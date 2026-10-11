@@ -7,6 +7,7 @@ const helperSource = readFileSync(new URL("../auth-helper/helper.mjs", import.me
 
 async function harness({
   appOrigin = "http://localhost:4174",
+  helperOrigin = "http://localhost:4175",
   clientId = "123-example.apps.googleusercontent.com",
   googleScope = "https://www.googleapis.com/auth/drive.file",
 } = {}) {
@@ -34,7 +35,7 @@ async function harness({
     } } } },
   };
   const context = createContext({
-    window: win, location: { origin: "http://localhost:4175" }, URL, Date,
+    window: win, location: { origin: helperOrigin }, URL, Date,
     document: {
       querySelector(key) { return elements[key]; },
       createElement() { throw Error("Mock must not load Google network JS"); },
@@ -110,4 +111,11 @@ test("helper cancellation sends no token and is terminal", async () => {
   assert.equal(x.sent.at(-1).data.kind, "cancelled");
   x.elements["#load"].click();
   assert.equal("token" in x.sent.at(-1).data, false);
+});
+
+test("helper cannot send ready or load GIS over insecure remote HTTP", async () => {
+  const x = await harness({ helperOrigin: "http://insecure.example.com" });
+  assert.equal(x.sent.length, 0);
+  assert.equal(x.elements["#load"].disabled, true);
+  assert.match(x.elements["#status"].textContent, /approved Job Ranger application/);
 });
