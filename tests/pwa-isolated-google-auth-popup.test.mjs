@@ -89,3 +89,27 @@ test('manual cancellation blocks stale popup responses', async () => {
 test('unconfigured same-origin helper is never allowed', () => {
   assert.throws(() => new IsolatedDriveAuthPopup('http://localhost:4174', () => {}, { location: { origin: 'http://localhost:4174' } }), /separate origin/);
 });
+
+test('throwing window.open clears the listener and reports a retryable failure', async () => {
+  const x = harness();
+  x.host.open = () => { throw new Error('SecurityError: popup denied'); };
+  assert.doesNotThrow(() => x.controller.connectFromUserClick());
+  assert.equal(x.controller.snapshot().phase, 'action_needed');
+  assert.match(x.controller.snapshot().message, /could not open/i);
+  assert.equal(x.listeners.size, 0, 'failed opener must never retain a message handler');
+  await assert.rejects(x.controller.withTokenForUserAction(async token => token));
+  x.controller.dispose();
+});
+
+test('throwing child postMessage fails immediately rather than leaving authorizing spinner', async () => {
+  const x = harness();
+  x.popup.postMessage = () => { throw new Error('SecurityError: WindowProxy severed'); };
+  x.controller.connectFromUserClick();
+  x.message({ protocol: 'job-ranger:isolated-drive-auth-ready', version: ISOLATED_DRIVE_AUTH_VERSION });
+  assert.equal(x.controller.snapshot().phase, 'action_needed');
+  assert.match(x.controller.snapshot().message, /lost its secure connection/i);
+  assert.equal(x.popup.closed, true);
+  assert.equal(x.listeners.size, 0);
+  await assert.rejects(x.controller.withTokenForUserAction(async token => token));
+  x.controller.dispose();
+});
