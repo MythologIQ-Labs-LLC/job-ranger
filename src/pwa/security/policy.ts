@@ -52,14 +52,23 @@ export function buildContentSecurityPolicy(): string {
 }
 
 /** Headers for every response served from the production origin. */
-export function buildSecurityHeaders(): Record<string, string> {
+/**
+ * OAuth helper is NEVER hosted by this page. Enabling the reviewed two-origin
+ * research build relaxes only COOP to preserve the popup WindowProxy, not CSP.
+ * Default releases remain same-origin isolated from unrelated popups.
+ */
+export interface PwaSecurityOptions {
+  isolatedDriveAuthEnabled?: boolean;
+}
+
+export function buildSecurityHeaders(options: PwaSecurityOptions = {}): Record<string, string> {
   return {
     "Content-Security-Policy": buildContentSecurityPolicy(),
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": options.isolatedDriveAuthEnabled === true ? "same-origin-allow-popups" : "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Permissions-Policy":
       "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()",
