@@ -20,6 +20,7 @@ test("default PWA has no OAuth prompt, injected vendor script, or silent Google 
   await page.goto(server.url);
   await waitForRuntime(page);
   await page.goto(server.url + "#/settings");
+  await expect(page.getByRole("heading", { name: /Shape the workspace around/i })).toBeVisible();
   await expect(page.getByTestId("pwa-drive-auth-proof")).toHaveCount(0);
   await expect(page.getByTestId("pwa-drive-load-gis")).toHaveCount(0);
   await expect(page.getByTestId("pwa-drive-authorize")).toHaveCount(0);
