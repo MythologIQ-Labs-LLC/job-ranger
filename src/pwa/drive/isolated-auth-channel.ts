@@ -109,10 +109,13 @@ export function makeIsolatedAuthAttempt(input: {
 export class IsolatedDriveAuthReceiver {
   private consumed = false;
 
-  constructor(
-    private readonly attempt: IsolatedAuthAttempt,
-    private readonly now: () => number = Date.now,
-  ) {}
+  private readonly attempt: IsolatedAuthAttempt;
+  private readonly now: () => number;
+
+  constructor(attempt: IsolatedAuthAttempt, now: () => number = Date.now) {
+    this.attempt = attempt;
+    this.now = now;
+  }
 
   get finished(): boolean {
     return this.consumed;
