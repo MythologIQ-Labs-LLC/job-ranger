@@ -10,6 +10,7 @@ async function harness({
   helperOrigin = "http://localhost:4175",
   clientId = "123-example.apps.googleusercontent.com",
   googleScope = "https://www.googleapis.com/auth/drive.file",
+  scriptFailure = null,
 } = {}) {
   const elements = Object.fromEntries(["status", "load", "authorize", "cancel"].map((name) => [
     "#" + name, {
@@ -38,8 +39,14 @@ async function harness({
     window: win, location: { origin: helperOrigin }, URL, Date,
     document: {
       querySelector(key) { return elements[key]; },
-      createElement() { throw Error("Mock must not load Google network JS"); },
-      head: { appendChild() { throw Error("Unexpected external request"); } },
+      createElement() {
+        if (scriptFailure === "construct") throw new Error("Mocked document creation refused");
+        return { async: false, src: "", onload: null, onerror: null };
+      },
+      head: { appendChild() {
+        if (scriptFailure === "append") throw new Error("Mocked CSP DOM insertion refused");
+        throw new Error("Unexpected Google network request in VM test");
+      } },
     },
     setInterval(fn) { callbacks.readyPoll = fn; return 1; }, clearInterval() {},
     setTimeout() { return 2; }, clearTimeout() {},
@@ -118,4 +125,26 @@ test("helper cannot send ready or load GIS over insecure remote HTTP", async () 
   assert.equal(x.sent.length, 0);
   assert.equal(x.elements["#load"].disabled, true);
   assert.match(x.elements["#status"].textContent, /approved Job Ranger application/);
+});
+
+test("helper reports failure when Trusted Types rejects its script URL", async () => {
+  const x = await harness();
+  initialize(x);
+  x.win.google = undefined; // Force the hosted-script loading path.
+  x.win.trustedTypes = { createPolicy() { throw new Error("Trusted Types policy denied"); } };
+  assert.doesNotThrow(() => x.elements["#load"].click());
+  assert.equal(x.sent.at(-1).data.kind, "provider_error");
+  assert.equal("token" in x.sent.at(-1).data, false);
+  assert.equal(x.elements["#load"].disabled, true);
+  assert.match(x.elements["#status"].textContent, /Authorization ended/);
+});
+
+test("helper fails closed if document refuses to attach Google script", async () => {
+  const x = await harness({ scriptFailure: "append" });
+  initialize(x);
+  x.win.google = undefined;
+  assert.doesNotThrow(() => x.elements["#load"].click());
+  assert.equal(x.sent.at(-1).data.kind, "provider_error");
+  assert.equal("token" in x.sent.at(-1).data, false);
+  assert.match(x.elements["#status"].textContent, /Authorization ended/);
 });
