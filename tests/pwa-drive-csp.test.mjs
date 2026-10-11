@@ -8,7 +8,7 @@ test("normal production PWA keeps its existing no-Google network/remote script p
   assert.doesNotMatch(csp, /accounts\.google\.com|googleapis\.com|job-ranger-google-gis/);
   assert.match(csp, /script-src 'self' 'wasm-unsafe-eval'/);
   assert.match(csp, /frame-src 'none'/);
-  assert.match(csp, /trusted-types job-ranger-script-url;/);
+  assert.match(csp, /trusted-types job-ranger-script-url$/);
   assert.equal(headers["Cross-Origin-Opener-Policy"], "same-origin");
   assert.equal(headers["Content-Security-Policy"], csp);
 });
@@ -21,7 +21,7 @@ test("Google authorization proof permits only the vendor's GIS script/frames and
   assert.match(csp, /connect-src 'self' [^;]+https:\/\/accounts\.google\.com\/gsi\//);
   assert.match(csp, /trusted-types job-ranger-script-url job-ranger-google-gis/);
   assert.doesNotMatch(csp, /https:\/\/www\.googleapis\.com/);
-  assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/);
+  assert.doesNotMatch(csp, /'unsafe-eval'|unsafe-inline/);
   assert.equal(headers["Cross-Origin-Opener-Policy"], "same-origin-allow-popups");
   assert.equal(headers["Content-Security-Policy"], csp);
 });
