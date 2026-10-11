@@ -38,7 +38,7 @@ The baseline `main` PWA and Electron builds are unchanged by this branch. No new
 - `src/pwa/drive/isolated-auth-channel.ts`: existing pure receiver for exact origin/source/nonce/scope/time checks, fail-closed reply handling, internally minted nonce.
 - `src/pwa/drive/isolated-auth-popup.ts`: new parent/window manager that opens a **configured separate origin synchronously on a click**, receives ready/init/initialized/result messages, binds to the exact child WindowProxy, and keeps tokens in private volatile memory. On cancel, close, timeout and dispose it invalidates the session and listener. **It is not yet imported by Job Ranger's UI.**
 - `auth-helper/index.html`, `helper.mjs`, `config.mjs`, `style.css`: separate minimal static page with two-stage user-present GIS loading/consent. Public client ID/app origin default to empty; there is no real credential or client secret. An opt-in local or HTTPS hosting process must configure these values explicitly and serve the helper at a **different origin** from Job Ranger. No bundled Google script or third-party JavaScript on the PWA origin.
-- `auth-helper/_headers`: standalone hosting example for **helper only**, including strict CSP, Trusted Types and `frame-ancestors 'none'`; COOP is `unsafe-none` for this helper origin. **This file does not modify the PWA's COOP or deployed hosting settings.** The main PWA currently uses `same-origin` COOP; a separately reviewed, build-gated `same-origin-allow-popups` change is needed before a live two-origin browser flow can work.
+- `auth-helper/_headers`: standalone hosting example for **helper only**, including strict CSP, Trusted Types and `frame-ancestors 'none'`; COOP is `unsafe-none` for this helper origin. **This file does not modify the PWA's COOP or deployed hosting settings.** On `main` the PWA uses `same-origin` COOP; this spike branch now has a build-gated `same-origin-allow-popups` candidate, which still requires security review and live two-origin browser acceptance.
 - Three new test files in `tests/pwa-isolated-google-auth-{popup,helper,handshake}.test.mjs` cover parent popup, helper GIS mock, exact origin safety (including insecure remote HTTP refusal), and combined two-origin protocol. They are not yet added to full `npm test` and were tested with local Node fixtures.
 - `tests/research/isolated-google-auth.browser.mjs` is a separate, **manual opt-in** Playwright script that serves temporary 127.0.0.1 origins, the helper's actual `_headers` CSP and a popup-compatible main COOP, injects a **mock** Google client, and checks the popup+token journey. It is **not** in GitHub Actions, not a real Google authorization test, and could not be run in the current container because Chromium returns `ERR_BLOCKED_BY_ADMINISTRATOR` for browser navigation. Its JS syntax was checked locally. Run it only from a trusted local checkout with the existing `playwright` dev dependency and a functional Chromium binary:
 ```sh
@@ -80,6 +80,52 @@ All **23 offline tests passed locally** on Node v22.16.0; the strict standalone 
 The standalone helper is intentionally **unconfigured**. For a future controlled test build, replace the empty `GOOGLE_WEB_CLIENT_ID` and `JOB_RANGER_APP_ORIGIN` *locally in a separate served artifact*, never commit live tokens/secrets; register the helper origin in Google's Authorized JavaScript origins. Do not deploy `auth-helper/` under the same origin as the PWA or use a path-only partition.
 
 Security review must explicitly prevent a malicious actor from inventing a snapshot `validated: true`, manufacturing user approval, or bypassing the deterministic Career Evidence/Truth Gate authority.
+
+## Research-only PWA Settings integration and local proof server
+
+The experimental branch now includes an explicitly **build-gated** Settings panel; it is not on `main`, deployed or shipped:
+
+- `src/components/IsolatedGoogleDrivePanel.tsx` is rendered only for the PWA runtime with a nonempty public `JOB_RANGER_ISOLATED_DRIVE_AUTH_ORIGIN` at PWA build time. An ordinary PWA build does **not** show this panel, poll the auth state, or request Google content. The React component holds only safe phase/message state; the bearer token stays private in the popup controller.
+- `src/pwa/security/policy.ts` preserves the **same original PWA CSP** and the default `Cross-Origin-Opener-Policy: same-origin`. An explicitly configured helper origin enables only `same-origin-allow-popups`; it does **not** grant the main Career Ops origin permission to execute Google's script or connect directly to Google. This relaxation has an XS-Leak/opener-risk tradeoff and requires independent security approval, real-browser verification and main-origin regression review.
+- `vite.pwa.config.ts` validates the configured exact helper origin (HTTPS, or HTTP loopback only), substitutes a **public** build-time constant, sets the corresponding `_headers`/preview COOP, and includes `crossOriginOpenerPolicy` and `experimentalIsolatedDriveAuth` in the generated `build-info.json` so the effective build can be inspected. The helper must use a **separate** origin; the controller refuses same-origin configurations.
+- `scripts/research/serve-isolated-google-auth.mjs` provides a localhost-only helper server. It serves a strict allowlist of static assets and dynamic **public** client/app-origin configuration, applies the helper-specific `_headers` CSP and `no-store` to every response, and refuses POST/query requests. This research server is **not** a hosted backend or production deployment candidate.
+- `tests/pwa-isolated-drive-policy.test.mjs` and `tests/pwa-isolated-auth-helper-server.test.mjs` assert default/opt-in security policy and HTTP server boundaries. They are deliberately not added to standard hosted CI while this remains an experimental branch.
+
+### Run the two-origin prototype locally (not production)
+
+Use an isolated browser profile and a **Google-issued Web application OAuth client ID**. The client ID is public; a client secret/refresh token must **never** be put into a PWA build, repository or browser environment.
+
+Terminal A, build and serve the PWA with the separate auth origin explicitly configured:
+
+```sh
+JOB_RANGER_ISOLATED_DRIVE_AUTH_ORIGIN=http://localhost:4175 npm run build:pwa
+JOB_RANGER_ISOLATED_DRIVE_AUTH_ORIGIN=http://localhost:4175 npm run preview:pwa
+```
+
+Terminal B, serve the auth helper on localhost with its actual security headers:
+
+```sh
+JOB_RANGER_GOOGLE_WEB_CLIENT_ID="YOUR_PUBLIC_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com" \
+JOB_RANGER_PWA_ORIGIN="http://localhost:4174" \
+node scripts/research/serve-isolated-google-auth.mjs
+```
+
+In Google Cloud, register the **helper** JavaScript origin `http://localhost:4175` under this Web OAuth client. This is a different origin from the main Job Ranger page `http://localhost:4174`. Open the PWA Settings page at `http://localhost:4174`. First verify the main page emits only the standard same-origin app/network policy except for its **explicitly configured** opener policy, then click the authorization test panel; the helper separately asks the user to load Google and authorizes only after another direct click. This sequence does not back up, upload, list, recover, or share anything.
+
+The manual Playwright simulated harness can be run without a Google account:
+
+```sh
+node tests/research/isolated-google-auth.browser.mjs
+```
+
+Both browser flows are **unverified** in this environment because browser navigation is blocked here. Capture actual response headers, console violations, popup/COOP continuity, and sanitized consent outcomes when using a machine with working Chromium. Do not paste access tokens in evidence.
+
+### Current validation evidence (2026-10-11)
+
+- Previous **23 offline unit/VM cases** passed against the local prototype files. The parent/controller/channel TypeScript modules and the newly updated `src/pwa/security/policy.ts` passed a standalone strict `tsc` check using TypeScript 5.8.3. The local security-policy copy was byte-for-byte verified by Git blob SHA `0d540f92b516520e77f358fab42ba7181316beaa`.
+- The **exact GitHub blob** of the new localhost server (`9933dfd0493b768ad032d04384c45d3acd67827e`) passed `node --check` and local Node HTTP tests for index, config, helper JS, CSS, 404, query denial, POST denial, `no-store`, and CSP headers. No provider credentials were used.
+- Standalone assertions passed for unchanged default CSP/COOP, opt-in-only opener policy, and helper-origin restrictions. The full new policy/server test files were **committed but have not both been executed as exact repository test files**; a complete `npm run typecheck`, `npm run build:pwa` and real browser/provider validation also remain outstanding.
+- These branch updates do **not** trigger hosted GitHub Actions while the branch has no open PR. CI budget is preserved at the cost of postponing full integrated validation. None of this evidence authorizes merging, publishing or calling cloud recovery reliable.
 
 ## Cost discipline
 
