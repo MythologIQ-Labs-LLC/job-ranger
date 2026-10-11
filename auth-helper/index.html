@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://accounts.google.com/gsi/client; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; style-src 'self' https://accounts.google.com/gsi/style; img-src 'self' data: https://accounts.google.com; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types job-ranger-auth-gis" />
+  <title>Job Ranger | Google authorization</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main>
+    <h1>Connect Google Drive</h1>
+    <p>This separate window asks Google for permission to create and work with files Job Ranger has access to. No career data is sent by connecting.</p>
+    <p id="status" role="status">Checking secure connection to Job Ranger…</p>
+    <button type="button" id="load" disabled>Load Google authorization</button>
+    <button type="button" id="authorize" disabled hidden>Authorize Drive access</button>
+    <button type="button" id="cancel">Cancel</button>
+    <p class="small">Only Google Drive file access (<code>drive.file</code>) is requested. No uploads happen in this window.</p>
+  </main>
+  <script type="module" src="./helper.mjs"></script>
+</body>
+</html>
