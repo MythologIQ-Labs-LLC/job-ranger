@@ -25,9 +25,11 @@ const clientConfigured = /^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(
 let targetOrigin = null;
 try {
   const origin = new URL(JOB_RANGER_APP_ORIGIN);
-  if (origin.origin === JOB_RANGER_APP_ORIGIN && origin.origin !== location.origin &&
-      (origin.protocol === "https:" || (origin.protocol === "http:" &&
-       ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)))) {
+  const helper = new URL(location.origin);
+  const local = (value) => ["localhost", "127.0.0.1", "[::1]"].includes(value.hostname);
+  const safeOrigin = (value) => value.protocol === "https:" || (value.protocol === "http:" && local(value));
+  if (safeOrigin(helper) && safeOrigin(origin) &&
+      origin.origin === JOB_RANGER_APP_ORIGIN && origin.origin !== location.origin) {
     targetOrigin = origin.origin;
   }
 } catch { /* Unconfigured deployment intentionally cannot authorize. */ }
