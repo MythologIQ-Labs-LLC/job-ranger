@@ -34,20 +34,30 @@ try {
   }
 } catch { /* Unconfigured deployment intentionally cannot authorize. */ }
 
+/** A severed WindowProxy must never throw through the helper's lifecycle. */
+function postToApp(payload) {
+  if (!targetOrigin || !window.opener) return false;
+  try {
+    window.opener.postMessage(payload, targetOrigin);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function finish(kind, payload = {}) {
   if (finished) return;
   finished = true;
   clearInterval(readyPoll);
   load.disabled = true;
   authorize.disabled = true;
-  if (nonce && targetOrigin && window.opener) {
-    // Exact targetOrigin, never *. No token in browser URL, storage or logs.
-    window.opener.postMessage({
-      protocol: RESULT, version: VERSION, nonce, requestingOrigin: targetOrigin,
-      kind, ...payload,
-    }, targetOrigin);
-  }
-  setStatus(kind === "authorized" ? "Google authorized this browser session. You can close this window." :
+  // Exact targetOrigin, never *. No token in browser URL, storage or logs.
+  const delivered = !nonce || postToApp({
+    protocol: RESULT, version: VERSION, nonce, requestingOrigin: targetOrigin,
+    kind, ...payload,
+  });
+  setStatus(!delivered ? "Could not return the authorization result to Job Ranger. Close this window and retry." :
+    kind === "authorized" ? "Google authorized this browser session. You can close this window." :
     "Authorization ended. Your local Job Ranger data is unchanged.");
 }
 
@@ -69,12 +79,20 @@ window.addEventListener("message", (event) => {
   }
   load.disabled = false;
   setStatus("Connection to Job Ranger confirmed. Load Google's authorization library to continue.");
-  window.opener.postMessage({ protocol: INITIALIZED, version: VERSION, nonce }, targetOrigin);
+  if (!postToApp({ protocol: INITIALIZED, version: VERSION, nonce })) {
+    finish("provider_error");
+  }
 });
 
 function sendReady() {
-  if (nonce || finished || !targetOrigin || !window.opener) return;
-  window.opener.postMessage({ protocol: READY, version: VERSION }, targetOrigin);
+  if (nonce || finished || !targetOrigin || !window.opener) return false;
+  if (!postToApp({ protocol: READY, version: VERSION })) {
+    finished = true;
+    clearInterval(readyPoll);
+    setStatus("Secure connection to Job Ranger failed. Close this window and retry.");
+    return false;
+  }
+  return true;
 }
 
 if (!window.opener || !targetOrigin) {
@@ -82,8 +100,9 @@ if (!window.opener || !targetOrigin) {
   load.disabled = true;
   authorize.disabled = true;
 } else {
-  sendReady();
-  readyPoll = setInterval(sendReady, 350);
+  if (sendReady()) {
+    readyPoll = setInterval(sendReady, 350);
+  }
   setTimeout(() => {
     if (!nonce && !finished) {
       clearInterval(readyPoll);
