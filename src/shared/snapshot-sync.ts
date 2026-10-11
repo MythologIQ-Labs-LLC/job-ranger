@@ -38,6 +38,14 @@ export interface SnapshotPayload {
   validated: true;
 }
 
+export interface SnapshotDestination {
+  providerId: SnapshotProviderId;
+  /** Opaque remotely authorized folder ID, checked again by the provider. */
+  folderId: string;
+  /** Human-readable label presented at the approval boundary. */
+  displayName: string;
+}
+
 export interface SnapshotUploadApproval {
   kind: "explicit_share_snapshot";
   /** Unique transaction ID from the human-action orchestrator. */
@@ -46,6 +54,9 @@ export interface SnapshotUploadApproval {
   /** Consent is bound to specific bytes, not merely the word "backup". */
   approvedSha256Hex: string;
   approvedByteLength: number;
+  /** Consent cannot silently be redirected to a different provider/folder. */
+  approvedProviderId: SnapshotProviderId;
+  approvedFolderId: string;
   /** Stable identifier of the human-readable disclosures shown to the user. */
   disclosureVersion: string;
   /** User-facing destination presented before approval. */
@@ -54,6 +65,7 @@ export interface SnapshotUploadApproval {
 
 export interface ApprovedSnapshotUpload {
   snapshot: SnapshotPayload;
+  destination: SnapshotDestination;
   approval: SnapshotUploadApproval;
 }
 
@@ -102,6 +114,7 @@ export interface SnapshotListQuery {
 export interface ApprovedSnapshotPrune {
   /** Deletion MUST be based on a fresh provider-backed explicit preview. */
   preview: {
+    providerId: SnapshotProviderId;
     folderId: string;
     selected: readonly RemoteSnapshot[];
     observedAt: string;
@@ -154,7 +167,7 @@ export function assertApprovedSnapshotUpload(
   request: ApprovedSnapshotUpload,
   nowMs: number = Date.now(),
 ): void {
-  const { snapshot, approval } = request;
+  const { snapshot, destination, approval } = request;
   if (!snapshot.validated || !(snapshot.bytes instanceof Blob)) {
     throw new Error("A verified local snapshot is required before sharing.");
   }
@@ -178,8 +191,13 @@ export function assertApprovedSnapshotUpload(
       !isRecentConsent(approval.confirmedAt, nowMs) ||
       approval.approvedSha256Hex !== snapshot.sha256Hex ||
       approval.approvedByteLength !== snapshot.bytes.size ||
-      !isSafeIdentifier(approval.disclosureVersion) ||
-      !approval.destinationLabel.trim()) {
+      (destination.providerId !== "google-drive" && destination.providerId !== "onedrive") ||
+      approval.approvedProviderId !== destination.providerId ||
+      !isSafeIdentifier(destination.folderId) ||
+      approval.approvedFolderId !== destination.folderId ||
+      !destination.displayName.trim() ||
+      approval.destinationLabel !== destination.displayName ||
+      !isSafeIdentifier(approval.disclosureVersion)) {
     throw new Error("Sharing requires fresh approval of these exact archive bytes and destination.");
   }
 }
@@ -206,6 +224,7 @@ export function assertApprovedSnapshotPrune(
   if (new Set(ids).size !== ids.length ||
       ids.some((id, index) =>
         !isSafeIdentifier(id) ||
+        preview.selected[index].providerId !== preview.providerId ||
         preview.selected[index].parentFolderId !== preview.folderId ||
         approval.approvedRemoteIds[index] !== id
       )) {
