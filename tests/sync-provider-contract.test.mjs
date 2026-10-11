@@ -20,12 +20,19 @@ function upload() {
       validated: true,
       format: { id: "job-ranger-portable-archive", version: 1 },
     },
+    destination: {
+      providerId: "google-drive",
+      folderId: "drive-folder-A",
+      displayName: "Job Ranger backups in my Google Drive",
+    },
     approval: {
       kind: "explicit_share_snapshot",
       transactionId: "tx:0001",
       confirmedAt: now,
       approvedSha256Hex: SHA,
       approvedByteLength: 16,
+      approvedProviderId: "google-drive",
+      approvedFolderId: "drive-folder-A",
       disclosureVersion: "drive-snapshot-v1",
       destinationLabel: "Job Ranger backups in my Google Drive",
     },
@@ -38,7 +45,7 @@ function prune() {
     { providerId: "google-drive", remoteId: "id_2", parentFolderId: "folder-A", name: "b.jobranger", byteLength: 5, createdAt: now, sha256Hex: SHA, verified: true },
   ];
   return {
-    preview: { folderId: "folder-A", selected, observedAt: now },
+    preview: { providerId: "google-drive", folderId: "folder-A", selected, observedAt: now },
     approval: {
       kind: "explicit_delete_these_snapshots",
       transactionId: "tx:0002",
@@ -73,6 +80,9 @@ test("upload consent is bound to exact source digest and byte count", () => {
     (r) => { r.approval.kind = "not_approved"; },
     (r) => { r.approval.transactionId = ""; },
     (r) => { r.approval.destinationLabel = " "; },
+    (r) => { r.destination.folderId = "different-folder"; },
+    (r) => { r.destination.providerId = "onedrive"; },
+    (r) => { r.destination.displayName = "Other destination"; },
     (r) => { r.snapshot.validated = false; },
     (r) => { r.snapshot.bytes = new Blob([]); },
     (r) => { r.snapshot.fileName = "../private.jobranger"; },
@@ -94,6 +104,8 @@ test("only exact selected, same-parent remote snapshots may be pruned", () => {
     (r) => { r.approval.kind = "not_approved"; },
     (r) => { r.approval.approvedFolderId = "folder-B"; },
     (r) => { r.preview.selected[1].parentFolderId = "folder-B"; },
+    (r) => { r.preview.selected[1].providerId = "onedrive"; },
+    (r) => { r.preview.providerId = "onedrive"; },
     (r) => { r.approval.approvedRemoteIds.push("id_3"); },
     (r) => { r.approval.approvedRemoteIds[1] = "id_other"; },
     (r) => { r.preview.selected[1].remoteId = "id_1"; },
