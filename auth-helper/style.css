@@ -1,0 +1,7 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; padding: 1.5rem; }
+main { max-width: 34rem; margin: 0 auto; }
+button { padding: .65rem 1rem; margin: .4rem .5rem .4rem 0; border-radius: .5rem; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .6; }
+p { line-height: 1.55; }
+.small { font-size: .9rem; }
