@@ -155,8 +155,9 @@ export function assertApprovedSnapshotUpload(request: ApprovedSnapshotUpload): v
   if (!snapshot.validated || !(snapshot.bytes instanceof Blob)) {
     throw new Error("A verified local snapshot is required before sharing.");
   }
-  if (!snapshot.fileName.endsWith(".jobranger") ||
-      snapshot.fileName === ".jobranger" ||
+  // #255 has not selected the archive format; do not force an extension here.
+  if (snapshot.fileName.length < 3 || snapshot.fileName.length > 180 ||
+      snapshot.fileName.trim() !== snapshot.fileName ||
       /[\\/\x00-\x1f]/.test(snapshot.fileName) ||
       snapshot.fileName === "." || snapshot.fileName === "..") {
     throw new Error("Unsafe or unsupported snapshot filename.");
@@ -217,7 +218,8 @@ function isSha256(value: string): boolean {
 function isIsoInstant(value: string): boolean {
   if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value)) return false;
   const date = new Date(value);
-  return Number.isFinite(date.valueOf());
+  return Number.isFinite(date.valueOf()) &&
+    date.toISOString().slice(0, 19) === value.slice(0, 19);
 }
 
 function isSafeIdentifier(value: string): boolean {
