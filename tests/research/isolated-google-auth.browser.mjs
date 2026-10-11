@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const helperRoot = path.join(ROOT, "auth-helper");
+let helperContentSecurityPolicy = "";
 function js(source) {
   return ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022,
@@ -37,10 +38,19 @@ function respond(res, text, contentType = "text/javascript; charset=utf-8", coop
     "X-Content-Type-Options": "nosniff",
     "Cross-Origin-Opener-Policy": coop,
     "X-Frame-Options": "DENY",
+    ...(coop === "unsafe-none" ? { "Content-Security-Policy": helperContentSecurityPolicy } : {}),
   });
   res.end(text);
 }
 async function run() {
+  const headerFile = await readFile(path.join(helperRoot, "_headers"), "utf8");
+  const policyLine = headerFile.split("\n").find(line => line.trimStart().startsWith("Content-Security-Policy:"));
+  if (!policyLine) throw new Error("Missing helper CSP hosting contract");
+  helperContentSecurityPolicy = policyLine.trim().slice("Content-Security-Policy:".length).trim();
+  if (!helperContentSecurityPolicy.includes("frame-ancestors 'none'") ||
+      helperContentSecurityPolicy.includes("'unsafe-inline'")) {
+    throw new Error("Helper CSP must reject embedding and inline scripts");
+  }
   let parentOrigin = "";
   const helper = await listen(async (url, res) => {
     if (url.pathname === "/config.mjs") {
