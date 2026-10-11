@@ -248,5 +248,5 @@ function isSafeIdentifier(value: string): boolean {
   // Remote IDs are provider-defined opaque strings, not local paths.
   // An adapter must encode them before inserting them into any provider URL.
   return typeof value === "string" && value.length > 0 &&
-    value.length <= 512 && value.trim() === value && !/[\\x00-\\x1f\\x7f]/.test(value);
+    value.length <= 512 && value.trim() === value && !/[\x00-\x1f\x7f]/.test(value);
 }
