@@ -150,7 +150,10 @@ export interface SyncProvider {
  * It cannot substitute for genuine UI consent, local archive validation,
  * remote provider authorization, or hash recomputation by the caller.
  */
-export function assertApprovedSnapshotUpload(request: ApprovedSnapshotUpload): void {
+export function assertApprovedSnapshotUpload(
+  request: ApprovedSnapshotUpload,
+  nowMs: number = Date.now(),
+): void {
   const { snapshot, approval } = request;
   if (!snapshot.validated || !(snapshot.bytes instanceof Blob)) {
     throw new Error("A verified local snapshot is required before sharing.");
@@ -172,6 +175,7 @@ export function assertApprovedSnapshotUpload(request: ApprovedSnapshotUpload): v
   if (approval.kind !== "explicit_share_snapshot" ||
       !isSafeIdentifier(approval.transactionId) ||
       !isIsoInstant(approval.confirmedAt) ||
+      !isRecentConsent(approval.confirmedAt, nowMs) ||
       approval.approvedSha256Hex !== snapshot.sha256Hex ||
       approval.approvedByteLength !== snapshot.bytes.size ||
       !isSafeIdentifier(approval.disclosureVersion) ||
@@ -180,7 +184,10 @@ export function assertApprovedSnapshotUpload(request: ApprovedSnapshotUpload): v
   }
 }
 
-export function assertApprovedSnapshotPrune(request: ApprovedSnapshotPrune): void {
+export function assertApprovedSnapshotPrune(
+  request: ApprovedSnapshotPrune,
+  nowMs: number = Date.now(),
+): void {
   const { preview, approval } = request;
   if (approval.kind !== "explicit_delete_these_snapshots" ||
       !isSafeIdentifier(approval.transactionId) ||
@@ -188,6 +195,9 @@ export function assertApprovedSnapshotPrune(request: ApprovedSnapshotPrune): voi
       approval.approvedFolderId !== preview.folderId ||
       !isIsoInstant(preview.observedAt) ||
       !isIsoInstant(approval.confirmedAt) ||
+      !isRecentConsent(approval.confirmedAt, nowMs) ||
+      !isRecentConsent(preview.observedAt, nowMs) ||
+      Date.parse(preview.observedAt) > Date.parse(approval.confirmedAt) ||
       preview.selected.length < 1 ||
       preview.selected.length !== approval.approvedRemoteIds.length) {
     throw new Error("Explicit snapshot deletion approval is missing or mismatched.");
@@ -211,6 +221,18 @@ export function assertSnapshotListQuery(query: SnapshotListQuery): void {
   }
 }
 
+/**
+ * Prevent approving a transfer in one session and replaying it much later.
+ * The UI must independently prove this approval came from a real user action.
+ */
+const MAX_APPROVAL_AGE_MS = 5 * 60_000;
+
+function isRecentConsent(iso: string, nowMs: number): boolean {
+  const atMs = Date.parse(iso);
+  const ageMs = nowMs - atMs;
+  return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= MAX_APPROVAL_AGE_MS;
+}
+
 function isSha256(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value);
 }
@@ -223,6 +245,8 @@ function isIsoInstant(value: string): boolean {
 }
 
 function isSafeIdentifier(value: string): boolean {
+  // Remote IDs are provider-defined opaque strings, not local paths.
+  // An adapter must encode them before inserting them into any provider URL.
   return typeof value === "string" && value.length > 0 &&
-    value.length <= 256 && /^[A-Za-z0-9._:-]+$/.test(value);
+    value.length <= 512 && value.trim() === value && !/[\\x00-\\x1f\\x7f]/.test(value);
 }
