@@ -148,3 +148,48 @@ test("helper fails closed if document refuses to attach Google script", async ()
   assert.equal("token" in x.sent.at(-1).data, false);
   assert.match(x.elements["#status"].textContent, /Authorization ended/);
 });
+
+test("helper fails safely if opener messaging breaks before handshake", async () => {
+  // Failure at the initial ready message previously aborted module evaluation.
+  // This variant creates its own isolated VM fixture with a failing opener
+  // while keeping all other test harness defaults.
+  const source = helperSource;
+  const status = { textContent: "" };
+  const btn = () => ({ disabled: true, hidden: false, addEventListener() {} });
+  const elements = { "#status": status, "#load": btn(), "#authorize": btn(), "#cancel": btn() };
+  const opener = { postMessage() { throw new Error("WindowProxy severed"); } };
+  const window = { opener, addEventListener() {} };
+  const context = createContext({
+    window, location: { origin: "http://localhost:4175" }, URL, Date,
+    document: { querySelector(key) { return elements[key]; } },
+    setInterval() { throw new Error("No recurring interval after handshake failure"); },
+    clearInterval() {}, setTimeout() { return 1; }, clearTimeout() {},
+  });
+  const app = new SourceTextModule(source, { context });
+  const cfg = new SyntheticModule(["GOOGLE_WEB_CLIENT_ID", "JOB_RANGER_APP_ORIGIN"], function() {
+    this.setExport("GOOGLE_WEB_CLIENT_ID", "123-example.apps.googleusercontent.com");
+    this.setExport("JOB_RANGER_APP_ORIGIN", "http://localhost:4174");
+  }, { context });
+  await app.link(() => cfg);
+  await assert.doesNotReject(app.evaluate());
+  assert.match(status.textContent, /Secure connection to Job Ranger failed/);
+  assert.equal(elements["#load"].disabled, true);
+});
+
+test("helper never reports success if the final token message cannot reach opener", async () => {
+  const x = await harness();
+  initialize(x);
+  x.elements["#load"].click();
+  x.opener.postMessage = () => { throw new Error("Opener was closed"); };
+  assert.doesNotThrow(() => x.elements["#authorize"].click());
+  assert.match(x.elements["#status"].textContent, /Could not return the authorization result/);
+  assert.equal(x.elements["#load"].disabled, true);
+});
+
+test("helper fails closed when initialized acknowledgement cannot reach opener", async () => {
+  const x = await harness();
+  x.opener.postMessage = () => { throw new Error("Opener navigation denied"); };
+  assert.doesNotThrow(() => initialize(x));
+  assert.match(x.elements["#status"].textContent, /Could not return the authorization result/);
+  assert.equal(x.elements["#load"].disabled, true);
+});
