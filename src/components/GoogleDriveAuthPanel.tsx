@@ -7,7 +7,10 @@ import {
 } from "../pwa/drive/google-web-auth";
 
 const GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
-const CLIENT_ID = String(import.meta.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID ?? "").trim();
+declare const __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: string | undefined;
+const CLIENT_ID = typeof __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__ === "string"
+  ? __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__.trim()
+  : "";
 
 interface GoogleWindow {
   google?: { accounts?: { oauth2?: GoogleOAuthTokenApi } };
