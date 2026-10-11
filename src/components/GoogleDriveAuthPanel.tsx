@@ -83,9 +83,15 @@ export function GoogleDriveAuthPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const session = useRef<DriveWebAuthorization | null>(null);
 
-  useEffect(() => () => {
-    session.current?.dispose();
-    session.current = null;
+  useEffect(() => {
+    // Keep the visible state truthful even if an access token expires while
+    // Settings remains open. No token renewal occurs in the background.
+    const refresh = window.setInterval(() => session.current?.snapshot(), 10_000);
+    return () => {
+      window.clearInterval(refresh);
+      session.current?.dispose();
+      session.current = null;
+    };
   }, []);
 
   const load = async () => {
