@@ -11,6 +11,7 @@ name: Windows Store package
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - "electron/**"
       - "src/shared/**"
@@ -58,6 +59,7 @@ concurrency:
 
 jobs:
   store-package:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
