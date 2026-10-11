@@ -159,6 +159,12 @@ function shellManifestPlugin(): Plugin {
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
             contentSecurityPolicy: buildContentSecurityPolicy(),
+            crossOriginOpenerPolicy: buildSecurityHeaders(pwaSecurity)["Cross-Origin-Opener-Policy"],
+            experimentalIsolatedDriveAuth: {
+              configured: pwaSecurity.isolatedDriveAuthEnabled,
+              status: "authorization-proof-only",
+              helperOrigin: isolatedDriveAuthOrigin || null,
+            },
             assets,
             onDemandAssets: {
               purpose: "resume PDF fonts for text outside Windows-1252, loaded only when a resume needs them",
