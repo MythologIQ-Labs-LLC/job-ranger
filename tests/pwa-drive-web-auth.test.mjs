@@ -42,6 +42,7 @@ test("scope is exactly drive.file, and popup begins synchronously", () => {
   x.session.authorize(x.google);
   assert.equal(x.requested, 1);
   assert.deepEqual(x.scopes, [DRIVE_FILE_SCOPE]);
+  assert.equal(x.options.include_granted_scopes, false, "GIS must not accumulate earlier grants");
   assert.equal(x.session.snapshot().phase, "authorizing");
   x.session.dispose();
 });
