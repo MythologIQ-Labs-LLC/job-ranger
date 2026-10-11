@@ -36,8 +36,9 @@ The baseline `main` PWA and Electron builds are unchanged by this branch. No new
 ## Implemented in this branch
 
 - `src/pwa/drive/isolated-auth-channel.ts`: **pure receiver only** for exact origin/window/nonce/scope/time validation, with cryptographically generated nonce function. No browser popup is opened by this module.
-- `tests/pwa-isolated-google-auth-channel.test.mjs`: adversarial success, scope expansion, origin spoofing, source identity, nonce/protocol mismatch, wrong commands, token expiration, one-shot replay, and timeout cases. Test source added but **not yet executed** on this branch.
-- No `package.json` or workflow changes, so the new suite is **not included** in ordinary CI. Only add to regular tests after the spike and #263 governance are approved. It is dishonest to mark an unrun suite as passing.
+- `tests/pwa-isolated-google-auth-channel.test.mjs`: adversarial success, scope expansion, origin spoofing, source identity, nonce/protocol mismatch, wrong commands, token expiration, one-shot replay, and timeout cases. **11/11 locally passed** on 2026-10-11 under Node v22.16.0 with `--experimental-strip-types`.
+- **Exact-blob validation:** The locally executed module's Git blob SHA was `f070a05e70bd866b55c78d0a23c17779d62b1a6d`, and the test file was `9672e6ef0de86092b3ee981a305f574d5961cc1a`; both matched the fetched GitHub branch blobs. The standalone strict `tsc --noEmit --strict --target ES2022 --lib ES2022,DOM` check passed with local TypeScript 5.8.3. The repository's pinned TypeScript 7 and integrated `npm run typecheck` were **not** executed.
+- No `package.json` or workflow changes, so this suite is **not included** in ordinary CI. Only add to regular tests after the spike and #263 governance are approved. Local unit passes do not establish real browser, OAuth or product readiness.
 
 ## Design decisions and tests still blocked
 
