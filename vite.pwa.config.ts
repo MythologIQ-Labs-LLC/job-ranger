@@ -38,7 +38,7 @@ const buildId = process.env.JOB_RANGER_BUILD_ID?.trim() || `${packageJson.versio
 // Public Web OAuth client ID only; never embed a client secret or token.
 // Omission leaves the baseline no-Google-network CSP and runtime behavior intact.
 const googleWebClientId = (process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID ?? "").trim();
-if (googleWebClientId && !/^[A-Za-z0-9._-]+\\.apps\\.googleusercontent\\.com$/.test(googleWebClientId)) {
+if (googleWebClientId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(googleWebClientId)) {
   throw new Error("Invalid VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID format");
 }
 const webAuthSecurity = { googleOAuthEnabled: googleWebClientId.length > 0 };
