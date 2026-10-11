@@ -15,6 +15,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { buildContentSecurityPolicy, buildSecurityHeaders } from "./src/pwa/security/policy.ts";
+import { assertIsolatedAuthOrigin } from "./src/pwa/drive/isolated-auth-channel.ts";
 import { NODE_BUILTIN_ADAPTERS, SHARED_CORE_ADAPTERS } from "./src/pwa/adapter-map.ts";
 import { buildPdfFonts } from "./scripts/pdf-fonts.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
@@ -34,6 +35,13 @@ function gitCommit(): string {
 
 const commit = gitCommit();
 const buildId = process.env.JOB_RANGER_BUILD_ID?.trim() || `${packageJson.version}+${commit.slice(0, 12)}`;
+
+// Research-only, explicitly configured separate helper origin. No OAuth provider
+// JavaScript is added to the sensitive Career Ops page's Content-Security-Policy.
+const isolatedDriveAuthOrigin = (process.env.JOB_RANGER_ISOLATED_DRIVE_AUTH_ORIGIN ?? "").trim();
+if (isolatedDriveAuthOrigin) assertIsolatedAuthOrigin(isolatedDriveAuthOrigin);
+const pwaSecurity = { isolatedDriveAuthEnabled: Boolean(isolatedDriveAuthOrigin) };
+
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
@@ -95,7 +103,7 @@ function listFiles(directory: string, base = directory): string[] {
 }
 
 function headersFile(): string {
-  const headers = buildSecurityHeaders();
+  const headers = buildSecurityHeaders(pwaSecurity);
   const lines = ["/*", ...Object.entries(headers).map(([key, value]) => `  ${key}: ${value}`)];
   lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "");
   lines.push("/assets/*", "  Cache-Control: public, max-age=31536000, immutable", "");
@@ -177,6 +185,7 @@ export default defineConfig({
   define: {
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
+    __JOB_RANGER_ISOLATED_DRIVE_AUTH_ORIGIN__: JSON.stringify(isolatedDriveAuthOrigin),
   },
   worker: {
     format: "es",
@@ -197,7 +206,7 @@ export default defineConfig({
     port: 5174,
     strictPort: true,
     headers: {
-      ...buildSecurityHeaders(),
+      ...buildSecurityHeaders(pwaSecurity),
       // Vite's dev client needs inline/eval support; the production CSP is
       // enforced by the built index.html meta tag and the _headers file.
       "Content-Security-Policy": "",
@@ -207,6 +216,6 @@ export default defineConfig({
     host: "localhost",
     port: 4174,
     strictPort: true,
-    headers: buildSecurityHeaders(),
+    headers: buildSecurityHeaders(pwaSecurity),
   },
 });
