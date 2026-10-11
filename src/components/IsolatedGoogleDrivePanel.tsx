@@ -26,6 +26,7 @@ export function IsolatedGoogleDrivePanel() {
   const session = useRef<IsolatedDriveAuthPopup | null>(null);
 
   useEffect(() => {
+    if (!AUTH_ORIGIN) return;
     // Demote expired grants without refreshing Google credentials.
     const interval = window.setInterval(() => session.current?.snapshot(), 10_000);
     return () => {
