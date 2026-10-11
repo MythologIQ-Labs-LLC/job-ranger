@@ -60,6 +60,18 @@ For user-facing visual changes, include screenshots when they materially help re
 
 The project deliberately preserves GitHub Actions budget. Hosted CI/CD is not required for every routine documentation change or every iteration of release preparation.
 
+### Hosted-run policy
+
+- **Keep work-in-progress PRs in Draft.** Draft PR pushes are not a reason to spend hosted runner minutes. Make related commits and review changes together, rather than pushing each small adjustment to a ready-for-review PR.
+- **Promote to Ready for review once a meaningful, reviewed candidate exists.** The promotion triggers the applicable hosted validation. New commits on a ready PR trigger those checks again, so batch remediation locally before pushing.
+- **Run local targeted checks first.** Prefer focused tests, typecheck, and relevant platform builds. Record commands and results accurately; never mark a release gate as satisfied by a skipped workflow.
+- **Preserve complete checks for ready PRs and releases.** CI, PWA, Electron E2E and Store suites still apply when their existing path filters permit, and release/manual workflows remain available. A skipped draft job is not proof of correctness.
+- **Use manual hosted runs sparingly.** Trigger only for a specific missing environment, failure reproduction, or release-candidate gate. No automatic rerun on success and no duplicate runs simply to refresh a status badge.
+- **Protect the actual billing owner.** Repository settings alone cannot establish available organization/account minutes or spending limits. Consult GitHub Billing & licensing / Actions usage for the billable owner before expensive platform sweeps. If the budget is near its limit, defer noncritical hosted runs and record blocked validation rather than claiming success.
+- **Avoid redundant full validations.** Review already successful exact-head evidence before rerunning. Do not run `repo:health`, PWA and Store packaging repeatedly for documentation or trivial follow-up edits.
+
+In the CI workflow, `pull_request` draft events yield skipped jobs, while the `ready_for_review` event re-enables normal PR checks. `push` to `main`, manually triggered workflows, and reusable `workflow_call` release validation are **not** suppressed by this rule.
+
 When appropriate, the maintainer may run validation manually in an isolated environment.
 
 Manual validation should record:
