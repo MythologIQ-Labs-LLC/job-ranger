@@ -110,16 +110,22 @@ load.addEventListener("click", () => {
   setStatus("Loading Google's hosted authorization library…");
   const existing = window.google?.accounts?.oauth2;
   if (existing?.initTokenClient) { configure(existing); return; }
-  const script = document.createElement("script");
-  script.async = true;
-  script.onload = () => {
-    const gis = window.google?.accounts?.oauth2;
-    if (!gis?.initTokenClient) finish("provider_error");
-    else configure(gis);
-  };
-  script.onerror = () => finish("provider_error");
-  script.src = trustedScriptUrl();
-  document.head.appendChild(script);
+  try {
+    const script = document.createElement("script");
+    script.async = true;
+    script.onload = () => {
+      const gis = window.google?.accounts?.oauth2;
+      if (!gis?.initTokenClient) finish("provider_error");
+      else configure(gis);
+    };
+    script.onerror = () => finish("provider_error");
+    // Trusted Types construction/DOM insertion can fail synchronously when
+    // the host CSP or provider policy changes. Surface that failure promptly.
+    script.src = trustedScriptUrl();
+    document.head.appendChild(script);
+  } catch {
+    finish("provider_error");
+  }
 });
 
 function configure(gis) {
