@@ -59,11 +59,19 @@ export class DriveWebAuthorization {
     expiresAt: null,
   };
 
+  private readonly clientId: string;
+  private readonly onChange: (view: DriveAuthView) => void;
+  private readonly now: () => number;
+
   constructor(
-    private readonly clientId: string,
-    private readonly onChange: (view: DriveAuthView) => void = () => {},
-    private readonly now: () => number = Date.now,
-  ) {}
+    clientId: string,
+    onChange: (view: DriveAuthView) => void = () => {},
+    now: () => number = Date.now,
+  ) {
+    this.clientId = clientId;
+    this.onChange = onChange;
+    this.now = now;
+  }
 
   snapshot(): DriveAuthView {
     if (this.view.phase === "authorized_unverified" && this.now() >= this.expiry) {
