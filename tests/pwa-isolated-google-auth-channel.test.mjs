@@ -15,15 +15,16 @@ const APP = "http://localhost:4174";
 const AUTH = "http://localhost:4175";
 const NONCE = "0b".repeat(24);
 const popup = Object.freeze({ name: "authorized-popup" });
+// A deterministic Web Crypto-shaped test fixture; production always uses crypto.
+const deterministicRandom = { getRandomValues(bytes) { bytes.fill(0x0b); return bytes; } };
 
 function fixture() {
   const attempt = makeIsolatedAuthAttempt({
     appOrigin: APP,
     helperOrigin: AUTH,
     popup: { identity: popup },
-    nonce: NONCE,
     openedAt: TIME,
-  });
+  }, deterministicRandom);
   let now = TIME + 1_000;
   const receiver = new IsolatedDriveAuthReceiver(attempt, () => now);
   const validMessage = {
@@ -59,8 +60,8 @@ test("origin syntax rejects untrusted HTTP, paths, URLs with credentials, and sa
   assert.equal(assertIsolatedAuthOrigin("https://auth.example.com"), "https://auth.example.com");
   assert.throws(() => makeIsolatedAuthAttempt({
     appOrigin: APP, helperOrigin: APP,
-    popup: { identity: popup }, nonce: NONCE, openedAt: TIME,
-  }), /isolated/i);
+    popup: { identity: popup }, openedAt: TIME,
+  }, deterministicRandom), /isolated/i);
 });
 
 test("cryptographically sourced nonce encodes 192 bits in lowercase hex", () => {
@@ -161,15 +162,14 @@ test("timeout consumes the attempt before granting any token", () => {
   assert.equal(x.receiver.take(x.event), null);
 });
 
-test("missing exact popup/nonce rejects initialization", () => {
+test("missing popup or start time rejects initialization", () => {
   const base = {
     appOrigin: APP,
     helperOrigin: AUTH,
     popup: { identity: popup },
-    nonce: NONCE,
     openedAt: TIME,
   };
-  for (const field of ["nonce", "popup", "openedAt"]) {
+  for (const field of ["popup", "openedAt"]) {
     const next = { ...base, [field]: null };
     assert.throws(() => makeIsolatedAuthAttempt(next));
   }
