@@ -52,7 +52,7 @@ function prune() {
 test("valid selected archive and exact separate human approval satisfy structural guard", () => {
   const request = upload();
   request.approval.approvedByteLength = request.snapshot.bytes.size;
-  assert.doesNotThrow(() => assertApprovedSnapshotUpload(request));
+  assert.doesNotThrow(() => assertApprovedSnapshotUpload(request, Date.parse(now)));
 });
 
 test("new agent snapshot format remains intentionally possible until issue 255 chooses one", () => {
@@ -60,7 +60,7 @@ test("new agent snapshot format remains intentionally possible until issue 255 c
   request.snapshot.fileName = "job-ranger-agent-2026-10-11.json";
   request.snapshot.format = { id: "candidate-agent-format", version: 1 };
   request.approval.approvedByteLength = request.snapshot.bytes.size;
-  assert.doesNotThrow(() => assertApprovedSnapshotUpload(request));
+  assert.doesNotThrow(() => assertApprovedSnapshotUpload(request, Date.parse(now)));
 });
 
 test("upload consent is bound to exact source digest and byte count", () => {
@@ -84,12 +84,12 @@ test("upload consent is bound to exact source digest and byte count", () => {
     const modified = upload();
     modified.approval.approvedByteLength = modified.snapshot.bytes.size;
     mutation(modified);
-    assert.throws(() => assertApprovedSnapshotUpload(modified));
+    assert.throws(() => assertApprovedSnapshotUpload(modified, Date.parse(now)));
   }
 });
 
 test("only exact selected, same-parent remote snapshots may be pruned", () => {
-  assert.doesNotThrow(() => assertApprovedSnapshotPrune(prune()));
+  assert.doesNotThrow(() => assertApprovedSnapshotPrune(prune(), Date.parse(now)));
   for (const mutation of [
     (r) => { r.approval.kind = "not_approved"; },
     (r) => { r.approval.approvedFolderId = "folder-B"; },
@@ -103,8 +103,22 @@ test("only exact selected, same-parent remote snapshots may be pruned", () => {
   ]) {
     const modified = prune();
     mutation(modified);
-    assert.throws(() => assertApprovedSnapshotPrune(modified));
+    assert.throws(() => assertApprovedSnapshotPrune(modified, Date.parse(now)));
   }
+});
+
+test("approval is time-bound and cannot be replayed later or from the future", () => {
+  const x = upload();
+  x.approval.approvedByteLength = x.snapshot.bytes.size;
+  assert.throws(() => assertApprovedSnapshotUpload(x, Date.parse(now) + 5 * 60_000 + 1), /fresh approval/i);
+  assert.throws(() => assertApprovedSnapshotUpload(x, Date.parse(now) - 1), /fresh approval/i);
+});
+
+test("prune needs both a fresh preview and a fresh user decision, in that order", () => {
+  const x = prune();
+  assert.throws(() => assertApprovedSnapshotPrune(x, Date.parse(now) + 5 * 60_000 + 1), /approval/i);
+  x.preview.observedAt = "2026-10-11T16:00:01.000Z";
+  assert.throws(() => assertApprovedSnapshotPrune(x, Date.parse(now) + 1000), /approval/i);
 });
 
 test("provider listing is bounded and requires opaque cursor validation", () => {
