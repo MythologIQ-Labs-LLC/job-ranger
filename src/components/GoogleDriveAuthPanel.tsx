@@ -122,6 +122,9 @@ export function GoogleDriveAuthPanel() {
     if (!session.current) setView(INITIAL_VIEW);
   };
 
+  // Unconfigured builds must not advertise an incomplete cloud capability.
+  if (!CLIENT_ID) return null;
+
   return (
     <section className="grid grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.1fr]" data-testid="pwa-drive-auth-proof">
       <div>
