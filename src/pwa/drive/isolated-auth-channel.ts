@@ -78,20 +78,22 @@ export function makeIsolatedAuthAttempt(input: {
   helperOrigin: string;
   appOrigin: string;
   popup: AuthWindowReference;
-  nonce: string;
   openedAt: number;
-}): IsolatedAuthAttempt {
+}, random: Pick<Crypto, "getRandomValues"> = crypto): IsolatedAuthAttempt {
   const helperOrigin = assertIsolatedAuthOrigin(input.helperOrigin);
   const appOrigin = assertIsolatedAuthOrigin(input.appOrigin);
   if (helperOrigin === appOrigin) {
     throw new Error("Google auth helper must be isolated from the Career Ops origin.");
   }
-  if (!input.popup?.identity || !isExactNonce(input.nonce) ||
-      !Number.isFinite(input.openedAt)) {
-    throw new Error("Missing browser popup identity, random nonce or start time.");
+  if (!input.popup?.identity || !Number.isFinite(input.openedAt)) {
+    throw new Error("Missing browser popup identity or start time.");
   }
+  // The caller cannot supply a reused/low-entropy nonce. Production always
+  // uses Web Crypto; injecting a randomness source is for deterministic tests.
+  const nonce = newIsolatedAuthNonce(random);
+  if (!isExactNonce(nonce)) throw new Error("Invalid generated nonce.");
   return Object.freeze({
-    helperOrigin, appOrigin, popup: input.popup, nonce: input.nonce,
+    helperOrigin, appOrigin, popup: Object.freeze({ identity: input.popup.identity }), nonce,
     expiresAt: input.openedAt + ISOLATED_DRIVE_ATTEMPT_MS,
   });
 }
