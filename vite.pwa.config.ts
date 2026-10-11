@@ -186,6 +186,7 @@ export default defineConfig({
   define: {
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
+    __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: JSON.stringify(googleWebClientId),
   },
   worker: {
     format: "es",
