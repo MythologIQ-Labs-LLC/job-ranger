@@ -6,7 +6,7 @@ This deliberately does not replace the current local-first storage, manual `.job
 
 ## Security model
 
-- Ordinary builds without `VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID` keep the existing no-Google CSP, COOP, and no remote Google library requests. Settings shows that cloud snapshots are not enabled.
+- Ordinary builds without `VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID` keep the existing no-Google CSP, COOP, and no remote Google library requests. Settings does not display the unshipped cloud authorization panel.
 - A separately configured proof build allows the Google Identity Services (GIS) JavaScript **token model** only, requesting exactly `https://www.googleapis.com/auth/drive.file`. This uses a **Web application** OAuth client (not a Desktop client). The publicly visible client ID is **not a secret**.
 - The user first chooses **Load Google authorization** (the only point at which the browser loads Google's hosted JavaScript), then explicitly clicks **Authorize Drive access** to open Google's popup. Nothing launches the authorization prompt without a user gesture.
 - Access token lives only in a private browser runtime object for its short valid lifetime, not React state, IndexedDB, OPFS, `localStorage`, the service worker, logs, or a backend. It is never included in UI status.
