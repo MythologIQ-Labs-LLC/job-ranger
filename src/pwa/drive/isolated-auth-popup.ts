@@ -98,13 +98,19 @@ export class IsolatedDriveAuthPopup {
       const data = raw as Record<string, unknown>;
       if (data.protocol === ISOLATED_DRIVE_AUTH_READY && data.version === ISOLATED_DRIVE_AUTH_VERSION) {
         // The nonce never enters the popup's URL or browser history.
-        current.popup.postMessage({
-          protocol: ISOLATED_DRIVE_AUTH_INIT,
-          version: ISOLATED_DRIVE_AUTH_VERSION,
-          nonce: current.nonce,
-          requestingOrigin: this.host.location.origin,
-          scope: ISOLATED_DRIVE_SCOPE,
-        }, this.helperOrigin);
+        try {
+          current.popup.postMessage({
+            protocol: ISOLATED_DRIVE_AUTH_INIT,
+            version: ISOLATED_DRIVE_AUTH_VERSION,
+            nonce: current.nonce,
+            requestingOrigin: this.host.location.origin,
+            scope: ISOLATED_DRIVE_SCOPE,
+          }, this.helperOrigin);
+        } catch {
+          // A cross-origin navigation or changed opener boundary can revoke
+          // access to the popup. Fail now rather than leaving a false spinner.
+          this.fail("The authorization window lost its secure connection. Close it and retry.");
+        }
         return;
       }
       if (data.protocol === ISOLATED_DRIVE_AUTH_INITIALIZED &&
@@ -146,7 +152,15 @@ export class IsolatedDriveAuthPopup {
     this.host.addEventListener("message", this.handleMessage);
     // No noopener: the two-origin, exact-source messaging contract needs
     // the WindowProxy. COOP must be deliberately reviewed in both origins.
-    const popup = this.host.open(this.helperOrigin + "/", "_blank", "popup,width=500,height=680");
+    let popup: Window | null;
+    try {
+      popup = this.host.open(this.helperOrigin + "/", "_blank", "popup,width=500,height=680");
+    } catch {
+      // Browser policies may throw, not merely return null. Listener and
+      // pending credentials must be cleaned up on either failure mode.
+      this.fail("The browser could not open the authorization window. Check popup permissions and retry.");
+      return;
+    }
     if (!popup) {
       this.fail("The browser blocked the authorization window. Allow popups and retry.");
       return;
