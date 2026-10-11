@@ -1,6 +1,6 @@
 # Isolated Google OAuth channel: security spike for #264
 
-**Status: candidate implementation, not wired into the main PWA.** This branch intentionally has no PR while the CI budget safeguard in #263 is reviewed. A standalone helper webpage and a main-window popup controller are now implemented, but neither is deployed or connected to Job Ranger Settings. No real Google OAuth client, live authorization, Drive API, archive transfer, real Chromium two-origin pass, or user-facing feature exists.
+**Status: candidate on an unmerged hardening branch, not shipped or publicly deployed.** This branch contains an opt-in **PWA Settings authorization test panel**, a standalone helper webpage and a popup controller, but no normal build enables the panel without an explicit separate-origin setting. No real Google OAuth client, live authorization, Drive API, archive transfer, real Chromium two-origin pass, or generally available cloud feature exists.
 
 ## Why this spike exists
 
