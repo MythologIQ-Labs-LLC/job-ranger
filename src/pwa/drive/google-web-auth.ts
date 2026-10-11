@@ -38,6 +38,8 @@ export interface GoogleOAuthTokenApi {
   initTokenClient(options: {
     client_id: string;
     scope: string;
+    // Google GIS defaults to true, which can attach unrelated past grants.
+    include_granted_scopes: false;
     callback: (response: GoogleTokenResponse) => void;
     error_callback: (error: GooglePopupError) => void;
   }): GoogleTokenClient;
@@ -124,6 +126,7 @@ export class DriveWebAuthorization {
       const client = google.initTokenClient({
         client_id: this.clientId,
         scope: DRIVE_FILE_SCOPE,
+        include_granted_scopes: false,
         callback: (response) => {
           if (!isCurrent()) return;
           if (response.error) {
