@@ -195,9 +195,53 @@ Additional coverage, green before and after the repairs:
 - The tests assert behavior through the CLI process, except the timeout mapping, which is tested at unit level.
 - No out-of-scope files changed.
 
-**Ship assessment for this component, within local-only scope:** see the independent review below.
+**Ship assessment for this component, within local-only scope:** YES after the independent review below (round 2 PASS).
 
 **Test limit:** `test_partial_clone_never_fetches_missing_objects` stops at the missing inventory blob, so the claim-blob fetch path is covered only by the shared `git()` controls.
+
+## Independent review
+
+The review used a fresh-context subagent. It was read-only on the checkout, its probes ran in a scratch directory, and it took no GitHub actions.
+
+**Round 1, `bded6d4`: VETO**
+
+- 22/22 tests passed.
+- These held under probing:
+  - SHA and object-type enforcement.
+  - Refs named with 40 hex characters.
+  - Replace objects, corrupt objects and missing objects.
+  - Malformed JSON, wrong types and duplicate ids.
+  - Path, pathspec and option injection.
+  - Lazy-fetch isolation. With neither mitigation the fetch reproduced; each mitigation alone blocks it.
+  - Repository and `.git` hashes are identical before and after a run.
+- One confirmed MAJOR defect: D1 (the caller-directory `git.exe`, now IQ-TRUST-003). The doc also falsely claimed that case had been refuted.
+
+**Correction pass `f0be4e6`, the only amendment round**
+
+- D1 was fixed and the doc corrected.
+
+**Round 2, `f0be4e6`: PASS**
+
+- The D1 reproduction now gives `VERIFIED 1/1`.
+- The new test fails against `bded6d4` and passes against `f0be4e6`.
+- 23/23 tests pass, with and without `NoDefaultCurrentDirectoryInExePath`.
+- `PATH` edge cases either resolve the real Git or fail closed without a traceback. The cases were quoted entries, trailing separators, empty entries, `.`, a drive-relative `C:`, a leading space and `git.cmd` only.
+- `git.cmd`-only was already unsupported before the fix.
+- No scope expansion.
+
+**Remaining observations (not defects)**
+
+- The worst-case timeout ceiling is loose: 200 × about 5 calls × 30 s.
+- `PATH` is re-scanned on every Git call; the cost is negligible.
+- A root-relative `PATH` entry such as `\tools` is treated as absolute. The operator's `PATH` is trusted.
+- Repository-local config can weaken `protocol.allow=never` on Git older than 2.44.
+- The partial-clone test stops at the inventory blob.
+- Red-first evidence for the non-ASCII crash depends on a cp1252 pipe.
+
+**Ship assessment**
+
+- **YES** for the bounded local-only component: an optional, standalone, read-only checker of typed local evidence.
+- **Not** an approval of any PR gate, Qor seal, or governance closure.
 
 ## Not solved
 
