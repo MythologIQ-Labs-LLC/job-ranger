@@ -203,6 +203,30 @@ textarea {
   color: var(--color-text-secondary);
 }
 
+/* #248 Option A: on narrow or short viewports the shared page introduction takes about
+   half of the first screen. Compact it (about 30% smaller title, 40% less panel padding)
+   while keeping every word of the explanation visible. Unlayered, so it overrides the
+   panel's Tailwind padding utilities. Regular desktop views are unchanged. */
+@media (max-width: 767px), (max-height: 700px) {
+  .page-title {
+    font-size: clamp(1.5rem, 2.24vw, 2.1rem);
+    line-height: 1.08;
+  }
+
+  .page-copy {
+    margin-top: 0.5rem;
+    line-height: 1.6;
+  }
+
+  .panel-strong:has(.page-title) {
+    padding: 1.05rem 1.2rem;
+  }
+
+  .panel-strong:has(.page-title) .page-title.mt-4 {
+    margin-top: 0.6rem;
+  }
+}
+
 .panel {
   border: 1px solid var(--color-border);
   border-radius: 1.5rem;
