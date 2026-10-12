@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -200,6 +201,29 @@ class LocalEvidenceTests(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
         self.assertIn('FAILED: Git', r.stdout)
         self.assertNotIn('Traceback', r.stderr)
+
+    def test_git_in_caller_directory_is_never_executed(self):
+        head = self.commit_inventory()
+        plant = Path(self.tmp.name) / 'planted'
+        plant.mkdir()
+        if os.name == 'nt':
+            # CreateProcess searches the caller's directory before PATH unless this is set.
+            shutil.copy(Path(os.environ['SYSTEMROOT']) / 'System32' / 'whoami.exe', plant / 'git.exe')
+            env = {k: v for k, v in os.environ.items() if k.lower() != 'nodefaultcurrentdirectoryinexepath'}
+        else:
+            (plant / 'git').write_text('#!/bin/sh\ntouch PLANTED_GIT_RAN\nexit 1\n')
+            (plant / 'git').chmod(0o755)
+            env = dict(os.environ, PATH=os.pathsep.join(('.', os.environ.get('PATH', ''))))
+        control = subprocess.run([sys.executable, '-c', 'import subprocess; print(subprocess.run(["git", "--version"], '
+                                  'capture_output=True).stdout)'], cwd=plant, env=env, capture_output=True, text=True,
+                                 stdin=subprocess.DEVNULL, timeout=TIMEOUT)
+        self.assertNotIn('git version', control.stdout, 'control: a bare "git" must resolve to the planted file here')
+        r = subprocess.run([sys.executable, str(CLI), '--repo', str(self.repo), '--head', head,
+                            '--inventory', 'docs/claims.evidence.json'], cwd=plant, env=env, capture_output=True,
+                           text=True, stdin=subprocess.DEVNULL, timeout=TIMEOUT)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('VERIFIED 4/4', r.stdout)
+        self.assertFalse((plant / 'PLANTED_GIT_RAN').exists())
 
     def test_git_timeout_is_a_controlled_failure(self):
         sys.path.insert(0, str(CLI.parent))

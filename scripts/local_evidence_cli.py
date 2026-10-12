@@ -48,6 +48,17 @@ def safe_path(value: object) -> str:
     return value
 
 
+def git_executable() -> str:
+    # A bare 'git' would let Windows CreateProcess (or a relative POSIX PATH entry) run a
+    # git binary from the caller's directory, such as the checkout being checked.
+    name = 'git.exe' if os.name == 'nt' else 'git'
+    for entry in os.environ.get('PATH', '').split(os.pathsep):
+        candidate = os.path.join(entry.strip('"'), name)
+        if os.path.isabs(candidate) and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    raise CheckError('Git executable could not be started')
+
+
 def git(repo: Path, *args: str, allowed_failure: bool = False) -> bytes | None:
     require(args and args[0] in GIT_COMMANDS, 'unsupported Git operation')
     env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'WINDIR', 'HOME', 'USERPROFILE', 'TMP', 'TEMP')
@@ -59,7 +70,7 @@ def git(repo: Path, *args: str, allowed_failure: bool = False) -> bytes | None:
     env.update(GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_NO_LAZY_FETCH='1',
                GIT_CONFIG_GLOBAL=os.devnull, GIT_OPTIONAL_LOCKS='0', GIT_TERMINAL_PROMPT='0')
     try:
-        result = subprocess.run(['git', '-C', str(repo), '-c', 'core.fsmonitor=false',
+        result = subprocess.run([git_executable(), '-C', str(repo), '-c', 'core.fsmonitor=false',
                                  '-c', 'protocol.allow=never', '--no-pager', *args],
                                 env=env, capture_output=True, check=False, stdin=subprocess.DEVNULL,
                                 timeout=GIT_TIMEOUT_SECONDS)

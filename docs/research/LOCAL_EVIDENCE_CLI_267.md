@@ -36,7 +36,7 @@ A verified literal is not proof that a plan is truthful or complete.
 
 ## Usage
 
-Requirements: Python 3.10+ (exercised on 3.11.9 only), and Git on `PATH`. Git 2.44+ is recommended so that `GIT_NO_LAZY_FETCH` applies; on older Git, `protocol.allow=never` still refuses any fetch. Exercised on Git 2.55.0.windows.3 only. No network access, no third-party packages.
+Requirements: Python 3.10+ (exercised on 3.11.9 only), and Git in an absolute `PATH` directory (relative `PATH` entries and the caller's current directory are never searched). Git 2.44+ is recommended so that `GIT_NO_LAZY_FETCH` applies; on older Git, `-c protocol.allow=never` refuses fetches unless repository-local config re-allows a protocol (for example `protocol.file.allow=always`). Exercised on Git 2.55.0.windows.3 only. No network access, no third-party packages.
 
 ```sh
 SHA=$(git rev-parse HEAD)
@@ -89,7 +89,7 @@ Example inventory (placeholder SHA, not a factual repository claim):
 **Judgments and sources**
 
 - 0–50 judgments.
-- Each judgment has exactly `id`, `statement` (8–300), `owner` (2–80) and `rationale` (40–1000), all single-line.
+- Each judgment has exactly `id`, `statement` (8–300), `owner` (2–80) and `rationale` (40–1000), none containing a `\n` line feed (a `\r` is not rejected; judgments are never printed).
 - Source blobs are at most 2 MiB; the size is checked with `cat-file -s` before the content is read.
 
 **Measured worst case**
@@ -106,7 +106,7 @@ The operator, the local repository and its `.git` directory, Python and Git are 
 
 The checker:
 
-- **runs only** `git cat-file`, `git ls-tree` and `git merge-base`, with argument values validated as SHAs or safe paths. Inventory data selects objects, never operations. Nothing from the repository is executed or checked out, and the working tree is not modified.
+- **runs only** `git cat-file`, `git ls-tree` and `git merge-base`, with argument values validated as SHAs or safe paths. Inventory data selects objects, never operations. Git is resolved to an absolute path from absolute `PATH` entries only, so a `git`/`git.exe` committed in the checkout and run from its root is never executed. Nothing from the repository is executed or checked out, and the working tree is not modified.
 - **isolates Git:**
   - The environment is minimal, so inherited `GIT_DIR` and `GIT_CONFIG_*` are dropped.
   - System and global Git config are ignored.
@@ -125,7 +125,6 @@ The checker:
 - Repository-local `.git/config` is still honored, as Git requires to read the repository. The Git commands used do not run hooks, filters, pagers or transports.
 - Shallow boundaries can make a true ancestor look unrelated. This fails closed.
 - A repository owned by another user needs a `safe.directory` entry, which global config would normally hold. Without it the checker fails closed.
-- On POSIX, relative `PATH` entries were not examined.
 
 ## Test commands and results
 
@@ -154,11 +153,12 @@ All results below are local execution on Windows 11, Python 3.11.9 and Git 2.55.
   - An empty stdout plus a traceback for missing Git.
   - A missing timeout contract.
 - The graft test failed separately with `VERIFIED 4/4`.
+- After the independent review, the caller-directory Git test failed against `bded6d4`: `FAILED: revision does not identify an existing commit`, because the planted binary ran instead of Git.
 
 **After repair**
 
-- 22/22 OK in about 21 s.
-- 22/22 OK with a hostile commit-signing `GIT_CONFIG_GLOBAL`.
+- 23/23 OK in about 23 s.
+- 23/23 OK with `NoDefaultCurrentDirectoryInExePath` removed and a hostile commit-signing `GIT_CONFIG_GLOBAL`.
 
 ## Hardening record (QOR Harden methodology, component scope, repair disposition)
 
@@ -169,6 +169,7 @@ The [canonical `/qor-harden` skill](https://github.com/MythologIQ-Labs-LLC/Qor-l
 | IQ-TRUST-001 | MAJOR | **Behavior:** in a `--filter=blob:none` clone, inventory-selected missing objects were fetched through the configured promisor transport. **Evidence:** the blob was absent before the run and present after. With a stalled `core.sshCommand`, the CLI was still running after 60 s. **Consequence:** this broke the read-only/offline contract and let inventory data trigger a transport. | `GIT_NO_LAZY_FETCH=1` and `-c protocol.allow=never`; each alone was verified to block the fetch. Covered by `test_partial_clone_never_fetches_missing_objects`. |
 | IQ-RESOURCE-001 | MAJOR | **Behavior:** Git subprocesses had no timeout and inherited stdin. **Evidence:** the indefinite hang above. | 30 s per-call timeout raising a controlled failure, plus `stdin=DEVNULL`. Covered by `test_git_timeout_is_a_controlled_failure` (unit-level, via a near-zero timeout). |
 | IQ-TRUST-002 | MINOR | **Behavior:** a `.git/info/grafts` line spliced an unrelated commit under `--head`, so a non-ancestor claim reported `VERIFIED 4/4`. Replace refs were already disabled for the same reason. **Consequence:** this needs local `.git` write access, which the trust model already grants. | `GIT_GRAFT_FILE` points at the null device. Covered by `test_local_grafts_cannot_forge_claim_ancestry`, which includes a no-graft control. |
+| IQ-TRUST-003 | MAJOR | **Found by the independent review; my own probe missed it** because this session sets `NoDefaultCurrentDirectoryInExePath=1`. **Behavior:** `subprocess.run(['git', ...])` let Windows `CreateProcess` search the caller's current directory before `PATH`. **Evidence:** with the variable unset and the CLI run from a directory containing `git.exe`, the planted binary ran instead of Git. **Consequence:** the documented `--repo .` invocation from a checkout root could execute committed repository content. | `git_executable()` resolves `git`/`git.exe` from absolute `PATH` entries only. Covered by `test_git_in_caller_directory_is_never_executed`, which includes a control proving a bare `git` would hit the planted file. |
 | IQ-OBSERVE-001 | MAJOR | **Behavior:** the duplicate-key message echoed the raw key. **Evidence:** `"\nVERIFIED 4/4 declared claims"` printed a forged success line; ANSI escapes reached stdout; `U+202E` and CJK keys crashed with `UnicodeEncodeError` on a cp1252 pipe. | `ascii()` escaping. Covered by `test_untrusted_json_keys_cannot_forge_output_lines`. |
 | IQ-CORRECT-001 | MINOR | **Behavior:** with Git missing from `PATH`, the CLI printed a `FileNotFoundError` traceback and empty stdout. The exit code was non-zero, so there was no false success. | `OSError` becomes `FAILED: Git executable could not be started`. Covered by `test_unavailable_git_is_a_controlled_failure`. |
 | IQ-COMPLETE-001 | MAJOR (test validity) | **Behavior:** the symlink test needed an OS privilege and errored on default Windows. No gitlink test existed. **Consequence:** the refusal of non-regular entries was unproven on that platform. | Entries are written with `update-index --cacheinfo`, so the test needs no OS symlink; it covers both symlinks and gitlinks. |
@@ -184,7 +185,6 @@ Additional coverage, green before and after the repairs:
 
 **Rejected candidates**
 
-- A `git.exe` planted in the caller's working directory was **not** executed (probed on Windows).
 - No option or pathspec injection was found; validation precedes every Git argument.
 - No other uncontrolled exception path was found in input validation.
 
@@ -196,6 +196,8 @@ Additional coverage, green before and after the repairs:
 - No out-of-scope files changed.
 
 **Ship assessment for this component, within local-only scope:** see the independent review below.
+
+**Test limit:** `test_partial_clone_never_fetches_missing_objects` stops at the missing inventory blob, so the claim-blob fetch path is covered only by the shared `git()` controls.
 
 ## Not solved
 
