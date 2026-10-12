@@ -2992,6 +2992,30 @@ Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events st
 
 ---
 
+### Entry #109: PLAN (Phase 18 Plan Evidence Gate v3)
+
+**Timestamp**: 2026-10-12T15:56:08Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase18-plan-evidence-gate-v3.md
+
+**Content Hash**: `d034403b5f4d653295a3bcd02c0a2282bd288a6b9502edc83e21829a619bf2a7`
+
+**Previous Hash**: `289cb7ab9812a83d58a2001c19779c6648dff8b2112d021ce5026962b5a531bb`
+
+**Chain Hash**: `c30785d3404259f0961677678ec7a4b56a82f8fb076aa3f54c8eec45a4b018bd`
+
+**Decision**: Phase 18 plan for issue #267 (operator Option A after remediation VETOs #104/#106/#108).
+Session 2026-10-12T1556-8f9381 is new; the remediation session 2026-10-10T0443-9d3df3 is untouched.
+Specification: docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md. The v3 gate verifies only typed records and CommonMark structure,
+and states that prose completeness is NOT asserted. function-lines is removed; import-edge, enum-values and test-outcome are held.
+Proposed dependency: markdown-it-py 4.2.0 + mdurl 0.1.2, hash-pinned. This is not a remediation amendment.
+The canonical remediation gate, Amendments 1-3, VETO #108 and the two Phase 16 pending events are unchanged.
+Awaiting an independent design GATE tribunal.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3011,4 +3035,5 @@ Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events st
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Next required action: Governor amends the remediation per Entry #108 findings (V1-A, V1-B, V2, V3 documentation) via /qor-remediate (Amendment 4), then a fresh independent /qor-audit reviews-remediate; event closure also requires D1 and D2*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; independent design GATE pending*
+*Next required action: independent design /qor-audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*

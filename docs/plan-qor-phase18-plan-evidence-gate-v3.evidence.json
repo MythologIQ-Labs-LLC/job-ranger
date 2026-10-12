@@ -1,0 +1,47 @@
+{
+  "schema_version": 3,
+  "plan": "docs/plan-qor-phase18-plan-evidence-gate-v3.md",
+  "claims": [
+    {
+      "id": "v2-gate-trigger",
+      "kind": "text-present",
+      "commit": "cb9b7b1bc0e27c96085be7c6da423369995d6fac",
+      "path": ".github/workflows/plan-claims-gate.yml",
+      "text": "pull_request_target:",
+      "purpose": "The v2 base-revision gate workflow uses pull_request_target at the PR #232 head"
+    },
+    {
+      "id": "v2-prose-size",
+      "kind": "file-lines",
+      "commit": "cb9b7b1bc0e27c96085be7c6da423369995d6fac",
+      "path": "scripts/plan_claims_prose.py",
+      "predicate": {"operator": "equals", "value": 232},
+      "purpose": "Size of the lexical binding module that v3 removes"
+    },
+    {
+      "id": "v2-enforcer",
+      "kind": "text-present",
+      "commit": "cb9b7b1bc0e27c96085be7c6da423369995d6fac",
+      "path": ".qor/gates/2026-10-10T0443-9d3df3/remediate.json",
+      "text": "\"closure_enforcer\": \"tests/test_plan_claims_manifest.py\"",
+      "purpose": "The vetoed remediation artifact still names the v2 suite as its enforcer"
+    },
+    {
+      "id": "runtime-kind",
+      "kind": "line-equals",
+      "commit": "cb9b7b1bc0e27c96085be7c6da423369995d6fac",
+      "path": "src/shared/runtime.ts",
+      "line": 10,
+      "text": "export type RuntimeKind = \"electron\" | \"web\";",
+      "purpose": "Runtime kinds are stated as an exact source line, not an enum-values claim"
+    }
+  ],
+  "judgments": [
+    {
+      "id": "dependency-choice",
+      "statement": "Hash-pinned wheel admission versus vendoring is a design choice",
+      "owner": "independent design auditor",
+      "rationale": "Supply-chain trade-offs between pinned wheels and vendored source cannot be derived from repository objects."
+    }
+  ]
+}

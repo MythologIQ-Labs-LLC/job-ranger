@@ -1,0 +1,35 @@
+{
+  "phase": "plan",
+  "session_id": "2026-10-12T1556-8f9381",
+  "ts": "2026-10-12T15:56:08Z",
+  "plan_path": "docs/plan-qor-phase18-plan-evidence-gate-v3.md",
+  "phases": [
+    "Phase 1: Red-first adversarial suites",
+    "Phase 2: Implementation"
+  ],
+  "ci_commands": [
+    "python -m pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt",
+    "python -m unittest discover -s tests -p \"test_plan_evidence_*.py\"",
+    "python scripts/plan_evidence_check.py --repo . docs/plan-qor-phase18-plan-evidence-gate-v3.md"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "high_risk_target": false,
+  "pr_target": "feature/136-provider-tranche-governed-plan",
+  "originating_remediation": "issue #267 (Option A after remediation VETOs #104, #106, #108)",
+  "terms": [
+    {
+      "term": "evidence inventory",
+      "home": "docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md"
+    }
+  ],
+  "feature_inventory_touches": [],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "unknown",
+    "host": "unknown",
+    "model_family": "opus",
+    "human_oversight": "absent",
+    "ts": "2026-10-12T15:56:08Z"
+  }
+}
