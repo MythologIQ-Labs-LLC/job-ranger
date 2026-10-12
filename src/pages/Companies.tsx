@@ -5,8 +5,10 @@ import {
   CheckCircle2,
   Compass,
   ExternalLink,
+  Pause,
   Plus,
   Play,
+  PlayCircle,
   Radar,
   Search,
   Trash2,
@@ -26,7 +28,15 @@ import type {
   SourceDiscoveryCandidate,
   SourceDiscoveryResult,
 } from "../shared/source-discovery";
-import { canRunSourceType, getSourceProfile } from "../types";
+import { canRunSourceType, getSourceProfile, type CompanyUpdate } from "../types";
+
+// Same cadence choices as the Add job source form (CompanyForm).
+const FREQUENCY_OPTIONS = [
+  { minutes: 15, label: "Every 15 minutes" },
+  { minutes: 30, label: "Every 30 minutes" },
+  { minutes: 60, label: "Every hour" },
+  { minutes: 1440, label: "Every 24 hours" },
+];
 
 const SUPPORT_BADGE_CLASSES: Record<string, string> = {
   supported: "soft-badge-success",
@@ -37,7 +47,20 @@ const SUPPORT_BADGE_CLASSES: Record<string, string> = {
 
 export function Companies() {
   const runtimeKind = useRuntimeInfo()?.kind;
-  const { companies, addCompany, deleteCompany, runScraper, refreshing } = useAppContext();
+  const { companies, addCompany, updateCompany, deleteCompany, runScraper, refreshing } = useAppContext();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // updateCompany reports failures itself; the row keeps showing the saved state.
+  const changeSource = async (id: string, update: CompanyUpdate) => {
+    setUpdatingId(id);
+    try {
+      await updateCompany(id, update);
+    } catch {
+      // Already surfaced as an error toast by updateCompany.
+    } finally {
+      setUpdatingId(null);
+    }
+  };
   const targetTracks = useTargetTracks();
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -477,7 +500,22 @@ export function Companies() {
                     </p>
                   </td>
                   <td className="px-6 py-5 align-top text-sm text-[var(--color-text-secondary)]">
-                    Every {company.frequencyMinutes >= 60 ? `${company.frequencyMinutes / 60} hour(s)` : `${company.frequencyMinutes} min`}
+                    <select
+                      aria-label={`Run frequency for ${company.name}`}
+                      value={company.frequencyMinutes}
+                      disabled={updatingId === company.id}
+                      onChange={(event) => void changeSource(company.id, { frequencyMinutes: Number(event.target.value) })}
+                      className="select-shell min-w-36"
+                    >
+                      {!FREQUENCY_OPTIONS.some((option) => option.minutes === company.frequencyMinutes) && (
+                        <option value={company.frequencyMinutes}>
+                          Every {company.frequencyMinutes >= 60 ? `${company.frequencyMinutes / 60} hour(s)` : `${company.frequencyMinutes} min`}
+                        </option>
+                      )}
+                      {FREQUENCY_OPTIONS.map((option) => (
+                        <option key={option.minutes} value={option.minutes}>{option.label}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-6 py-5 align-top text-sm text-[var(--color-text-secondary)]">
                     {company.lastRunAt
@@ -496,6 +534,16 @@ export function Companies() {
                       >
                         <Play className="h-4 w-4" />
                         {runningId === company.id ? "Running" : "Run"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={updatingId === company.id}
+                        onClick={() => void changeSource(company.id, { isActive: !company.isActive })}
+                        aria-label={`${company.isActive ? "Pause" : "Resume"} source ${company.name}`}
+                        className="secondary-button disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {company.isActive ? <Pause className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
+                        {company.isActive ? "Pause" : "Resume"}
                       </button>
                       <button
                         type="button"

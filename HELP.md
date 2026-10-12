@@ -287,7 +287,7 @@ See [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md) and [`docs/DI
 Check:
 
 1. the source URL points to a real careers/jobs page;
-2. the source is active;
+2. the source is active. On **Companies**, **Pause** stops scheduled runs for a source without deleting it, **Resume** restarts them, and the cadence menu changes how often it runs. To monitor a different URL, add it as a new source;
 3. the latest acquisition status/diagnostic;
 4. the source support state is not `manual-review`;
 5. filters are not excluding results;
