@@ -92,3 +92,39 @@ test("editing a filter starts from its saved rules, cancel keeps them, save repl
   expect((await page.evaluate(() => window.electronAPI.filters.list())).length).toBe(1);
   await expect(card.getByText("coordinator, scheduler")).toBeVisible();
 });
+
+test("editing can clear the minimum salary and widen scope to all companies", async ({ page }) => {
+  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  const id = await page.evaluate(async () => {
+    const api = window.electronAPI;
+    const source = await api.companies.create({
+      name: "Acme Co", url: "https://boards.greenhouse.io/acme-co", frequencyMinutes: 1440, isActive: false,
+    });
+    const filter = await api.filters.create({
+      name: "Scoped pay floor", companyId: source.id, titleInclude: ["coordinator"], titleExclude: [],
+      keywordsInclude: [], keywordsExclude: [], salaryMin: 52000, locationInclude: [], locationExclude: [],
+      isActive: true,
+    });
+    return filter.id;
+  });
+  await page.goto(`${server.url}#/filters`);
+  await page.reload();
+  await waitForRuntime(page);
+  const card = page.getByRole("region", { name: "Scoped pay floor" });
+  await expect(card.getByText("Scoped to Acme Co")).toBeVisible();
+
+  await card.getByRole("button", { name: "Edit filter Scoped pay floor" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit filter" });
+  await dialog.getByLabel("Minimum salary").fill("");
+  await dialog.getByLabel("Company scope").selectOption("all");
+  await dialog.getByRole("button", { name: "Save filter" }).click();
+  await expect(dialog).toBeHidden();
+
+  const after = await stored(page, id);
+  expect(after?.salaryMin).toBeNull();
+  expect(after?.companyId).toBeNull();
+  await expect(card.getByText("Applies to every supported company")).toBeVisible();
+  await expect(card.getByText("$52,000")).toBeHidden();
+});
