@@ -21,6 +21,7 @@ MAX_INVENTORY = 64 * 1024
 MAX_SOURCE = 2 * 1024 * 1024
 MAX_ERRORS = 30
 GIT_COMMANDS = {'cat-file', 'ls-tree', 'merge-base'}
+GIT_TIMEOUT_SECONDS = 30
 
 
 class CheckError(Exception):
@@ -51,10 +52,21 @@ def git(repo: Path, *args: str, allowed_failure: bool = False) -> bytes | None:
     require(args and args[0] in GIT_COMMANDS, 'unsupported Git operation')
     env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'WINDIR', 'HOME', 'USERPROFILE', 'TMP', 'TEMP')
            if key in os.environ}
-    env.update(GIT_NO_REPLACE_OBJECTS='1', GIT_CONFIG_NOSYSTEM='1',
+    # A partial clone would otherwise fetch inventory-selected missing objects through the
+    # repository's configured transport. GIT_NO_LAZY_FETCH needs Git 2.44+;
+    # protocol.allow=never also refuses any transport on older Git. Replace refs and the
+    # deprecated graft file both rewrite ancestry, so neither is honored.
+    env.update(GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_NO_LAZY_FETCH='1',
                GIT_CONFIG_GLOBAL=os.devnull, GIT_OPTIONAL_LOCKS='0', GIT_TERMINAL_PROMPT='0')
-    result = subprocess.run(['git', '-C', str(repo), '-c', 'core.fsmonitor=false',
-                             '--no-pager', *args], env=env, capture_output=True, check=False)
+    try:
+        result = subprocess.run(['git', '-C', str(repo), '-c', 'core.fsmonitor=false',
+                                 '-c', 'protocol.allow=never', '--no-pager', *args],
+                                env=env, capture_output=True, check=False, stdin=subprocess.DEVNULL,
+                                timeout=GIT_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired as exc:
+        raise CheckError(f'Git object query timed out after {GIT_TIMEOUT_SECONDS} seconds') from exc
+    except OSError as exc:
+        raise CheckError('Git executable could not be started') from exc
     if result.returncode:
         if allowed_failure:
             return None
@@ -93,7 +105,8 @@ def regular_blob(repo: Path, commit: str, path: str, limit: int) -> bytes:
 def no_duplicates(items: list[tuple[str, object]]) -> dict:
     d = {}
     for key, value in items:
-        require(key not in d, f'duplicate JSON key: {key[:30]}')
+        # Keys are untrusted: ascii() escapes newlines, terminal controls and non-ASCII.
+        require(key not in d, f'duplicate JSON key: {ascii(key[:30])}')
         d[key] = value
     return d
 
@@ -113,7 +126,7 @@ def fields(record: object, allowed: set[str], required: set[str]) -> dict:
     return record
 
 
-def check_inventory(doc: object, expected_path: str) -> tuple[list[dict], list[dict]]:
+def check_inventory(doc: object) -> tuple[list[dict], list[dict]]:
     doc = fields(doc, {'schema_version', 'plan', 'claims', 'judgments'},
                  {'schema_version', 'plan', 'claims', 'judgments'})
     require(type(doc['schema_version']) is int and doc['schema_version'] == 3,
@@ -201,7 +214,7 @@ def run(repo: Path, head: str, inventory: str) -> int:
     try:
         verified_commit(repo, head)
         data = regular_blob(repo, head, safe_path(inventory), MAX_INVENTORY)
-        claims, judgments = check_inventory(decode_json(data), inventory)
+        claims, judgments = check_inventory(decode_json(data))
     except CheckError as exc:
         print('FAILED: ' + str(exc)[:300])
         return 1
