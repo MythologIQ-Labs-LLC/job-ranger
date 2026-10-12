@@ -99,6 +99,8 @@ Use **Companies** to:
 
 Discovery and monitoring remain separate. Finding a job at an employer does not silently convert the employer into a trusted monitored source.
 
+**Unqualified development candidate (issue #136; not in the published release):** the desktop implementation is being expanded to search Himalayas for selected target-role titles. Results must credit and link back to Himalayas, and location restrictions are not promises of eligibility. The web/PWA runtime cannot call that JSON API directly because Himalayas disallows browser CORS, so the candidate skips that source and shows an explicit coverage warning. We Work Remotely RSS remains under separate assessment. See `docs/validation/source-discovery-tranche-2-candidate.md`.
+
 Arbitrary generic career-site hostnames remain manual-review/non-runnable in v1.2.0.
 
 ### 6. Source snapshots and diagnostics

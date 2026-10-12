@@ -7,10 +7,13 @@ import type {
 } from "../../src/shared/source-discovery.js";
 import { getSourceProfile } from "../../src/shared/contracts.js";
 import { fetchDiscoveryJson } from "./source-discovery-fetch.cjs";
+import { normalizeHimalayasResponse, type HimalayasNormalizedJob } from "./himalayas-discovery.cjs";
+import type { RuntimeKind } from "../../src/shared/runtime.js";
 import { detectSourceFromUrl } from "./scrapers.cjs";
 
 const REMOTE_OK_ENDPOINT = "https://remoteok.com/api";
 const ARBEITNOW_ENDPOINT = "https://www.arbeitnow.com/api/job-board-api?page=1";
+const HIMALAYAS_SEARCH_ENDPOINT = "https://himalayas.app/jobs/api/search";
 const STRUCTURED_MONITORABLE_TYPES = new Set<CompanySourceType>([
   "greenhouse",
   "lever",
@@ -35,6 +38,7 @@ const STOP_WORDS = new Set([
 interface DiscoveryContext {
   fetchImpl: typeof fetch;
   existingCompanies: Company[];
+  runtimeKind?: RuntimeKind;
   now?: () => string;
 }
 
@@ -315,6 +319,75 @@ function arbeitnowCandidates(
     });
 }
 
+function himalayasLocation(job: HimalayasNormalizedJob): string {
+  const regions = job.locationRestrictions;
+  const timezones = job.timezoneRestrictions;
+  if (!regions) return "Remote · eligibility unspecified";
+  if (regions.length === 0 && timezones?.length === 0) return "Worldwide remote";
+
+  const parts = ["Remote", regions.length ? regions.join(", ") : "countries unrestricted"];
+  if (timezones?.length) parts.push(`${timezones.join(", ")} time zone`);
+  else if (timezones === null) parts.push("time zone eligibility unspecified");
+  return parts.join(" · ");
+}
+
+function himalayasCandidates(
+  jobs: readonly HimalayasNormalizedJob[],
+  request: SourceDiscoveryRequest,
+): SourceDiscoveryCandidate[] {
+  return jobs.filter((job) => roleMatchScore(job.title, request.roleTitles) >= 0.5)
+    .map((job) => ({
+      id: stableId(`himalayas\n${job.guid}`),
+      providerId: "public-job-feeds" as const,
+      providerName: "Himalayas",
+      employerName: job.companyName,
+      opportunityTitle: job.title,
+      opportunityUrl: job.opportunityUrl,
+      applyUrl: null,
+      location: himalayasLocation(job),
+      employmentType: job.employmentType,
+      publishedAt: job.publishedAt,
+      sourceUrl: null,
+      sourceType: null,
+      sourceSupportLevel: null,
+      sourceLabel: null,
+      canMonitor: false,
+      duplicateCompanyId: null,
+      provenanceUrl: job.opportunityUrl,
+      summary: snippet(job.summary) || "Himalayas listing. Review eligibility at the source.",
+    }));
+}
+
+function himalayasQuery(role: string): string {
+  const url = new URL(HIMALAYAS_SEARCH_ENDPOINT);
+  url.searchParams.set("q", role);
+  url.searchParams.set("sort", "recent");
+  url.searchParams.set("page", "1");
+  return url.toString();
+}
+
+/**
+ * Keep one prolific feed from consuming the entire user-visible result limit.
+ * Preserve each feed's order while taking one result per source per round.
+ */
+function balanceProviderResults(items: SourceDiscoveryCandidate[]): SourceDiscoveryCandidate[] {
+  const providers = new Map<string, SourceDiscoveryCandidate[]>();
+  for (const item of items) {
+    const group = providers.get(item.providerName) ?? [];
+    group.push(item);
+    providers.set(item.providerName, group);
+  }
+  const groups = Array.from(providers.values());
+  const depth = groups.reduce((largest, group) => Math.max(largest, group.length), 0);
+  const ordered: SourceDiscoveryCandidate[] = [];
+  for (let index = 0; index < depth; index += 1) {
+    for (const group of groups) {
+      if (group[index]) ordered.push(group[index]);
+    }
+  }
+  return ordered;
+}
+
 export async function discoverPublicJobFeeds(
   request: SourceDiscoveryRequest,
   context: DiscoveryContext,
@@ -324,9 +397,19 @@ export async function discoverPublicJobFeeds(
     "Location is shown from provider data but is not used as a hard discovery filter in this first provider because feed location fields are inconsistent.",
   ];
 
-  const [remoteOk, arbeitnow] = await Promise.allSettled([
+  // The Himalayas public API explicitly disallows browser CORS. Do not try to
+  // bypass it with a hidden proxy or let blocked requests delay PWA discovery.
+  const himalayasRoles = request.roleTitles.slice(0, 3);
+  const [remoteOk, arbeitnow, himalayas] = await Promise.allSettled([
     fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl),
     fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl),
+    context.runtimeKind === "web"
+      ? Promise.resolve(null)
+      : Promise.allSettled(
+          himalayasRoles.map((role) =>
+            fetchDiscoveryJson<unknown>(himalayasQuery(role), context.fetchImpl),
+          ),
+        ),
   ]);
 
   let candidates: SourceDiscoveryCandidate[] = [];
@@ -350,8 +433,34 @@ export async function discoverPublicJobFeeds(
     );
   }
 
+  if (context.runtimeKind === "web") {
+    warnings.push("Himalayas is unavailable in the browser: its public JSON API does not permit cross-origin requests (CORS). No proxy or credential workaround is used.");
+  } else if (himalayas.status === "fulfilled" && Array.isArray(himalayas.value)) {
+    let succeeded = false;
+    for (const outcome of himalayas.value) {
+      if (outcome.status === "rejected") {
+        const reason = outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
+        warnings.push(`Himalayas search unavailable: ${reason}`);
+        continue;
+      }
+      try {
+        const normalized = normalizeHimalayasResponse(outcome.value);
+        candidates.push(...himalayasCandidates(normalized, request));
+        succeeded = true;
+      } catch (error) {
+        warnings.push(`Himalayas search returned invalid data: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    if (succeeded) providerSuccesses += 1;
+    if (request.roleTitles.length > himalayasRoles.length) {
+      warnings.push("Himalayas search covered only the first three target-role titles to limit API requests.");
+    }
+  } else {
+    warnings.push("Himalayas search was unavailable for this discovery run.");
+  }
+
   const seen = new Set<string>();
-  candidates = candidates
+  candidates = balanceProviderResults(candidates)
     .filter((candidate) => {
       const key = `${normalize(candidate.employerName)}\n${normalize(candidate.opportunityTitle)}\n${normalize(candidate.opportunityUrl)}`;
       if (seen.has(key)) return false;

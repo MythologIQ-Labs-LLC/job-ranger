@@ -1,4 +1,5 @@
 import type { Company } from "../../src/shared/contracts.js";
+import type { RuntimeKind } from "../../src/shared/runtime.js";
 import type {
   SourceDiscoveryProviderId,
   SourceDiscoveryRequest,
@@ -9,6 +10,7 @@ import { discoverPublicJobFeeds } from "./source-discovery.cjs";
 export interface SourceDiscoveryProviderContext {
   fetchImpl: typeof fetch;
   existingCompanies: Company[];
+  runtimeKind?: RuntimeKind;
   now?: () => string;
 }
 

@@ -94,6 +94,21 @@ test.beforeAll(async () => {
           headers: { "content-type": "application/json" },
         });
       }
+      if (url.startsWith("https://himalayas.app/jobs/api/search?")) {
+        return new Response(JSON.stringify({
+          jobs: [{
+            guid: "h-e2e-1",
+            companyName: "Himalayas Discovery",
+            title: "Customer Success Manager",
+            applicationLink: "https://himalayas.app/jobs/h-e2e-1",
+            locationRestrictions: ["United States"],
+            timezoneRestrictions: ["UTC-05:00"],
+            employmentType: "Full Time",
+            excerpt: "Help enterprise customers reach successful outcomes.",
+            pubDate: 1791504000000,
+          }],
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
       return originalFetch(input, init);
     };
   });
@@ -140,6 +155,13 @@ test("discovers opportunities, dismisses a lead, and approves a monitorable empl
   await expect(opportunityOnlyCard).toBeVisible();
   await expect(opportunityOnlyCard.getByText("Arbeitnow", { exact: false })).toBeVisible();
   await expect(opportunityOnlyCard.getByText("Opportunity only", { exact: true })).toBeVisible();
+
+  const himalayasCard = page.locator("article").filter({ hasText: "Himalayas Discovery" });
+  await expect(himalayasCard).toBeVisible();
+  await expect(himalayasCard.getByText("Found via Himalayas", { exact: true })).toBeVisible();
+  await expect(himalayasCard.getByText("Remote · United States · UTC-05:00 time zone", { exact: true })).toBeVisible();
+  await expect(himalayasCard.getByText("Opportunity only", { exact: true })).toBeVisible();
+  await expect(himalayasCard.getByRole("button", { name: "Approve & monitor source" })).toHaveCount(0);
 
   await opportunityOnlyCard
     .getByRole("button", {
