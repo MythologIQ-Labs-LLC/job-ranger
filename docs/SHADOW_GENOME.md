@@ -705,4 +705,31 @@ None in this cycle. Under #267, the operator allowed one bounded correction afte
 
 ---
 
+## Failure Entry #23
+
+**Date**: 2026-10-12T17:05:44Z
+**Verdict ID**: Entry #114 (GATE TRIBUNAL Phase 18 Plan Evidence Gate v3 Final Design Audit, iteration 3)
+**Failure Mode**: owasp-violation (A04) / coverage-gap / specification-drift. The fail-closed rule trusted a single merge base that the PR head can choose through its own ancestry.
+
+### What Failed
+
+The Phase 18 design iteration 3, which was the final authorized iteration: docs/plan-qor-phase18-plan-evidence-gate-v3.md (content hash a9dd7e46) and docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md iteration 3. The head-controlled LEGACY exemption was removed. Every named linear-history R1 scenario behaved correctly in real git. R3 and R5 closed.
+
+### Why It Failed
+
+- Applicability came from `git diff --no-renames M H`, with M taken from a single `git merge-base`. The PR author chooses H's parents. A head that merges both parents of any historical base merge commit has two merge bases, and `git merge-base` prints one of them, chosen by commit date. The M..H list can then be empty while the actual merge deletes a governed plan or strips an inventory. This was demonstrated on real repository history: the merge deletes docs/plan-qor-phase10-public-demo-harness.md, while the gate sees no change and reports not applicable with exit 0.
+- The status table enumerated A, M and D but not T (type change to a symlink or gitlink), and it gave no default for unlisted statuses.
+- The corpus conversion specified the Markdown side precisely but not the inventory side. The v3-mandatory purpose and owner fields, and records carrying both max and equals, had no defined mapping. The "57 of 57" reproduction came from a structure-only harness that never ran the schema stage.
+- The new file-name grammar, the governed-path filter and a grammar fixture contradicted each other on case and extension.
+
+### Pattern to Avoid
+
+A change list decides authority only if it is the change the merge will actually apply. Never trust a single `git merge-base` answer from history the gated party controls. Either require a unique merge base, or require the base to be an ancestor of the head, so that the evaluated tree is the merged tree. Close every enumerated status table with an explicit fail-closed default. When a test oracle is "reproduced", say which stages the harness actually ran. A conversion procedure must yield inputs that are valid under the target schema as written.
+
+### Remediation Attempted
+
+None. Under #267 comment 6128584663, a VETO on this final iteration means stop and report: no fourth design iteration, no amendment loop and no override. Phase 17 remains VETO #108, and events 1f15661a and f0b67f91 remain addressed_pending.
+
+---
+
 *Shadow Genome updated. Pattern documented for future avoidance.*

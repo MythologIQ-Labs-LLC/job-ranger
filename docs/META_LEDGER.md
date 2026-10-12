@@ -3132,6 +3132,40 @@ The dependency admission from #110 is unchanged. The Phase 17 remediation gate, 
 
 ---
 
+### Entry #114: GATE TRIBUNAL (Phase 18 Plan Evidence Gate v3 Final Design Audit, iteration 3)
+
+**Timestamp**: 2026-10-12T17:05:44Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: docs/plan-qor-phase18-plan-evidence-gate-v3.md (design iteration 3, final; target content hash a9dd7e46)
+
+**Verdict**: VETO
+
+**Content Hash**: `82aef5b5ad0fbd976b18693c91b3e0a699873e642bdbec351fd286532a31acd0`
+
+**Previous Hash**: `23c2f1425e0ecfa2d8e6e4dbba5268ca1056b4361975c1fa10e9b5e9759a29d7`
+
+**Chain Hash**: `ee5a6e294c5d43a59b1210e9600e8f4eb7152f64a406775e408fcd889bf70a21`
+
+**Decision**: VETO for the Phase 18 v3 design iteration 3, the final authorized iteration (#267 comment 6128584663). It comes from a fresh-context subagent review, not a human or separately authenticated approval.
+
+Closure of #112:
+- R3, A1, A2 and A6 are closed. R5 is closed: truncation always exits 1.
+- R2, R4, A4 and A5 are partial. A3 is closed for the corpus.
+- R1 is NOT closed. Every named linear-history scenario behaves correctly in real git (add, edit, rename, copy, delete, inventory delete or change, and name tricks).
+- Dependency ADMIT stands, re-verified. Self-application passes mechanically.
+
+Findings:
+- (F1, owasp-violation A04) Applicability trusts a single git merge-base, and the head controls its own ancestry. A criss-cross head (merging both parents of a base merge commit) gives an empty or unrelated M..H list, so the gate reports not applicable with exit 0. On real job-ranger history, merging that head deletes docs/plan-qor-phase10-public-demo-harness.md. Synthetically, it strips an inventory and reverts the plan.
+- (F1b, owasp-violation A04) Git status T (a plan or inventory changed to a symlink or gitlink) is undefined by the section 3 table.
+- (F2, coverage-gap) The R4 inventory conversion omits the mandatory purpose and owner fields and the max+equals predicate rule. Read literally, it gives 20/57 (n19 and s3 fail E_SCHEMA). The 57/57 claim came from a section-6-only harness. The s3 description is wrong.
+- (F3, specification-drift) The section 3 glob, the section 8 governed paths and the section 11 uppercase-name fixture contradict each other. Plan line 20 cites spec iteration 2.
+
+Per #267: stop and report. No fourth design iteration, amendment loop or override follows from this verdict. Phase 17 remains VETO #108, the events stay addressed_pending, and closure still requires D1 and D2.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3151,5 +3185,5 @@ The dependency admission from #110 is unchanged. The Phase 17 remediation gate, 
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109/#111/#113; VETO #110/#112; final independent design audit (iteration 3) pending*
-*Next required action: independent design audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md iteration 3 (final) (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109/#111/#113; VETO #110/#112/#114 (final design audit, iteration 3); design loop stopped per #267*
+*Next required action: operator decision per #267 comment 6128584663 on VETO #114 (stop and report; no fourth design iteration without a new operator decision) (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
