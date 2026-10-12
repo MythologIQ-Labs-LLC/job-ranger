@@ -11,6 +11,8 @@ const execFileAsync = promisify(execFile);
 let fixture: ElectronAppFixture;
 
 async function navigateTo(destination: "Career Profile" | "Resume") {
+  const toggle = fixture.page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "My Career" });
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
   await fixture.page.getByRole("link", { name: destination, exact: true }).click();
 }
 
