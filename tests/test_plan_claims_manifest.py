@@ -80,16 +80,16 @@ class ManifestCore(GateTestCase):
             {"id": "line", "kind": "line-equals", "commit": sha, "path": "src/core.ts", "line": 3, "text": "export function small(a: string) {"},
             {"id": "fn", "kind": "function-lines", "commit": sha, "path": "src/core.ts", "function": "small", "max": 6, "equals": 6},
         ]
-        extra = (f'- `RuntimeKind` in `core.ts` at `{s7}` is "electron" | "web" [claim:enum].\n'
+        extra = (f'- `RuntimeKind` at `{s7}` is "electron" | "web" [claim:enum].\n'
                  f"- `core.ts` at `{s7}` imports `./helper.cjs` [claim:edge].\n"
                  f"- `src/core.ts:3` at `{s7}` declares the function [claim:line].\n"
-                 f"- `small` in `core.ts` at `{s7}` is 6 lines [claim:fn].\n")
+                 f"- `small` at `{s7}` is 6 lines [claim:fn].\n")
         self.assertEqual(len(self.ok(self.f.plan(manifest=self.f.manifest(claims), extra=extra))), 5)
         wrong = dict(claims[0], values=["desktop", "web"])
-        line = f'- `RuntimeKind` in `core.ts` at `{s7}` is "desktop" | "web" [claim:enum].\n'
+        line = f'- `RuntimeKind` at `{s7}` is "desktop" | "web" [claim:enum].\n'
         self.rejects(self.f.plan(manifest=self.f.manifest([wrong]), extra=line), "R1", "enum values")
         too_long = {k: v for k, v in claims[3].items() if k != "equals"} | {"max": 5}
-        line = f"- `small` in `core.ts` at `{s7}` is 5 lines [claim:fn].\n"
+        line = f"- `small` at `{s7}` is at most 5 lines [claim:fn].\n"
         self.rejects(self.f.plan(manifest=self.f.manifest([too_long]), extra=line), "R1", "6 lines exceeds 5")
 
 

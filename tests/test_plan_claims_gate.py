@@ -55,6 +55,15 @@ class GateDecision(GateTestCase):
         self.assertEqual(run.returncode, 0, run.stdout)
         self.assertIn("code-owner review", run.stdout)
 
+    def test_workflow_that_spoofs_the_required_check_name_fails(self):
+        for body in ("jobs:\n  plan-claims-gate:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: 'true'\n",
+                     "jobs:\n  other:\n    name: plan-claims-gate\n    runs-on: ubuntu-24.04\n"):
+            with self.subTest(body=body):
+                head = self.f.commit_files({".github/workflows/ci-extra.yml": body})
+                run = self.run_gate(self.f.sha, head)
+                self.assertEqual(run.returncode, 1, run.stdout)
+                self.assertIn("spoof", run.stdout)
+
     def test_non_sha_revisions_are_rejected(self):
         for base, head in [("HEAD", self.f.sha), (self.f.sha, "main"), (self.f.sha[:7], self.f.sha)]:
             self.assertEqual(self.run_gate(base, head).returncode, 2)
@@ -86,7 +95,7 @@ class WorkflowArchitecture(unittest.TestCase):
     def test_codeowners_cover_every_governed_path(self):
         owners = (REPO / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
         for pattern in ("/docs/plan-qor-phase*.md", "/scripts/plan_claims_*.py", "/tests/test_plan_claims_*.py",
-                        "/tests/plan_claims_fixture.py", "/.github/workflows/plan-claims*.yml", "/.github/CODEOWNERS"):
+                        "/tests/plan_claims_fixture.py", "/.github/workflows/", "/.github/CODEOWNERS"):
             self.assertRegex(owners, rf"(?m)^{re.escape(pattern)}\s+@\S+")
         for governed in ("docs/plan-qor-phase17-x.md", "scripts/plan_claims_check.py", ".github/CODEOWNERS",
                          ".github/workflows/plan-claims-gate.yml", "tests/test_plan_claims_gate.py"):
@@ -105,9 +114,26 @@ class RazorLimits(unittest.TestCase):
             for node in ast.walk(ast.parse(text)):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     self.assertLessEqual(node.end_lineno - node.lineno + 1, 40, f"{path.name}:{node.name}")
+                    self.assertLessEqual(_depth(node), 3, f"nesting depth in {path.name}:{node.name}")
                 if isinstance(node, ast.IfExp):
                     nested = [n for n in ast.walk(node) if isinstance(n, ast.IfExp) and n is not node]
                     self.assertEqual(nested, [], f"nested ternary in {path.name}:{node.lineno}")
+
+    def test_depth_measure_detects_four_levels(self):
+        deep = "def f(a):\n    for x in a:\n        for y in x:\n            if y:\n                if y > 1:\n                    return y\n"
+        self.assertEqual(_depth(ast.parse(deep).body[0]), 4)
+
+
+BLOCKS = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, ast.Try, ast.Match)
+
+
+def _depth(node: ast.AST, level: int = 0) -> int:
+    deepest = level
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+            continue
+        deepest = max(deepest, _depth(child, level + isinstance(child, BLOCKS)))
+    return deepest
 
 
 if __name__ == "__main__":

@@ -78,6 +78,7 @@ class DetectorRecall(GateTestCase):
 class RealPhase17Facts(GateTestCase):
     def _real_plan(self, ipc_lines: int, ipc_max: int):
         b7 = BASE[:7]
+        qualifier = "at most " if ipc_lines == ipc_max else ""
         claims = [
             {"id": "provider-id", "kind": "line-equals", "commit": BASE, "path": "src/shared/source-discovery.ts", "line": 3,
              "text": 'export type SourceDiscoveryProviderId = "public-job-feeds";'},
@@ -94,7 +95,7 @@ class RealPhase17Facts(GateTestCase):
                  f"- `src/shared/source-discovery.ts:3` at `{b7}` fixes the provider id [claim:provider-id].\n"
                  f"- `git show {b7}:electron/src/source-discovery-validator.cts | grep -n 'Math.min'` -> `39:  const limit = Math.min(40, Math.max(1, rawLimit));` [claim:limit].\n"
                  f'- `RuntimeKind` at `{b7}` is "electron" | "web" [claim:runtime].\n'
-                 f"- `registerCoreIpcHandlers` at `{b7}` is {ipc_lines} lines [claim:ipc].\n"
+                 f"- `registerCoreIpcHandlers` at `{b7}` is {qualifier}{ipc_lines} lines [claim:ipc].\n"
                  f"- `discoverPublicJobFeeds` at `{b7}` is 56 lines [claim:dpjf].\n"
                  f"- `source-discovery.cts` at `{b7}` imports `./scrapers.cjs` [claim:scrapers].\n"
                  f"- `source-discovery.cts` at `{b7}` does not import `./himalayas-discovery.cjs` [claim:no-himalayas].\n")
@@ -110,6 +111,42 @@ class RealPhase17Facts(GateTestCase):
         plan = self._real_plan(40, 40)
         plan.write_text(plan.read_text(encoding="utf-8").replace(self.f.size_line(), ""), encoding="utf-8")
         self.rejects(plan, "R1", "161 lines exceeds 40", repo=REPO)
+
+
+class SubjectAndPropertyBinding(GateTestCase):
+    """V1-B (VETO #106): subjects come from the assertion itself; exact sizes bind only to equals."""
+
+    def _plan(self, claims: list, extra: str, judgments: list | None = None):
+        return self.f.plan(manifest=self.f.manifest(claims, judgments), extra=extra)
+
+    def test_s2_line_reference_with_two_candidate_files_is_ambiguous(self):
+        claim = {"id": "ln", "kind": "line-equals", "commit": self.f.sha, "path": "src/core.ts", "line": 3,
+                 "text": "export function small(a: string) {"}
+        extra = f"- In `core.ts`, line 3 declares it (see helper.cjs) at `{self.f.sha7}` [claim:ln].\n"
+        self.rejects(self._plan([claim], extra), "R1", "subject")
+
+    def test_s3_size_without_an_anchored_subject_cannot_bind_a_named_claim(self):
+        claim = {"id": "fn", "kind": "function-lines", "commit": self.f.sha, "path": "src/core.ts", "function": "small", "max": 6, "equals": 6}
+        extra = f"- registerCoreIpcHandlers is 6 lines at `{self.f.sha7}`, unlike `small` [claim:fn].\n"
+        self.rejects(self._plan([claim], extra), "R1", "subject")
+
+    def test_identifier_between_subject_and_size_is_ambiguous(self):
+        claim = {"id": "fn", "kind": "function-lines", "commit": self.f.sha, "path": "src/core.ts", "function": "small", "max": 6, "equals": 6}
+        extra = f"- `small` at `{self.f.sha7}` like helperFunction is 6 lines [claim:fn].\n"
+        self.rejects(self._plan([claim], extra), "R1", "subject")
+
+    def test_p02_exact_size_cannot_bind_a_max_only_claim(self):
+        claim = {"id": "big", "kind": "file-lines", "commit": self.f.sha, "path": "src/hostile.txt", "max": 500}
+        extra = f"- `src/hostile.txt` is exactly 500 lines at `{self.f.sha7}` [claim:big].\n"
+        self.rejects(self._plan([claim], extra), "R1", "unbound")
+        bounded = f"- `src/hostile.txt` is at most 500 lines at `{self.f.sha7}` [claim:big].\n"
+        self.assertEqual(self.ok(self._plan([claim], bounded)), ["core-size", "big"])
+
+    def test_p11_one_judgment_cannot_cover_several_numbers(self):
+        judgment = {"id": "j", "statement": "returns 37 zones and 251 entries",
+                    "rationale": "Observed live payload counts, reviewed by the independent auditor."}
+        extra = "- Himalayas returns 37 zones and 251 entries [judgment:j].\n"
+        self.rejects(self._plan([], extra, [judgment]), "R1", "exactly one")
 
 
 if __name__ == "__main__":

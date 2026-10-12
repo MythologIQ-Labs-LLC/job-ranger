@@ -72,6 +72,39 @@ class FunctionSpan(unittest.TestCase):
         self.assertIn("unsupported", src.evaluate(body(5, ""), claim))
 
 
+class GenericsAndTemplates(unittest.TestCase):
+    """V2 (VETO #106): reviewer counterexamples that previously verified falsely."""
+
+    FILLER = "".join(f"  const v{i} = {i};\n" for i in range(100))
+
+    def test_generic_constraint_containing_arrow_fails_closed(self):
+        arrow = "export const big = <T extends (a: number) => { x: number }>(p: T) => {\n" + self.FILLER + "  return p;\n};\n"
+        decl = "export function big<T extends (a: number) => { x: number }>(p: T) {\n" + self.FILLER + "  return p;\n}\n"
+        for text in (arrow, decl):
+            with self.subTest(text=text[:40]), self.assertRaises(ValueError):
+                src.function_lines(text, "big")
+            claim = {"kind": "function-lines", "function": "big", "max": 40, "path": "a.ts"}
+            self.assertIn("cannot be verified", src.evaluate(text, claim))
+
+    def test_simple_generics_are_still_measured(self):
+        text = "export const big = async <T,>(p: T) => {\n" + self.FILLER + "  return p;\n};\n"
+        self.assertEqual(src.function_lines(text, "big"), 103)
+        decl = "export function big<T extends string>(p: T) {\n" + self.FILLER + "  return p;\n}\n"
+        self.assertEqual(src.function_lines(decl, "big"), 103)
+
+    def test_template_literal_specifiers_are_import_edges(self):
+        for text in ("const lp = require(`left-pad`);\n", "const m = await import(`left-pad`);\n"):
+            claim = {"kind": "import-edge", "specifier": "left-pad", "present": False, "path": "a.ts"}
+            with self.subTest(text=text):
+                self.assertIn("present=True", src.evaluate(text, claim))
+
+    def test_non_literal_specifier_fails_closed(self):
+        for text in ("const m = require(name);\n", "const m = await import(`${base}/x`);\n"):
+            claim = {"kind": "import-edge", "specifier": "left-pad", "present": False, "path": "a.ts"}
+            with self.subTest(text=text):
+                self.assertIn("cannot be verified", src.evaluate(text, claim))
+
+
 class ImportEdges(unittest.TestCase):
     def test_imports_in_comments_and_strings_do_not_count(self):
         text = '// import { x } from "./ghost.cjs";\nconst s = "require(\'./ghost.cjs\')";\nimport { y } from "./real.cjs";\n'

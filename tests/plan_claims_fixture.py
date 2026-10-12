@@ -78,7 +78,7 @@ class Fixture:
         return path
 
     def manifest(self, claims: list | None = None, judgments: list | None = None, size: bool = True) -> dict:
-        base = [{"id": "core-size", "kind": "file-lines", "commit": self.sha, "path": "src/core.ts", "max": 8}]
+        base = [{"id": "core-size", "kind": "file-lines", "commit": self.sha, "path": "src/core.ts", "max": 8, "equals": 8}]
         return {"version": 2, "commits": {"fixture": self.sha},
                 "claims": (base if size else []) + (claims or []), "judgments": judgments or []}
 

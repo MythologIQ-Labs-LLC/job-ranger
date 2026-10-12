@@ -77,7 +77,7 @@ class R3NoAuthorExecution(GateTestCase):
         self.rejects(self.f.plan(manifest=self.f.manifest([claim])), "R1", "orphan")
 
     def test_symlink_blob_rejected(self):
-        claim = {"id": "link", "kind": "file-lines", "commit": self.f.sha, "path": "src/link.ts", "max": 8}
+        claim = {"id": "link", "kind": "file-lines", "commit": self.f.sha, "path": "src/link.ts", "max": 8, "equals": 8}
         extra = f"- `src/link.ts` is 8 lines at `{self.f.sha7}` [claim:link].\n"
         self.rejects(self.f.plan(manifest=self.f.manifest([claim]), extra=extra), "R3", "regular file")
 
