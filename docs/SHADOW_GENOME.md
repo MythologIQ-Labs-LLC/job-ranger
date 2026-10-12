@@ -635,4 +635,39 @@ None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and n
 
 ---
 
+## Failure Entry #21
+
+**Date**: 2026-10-12T16:10:13Z
+**Verdict ID**: Entry #110 (GATE TRIBUNAL Phase 18 Plan Evidence Gate v3 Design Review)
+**Failure Mode**: infrastructure-mismatch / owasp-violation (A04) / coverage-gap / specification-drift. A sound redesign whose delivery premise and parser boundary were not checked against reality.
+
+### What Failed
+
+The Phase 18 design: docs/plan-qor-phase18-plan-evidence-gate-v3.md (content hash d034403b), its inventory, and docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md. The dependency (markdown-it-py 4.2.0 + mdurl 0.1.2) was ADMITTED. The failures are in plan and specification text.
+
+### Why It Failed
+
+- pr_target named the vetoed PR #232 head branch, contradicting the plan's own exclusions and the operator's "new branch" direction.
+- The bootstrap never showed that a valid governed PR can pass on a lineage that still carries a plan the new gate fails.
+- A Locked Decision said the v2 gate "already runs" when the cited record proves only that a workflow file contains a trigger keyword. That workflow has never executed.
+- The spec trusted parser tokens as a complete view of the document. markdown-it silently drops content nested at depth 20 or more (maxNesting), so "raw HTML anywhere fails" and "structure VALIDATED" overclaim.
+- The test plan omitted rules the spec itself asserts (NUL/C0, U+2028, case-variant headings) and did not require the full reviewer corpus.
+- The operator's parse-time bound was not specified.
+
+### Pattern to Avoid
+
+Adopting a real parser removes lexer drift but not boundary drift. For every parser, enumerate the conditions under which it stops producing tokens: nesting limits, recursion limits and error recovery. Fail closed when they are reached.
+
+A record that proves a file contains text supports only "is configured", never "runs". Write prose no stronger than its record.
+
+Before planning delivery, resolve the landing path: target branch, the content stacked under the branch, and whether a valid governed PR can pass on that lineage.
+
+Every rule written into a spec needs a named fixture.
+
+### Remediation Attempted
+
+None in this cycle. The Governor amends the plan and spec per AUDIT_REPORT V1-V5 and resubmits to a fresh independent /qor-audit. Phase 17 remains VETO #108, and events 1f15661a and f0b67f91 remain addressed_pending.
+
+---
+
 *Shadow Genome updated. Pattern documented for future avoidance.*

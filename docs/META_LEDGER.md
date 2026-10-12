@@ -3016,6 +3016,43 @@ Awaiting an independent design GATE tribunal.
 
 ---
 
+### Entry #110: GATE TRIBUNAL (Phase 18 Plan Evidence Gate v3 Design Review)
+
+**Timestamp**: 2026-10-12T16:10:13Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: docs/plan-qor-phase18-plan-evidence-gate-v3.md (design; target content hash d034403b)
+
+**Verdict**: VETO
+
+**Content Hash**: `f517d37c9756cc38d4795fbf5be58a50a884a216639bec12d217e6019d513c63`
+
+**Previous Hash**: `c30785d3404259f0961677678ec7a4b56a82f8fb076aa3f54c8eec45a4b018bd`
+
+**Chain Hash**: `684cb67c886aebee1546e2bfb705d4ad2d55e988c895f3b0526263c40a90d6a3`
+
+**Decision**: VETO for the Phase 18 v3 design, from a fresh-context subagent review (not a human or separately authenticated approval).
+
+Verified:
+- Dependency decision: ADMIT markdown-it-py 4.2.0 + mdurl 0.1.2. Hashes equal PyPI, MIT, no OSV/PyPI vulnerabilities for the pinned versions, wheels byte-identical to the upstream tags, no PEP 740 attestations.
+- The parser decides every VETO #108 V1-A construct by tokens.
+- The section 5 line semantics are deterministic.
+- The trust model is sound, and the report wording does not overclaim.
+- Preservation of the Phase 17 gate, Amendments 1-3, Entries #95-#108 and the pending events is clean.
+- Self-application passes mechanically (4/4 VERIFIED).
+
+Findings:
+- (V1, infrastructure-mismatch) pr_target is the vetoed PR #232 head branch, which contradicts the plan's exclusions and #267. There is no landing path to main without #232's content, and no "valid governed PR passes" bootstrap step while the Phase 17 iteration-4 plan is on the lineage.
+- (V2, infrastructure-mismatch) Locked Decision 1 says the v2 gate "already runs" on pull_request_target. It has never run: the workflow is not on the default branch, and all runs were pull_request self-tests.
+- (V3, owasp-violation A04) markdown-it maxNesting=20 silently drops deeper content, raw HTML included, with no token. The HTML ban and "structure VALIDATED" overclaim.
+- (V4, coverage-gap) Section 11 omits n10, n18, p05/p05b, b05, the nesting limit, the reference label, the parse-time worst case, and a converted probe corpus with reason codes.
+- (V5, specification-drift) Unspecified: the parse-time bound (a #267 requirement), text-absent constraints, the heading-text definition, claim-commit reachability, and a CI venv plus install-failure semantics.
+
+The Governor amends the plan and spec text and re-runs an independent /qor-audit. Phase 17 remains VETO #108, the events stay addressed_pending, and closure still requires D1 and D2.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3035,5 +3072,5 @@ Awaiting an independent design GATE tribunal.
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; independent design GATE pending*
-*Next required action: independent design /qor-audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110 (design; dependency ADMIT); amend plan/spec*
+*Next required action: Governor amends docs/plan-qor-phase18-plan-evidence-gate-v3.md and PLAN_EVIDENCE_GATE_V3_SPEC.md per Entry #110 (V1-V5), then a fresh independent design /qor-audit (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
