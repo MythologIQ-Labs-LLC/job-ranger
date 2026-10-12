@@ -1,24 +1,52 @@
+import { useCallback, useRef, useState } from "react";
+import { useBeforeUnload, useBlocker } from "react-router-dom";
 import { ExternalLink, FileText, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ApplicationInsightsPanel } from "../components/ApplicationInsightsPanel";
 import { ApplicationLifecyclePanel } from "../components/ApplicationLifecyclePanel";
 import { ApplicationMaterialsPanel } from "../components/ApplicationMaterialsPanel";
+import { ApplicationNotesEditor } from "../components/ApplicationNotesEditor";
+import { ApplicationStatusEditor } from "../components/ApplicationStatusEditor";
 import { InterviewPrepPanel } from "../components/InterviewPrepPanel";
 import { Layout } from "../components/Layout";
-import { useApplications, type ApplicationStatus } from "../career/storage";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { useApplications } from "../career/storage";
 import { getDesktopApi } from "../services/api";
-
-const statuses: Array<{ value: ApplicationStatus; label: string }> = [
-  { value: "interested", label: "Interested" },
-  { value: "applied", label: "Applied" },
-  { value: "interview", label: "Interview" },
-  { value: "offer", label: "Offer" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
-];
 
 export function Applications() {
   const { applications, update, remove, loading, error } = useApplications();
+  const [deleteApplicationId, setDeleteApplicationId] = useState<string | null>(null);
+  const deleteApplication = applications.find((item) => item.id === deleteApplicationId) ?? null;
+  const [dirtyFields, setDirtyFields] = useState<Record<string, true>>({});
+  const hasUnsavedChanges = Object.keys(dirtyFields).length > 0;
+  const leavingRef = useRef(false);
+
+  const markDirty = useCallback((id: string, field: "status" | "notes", dirty: boolean) => {
+    const key = id + ":" + field;
+    setDirtyFields((current) => {
+      if (Boolean(current[key]) === dirty) return current;
+      const next = { ...current };
+      if (dirty) next[key] = true;
+      else delete next[key];
+      return next;
+    });
+  }, []);
+
+  // A data-router blocker catches links, browser back/forward and programmatic
+  // SPA navigation, not merely clicks within the Sidebar.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  // Hard reload and tab close use the browser's native advisory. Force-quit
+  // or sudden power loss cannot be intercepted by client-side navigation.
+  useBeforeUnload(useCallback((event) => {
+    if (!hasUnsavedChanges) return;
+    event.preventDefault();
+    event.returnValue = "";
+  }, [hasUnsavedChanges]));
+
 
   return (
     <Layout>
@@ -74,26 +102,15 @@ export function Applications() {
               </div>
 
               <div className="flex items-center gap-2">
-                <select
-                  className="select-shell min-w-40"
-                  value={application.status}
-                  onChange={(event) =>
-                    void update(application.id, {
-                      status: event.target.value as ApplicationStatus,
-                    })
-                  }
-                  aria-label={`Application status for ${application.title}`}
-                >
-                  {statuses.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
+                <ApplicationStatusEditor
+                  application={application}
+                  onSave={(status) => update(application.id, { status })}
+                  onDirtyChange={(dirty) => markDirty(application.id, "status", dirty)}
+                />
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => void remove(application.id)}
+                  onClick={() => setDeleteApplicationId(application.id)}
                   aria-label={`Remove ${application.title} from applications`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -102,17 +119,11 @@ export function Applications() {
               </div>
             </div>
 
-            <label className="mt-5 block">
-              <span className="metric-label">Notes</span>
-              <textarea
-                className="input-shell mt-2 min-h-24 resize-y py-3"
-                value={application.notes}
-                onChange={(event) =>
-                  void update(application.id, { notes: event.target.value })
-                }
-                placeholder="What you liked about the role, context you want to remember, or anything that does not belong to a specific person or milestone..."
-              />
-            </label>
+            <ApplicationNotesEditor
+              application={application}
+              onSave={(notes) => update(application.id, { notes })}
+              onDirtyChange={(dirty) => markDirty(application.id, "notes", dirty)}
+            />
 
             <ApplicationLifecyclePanel applicationId={application.id} />
             <ApplicationInsightsPanel applicationId={application.id} />
@@ -123,6 +134,43 @@ export function Applications() {
           </article>
         ))}
       </div>
+      <ConfirmDialog
+        open={blocker.state === "blocked"}
+        onClose={() => {
+          if (!leavingRef.current && blocker.state === "blocked") blocker.reset();
+          leavingRef.current = false;
+        }}
+        onConfirm={() => {
+          if (blocker.state !== "blocked") return;
+          leavingRef.current = true;
+          blocker.proceed();
+        }}
+        title="Leave with unsaved changes?"
+        message={hasUnsavedChanges
+          ? "Your application has notes or a status selection that the local database has not confirmed. Leaving may discard those changes. Stay here to retry the save, or explicitly leave without saving."
+          : "The pending changes are now saved. You can continue navigating or stay on this page."}
+        confirmLabel={hasUnsavedChanges ? "Leave without saving" : "Continue navigation"}
+        cancelLabel="Stay on this page"
+        variant="warning"
+      />
+      <ConfirmDialog
+        open={Boolean(deleteApplication)}
+        onClose={() => setDeleteApplicationId(null)}
+        onConfirm={async () => {
+          if (!deleteApplication) throw new Error("The selected application is no longer available.");
+          await remove(deleteApplication.id);
+          setDirtyFields((current) => {
+            const next = { ...current };
+            delete next[deleteApplication.id + ":status"];
+            delete next[deleteApplication.id + ":notes"];
+            return next;
+          });
+          setDeleteApplicationId(null);
+        }}
+        title="Remove tracked application?"
+        message={`Remove "${deleteApplication?.title ?? "this application"}" at "${deleteApplication?.companyName ?? "this organization"}" from your tracked job search? This also removes the locally recorded application context, including its notes and associated contacts and milestones. This cannot be undone.`}
+        confirmLabel="Remove application"
+      />
     </Layout>
   );
 }

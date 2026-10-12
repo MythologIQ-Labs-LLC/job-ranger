@@ -311,8 +311,12 @@ test.describe("Job Ranger E2E Tests", () => {
 
     const company = page.getByText("Test Company", { exact: true });
     if ((await company.count()) > 0) {
-      await page.getByRole("button", { name: "Remove", exact: true }).click();
-      await expect(company).toHaveCount(0);
+      const row = page.getByRole("row").filter({ has: company });
+      await row.getByRole("button", { name: "Remove source Test Company", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Remove job source?", exact: true });
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole("button", { name: "Remove source", exact: true }).click();
+      await expect(row).toHaveCount(0);
     }
   });
 });

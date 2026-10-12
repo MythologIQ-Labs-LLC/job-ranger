@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Filter as FilterIcon, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { FilterForm } from "../components/FilterForm";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Layout } from "../components/Layout";
 import { Modal } from "../components/Modal";
 import { useAppContext } from "../context/AppContext";
@@ -8,6 +9,8 @@ import { useAppContext } from "../context/AppContext";
 export function Filters() {
   const { filters, companies, addFilter, deleteFilter } = useAppContext();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const deleteTarget = filters.find((filter) => filter.id === deleteTargetId) ?? null;
 
   return (
     <Layout>
@@ -81,7 +84,7 @@ export function Filters() {
                     {company ? `Scoped to ${company.name}` : "Applies to every supported company"}
                   </p>
                 </div>
-                <button type="button" onClick={() => void deleteFilter(filter.id)} className="danger-button">
+                <button type="button" onClick={() => setDeleteTargetId(filter.id)} aria-label={`Delete filter ${filter.name}`} className="danger-button">
                   <Trash2 className="h-4 w-4" />
                   Delete
                 </button>
@@ -110,6 +113,18 @@ export function Filters() {
         })}
       </div>
 
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteFilter(deleteTarget.id);
+          setDeleteTargetId(null);
+        }}
+        title="Delete filter?"
+        message={`Delete "${deleteTarget?.name ?? "this filter"}"? This removes its local matching rules and cannot be undone.`}
+        confirmLabel="Delete filter"
+      />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create filter">
         <FilterForm
           companies={companies}

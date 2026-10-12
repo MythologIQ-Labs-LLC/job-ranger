@@ -45,6 +45,22 @@ export function useCareerStories() {
     }
   };
 
+  // A successful canonical DELETE is authoritative. A separate list refresh
+  // must not turn that successful irreversible mutation into a false failure.
+  const remove = async (storyId: string): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      await getDesktopApi().careerStories.delete(storyId);
+      setStories((current) => current.filter((story) => story.id !== storyId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete Career Story");
+      throw cause;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return {
     stories,
     loading,
@@ -55,7 +71,6 @@ export function useCareerStories() {
       runMutation(() => getDesktopApi().careerStories.create(input)),
     update: (storyId: string, input: CareerStoryInput) =>
       runMutation(() => getDesktopApi().careerStories.update(storyId, input)),
-    remove: (storyId: string) =>
-      runMutation(() => getDesktopApi().careerStories.delete(storyId)),
+    remove,
   };
 }

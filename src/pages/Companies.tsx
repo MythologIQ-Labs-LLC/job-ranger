@@ -15,6 +15,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { useTargetTracks } from "../career/target-tracks";
 import { CompanyForm } from "../components/CompanyForm";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Layout } from "../components/Layout";
 import { Modal } from "../components/Modal";
 import { useAppContext } from "../context/AppContext";
@@ -39,6 +40,8 @@ export function Companies() {
   const { companies, addCompany, deleteCompany, runScraper, refreshing } = useAppContext();
   const targetTracks = useTargetTracks();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const deleteTarget = companies.find((company) => company.id === deleteTargetId) ?? null;
   const [runningId, setRunningId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [discovery, setDiscovery] = useState<SourceDiscoveryResult | null>(null);
@@ -496,7 +499,8 @@ export function Companies() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void deleteCompany(company.id)}
+                        onClick={() => setDeleteTargetId(company.id)}
+                        aria-label={`Remove source ${company.name}`}
                         className="danger-button"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -520,6 +524,18 @@ export function Companies() {
         </div>
       </div>
 
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteCompany(deleteTarget.id);
+          setDeleteTargetId(null);
+        }}
+        title="Remove job source?"
+        message={`Remove "${deleteTarget?.name ?? "this source"}" and its saved jobs and scrape history? This is permanent and may affect tracked opportunities. Review carefully before continuing.`}
+        confirmLabel="Remove source"
+      />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add job source">
         <CompanyForm
           onSubmit={async (draft) => {

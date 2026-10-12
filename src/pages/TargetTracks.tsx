@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Compass, Plus, Save, Trash2 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { EconomicPathwayExplorer } from "../components/EconomicPathwayExplorer";
 import {
   emptyTargetTrackInput,
   toTargetTrackInput,
@@ -116,6 +118,7 @@ export function TargetTracks() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<CareerTargetTrackInput>(cloneEmpty);
   const [saved, setSaved] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const editingTrack = useMemo(
     () => targetTracks.tracks.find((track) => track.id === editingId) ?? null,
@@ -160,17 +163,26 @@ export function TargetTracks() {
 
   const handleSave = async () => {
     if (!draft.name.trim()) return;
-    const result = await targetTracks.save(editingId, draft);
-    setEditingId(result.id);
-    setDraft(toTargetTrackInput(result));
-    setSaved(true);
+    try {
+      const result = await targetTracks.save(editingId, draft);
+      setEditingId(result.id);
+      setDraft(toTargetTrackInput(result));
+      setSaved(true);
+    } catch {
+      // useTargetTracks already exposes the failure on screen.
+      setSaved(false);
+    }
   };
 
-  const handleDelete = async () => {
-    if (!editingId || editingId === "legacy-default") return;
-    await targetTracks.remove(editingId);
-    startNew();
+  const confirmDelete = async () => {
+    if (!deleteTargetId || deleteTargetId === "legacy-default") return;
+    const id = deleteTargetId;
+    await targetTracks.remove(id);
+    setDeleteTargetId(null);
+    if (editingId === id) startNew();
   };
+
+  const deleteTarget = targetTracks.tracks.find((track) => track.id === deleteTargetId) ?? null;
 
   return (
     <Layout>
@@ -332,13 +344,22 @@ export function TargetTracks() {
             <div>{saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved</span>}</div>
             <div className="flex flex-wrap gap-3">
               {editingTrack?.origin === "user" && editingId !== "legacy-default" && (
-                <button type="button" className="secondary-button" onClick={() => void handleDelete()} disabled={targetTracks.busy}><Trash2 className="h-4 w-4" /> Delete</button>
+                <button type="button" className="secondary-button" onClick={() => setDeleteTargetId(editingId)} disabled={targetTracks.busy}><Trash2 className="h-4 w-4" /> Delete</button>
               )}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={targetTracks.busy || !draft.name.trim()}><Save className="h-4 w-4" />{targetTracks.busy ? "Saving..." : "Save target track"}</button>
             </div>
           </div>
         </div>
       </section>
+      <EconomicPathwayExplorer />
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDelete}
+        title="Delete target track?"
+        message={`Delete "${deleteTarget?.name ?? "this track"}" from your career search? This removes the saved direction and its preferences. This action cannot be undone.`}
+        confirmLabel="Delete target track"
+      />
     </Layout>
   );
 }

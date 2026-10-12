@@ -159,7 +159,7 @@ async function run() {
     const text = fs.readFileSync(path.join(repoRoot, 'electron', 'src', file), 'utf8');
     assert.doesNotMatch(text, /_MIGRATION_VERSION\s*=\s*\d+/, `${file} must take its migration version from feature-migrations.cts`);
   }
-  assert.deepEqual(Object.values(FEATURE_MIGRATIONS).map((item) => item.version), [1001, 1002, 1003, 1004, 1005, 1006]);
+  assert.deepEqual(Object.values(FEATURE_MIGRATIONS).map((item) => item.version), [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009]);
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'job-ranger-downgrade-'));
   try {
     const backend = new JobScoutBackend({ dataDirectory: root, schedulerEnabled: false });

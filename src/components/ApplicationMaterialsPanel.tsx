@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, ChevronDown, FileText, Plus, Trash2 } from "lucide-react";
 import type { ApplicationMaterialProjection } from "../shared/application-materials";
 import { getDesktopApi } from "../services/api";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface ApplicationMaterialsPanelProps {
   applicationId: string;
@@ -17,6 +18,8 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
+  const selectedMaterial = materials.find((material) => material.id === deleteMaterialId) ?? null;
 
   const load = async () => {
     setLoading(true);
@@ -60,11 +63,13 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
     setError(null);
     try {
       await getDesktopApi().applicationMaterials.delete(projectionId);
-      setMaterials(await getDesktopApi().applicationMaterials.list(applicationId));
+      // Do not turn a successful deletion into a false failure merely because
+      // a subsequent list refresh is unavailable. The deleted ID is known.
+      setMaterials((current) => current.filter((material) => material.id !== projectionId));
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error ? deleteError.message : "Unable to delete application material",
-      );
+      // Preserve the rejected promise for ConfirmDialog so the user sees
+      // a truthful failure and can cancel or retry. No optimistic deletion.
+      throw deleteError;
     } finally {
       setLoading(false);
     }
@@ -144,7 +149,7 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
                       className="surface-link-button p-2 text-[var(--color-text-muted)]"
                       aria-label={`Delete cover letter version ${material.version}`}
                       disabled={loading}
-                      onClick={() => void remove(material.id)}
+                      onClick={() => setDeleteMaterialId(material.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -168,6 +173,18 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(selectedMaterial)}
+        onClose={() => setDeleteMaterialId(null)}
+        onConfirm={async () => {
+          if (!selectedMaterial) throw new Error("The selected cover letter is no longer available.");
+          await remove(selectedMaterial.id);
+          setDeleteMaterialId(null);
+        }}
+        title="Delete cover letter version?"
+        message={`Delete cover letter version ${selectedMaterial?.version ?? ""}? This permanently removes this draft and its recorded evidence links from application materials. Other versions and Career Evidence remain unchanged. This cannot be undone.`}
+        confirmLabel="Delete cover letter"
+      />
     </div>
   );
 }

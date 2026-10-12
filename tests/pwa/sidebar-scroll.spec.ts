@@ -1,0 +1,62 @@
+import { test, expect } from "@playwright/test";
+import { startPwaServer, type PwaServer } from "./support/server";
+import { distPwa, waitForRuntime } from "./support/fixtures";
+
+let server: PwaServer;
+test.beforeAll(async () => { server = await startPwaServer(distPwa); });
+test.afterAll(async () => { await server.close(); });
+
+test("desktop nav stays in a viewport frame while long page and nav scroll independently", async ({ page }) => {
+  await page.setViewportSize({width: 1280, height: 580});
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  await page.goto(`${server.url}#/personal-brand`);
+  const sidebar=page.locator(".app-sidebar");
+  const main=page.locator(".app-main");
+  const nav=page.getByRole("navigation", {name:"Primary navigation"});
+  await expect(sidebar).toBeVisible();
+  await expect(nav).toBeVisible();
+  await expect(main).toBeVisible();
+  const initial=await sidebar.boundingBox();
+  expect(initial).not.toBeNull();
+  expect(initial!.y).toBeLessThan(2);
+  expect(Math.abs(initial!.height-580)).toBeLessThan(3);
+  const before=await main.evaluate(el=>({scroll:el.scrollTop,height:el.scrollHeight,client:el.clientHeight}));
+  expect(before.height).toBeGreaterThan(before.client+300);
+  await main.evaluate(el=>el.scrollTo({top:900,behavior:"instant"}));
+  await expect.poll(()=>main.evaluate(el=>el.scrollTop)).toBeGreaterThan(600);
+  const after=await sidebar.boundingBox();
+  expect(Math.abs(after!.y-initial!.y)).toBeLessThan(2);
+  expect(Math.abs(after!.height-initial!.height)).toBeLessThan(2);
+  expect(await page.evaluate(()=>window.scrollY)).toBe(0);
+  expect(await page.locator(".app-sidebar-footer").isVisible()).toBe(true);
+  const beforeMain=await main.evaluate(el=>el.scrollTop);
+  await nav.evaluate(el=>el.scrollTop=el.scrollHeight);
+  await expect.poll(()=>nav.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  expect(await main.evaluate(el=>el.scrollTop)).toBe(beforeMain);
+  await expect(page.getByRole("link",{name:"Personal Brand",exact:true})).toHaveAttribute("aria-current","page");
+});
+
+test("mobile navigation is compact, accessible and does not crush the content column", async ({page}) => {
+  await page.setViewportSize({width: 390, height: 780});
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  await page.goto(`${server.url}#/personal-brand`);
+  const nav=page.getByRole("navigation",{name:"Primary navigation"});
+  const menu=page.getByRole("button",{name:"Open navigation menu"});
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("aria-expanded","false");
+  await expect(nav).toBeHidden();
+  const sidebar=await page.locator(".app-sidebar").boundingBox();
+  const main=await page.locator(".app-main").boundingBox();
+  expect(sidebar!.width).toBeLessThanOrEqual(392);
+  expect(main!.width).toBeLessThanOrEqual(392);
+  expect(main!.y).toBeGreaterThanOrEqual(sidebar!.y+sidebar!.height-2);
+  await menu.click();
+  await expect(page.getByRole("button",{name:"Close navigation menu"})).toHaveAttribute("aria-expanded","true");
+  await expect(nav).toBeVisible();
+  await nav.getByRole("link",{name:"Settings"}).click();
+  await expect(nav).toBeHidden();
+  await expect(page.getByRole("button",{name:"Open navigation menu"})).toHaveAttribute("aria-expanded","false");
+  await expect(page).toHaveURL(/#\/settings$/);
+});

@@ -3,6 +3,7 @@ import { BadgeDollarSign, ChevronDown, Trash2 } from "lucide-react";
 import { useApplicationInsights } from "../career/application-insights";
 import { useTargetTracks } from "../career/target-tracks";
 import type { ApplicationOfferInput } from "../shared/application-insights";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const emptyOffer: ApplicationOfferInput = {
   status: "active",
@@ -23,6 +24,7 @@ export function ApplicationInsightsPanel({ applicationId }: { applicationId: str
   const { tracks } = useTargetTracks();
   const [offerDraft, setOfferDraft] = useState<ApplicationOfferInput>(emptyOffer);
   const [showOffer, setShowOffer] = useState(false);
+  const [confirmRemoveOffer, setConfirmRemoveOffer] = useState(false);
 
   useEffect(() => {
     if (!insights.detail?.offer) return;
@@ -153,7 +155,7 @@ export function ApplicationInsightsPanel({ applicationId }: { applicationId: str
                 </label>
                 <div className="sm:col-span-2 flex flex-wrap justify-end gap-2">
                   {insights.detail?.offer && (
-                    <button type="button" className="secondary-button" disabled={insights.busy} onClick={() => void removeOffer()}>
+                    <button type="button" className="secondary-button" disabled={insights.busy} onClick={() => setConfirmRemoveOffer(true)}>
                       <Trash2 className="h-4 w-4" /> Remove offer details
                     </button>
                   )}
@@ -164,6 +166,18 @@ export function ApplicationInsightsPanel({ applicationId }: { applicationId: str
           </section>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmRemoveOffer && Boolean(insights.detail?.offer)}
+        onClose={() => setConfirmRemoveOffer(false)}
+        onConfirm={async () => {
+          if (!insights.detail?.offer) throw new Error("Offer details are no longer available.");
+          await removeOffer();
+          setConfirmRemoveOffer(false);
+        }}
+        title="Remove offer details?"
+        message="Permanently delete this application's saved offer terms, compensation, benefits, deadlines, and private negotiation notes? The rest of the application remains. This cannot be undone."
+        confirmLabel="Remove offer details"
+      />
     </div>
   );
 }

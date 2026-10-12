@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useApplicationLifecycle } from "../career/application-lifecycle";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type {
   ApplicationContactInput,
   ApplicationEventInput,
@@ -68,6 +69,10 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
   const [eventDraft, setEventDraft] = useState(emptyEvent);
   const [showContactForm, setShowContactForm] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
+  const selectedContact = lifecycle.lifecycle.contacts.find((contact) => contact.id === deleteContactId) ?? null;
+  const selectedEvent = lifecycle.lifecycle.events.find((event) => event.id === deleteEventId) ?? null;
 
   const upcomingCount = useMemo(
     () => lifecycle.lifecycle.events.filter((event) => !event.completedAt).length,
@@ -280,7 +285,8 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                           type="button"
                           className="surface-link-button p-2 text-[var(--color-text-muted)]"
                           aria-label={`Delete contact ${contact.name}`}
-                          onClick={() => void lifecycle.deleteContact(contact.id)}
+                          disabled={lifecycle.busy}
+                          onClick={() => setDeleteContactId(contact.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -432,7 +438,8 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                               type="button"
                               className="surface-link-button p-2 text-[var(--color-text-muted)]"
                               aria-label={`Delete event ${event.title}`}
-                              onClick={() => void lifecycle.deleteEvent(event.id)}
+                              disabled={lifecycle.busy}
+                              onClick={() => setDeleteEventId(event.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -447,6 +454,30 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(selectedContact)}
+        onClose={() => setDeleteContactId(null)}
+        onConfirm={async () => {
+          if (!selectedContact) throw new Error("The selected person is no longer in this application.");
+          await lifecycle.deleteContact(selectedContact.id);
+          setDeleteContactId(null);
+        }}
+        title="Delete application contact?"
+        message={`Remove "${selectedContact?.name ?? "this contact"}" from this application's people list? Their saved contact information and notes will be deleted. This cannot be undone.`}
+        confirmLabel="Delete contact"
+      />
+      <ConfirmDialog
+        open={Boolean(selectedEvent)}
+        onClose={() => setDeleteEventId(null)}
+        onConfirm={async () => {
+          if (!selectedEvent) throw new Error("The selected event is no longer in this application.");
+          await lifecycle.deleteEvent(selectedEvent.id);
+          setDeleteEventId(null);
+        }}
+        title="Delete application event?"
+        message={`Delete "${selectedEvent?.title ?? "this event"}" from this application? The event record and any associated reminder will be removed. This cannot be undone.`}
+        confirmLabel="Delete event"
+      />
     </div>
   );
 }

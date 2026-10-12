@@ -110,6 +110,69 @@ textarea {
   max-width: 88rem;
 }
 
+/* Desktop uses one viewport frame. The content column scrolls independently,
+   while navigation stays anchored and can scroll if the viewport is short.
+   Avoid fixed positioning so overlays and responsive sizing remain correct. */
+@media (min-width: 48rem) {
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-sidebar {
+    flex: 0 0 18rem;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-sidebar-nav {
+    min-height: 0;
+    overscroll-behavior-y: contain;
+  }
+
+  .app-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Narrow screens use the ordinary document scroll, not a competing
+   nested full-screen sidebar. Navigation expands only on request. */
+@media (max-width: 47.999rem) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .app-sidebar-nav {
+    flex: none;
+    max-height: min(65dvh, 32rem);
+    overflow-y: auto;
+  }
+
+  .app-sidebar-footer {
+    display: none;
+  }
+
+  .app-main {
+    min-width: 0;
+    min-height: 0;
+    overflow: visible;
+    padding: 0.75rem;
+  }
+}
+
 .brand-mark {
   border: 1px solid color-mix(in srgb, var(--color-primary) 48%, transparent);
   background: color-mix(in srgb, var(--color-primary) 16%, transparent);

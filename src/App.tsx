@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import { createHashRouter, Outlet, RouterProvider } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import { Dashboard } from "./pages/Dashboard";
@@ -46,28 +46,11 @@ function HomeRoute() {
 
 function AppRoutes() {
   const { toasts, removeToast } = useAppContext();
-
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<HomeRoute />} />
-        <Route path="/onboarding" element={<OnboardingRoute />} />
-        <Route path="/career-evidence/new" element={<EvidenceEntry />} />
-        <Route path="/career-stories" element={<CareerStories />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/applications" element={<Applications />} />
-        <Route path="/search-insights" element={<SearchInsights />} />
-        <Route path="/personal-brand" element={<PersonalBrand />} />
-        <Route path="/career-profile" element={<CareerProfile />} />
-        <Route path="/target-tracks" element={<TargetTracks />} />
-        <Route path="/resume" element={<Resume />} />
-        <Route path="/companies" element={<Companies />} />
-        <Route path="/filters" element={<Filters />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/help" element={<Help />} />
-      </Routes>
+    <ErrorBoundary>
+      <Outlet />
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
-    </>
+    </ErrorBoundary>
   );
 }
 
@@ -87,15 +70,35 @@ function OnboardingRoute() {
   return <Onboarding profile={profile} saveProfile={save} />;
 }
 
+// The data hash-router preserves the existing #/ URLs used by the PWA
+// and packaged desktop shell, while allowing one first-class navigation blocker
+// for unacknowledged Career Ops edits. Keep the route inventory unchanged.
+const router = createHashRouter([{
+  element: <AppRoutes />,
+  children: [
+    { index: true, element: <HomeRoute /> },
+    { path: "onboarding", element: <OnboardingRoute /> },
+    { path: "career-evidence/new", element: <EvidenceEntry /> },
+    { path: "career-stories", element: <CareerStories /> },
+    { path: "jobs", element: <Jobs /> },
+    { path: "applications", element: <Applications /> },
+    { path: "search-insights", element: <SearchInsights /> },
+    { path: "personal-brand", element: <PersonalBrand /> },
+    { path: "career-profile", element: <CareerProfile /> },
+    { path: "target-tracks", element: <TargetTracks /> },
+    { path: "resume", element: <Resume /> },
+    { path: "companies", element: <Companies /> },
+    { path: "filters", element: <Filters /> },
+    { path: "settings", element: <Settings /> },
+    { path: "help", element: <Help /> },
+  ],
+}]);
+
 export function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <Router>
-          <ErrorBoundary>
-            <AppRoutes />
-          </ErrorBoundary>
-        </Router>
+        <RouterProvider router={router} />
       </AppProvider>
     </ThemeProvider>
   );

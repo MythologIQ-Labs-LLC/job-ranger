@@ -1,4 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
+import { validateLinkedInImport, type SavedLinkedInExport, type LinkedInImportResult } from "../../src/shared/linkedin-import-ledger.js";
+import { validateHistoricalLinkedInPost, canonicalHistoricalLinkedInUrl, collidesWithApprovedPublication, type HistoricalLinkedInPost } from "../../src/shared/linkedin-history.js";
 import type {
   AnalyticsSnapshot, ManualPostPackage, ManualPublicationReceipt, PersonalBrandDraft, MetricObservation,
 } from "../../src/shared/personal-brand.js";
@@ -9,6 +11,7 @@ import type { AnalyticsSnapshotInput, PersonalBrandDraftInput } from "../../src/
 import { sql, SqliteClient, toSqlLiteral } from "./sqlite.cjs";
 import { FEATURE_MIGRATIONS } from "./feature-migrations.cjs";
 import { validateCareerOutcomeInput, type CareerOutcomeRecord } from "../../src/shared/personal-brand-outcomes.js";
+import { validateTopicLabels, validateTopicTarget, latestTopicLabels, type LinkedInTopicEvent } from "../../src/shared/linkedin-topics.js";
 
 const schema = `
 CREATE TABLE IF NOT EXISTS personal_brand_drafts (
@@ -54,6 +57,45 @@ CREATE TABLE IF NOT EXISTS personal_brand_career_outcomes (
 );
 CREATE INDEX IF NOT EXISTS idx_personal_brand_career_outcomes_at
   ON personal_brand_career_outcomes(occurred_at, id);
+`;
+
+const linkedinExportSchema = `
+CREATE TABLE IF NOT EXISTS personal_brand_linkedin_exports (
+  id TEXT PRIMARY KEY,
+  content_sha256 TEXT NOT NULL UNIQUE CHECK(length(content_sha256) = 64),
+  imported_at TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_personal_brand_linkedin_exports_period
+  ON personal_brand_linkedin_exports(period_start, period_end, imported_at);
+`;
+
+const historicalLinkedInSchema = `
+CREATE TABLE IF NOT EXISTS personal_brand_linkedin_historical_posts (
+  id TEXT PRIMARY KEY,
+  canonical_url TEXT NOT NULL UNIQUE,
+  published_on TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_personal_brand_linkedin_historical_dates
+  ON personal_brand_linkedin_historical_posts(published_on DESC, recorded_at DESC);
+`;
+
+const topicAttestationSchema = `
+CREATE TABLE IF NOT EXISTS personal_brand_linkedin_topic_events (
+  id TEXT PRIMARY KEY,
+  target_kind TEXT NOT NULL CHECK(target_kind IN ('confirmed_publication','historical_post')),
+  target_id TEXT NOT NULL,
+  revision INTEGER NOT NULL CHECK(revision >= 1),
+  recorded_at TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  UNIQUE(target_kind,target_id,revision)
+);
+CREATE INDEX IF NOT EXISTS idx_personal_brand_linkedin_topic_history
+  ON personal_brand_linkedin_topic_events(target_kind,target_id,revision DESC);
 `;
 
 type JsonRow = { payload_json: string };
@@ -159,6 +201,39 @@ export class PersonalBrandBackend {
             VALUES (${outcomeMigration.version}, ${outcomeMigration.name}, ${new Date().toISOString()});`,
       ]);
     }
+    const linkedinMigration = FEATURE_MIGRATIONS.personalBrandLinkedInAnalytics;
+    const linkedinExists = await this.db.queryOne<{ version: number }>(sql`
+      SELECT version FROM schema_migrations WHERE version = ${linkedinMigration.version} LIMIT 1;
+    `);
+    if (!linkedinExists) {
+      await this.db.transaction([
+        linkedinExportSchema,
+        sql`INSERT INTO schema_migrations (version, name, applied_at)
+          VALUES (${linkedinMigration.version}, ${linkedinMigration.name}, ${new Date().toISOString()});`,
+      ]);
+    }
+    const historicMigration = FEATURE_MIGRATIONS.personalBrandHistoricalLinkedIn;
+    const historicExists = await this.db.queryOne<{ version: number }>(sql`
+      SELECT version FROM schema_migrations WHERE version = ${historicMigration.version} LIMIT 1;
+    `);
+    if (!historicExists) {
+      await this.db.transaction([
+        historicalLinkedInSchema,
+        sql`INSERT INTO schema_migrations (version, name, applied_at)
+          VALUES (${historicMigration.version}, ${historicMigration.name}, ${new Date().toISOString()});`,
+      ]);
+    }
+    const topicMigration = FEATURE_MIGRATIONS.personalBrandLinkedInTopics;
+    const topicExists = await this.db.queryOne<{ version: number }>(sql`
+      SELECT version FROM schema_migrations WHERE version = ${topicMigration.version} LIMIT 1;
+    `);
+    if (!topicExists) {
+      await this.db.transaction([
+        topicAttestationSchema,
+        sql`INSERT INTO schema_migrations (version, name, applied_at)
+          VALUES (${topicMigration.version}, ${topicMigration.name}, ${new Date().toISOString()});`,
+      ]);
+    }
   }
 
   private async getDraft(id: string): Promise<PersonalBrandDraft> {
@@ -256,6 +331,14 @@ export class PersonalBrandBackend {
       userConfirmed: input.userConfirmed,
       existing: await this.listPublications(),
     });
+    const canonical = receipt.destination === "linkedin" ? canonicalHistoricalLinkedInUrl(receipt.publishedUrl) : null;
+    if (canonical) {
+      const historical = await this.db.queryOne<{ id: string }>(sql`
+        SELECT id FROM personal_brand_linkedin_historical_posts
+        WHERE canonical_url = ${canonical} LIMIT 1;
+      `);
+      if (historical) throw new Error("This URL is recorded in the historical archive. Delete that user-attested entry before confirming a reviewed publication.");
+    }
     await this.db.exec(sql`INSERT INTO personal_brand_publications
       (post_id, draft_id, approved_revision, published_url, payload_json)
       VALUES (${receipt.postId}, ${receipt.draftId}, ${receipt.approvedRevision},
@@ -303,6 +386,185 @@ export class PersonalBrandBackend {
       (id, post_id, captured_at, payload_json)
       VALUES (${snapshot.id}, ${postId}, ${snapshot.capturedAt}, ${JSON.stringify(snapshot)});`);
     return snapshot;
+  }
+
+  async listLinkedInImports(): Promise<SavedLinkedInExport[]> {
+    const rows = await this.db.queryAll<JsonRow>(
+      "SELECT payload_json FROM personal_brand_linkedin_exports ORDER BY imported_at DESC, id ASC;",
+    );
+    return rows.map(row => rowJson<SavedLinkedInExport>(row));
+  }
+  async saveLinkedInImport(raw: unknown, userConfirmed: boolean): Promise<LinkedInImportResult> {
+    if (userConfirmed !== true) throw new Error("Saving LinkedIn analytics requires explicit user confirmation.");
+    const preview = validateLinkedInImport(raw);
+    const contentSha256 = createHash("sha256").update(JSON.stringify(preview)).digest("hex");
+    const existing = await this.db.queryOne<JsonRow>(sql`
+      SELECT payload_json FROM personal_brand_linkedin_exports
+      WHERE content_sha256 = ${contentSha256} LIMIT 1;
+    `);
+    if (existing) return { record: rowJson<SavedLinkedInExport>(existing), alreadyPresent: true };
+    const record: SavedLinkedInExport = {
+      id: `linkedin-import-${randomUUID()}`, contentSha256,
+      importedAt: new Date().toISOString(), source: "linkedin-native-xlsx-manual", preview,
+    };
+    // Ignore conflicts for the identical normalized content hash only.
+    // Read back the unique record after insertion to handle overlapping writers safely.
+    await this.db.exec(sql`
+      INSERT OR IGNORE INTO personal_brand_linkedin_exports
+      (id, content_sha256, imported_at, period_start, period_end, payload_json)
+      VALUES (${record.id}, ${record.contentSha256}, ${record.importedAt},
+        ${preview.period.start}, ${preview.period.end}, ${JSON.stringify(record)});
+    `);
+    const persisted = await this.db.queryOne<JsonRow>(sql`
+      SELECT payload_json FROM personal_brand_linkedin_exports
+      WHERE content_sha256 = ${contentSha256} LIMIT 1;
+    `);
+    if (!persisted) throw new Error("LinkedIn import was not committed.");
+    const actual = rowJson<SavedLinkedInExport>(persisted);
+    return { record: actual, alreadyPresent: actual.id !== record.id };
+  }
+  async deleteLinkedInImport(id: string, userConfirmed: boolean): Promise<void> {
+    if (userConfirmed !== true) throw new Error("Deleting LinkedIn analytics requires explicit confirmation.");
+    if (typeof id !== "string" || !/^linkedin-import-[a-f0-9-]{36}$/.test(id)) {
+      throw new Error("Invalid LinkedIn import ID.");
+    }
+    const existing = await this.db.queryOne<{ id: string }>(sql`
+      SELECT id FROM personal_brand_linkedin_exports WHERE id = ${id} LIMIT 1;
+    `);
+    if (!existing) throw new Error("LinkedIn import record not found.");
+    await this.db.exec(sql`DELETE FROM personal_brand_linkedin_exports WHERE id = ${id};`);
+  }
+
+  async listHistoricalLinkedInPosts(): Promise<HistoricalLinkedInPost[]> {
+    const rows = await this.db.queryAll<JsonRow>(
+      "SELECT payload_json FROM personal_brand_linkedin_historical_posts ORDER BY published_on DESC, recorded_at DESC, id ASC;",
+    );
+    return rows.map(row => rowJson<HistoricalLinkedInPost>(row));
+  }
+
+  async recordHistoricalLinkedInPost(raw: unknown, confirmed: boolean): Promise<HistoricalLinkedInPost> {
+    if (confirmed !== true) throw new Error("Historical post text requires explicit user attestation.");
+    const input = validateHistoricalLinkedInPost(raw);
+    if (input.publishedOn > new Date().toISOString().slice(0, 10)) {
+      throw new Error("Historical LinkedIn publication date cannot be in the future.");
+    }
+    if (collidesWithApprovedPublication(input.url, await this.listPublications())) {
+      throw new Error("A reviewed publication receipt already exists for this LinkedIn URL.");
+    }
+    const exists = await this.db.queryOne<{ id: string }>(sql`
+      SELECT id FROM personal_brand_linkedin_historical_posts WHERE canonical_url = ${input.url} LIMIT 1;
+    `);
+    if (exists) throw new Error("This historical LinkedIn URL is already archived.");
+    const record: HistoricalLinkedInPost = {
+      ...input, id: `linkedin-history-${randomUUID()}`,
+      recordedAt: new Date().toISOString(),
+      bodySha256: createHash("sha256").update(input.body,"utf8").digest("hex"),
+      source: "user_attested_historical", userConfirmed: true,
+    };
+    await this.db.exec(sql`
+      INSERT INTO personal_brand_linkedin_historical_posts
+        (id, canonical_url, published_on, recorded_at, payload_json)
+      VALUES (${record.id}, ${record.url}, ${record.publishedOn},
+        ${record.recordedAt}, ${JSON.stringify(record)});
+    `);
+    return record;
+  }
+
+  async deleteHistoricalLinkedInPost(id: string, confirmed: boolean): Promise<void> {
+    if (confirmed !== true) throw new Error("Deleting a historical LinkedIn post requires explicit confirmation.");
+    if (typeof id !== "string" || !/^linkedin-history-[0-9a-f-]{36}$/.test(id)) {
+      throw new Error("Invalid historical LinkedIn post identifier.");
+    }
+    const exists = await this.db.queryOne<{ id: string }>(sql`
+      SELECT id FROM personal_brand_linkedin_historical_posts WHERE id = ${id} LIMIT 1;
+    `);
+    if (!exists) throw new Error("Historical LinkedIn post not found.");
+    await this.db.transaction([
+      sql`DELETE FROM personal_brand_linkedin_topic_events
+        WHERE target_kind = 'historical_post' AND target_id = ${id};`,
+      sql`DELETE FROM personal_brand_linkedin_historical_posts WHERE id = ${id};`,
+    ]);
+  }
+
+  private async topicSourceFingerprint(target: { targetKind: "confirmed_publication" | "historical_post"; targetId: string }): Promise<string> {
+    if (target.targetKind === "confirmed_publication") {
+      const row = await this.db.queryOne<JsonRow>(sql`
+        SELECT payload_json FROM personal_brand_publications WHERE post_id = ${target.targetId} LIMIT 1;
+      `);
+      if (!row) throw new Error("LinkedIn topic publication does not exist.");
+      const receipt = rowJson<ManualPublicationReceipt>(row);
+      if (receipt.destination !== "linkedin" || receipt.source !== "user_confirmed" ||
+          !/^[a-f0-9]{64}$/.test(receipt.contentSha256))
+        throw new Error("Topics require a confirmed LinkedIn publication.");
+      return receipt.contentSha256;
+    }
+    const row = await this.db.queryOne<JsonRow>(sql`
+      SELECT payload_json FROM personal_brand_linkedin_historical_posts WHERE id = ${target.targetId} LIMIT 1;
+    `);
+    if (!row) throw new Error("Historical LinkedIn topic post does not exist.");
+    const post = rowJson<HistoricalLinkedInPost>(row);
+    if (post.source !== "user_attested_historical" || post.userConfirmed !== true ||
+        !/^[a-f0-9]{64}$/.test(post.bodySha256) ||
+        createHash("sha256").update(post.body,"utf8").digest("hex") !== post.bodySha256)
+      throw new Error("Historical topic post failed source integrity verification.");
+    return post.bodySha256;
+  }
+
+  async listLinkedInTopicHistory(target: unknown): Promise<LinkedInTopicEvent[]> {
+    const t=validateTopicTarget(target);
+    await this.topicSourceFingerprint(t);
+    const rows=await this.db.queryAll<JsonRow>(sql`
+      SELECT payload_json FROM personal_brand_linkedin_topic_events
+      WHERE target_kind = ${t.targetKind} AND target_id = ${t.targetId}
+      ORDER BY revision ASC;
+    `);
+    return rows.map(row=>rowJson<LinkedInTopicEvent>(row));
+  }
+
+  async listLinkedInTopicLabels(): Promise<LinkedInTopicEvent[]> {
+    const rows=await this.db.queryAll<JsonRow>(
+      "SELECT payload_json FROM personal_brand_linkedin_topic_events ORDER BY target_kind, target_id, revision ASC;",
+    );
+    const active=latestTopicLabels(rows.map(row=>rowJson<LinkedInTopicEvent>(row)));
+    const valid:LinkedInTopicEvent[]=[];
+    for(const event of active){
+      try{
+        const fingerprint=await this.topicSourceFingerprint(event);
+        if(fingerprint===event.sourceFingerprint)valid.push(event);
+      }catch{
+        // Never show labels attributed to a deleted or integrity-failed post.
+      }
+    }
+    return valid;
+  }
+
+  async attestLinkedInTopics(raw: unknown, expectedRevision: number, confirmed: boolean): Promise<LinkedInTopicEvent> {
+    if(confirmed!==true)throw new Error("LinkedIn topic labels require explicit user confirmation.");
+    const input=validateTopicLabels(raw);
+    if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0||expectedRevision>100000)
+      throw new Error("Invalid topic revision precondition.");
+    const sourceFingerprint=await this.topicSourceFingerprint(input);
+    const record:LinkedInTopicEvent={
+      ...input,revision:expectedRevision+1,
+      id:`linkedin-topics-${randomUUID()}`, recordedAt:new Date().toISOString(),
+      sourceFingerprint, source:"user_attested",userConfirmed:true,
+      action:input.topics.length?"label":"clear",
+    };
+    // One atomic SQLite statement: a stale writer cannot replace a newer
+    // attestation or accidentally skip a revision on concurrent IPC calls.
+    await this.db.exec(sql`
+      INSERT INTO personal_brand_linkedin_topic_events
+        (id,target_kind,target_id,revision,recorded_at,payload_json)
+      SELECT ${record.id},${record.targetKind},${record.targetId},${record.revision},
+        ${record.recordedAt},${JSON.stringify(record)}
+      WHERE COALESCE((SELECT MAX(revision) FROM personal_brand_linkedin_topic_events
+        WHERE target_kind=${record.targetKind} AND target_id=${record.targetId}),0) = ${expectedRevision};
+    `);
+    const saved=await this.db.queryOne<JsonRow>(sql`
+      SELECT payload_json FROM personal_brand_linkedin_topic_events WHERE id=${record.id} LIMIT 1;
+    `);
+    if(!saved)throw new Error("Stale LinkedIn topic revision. Reload before updating.");
+    return rowJson<LinkedInTopicEvent>(saved);
   }
 
   async listCareerOutcomes(): Promise<CareerOutcomeRecord[]> {

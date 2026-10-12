@@ -128,3 +128,22 @@ The following are deliberate evidence-based scope decisions, not hidden incomple
 ## Completion
 
 The Universal User Stories program has current implementation and validation evidence for US-0 through US-30, with narrower expansions explicitly deferred where evidence does not justify core scope. The governed synthetic fixtures, production-logic regression suite, story-specific smoke/validator tests, and representative Electron E2E paths remain the standing regression contract after #81 closes.
+
+
+## QOR Harden B1/B4: UI-driven acceptance beyond production-logic fixtures
+
+The final dispositions above reflect the **original universal-story implementation program**. They do not mean every story has been completed end-to-end entirely through visible user interface controls. In particular, the existing `tests/pwa/career-ops.spec.ts` used read/write application runtime API calls for most workflow creation and state changes. The difference between a working domain backend and a usable interface is a release-quality boundary, not a cosmetic testing preference.
+
+**Current acceptance candidate:** [#214](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/214), `tests/pwa/resume-first-ui-journey.spec.ts`. Its scoped healthcare-operations fixture crosses US-1, US-4, US-9/10, US-13–15, US-18/19, US-22/23, and US-30 through the actual onboarding, Career Profile, Target Tracks, Companies, Find Jobs, Applications and Resume UI. All user-side mutations are visible UI actions; internal APIs are used only for read-only authority checks. The exact steps, expected state and limitations are documented in [QOR_HARDEN_B1_RESUME_FIRST_UI_2026-10-09.md](./QOR_HARDEN_B1_RESUME_FIRST_UI_2026-10-09.md).
+
+| UI journey | Synthetic context | Acceptance evidence | Scope disposition |
+| --- | --- | --- | --- |
+| Resume-first, imported and human-approved evidence through verified application resume | HC: healthcare operations | Playwright browser `tests/pwa/resume-first-ui-journey.spec.ts`; CI result on owning PR #214 required | One cross-story browser journey; **not** completion of B1/B4 |
+| Resume-first native file picker and restart | Cross-career representative desktop fixture | Existing `tests/e2e/onboarding.spec.ts`; native Electron file-dialog boundary | Native import path only, not entire user journey |
+| Full domain and PDF byte/parseability pipeline | HC: healthcare operations | Existing `tests/pwa/career-ops.spec.ts` with canonical API setup and selective UI steps | Backend invariants, **not** equivalent to UI-driven completion |
+| No-resume and goal-first end-to-end UI | HL/GR/RT and other materially distinct contexts | Not yet added to the B1 journey suite | **Open** |
+| Career changer multi-track UI and review | CC and transition contexts | Future separately scoped B1 story; don't infer additional requirements until clarified | **Open** |
+| Evidence correction/rejection/merge and truthful resume statement editing | Cross-career | Existing focused tests, comprehensive UI journey not yet recorded | **Open** |
+| Backup/restore, interrupted edits, installation and accessibility UX | Desktop and browser | Dedicated resilience/AX/drill matrices required | **Open** |
+
+**Evidence promotion rule:** Do not mark an individual UI journey as passing until the owning final-head Linux and Windows PWA jobs pass its test. Passing this single journey may close its bounded issue, but it does not close B1, B2, B3, B4 or QOR Harden #194. Preserve career universality without generating fictitious persona-specific product modes.

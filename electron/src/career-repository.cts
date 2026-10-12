@@ -438,16 +438,14 @@ export class CareerRepository {
     id: string,
     update: ApplicationUpdate,
   ): Promise<TrackedApplication> {
-    const current = await this.getApplicationById(id);
-    if (!current) {
-      throw new Error(`Application ${id} not found`);
-    }
-
+    // An application status edit must not replay an earlier snapshot of notes
+    // (nor may a notes edit replay an old status). Each omitted field retains
+    // its CURRENT database value in the same atomic UPDATE statement.
     const row = await this.sqlite.queryOne<ApplicationRow>(sql`
       UPDATE applications
       SET
-        status = ${update.status ?? current.status},
-        notes = ${update.notes ?? current.notes},
+        status = COALESCE(${update.status ?? null}, status),
+        notes = COALESCE(${update.notes ?? null}, notes),
         updated_at = ${new Date().toISOString()}
       WHERE id = ${id}
       RETURNING *;
