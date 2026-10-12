@@ -99,6 +99,7 @@ Key current research:
 - [`research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md)
 - [`research/RESUME_PARSER_ADOPTION_2026-09-25.md`](./research/RESUME_PARSER_ADOPTION_2026-09-25.md)
 - [`research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md`](./research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md)
+- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **unmerged developer-tool candidate**, local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
 
 Research can recommend or reject a capability. It does not make that capability product truth until accepted and implemented.
 
