@@ -141,7 +141,7 @@ export function Sidebar() {
           />
         ))}
 
-        <div className="my-3 border-t border-white/10 pt-3" aria-label="More navigation">
+        <div className="my-3 border-t border-white/10 pt-3" role="group" aria-label="Supporting navigation">
           {navGroups.map(group => {
             const expanded = openGroup === group.id;
             const containsCurrentPage = activeGroup === group.id;
