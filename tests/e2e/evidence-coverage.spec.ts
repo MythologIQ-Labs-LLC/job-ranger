@@ -17,6 +17,7 @@ test.afterAll(async () => {
 test("Find Jobs explains a selected-track opportunity assessment without a fit percentage", async () => {
   const { page } = fixture;
 
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "My Career" }).click();
   await page.getByRole("link", { name: "Career Profile", exact: true }).click();
   await page.getByRole("button", { name: "Paste text", exact: true }).click();
   await page
