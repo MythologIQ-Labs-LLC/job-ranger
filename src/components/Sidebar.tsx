@@ -6,6 +6,7 @@ import {
   Briefcase,
   Building2,
   ChevronRight,
+  CircleHelp,
   Compass,
   FileText,
   LayoutDashboard,
@@ -53,6 +54,11 @@ const navGroups: NavGroup[] = [
       { name: "Search Insights", href: "/search-insights", icon: BarChart3 },
     ],
   },
+];
+
+const utilityLinks: NavItem[] = [
+  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Help", href: "/help", icon: CircleHelp },
 ];
 
 function groupForPath(pathname: string): string | null {
@@ -183,11 +189,14 @@ export function Sidebar() {
       </nav>
 
       <nav id="job-ranger-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
-        <SidebarNavLink
-          item={{ name: "Settings", href: "/settings", icon: Settings }}
-          active={location.pathname === "/settings"}
-          onNavigate={closeMobileMenu}
-        />
+        {utilityLinks.map(item => (
+          <SidebarNavLink
+            key={item.href}
+            item={item}
+            active={location.pathname === item.href}
+            onNavigate={closeMobileMenu}
+          />
+        ))}
       </nav>
     </aside>
   );
