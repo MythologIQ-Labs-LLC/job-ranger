@@ -73,3 +73,23 @@ test("hovering a link does not look like the current page", async ({ page }) => 
   const style = (el: Element) => getComputedStyle(el).backgroundColor;
   expect(await other.evaluate(style)).not.toBe(await current.evaluate(style));
 });
+
+test("choosing Home from the mobile menu focuses Home's main content after it loads", async ({ page }) => {
+  await open(page, "/applications", 390, 780);
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Home" }).click();
+  await expect(page).toHaveURL(/#\/$/);
+  // Home shows a loading shell before the dashboard; focus must land on the final page.
+  await expect(page.locator(".page-title").first()).toBeVisible();
+  await expect(page.getByRole("main")).toBeFocused();
+});
+
+test("hovering the current page keeps its current-page styling", async ({ page }) => {
+  await open(page, "/applications", 1440, 900);
+  const current = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Applications" });
+  const style = (el: Element) => getComputedStyle(el).backgroundColor;
+  const resting = await current.evaluate(style);
+  await current.hover();
+  await page.waitForTimeout(250);
+  expect(await current.evaluate(style)).toBe(resting);
+});

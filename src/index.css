@@ -496,7 +496,7 @@ textarea {
 }
 
 /* Hover is a neutral tint; only the current page gets the brand fill (#274). */
-.sidebar-link:hover {
+.sidebar-link:hover:not(.sidebar-link-active) {
   color: var(--color-text-inverse);
   background: rgba(255, 255, 255, 0.08);
 }

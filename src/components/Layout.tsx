@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
-import { MAIN_CONTENT_ID, consumeMainFocusRequest, focusMainContent } from './mainFocus';
+import { MAIN_CONTENT_ID, focusMainContent, hasPendingMainFocusRequest } from './mainFocus';
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,7 +8,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   useEffect(() => {
-    if (consumeMainFocusRequest()) focusMainContent();
+    if (hasPendingMainFocusRequest()) focusMainContent();
   }, []);
 
   return (
