@@ -292,7 +292,7 @@ Check:
 2. the source is active;
 3. the latest acquisition status/diagnostic;
 4. the source support state is not `manual-review`;
-5. filters are not excluding results;
+5. filters are not excluding results. Each card on **Filters** lists the filter's include and exclude rules; use **Edit** to change them or **Disable** to pause a filter without deleting it;
 6. the third-party portal has not changed underneath its extraction path.
 
 ### Job Ranger found no requirements for a job
