@@ -133,7 +133,7 @@ def check_inventory(doc: object, expected_path: str) -> tuple[list[dict], list[d
             'line-equals': {'line', 'text'}, 'text-present': {'text'},
             'text-absent': {'text'}, 'file-lines': {'predicate'},
         }
-        require(kind in allowed, 'unsupported claim kind (function/import/enum/test outcomes never verified)')
+        require(isinstance(kind, str) and kind in allowed, 'unsupported claim kind (function/import/enum/test outcomes never verified)')
         common = {'id', 'kind', 'commit', 'path', 'purpose'}
         fields(claim, common | allowed[kind], common | allowed[kind])
         require(isinstance(claim['id'], str) and IDENT.fullmatch(claim['id']) is not None,
