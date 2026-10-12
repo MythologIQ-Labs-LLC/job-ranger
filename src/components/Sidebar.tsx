@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   BarChart3,
@@ -108,6 +108,21 @@ export function Sidebar() {
     setOpenGroup(groupForPath(location.pathname));
   }, [location.pathname]);
 
+  // On short screens an auto-expanded group can leave the current page below the
+  // sidebar's own scroll area. Reveal it once per route without moving page content.
+  const navRef = useRef<HTMLElement>(null);
+  const revealedPath = useRef<string | null>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !active || active.offsetParent === null || revealedPath.current === location.pathname) return;
+    revealedPath.current = location.pathname;
+    const navBox = nav.getBoundingClientRect();
+    const activeBox = active.getBoundingClientRect();
+    if (activeBox.bottom > navBox.bottom) nav.scrollTop += activeBox.bottom - navBox.bottom + 12;
+    else if (activeBox.top < navBox.top) nav.scrollTop -= navBox.top - activeBox.top + 12;
+  }, [location.pathname, openGroup, mobileOpen]);
+
   const closeMobileMenu = () => setMobileOpen(false);
 
   return (
@@ -120,7 +135,7 @@ export function Sidebar() {
           <h1 className="text-xl font-bold !text-white">Job Ranger</h1>
           <button
             type="button"
-            className="ml-auto rounded-lg border border-white/20 px-3 py-2 text-white md:hidden"
+            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 text-white md:hidden"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
             aria-controls="job-ranger-primary-nav job-ranger-utility-nav"
@@ -133,6 +148,7 @@ export function Sidebar() {
       </div>
 
       <nav
+        ref={navRef}
         id="job-ranger-primary-nav"
         className={`app-sidebar-nav min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-3
           ${mobileOpen ? "block" : "hidden"} md:block`}

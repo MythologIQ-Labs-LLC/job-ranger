@@ -126,3 +126,34 @@ test("keyboard can reveal a grouped destination without losing focus", async ({ 
   await page.keyboard.press("Enter");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
+
+test("a deep-linked nested destination is scrolled into the short-screen sidebar", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 580 });
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  await page.goto(`${server.url}#/resume`);
+  const nav = page.getByRole("navigation", { name: "Primary navigation" });
+  const resume = nav.getByRole("link", { name: "Resume", exact: true });
+  await expect(resume).toHaveAttribute("aria-current", "page");
+  // The active page must be visible inside the sidebar's own scroll area, not hidden below it.
+  await expect.poll(async () => {
+    const [n, r] = await Promise.all([nav.boundingBox(), resume.boundingBox()]);
+    return !!n && !!r && r.y >= n.y - 1 && r.y + r.height <= n.y + n.height + 1;
+  }).toBe(true);
+  expect(await page.locator(".app-main").evaluate(el => el.scrollTop)).toBe(0);
+});
+
+test("the mobile menu button is a comfortable touch target", async ({ page }) => {
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto(server.url);
+    await waitForRuntime(page);
+    for (const name of ["Open navigation menu", "Close navigation menu"]) {
+      const button = page.getByRole("button", { name });
+      const box = await button.boundingBox();
+      expect(box!.width, `${name} width at ${width}px`).toBeGreaterThanOrEqual(44);
+      expect(box!.height, `${name} height at ${width}px`).toBeGreaterThanOrEqual(44);
+      await button.click();
+    }
+  }
+});
