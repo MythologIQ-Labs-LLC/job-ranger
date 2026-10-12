@@ -144,26 +144,41 @@ Governed plans from `docs/plan-qor-phase17-*` onward carry exactly one fenced `j
 
 Binding rules, enforced by `scripts/plan_claims_check.py`:
 
+- **Restricted Markdown.** Governed plans use a small Markdown subset that a renderer and the checker read the same way. Anything else fails closed:
+  - ATX headings start at column 0. Canonical section names may appear only as level-2 headings, and there is at most one leading level-1 title.
+  - A fence is exactly three backticks at column 0 and is closed by exactly three backticks. Tilde, longer and indented fences are rejected.
+  - Setext underlines are rejected.
+  - Raw HTML outside code spans is rejected. Autolinks are allowed.
+  - Line endings must be LF or CRLF. Form feeds and Unicode line separators are rejected.
 - **Scope.** Canonical sections are Locked Decisions, each Phase, Definition of Done and CI Commands. They are scanned in full, fenced blocks included. An unclosed fence fails.
 - **Detected forms.** These assertions are detected:
-  - file:line citations;
+  - file:line and `#L` citations;
   - `git show` grep evidence;
-  - line references;
+  - line references and `L93-L120` ranges;
   - sizes;
   - enum literals;
   - imports;
   - text presence;
   - test classifications;
-  - exhaustiveness wording;
-  - other numbers.
-- **Typed claims.** Each detected assertion must reference exactly one type-compatible claim on its own line. That claim must match the assertion's subject (path, function, type or specifier), its revision (a SHA prefix on the line) and its property (line, text, size, values or polarity).
+  - exhaustiveness wording ("only", "sole", "nothing else");
+  - every other number outside code-span test vectors under an exact `### Unit Tests` heading.
+- **Typed claims.** Each detected assertion must reference exactly one unused, type-compatible claim on its own line. Matching works like this:
+  - **Subject.** It comes from the assertion itself:
+    - citations and grep evidence carry their own path;
+    - a line reference needs exactly one file named on the line;
+    - a size, enum, import or text assertion needs a backticked subject directly before it, with no other identifier in between.
+  - **Revision.** A SHA prefix of the claim's commit must appear on the line.
+  - **Property.**
+    - An exact size ("is N lines") binds only to `equals`.
+    - "at most N" and "under N" bind to `max`.
+    - Lines, text, enum values and import polarity must all match.
 - **One use per ID.** A claim or judgment ID may be referenced exactly once.
-- **Scoped judgments.** A judgment exception (`[judgment:id]`) may cover only non-mechanical numbers or exhaustiveness wording. Its statement must be quoted verbatim from its own line, and its rationale must be specific. The independent auditor challenges every judgment.
+- **Scoped judgments.** A judgment exception (`[judgment:id]`) covers exactly one non-mechanical number or exhaustiveness phrase. Its statement must be quoted verbatim from its own line, and its rationale must be specific. The independent auditor challenges every judgment.
 - **Test classifications.** Red-first and regression-lock classifications need trusted harness evidence (dependency D3). Until that exists, the gate rejects them.
 - **No execution.** Nothing in a manifest is executed. The checker reads git objects only, through fixed `git cat-file` and `git ls-tree` calls in a scrubbed environment. It rejects HEAD, branch, tag, short and expression references.
-- **Function sizes.** Sizes come from a JS/TS tokenizer that fails closed on ambiguous syntax.
+- **Function sizes.** Sizes come from a JS/TS tokenizer that fails closed on ambiguous syntax. That includes generic parameter lists containing `(`, `{` or `=>`, and non-literal module specifiers.
 
-Detection is lexical. It cannot prove arbitrary prose complete, so the auditor remains responsible for undeclared assertions.
+Detection is lexical. Numbers written as words, for example, are not detected, so the auditor remains responsible for undeclared assertions.
 
 ### Local commands
 
@@ -184,7 +199,7 @@ python scripts/plan_claims_check.py --repo .
 
 **`plan-claims-selftest`** (`.github/workflows/plan-claims.yml`) runs the PR head's own suites. It is informational only and must not be required.
 
-`.github/CODEOWNERS` assigns every governed path. That protection only takes effect once the ruleset requires code-owner review.
+`plan-claims-gate` also fails any PR that adds or changes another workflow publishing a check named `plan-claims-gate`, to prevent check-name spoofing. `.github/CODEOWNERS` assigns every governed path, including all workflows. That protection only takes effect once the ruleset requires code-owner review.
 
 ### Dependencies (not yet satisfied)
 

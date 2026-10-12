@@ -122,6 +122,8 @@ class RazorLimits(unittest.TestCase):
     def test_depth_measure_detects_four_levels(self):
         deep = "def f(a):\n    for x in a:\n        for y in x:\n            if y:\n                if y > 1:\n                    return y\n"
         self.assertEqual(_depth(ast.parse(deep).body[0]), 4)
+        chain = "def g(a):\n    if a == 1:\n        return 1\n    elif a == 2:\n        return 2\n    elif a == 3:\n        return 3\n"
+        self.assertEqual(_depth(ast.parse(chain).body[0]), 1)
 
 
 BLOCKS = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, ast.Try, ast.Match)
@@ -132,7 +134,8 @@ def _depth(node: ast.AST, level: int = 0) -> int:
     for child in ast.iter_child_nodes(node):
         if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
             continue
-        deepest = max(deepest, _depth(child, level + isinstance(child, BLOCKS)))
+        is_elif = isinstance(node, ast.If) and isinstance(child, ast.If) and node.orelse == [child]
+        deepest = max(deepest, _depth(child, level + (isinstance(child, BLOCKS) and not is_elif)))
     return deepest
 
 

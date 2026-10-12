@@ -131,7 +131,7 @@ class R4ImmutableRefs(GateTestCase):
         self.rejects(self.f.plan(manifest=manifest), "R4", "not declared")
         plan = self.f.plan(manifest=self.f.manifest())
         text = plan.read_text(encoding="utf-8")
-        plan.write_text(text.replace(f"Revision `{self.f.sha}`.\n", ""), encoding="utf-8")
+        plan.write_text(text.replace(f"Revision `{self.f.sha}`.\n", ""), encoding="utf-8", newline="\n")
         self.rejects(plan, "R4", "not recorded")
 
     def test_no_checkout_worktree_or_override(self):

@@ -101,7 +101,8 @@ class _Lexer:
 
     def template(self, start: int, opener: str) -> None:
         end, opened = _template_chunk(self.text, start)
-        self.emit("tmpl-open" if opened else opener, "`", start)
+        literal = opener == "template" and not opened
+        self.emit("tmpl-open" if opened else opener, self.text[start:end - 1] if literal else "`", start)
         if opened:
             self.braces.append("${")
         self.i = end

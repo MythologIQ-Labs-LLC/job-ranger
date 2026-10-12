@@ -19,13 +19,13 @@ class ReportedBypasses(GateTestCase):
         plan = self.f.plan(manifest=self.f.manifest())
         text = plan.read_text(encoding="utf-8").replace(
             self.f.size_line(), f"- `core-ipc.cts:93` at `{self.f.sha7}` passes the runtime kind [claim:core-size].\n")
-        plan.write_text(text, encoding="utf-8")
+        plan.write_text(text, encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "unbound assertion (file:line citation)")
 
     def test_bypass_1_claim_on_line_without_its_assertion_fails(self):
         plan = self.f.plan(manifest=self.f.manifest())
         plan.write_text(plan.read_text(encoding="utf-8").replace(
-            self.f.size_line(), f"- The design is sound at `{self.f.sha7}` [claim:core-size].\n"), encoding="utf-8")
+            self.f.size_line(), f"- The design is sound at `{self.f.sha7}` [claim:core-size].\n"), encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "not bound")
 
     def test_bypass_2_blanket_judgment_reused_or_unscoped_fails(self):
@@ -42,7 +42,7 @@ class ReportedBypasses(GateTestCase):
         empty = {"version": 2, "commits": {}, "claims": [], "judgments": []}
         plan = self.f.plan(manifest=empty)
         plan.write_text(plan.read_text(encoding="utf-8").replace(
-            self.f.size_line(), "- The parser covers 37 cases and line 75 checks it.\n"), encoding="utf-8")
+            self.f.size_line(), "- The parser covers 37 cases and line 75 checks it.\n"), encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "non-empty manifest")
 
     def test_bypass_4_fenced_assertions_are_scanned(self):
@@ -54,7 +54,7 @@ class ReportedBypasses(GateTestCase):
 
     def test_manifest_block_inside_canonical_section_fails(self):
         plan = self.f.plan(manifest=self.f.manifest())
-        plan.write_text(plan.read_text(encoding="utf-8").replace("## Plan Claims\n\n", ""), encoding="utf-8")
+        plan.write_text(plan.read_text(encoding="utf-8").replace("## Plan Claims\n\n", ""), encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "manifest must sit outside canonical sections")
 
 
@@ -104,12 +104,12 @@ class RealPhase17Facts(GateTestCase):
 
     def test_real_phase17_facts_reproduce_from_immutable_objects(self):
         plan = self._real_plan(161, 200)
-        plan.write_text(plan.read_text(encoding="utf-8").replace(self.f.size_line(), ""), encoding="utf-8")
+        plan.write_text(plan.read_text(encoding="utf-8").replace(self.f.size_line(), ""), encoding="utf-8", newline="\n")
         self.assertEqual(len(self.ok(plan, repo=REPO)), 7)
 
     def test_false_real_size_claim_is_rejected(self):
         plan = self._real_plan(40, 40)
-        plan.write_text(plan.read_text(encoding="utf-8").replace(self.f.size_line(), ""), encoding="utf-8")
+        plan.write_text(plan.read_text(encoding="utf-8").replace(self.f.size_line(), ""), encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "161 lines exceeds 40", repo=REPO)
 
 

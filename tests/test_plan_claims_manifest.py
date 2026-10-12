@@ -55,7 +55,7 @@ class ManifestCore(GateTestCase):
 
     def test_missing_canonical_section_fails(self):
         plan = self.f.plan(manifest=self.f.manifest())
-        plan.write_text(plan.read_text(encoding="utf-8").replace("## CI Commands", "## Commands"), encoding="utf-8")
+        plan.write_text(plan.read_text(encoding="utf-8").replace("## CI Commands", "## Commands"), encoding="utf-8", newline="\n")
         self.rejects(plan, "R1", "CI Commands")
 
     def test_history_section_is_not_canonical(self):
@@ -69,7 +69,7 @@ class ManifestCore(GateTestCase):
     def test_zero_padded_phase_name_cannot_claim_grandfathering(self):
         path = self.f.repo / "docs" / "plan-qor-phase016-x.md"
         path.parent.mkdir(exist_ok=True)
-        path.write_text("# Plan\n", encoding="utf-8")
+        path.write_text("# Plan\n", encoding="utf-8", newline="\n")
         self.rejects(path, "R1", "not a governed plan name")
 
     def test_read_only_kinds_evaluate_against_the_commit(self):
@@ -98,7 +98,7 @@ class SchemaHardening(GateTestCase):
         plan = self.f.plan(manifest=self.f.manifest())
         text = plan.read_text(encoding="utf-8")
         start = text.index("```json qor-plan-claims\n") + len("```json qor-plan-claims\n")
-        plan.write_text(text[:start] + raw + text[text.index("\n```", start):], encoding="utf-8")
+        plan.write_text(text[:start] + raw + text[text.index("\n```", start):], encoding="utf-8", newline="\n")
         return plan
 
     def test_hostile_json_shapes_are_coded_rejections(self):

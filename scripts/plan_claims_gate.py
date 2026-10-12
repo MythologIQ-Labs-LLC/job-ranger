@@ -26,7 +26,9 @@ from plan_claims_schema import SHA_RE, PlanClaimsError
 
 GOVERNED = tuple(re.compile(p) for p in (
     r"docs/plan-qor-phase[^/]*\.md", r"scripts/plan_claims_[^/]*\.py", r"tests/test_plan_claims_[^/]*\.py",
-    r"tests/plan_claims_fixture\.py", r"\.github/workflows/plan-claims[^/]*\.yml", r"\.github/CODEOWNERS"))
+    r"tests/plan_claims_fixture\.py", r"\.github/workflows/[^/]+\.ya?ml", r"\.github/CODEOWNERS"))
+GATE_WORKFLOW = ".github/workflows/plan-claims-gate.yml"
+SPOOF_RE = re.compile(r"(?m)^\s*(?:name:\s*[\"']?plan-claims-gate[\"']?|[\"']?plan-claims-gate[\"']?\s*:)\s*$")
 ENFORCER = GOVERNED[1:]
 
 
@@ -59,6 +61,18 @@ def plans_at(repo: Path, head: str) -> list[str]:
     return sorted(gated)
 
 
+def spoofing_workflows(repo: Path, head: str, changed: list[str]) -> list[str]:
+    """Changed workflows (other than the gate itself) that would publish a check named plan-claims-gate."""
+    spoofs = []
+    for path in changed:
+        if not re.fullmatch(r"\.github/workflows/[^/]+\.ya?ml", path) or path == GATE_WORKFLOW:
+            continue
+        if pcc._git(repo, "ls-tree", "-z", head, "--", path).stdout and SPOOF_RE.search(
+                pcc.read_blob(repo, {"id": path, "commit": head, "path": path})):
+            spoofs.append(path)
+    return spoofs
+
+
 def _verify_head_plan(repo: Path, head: str, path: str) -> list[str]:
     text = pcc.read_blob(repo, {"id": path, "commit": head, "path": path})
     return pcc.verify_text(repo, path.rsplit("/", 1)[-1], text)
@@ -69,12 +83,15 @@ def evaluate_pull_request(repo: Path, base: str, head: str) -> int:
     if not governed:
         print("plan-claims-gate: not applicable (no governed plan, enforcer or workflow file changed)")
         return 0
+    spoofs = spoofing_workflows(repo, head, governed)
+    for path in spoofs:
+        print(f"plan-claims-gate: FAIL {path} would publish a spoofed plan-claims-gate check")
     enforcer = [p for p in governed if any(e.fullmatch(p) for e in ENFORCER)]
     if enforcer:
         print("plan-claims-gate: enforcer files changed " + ", ".join(enforcer)
               + "; verified with the base-revision checker; merging requires code-owner review")
     results = [pcc.report(path, lambda path=path: _verify_head_plan(repo, head, path)) for path in plans_at(repo, head)]
-    return 0 if all(results) else 1
+    return 0 if all(results) and not spoofs else 1
 
 
 def main(argv: list[str] | None = None) -> int:

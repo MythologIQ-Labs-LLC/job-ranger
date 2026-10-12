@@ -69,6 +69,18 @@ def _declarations(toks: list[Token], name: str) -> list[tuple[int, int, bool]]:
     return found
 
 
+def _skip_generics(toks: list[Token], i: int) -> int:
+    """i indexes '<'; return the index after the matching '>', failing closed on nested signatures."""
+    depth = 0
+    for j in range(i, len(toks)):
+        if toks[j].value in ("(", "{", "=>") and toks[j].kind == "punct":
+            raise ValueError("generic parameters containing (, { or => are not supported")
+        depth += {"<": 1, ">": -1}.get(toks[j].value, 0) if toks[j].kind == "punct" else 0
+        if depth == 0:
+            return j + 1
+    raise ValueError("unbalanced generic parameters")
+
+
 def function_lines(text: str, name: str) -> int:
     toks = tokenize(text)
     decls = _declarations(toks, name)
@@ -76,8 +88,7 @@ def function_lines(text: str, name: str) -> int:
         raise ValueError(f"expected one declaration of {name}, found {len(decls)}")
     start, param, arrow = decls[0]
     if _is(toks[param], "<"):
-        while not _is(toks[param], "("):
-            param += 1
+        param = _skip_generics(toks, param)
     if not _is(toks[param], "("):
         raise ValueError(f"unsupported declaration form for {name}")
     open_brace = _body_open(toks, _match_paren(toks, param) + 1, arrow)
@@ -99,7 +110,9 @@ def import_specifiers(text: str) -> set[str]:
         nxt = toks[k + 1]
         if tok.value in ("from", "import") and nxt.kind == "str":
             specs.add(nxt.value)
-        elif tok.value in ("import", "require") and _is(nxt, "(") and k + 2 < len(toks) and toks[k + 2].kind == "str":
+        elif tok.value in ("import", "require") and _is(nxt, "(") and k + 2 < len(toks):
+            if toks[k + 2].kind not in ("str", "template"):
+                raise ValueError(f"non-literal module specifier on line {toks[k + 2].line}")
             specs.add(toks[k + 2].value)
     return specs
 

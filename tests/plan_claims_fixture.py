@@ -37,8 +37,8 @@ class Fixture:
     def __init__(self, root: Path):
         self.root, self.repo, self.sentinel = root, root / "repo", root / "SENTINEL"
         (self.repo / "src").mkdir(parents=True)
-        (self.repo / "src" / "core.ts").write_text(CORE, encoding="utf-8")
-        (self.repo / "src" / "hostile.txt").write_text(HOSTILE.format(s=self.sentinel), encoding="utf-8")
+        (self.repo / "src" / "core.ts").write_text(CORE, encoding="utf-8", newline="\n")
+        (self.repo / "src" / "hostile.txt").write_text(HOSTILE.format(s=self.sentinel), encoding="utf-8", newline="\n")
         git(self.repo, "init", "-q")
         git(self.repo, "add", "-A")
         oid = git(self.repo, "hash-object", "-w", "src/core.ts")
@@ -57,7 +57,7 @@ class Fixture:
         for rel, body in files.items():
             path = self.repo / rel
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(body, encoding="utf-8")
+            path.write_text(body, encoding="utf-8", newline="\n")
         git(self.repo, "add", "-A")
         return self._commit(message)
 
@@ -74,7 +74,7 @@ class Fixture:
     def plan(self, phase: int = 17, manifest: dict | None = None, **parts) -> Path:
         path = self.repo / "docs" / f"plan-qor-phase{phase}-x.md"
         path.parent.mkdir(exist_ok=True)
-        path.write_text(self.plan_text(manifest, **parts), encoding="utf-8")
+        path.write_text(self.plan_text(manifest, **parts), encoding="utf-8", newline="\n")
         return path
 
     def manifest(self, claims: list | None = None, judgments: list | None = None, size: bool = True) -> dict:

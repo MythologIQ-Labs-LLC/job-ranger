@@ -106,7 +106,11 @@ def verify_text(repo: Path, name: str, text: str) -> list[str]:
 
 
 def verify_plan(repo: Path, plan_path: Path) -> list[str]:
-    return verify_text(repo, plan_path.name, plan_path.read_text(encoding="utf-8"))
+    try:
+        text = plan_path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        _fail("R1", f"{plan_path.name} is not UTF-8 text")
+    return verify_text(repo, plan_path.name, text)
 
 
 def gated_plans(repo: Path) -> list[Path]:

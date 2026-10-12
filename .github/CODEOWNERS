@@ -4,5 +4,5 @@
 /scripts/plan_claims_*.py @Knapp-Kevin
 /tests/test_plan_claims_*.py @Knapp-Kevin
 /tests/plan_claims_fixture.py @Knapp-Kevin
-/.github/workflows/plan-claims*.yml @Knapp-Kevin
+/.github/workflows/ @Knapp-Kevin
 /.github/CODEOWNERS @Knapp-Kevin
