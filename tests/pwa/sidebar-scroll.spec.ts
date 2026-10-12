@@ -14,6 +14,9 @@ test("desktop sidebar stays in a viewport frame while expanded navigation scroll
   const sidebar = page.locator(".app-sidebar");
   const main = page.locator(".app-main");
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
+  // Measure the real page, not its "Loading saved professional presence data..." shell.
+  // Slow local storage (seen on hosted Linux) otherwise yields scrollHeight == clientHeight.
+  await expect(page.getByRole("heading", { name: "1. Compose and validate" })).toBeVisible();
   await expect(sidebar).toBeVisible();
   await expect(nav).toBeVisible();
   await expect(main).toBeVisible();
