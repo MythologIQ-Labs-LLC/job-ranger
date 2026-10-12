@@ -184,7 +184,7 @@ Career Stories provide reusable evidence-linked narratives for interviews/applic
 
 Job Ranger can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
 
-Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied until you rebuild them; their text stays visible for review. If the browser or operating system denies clipboard access, Job Ranger says so, and you can select and copy the text manually.
+Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Job Ranger says so, and you can select and copy the text manually.
 
 ### 13. Search Insights
 

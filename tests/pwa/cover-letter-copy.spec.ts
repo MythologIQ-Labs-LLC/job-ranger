@@ -52,7 +52,7 @@ test("a current cover-letter version copies its exact text for manual use", asyn
 
   const expected = seeded.letter.sections.map((section) => section.text).join("\n\n");
   expect(expected.length).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Copy cover letter version 1" }).click();
+  await page.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
   await expect(page.getByRole("status", { name: "Cover letter copy status" })).toContainText("Cover letter version 1 copied");
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   // The Windows clipboard stores LF line breaks as CRLF; the copied content is otherwise exact.
@@ -69,7 +69,7 @@ test("copy failure is reported truthfully and leaves the text available to selec
     });
   });
 
-  await page.getByRole("button", { name: "Copy cover letter version 1" }).click();
+  await page.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
   await expect(page.getByRole("status", { name: "Cover letter copy status" })).toContainText("Copy was unavailable");
   await expect(page.getByRole("status", { name: "Cover letter copy status" })).not.toContainText("copied");
   await expect(page.locator("article pre").first()).toContainText(seeded.letter.sections[0].text.slice(0, 40));
@@ -83,7 +83,23 @@ test("a version whose supporting evidence changed cannot be copied until rebuilt
   await openMaterials(page);
 
   await expect(page.getByText("Supporting Career Evidence changed after this draft was created")).toBeVisible();
-  const copy = page.getByRole("button", { name: "Copy cover letter version 1" });
+  const copy = page.getByRole("button", { name: "Copy text of cover letter version 1" });
   await expect(copy).toBeDisabled();
-  await expect(page.getByText("Rebuild before copying")).toBeVisible();
+  await expect(page.getByText("To copy a letter, create a new version from current evidence.", { exact: false })).toBeVisible();
+});
+
+test("evidence that changes while the panel is open blocks copying at copy time", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.url });
+  const seeded = await seedApplication(page);
+  await openMaterials(page);
+  await page.evaluate(() => navigator.clipboard.writeText("clipboard before copy"));
+  await page.evaluate(async (id) => {
+    await window.electronAPI.career.reviewEvidence(id, { action: "reject" });
+  }, seeded.evidenceId);
+
+  await page.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
+  await expect(page.getByRole("status", { name: "Cover letter copy status" }))
+    .toContainText("was not copied");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("clipboard before copy");
+  await expect(page.getByRole("button", { name: "Copy text of cover letter version 1" })).toBeDisabled();
 });
