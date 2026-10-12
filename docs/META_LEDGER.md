@@ -2956,6 +2956,42 @@ Status: HOLD. Closure requires an independent PASS plus D1 and D2.
 
 ---
 
+### Entry #108: GATE TRIBUNAL (Phase 17 Gate-Loop Remediation Amendment 3 Review)
+
+**Timestamp**: 2026-10-12T14:57:06Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json (reviews-remediate; target content hash 7bbc1e24)
+
+**Verdict**: VETO
+
+**Content Hash**: `d3c5c73c10fe095bd133c9a02bf020c364841e74ffe7260293ae89a02ee47350`
+
+**Previous Hash**: `0d4b0b548703c6e63c8de896828827b095bd84a78ba7f19fc16febd3c5781b47`
+
+**Chain Hash**: `289cb7ab9812a83d58a2001c19779c6648dff8b2112d021ce5026962b5a531bb`
+
+**Decision**: VETO for Amendment 3 of the Phase 17 gate-loop remediation, from a fresh-context subagent review (not a human or separately authenticated approval). The addressed flip was not performed.
+
+Verified:
+- Every VETO #106 probe now fails independently with a coded reason. The regenerated equals:97 control is legitimate.
+- V1-C is closed. Razor is within limits (file 232, function 25, nesting 3, no nested ternaries).
+- Red-first evidence is genuine (fb3cbb0 is tests only: 32 failures and 5 errors). The disclosed elif and LF test changes do not weaken any test.
+- R3/R4 are preserved. The protocol is clean: events 1f15661a and f0b67f91 are addressed_pending only, none are missing, and the session has no events. Entries #96-#106 are unchanged, and the artifact is schema-valid.
+- The suite is OK twice.
+
+Findings:
+- (V1-A, structural) Canonical headings still render where the scanner does not read them. The constructs are an escaped backtick before raw <h2>, a backtick fence whose info string contains a backtick, headings inside blockquotes or list items, NBSP/double-space/ZWSP/Cyrillic heading names, a leading BOM (cmark), and a code span split across lines under Unit Tests.
+- (V1-B) "more than", "over" and "not N lines" bind to equals N, which verifies a false sentence. A coordinated second subject or text operand passes unverified.
+- (V2) A for-await regex and a property named "in" before "/" shrink a 103-line function to 2 lines. declare function and satisfies-wrapped arrows over-measure. require("x" + y) verifies a false edge. The base-revision gate PASSES these end to end.
+- (V3, documentation) Spoof detection is lexical and misses comments, expressions, matrix, flow style and the status API. GOVERNANCE.md overstates it.
+- CI: only plan-claims-selftest ran on 2baefac (97 OK; the checker failed on iteration 4 as expected). plan-claims-gate has never run, and D1 is not enabled.
+
+Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events stay addressed_pending. Phase 17 plan iteration 5 is not authorized, and WWR remains HELD. The Governor must amend via /qor-remediate (Amendment 4) and then resubmit to an independent /qor-audit reviews-remediate.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -2974,5 +3010,5 @@ Status: HOLD. Closure requires an independent PASS plus D1 and D2.
 *Phase 14 Inference Slice A: SEALED (Entry #78); PR #165 merged*
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
-*Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Next required action: fresh independent /qor-audit reviews-remediate:.qor/gates/2026-10-10T0443-9d3df3/remediate.json; closure also requires D1 and D2*
+*Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
+*Next required action: Governor amends the remediation per Entry #108 findings (V1-A, V1-B, V2, V3 documentation) via /qor-remediate (Amendment 4), then a fresh independent /qor-audit reviews-remediate; event closure also requires D1 and D2*

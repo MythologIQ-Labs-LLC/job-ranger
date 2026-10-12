@@ -595,4 +595,44 @@ None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and n
 
 ---
 
+## Failure Entry #20
+
+**Date**: 2026-10-12T14:57:06Z
+**Verdict ID**: Entry #108 (GATE TRIBUNAL Phase 17 Gate-Loop Remediation Amendment 3 Review)
+**Failure Mode**: coverage-gap / specification-drift. The restricted-Markdown subset still diverges from CommonMark. Unrecognised size qualifiers default to an exact binding. Tokenizer context heuristics shrink function spans.
+
+### What Failed
+
+Amendment 3 of the Phase 17 /qor-remediate proposal (.qor/gates/2026-10-10T0443-9d3df3/remediate.json, content hash 7bbc1e24). It covers scripts/plan_claims_markdown.py, plan_claims_prose.py, plan_claims_tokens.py, plan_claims_source.py and plan_claims_gate.py.
+
+### Why It Failed
+
+- The subset rejected the constructs reviewers had already named, but not their siblings:
+  - backslash-escaped backticks, which hide raw HTML from the code-span blanker;
+  - backtick fences whose info string contains a backtick (not a fence in CommonMark);
+  - headings inside blockquotes or list items;
+  - canonical heading names written with NBSP, doubled spaces, zero-width or confusable characters;
+  - a leading BOM;
+  - code spans that cross lines.
+- Size prose with an unrecognised qualifier ("more than", "over", "not") falls through to the exact equals binding, so a false sentence verifies. Only the last backticked subject before an assertion is checked, so a coordinated second subject or operand rides along unverified.
+- The tokenizer decides regex versus division from the previous token. It does not handle `for await (` or property names that collide with keywords (`o.in`), so a 103-line function measured 2 lines. `_body_open` scans past the end of the declaring statement. A literal followed by `+` was accepted as a module specifier.
+
+### Pattern to Avoid
+
+Fixing the enumerated counterexamples is not closing a class. When a gate claims parity with a renderer, enumerate the renderer's grammar for each structure:
+- escapes;
+- info strings;
+- container blocks;
+- Unicode in identifiers;
+- the BOM;
+- multi-line inlines.
+
+Fail closed on everything outside a small, explicitly modelled subset, for example ASCII-only headings at column 0, no backslash before a backtick, and single-line code spans. For bindings, any unrecognised modifier must fail closed, never fall through to the strongest binding. For lexer heuristics, an unproven context must raise, never guess. A heuristic that can shrink a measurement is a false-PASS generator.
+
+### Remediation Attempted
+
+None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and no addressed flip was performed. The Governor amends via /qor-remediate (Amendment 4) per AUDIT_REPORT V1-A, V1-B, V2 and the V3 documentation item, then resubmits to an independent /qor-audit reviews-remediate. Closure additionally requires D1 and D2.
+
+---
+
 *Shadow Genome updated. Pattern documented for future avoidance.*

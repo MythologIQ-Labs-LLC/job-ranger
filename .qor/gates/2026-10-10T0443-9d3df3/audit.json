@@ -1,7 +1,7 @@
 {
   "phase": "audit",
   "session_id": "2026-10-10T0443-9d3df3",
-  "ts": "2026-10-10T07:25:42Z",
+  "ts": "2026-10-12T14:57:06Z",
   "target": ".qor/gates/2026-10-10T0443-9d3df3/remediate.json",
   "verdict": "VETO",
   "report_path": ".agent/staging/AUDIT_REPORT.md",
@@ -9,9 +9,9 @@
   "findings_categories": [
     "coverage-gap",
     "specification-drift",
-    "razor-overage"
+    "owasp-violation"
   ],
-  "target_content_hash": "fa0e69249c1d63a0bba4f8a442cef5ac148ea424b07ccb2a8d92b0e366391183",
+  "target_content_hash": "7bbc1e245dacbaab4d831a24de04a98cbab9e8722e3f5f456784f1b2edc3e970",
   "reviews_remediate_gate": ".qor/gates/2026-10-10T0443-9d3df3/remediate.json",
   "ai_provenance": {
     "system": "Qor-logic",
@@ -19,6 +19,6 @@
     "host": "unknown",
     "model_family": "opus",
     "human_oversight": "veto",
-    "ts": "2026-10-10T07:27:21Z"
+    "ts": "2026-10-12T14:59:00Z"
   }
 }
