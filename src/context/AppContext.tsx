@@ -145,7 +145,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           await refresh();
           addToast({
             title: "Settings saved",
-            message: "Desktop runtime settings were persisted locally.",
+            message: "Your settings were saved on this device.",
             type: "success",
           });
         } catch (actionError) {
