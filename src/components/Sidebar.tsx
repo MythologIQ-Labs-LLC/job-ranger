@@ -117,7 +117,7 @@ export function Sidebar() {
             className="ml-auto rounded-lg border border-white/20 px-3 py-2 text-white md:hidden"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
-            aria-controls="job-ranger-primary-nav"
+            aria-controls="job-ranger-primary-nav job-ranger-utility-nav"
             onClick={() => setMobileOpen(open => !open)}
           >
             {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> :
@@ -182,7 +182,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <nav className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
+      <nav id="job-ranger-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
         <SidebarNavLink
           item={{ name: "Settings", href: "/settings", icon: Settings }}
           active={location.pathname === "/settings"}
