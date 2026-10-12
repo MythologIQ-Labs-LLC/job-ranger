@@ -1,7 +1,8 @@
 # Specification: plan evidence gate v3
 
-**Status:** refined specification for independent design audit (#267). It refines `PLAN_EVIDENCE_GATE_V3_PROPOSAL.md` and does not replace it. Neither document is a remediation amendment, closes an event, or authorizes D1 or D2.
+**Status:** refined specification, iteration 2, for independent design audit (#267). Iteration 1 was VETOed at ledger #110 (findings V1-V5); the same audit ADMITTED the dependency. It refines `PLAN_EVIDENCE_GATE_V3_PROPOSAL.md` and does not replace it. Neither document is a remediation amendment, closes an event, or authorizes D1 or D2.
 **Branch:** `impl/267-plan-evidence-gate-v3`. This is a new branch: it starts from PR #232 head `cb9b7b1bc0e27c96085be7c6da423369995d6fac`, with the proposal commit cherry-picked on top. Basing it on that head keeps the remediation session and ledger chain continuous. PR #232's own branch is not modified.
+**Delivery (V1):** no pull request is opened under this plan. The branch is pushed for review only. It carries PR #232's governance-record lineage, including the vetoed Phase 17 records and ledger #95-#108. A PR, a target branch or any merge route therefore needs a separate, recorded operator decision.
 **Operator decision:** Option A, the structural redesign. No Amendment 4 and no Phase 17 plan iteration 5.
 
 ## 1. What v3 claims, and what it does not
@@ -23,7 +24,8 @@ v3 does **not** claim to find empirical assertions in free-form prose, and does 
 
 ## 3. Artifact layout
 
-- A governed plan is `docs/plan-qor-phaseNN-slug.md`. `NN` has no leading zero; a name with a leading zero is rejected, not grandfathered. Plans with NN >= 17 are gated.
+- A governed plan is `docs/plan-qor-phaseNN-slug.md`. `NN` has no leading zero; a name with a leading zero is rejected, not grandfathered.
+- A plan is **gated** when NN >= 18, or when its sibling inventory exists, whatever the phase. Any other plan is reported as `LEGACY (pre-v3, not evaluated)`; it is never reported as passing. The Phase 17 iteration-4 plan is legacy. A future Phase 17 iteration opts in simply by adding its inventory, and the Phase 17 remediation record must require that.
 - Its inventory is the sibling file `docs/plan-qor-phaseNN-slug.evidence.json`. The path is derived from the plan path, never declared inside the plan, so there is nothing to spoof.
 - A plan that still contains a v2 embedded `json qor-plan-claims` fence is rejected with a migration message. An inventory with `version` instead of `schema_version`, or with `schema_version` other than 3, is rejected. There is no silent reinterpretation.
 
@@ -69,7 +71,7 @@ Each kind adds its own fields. No other keys are allowed.
 | --- | --- | --- |
 | `line-equals` | `line` (integer ≥ 1), `text` (1–500 chars, no CR/LF) | The source's `line`-th line, defined in §5, equals `text` exactly |
 | `text-present` | `text` (1–500 chars, no CR/LF) | `text` is a literal substring of the decoded source |
-| `text-absent` | `text` | `text` is not a substring |
+| `text-absent` | `text` (1–500 chars, no CR/LF) | `text` is not a literal substring of the decoded source |
 | `file-lines` | `predicate` = `{"operator": "equals" or "at-most", "value": integer ≥ 0}` | The §5 line count satisfies the predicate |
 
 **Removed or held kinds.** These are rejected as unsupported:
@@ -89,13 +91,15 @@ Because these kinds fail validation outright, no guessed measurement can turn gr
 
 | Item | Limit |
 | --- | --- |
-| Plan file | ≤ 256 KiB |
+| Plan file | ≤ 128 KiB |
 | Inventory file | ≤ 64 KiB |
 | Claims | ≤ 200 |
 | Judgments | ≤ 50 |
 | Source blob per claim | ≤ 2 MiB (checked with `cat-file -s` before reading) |
 
-JSON is parsed with duplicate-key rejection, and integers are limited to 1–9 digits. Any violation fails closed with a coded error.
+JSON is parsed with duplicate-key rejection, and integers are limited to 1–9 digits. Strings must not contain lone surrogates. Any violation fails closed with a coded error.
+
+**Reachability (V5-d).** Each claim `commit` must be an ancestor of, or equal to, the evaluation head. That is the PR head in the gate, and the explicit `--head` SHA in the CLI. It is checked with `git merge-base --is-ancestor`. The plan and the inventory are read from git objects at the head, never from a working tree. Outcomes therefore do not depend on which other refs a runner has fetched.
 
 ## 5. Source evaluation semantics
 
@@ -114,16 +118,23 @@ The plan bytes are size-checked and decoded as strict UTF-8, then rejected if th
 - U+2028 or U+2029;
 - a v2 embedded manifest fence.
 
-The text is then parsed with `MarkdownIt("commonmark")` from `markdown-it-py`. The parser runs from the trusted base install.
+The text is then parsed with `MarkdownIt("commonmark")` from `markdown-it-py`, with `maxNesting` left at 20. The parser runs from the trusted base install.
+
+- **Nesting (V3).** Any token with `level >= 10` fails closed (`E_NESTING`). Content nested deeply enough to reach markdown-it's limit of 20 must first pass through levels 10-19, so silently dropped content is always detected before it is lost.
+- **Parse budget (V5-a).** The plan is capped at 128 KiB. If parsing takes longer than 10 s of wall time, the result is `E_PARSE_TIME`. The gate job has `timeout-minutes: 5`. A worst-case fixture (pathological `![` repetition at the cap) must parse within the budget on the reference runner, or the test fails.
 
 - **Headings.**
   - Every `heading_open` token must have nesting `level == 0`. A heading inside a list or blockquote fails closed.
-  - Every heading's inline text must be printable ASCII with no double spaces, so NBSP, zero-width and confusable letters fail.
+  - **Heading name (V5-c).** The name is the heading's `inline.content`, and the inline token must have exactly one `text` child whose content equals `inline.content`. Entities, escapes, emphasis, code or links in a heading therefore fail closed (`E_HEADING_TEXT`). The name must be printable ASCII with no double spaces, so NBSP, zero-width and confusable letters fail.
+  - A heading at any level whose case-folded, whitespace-collapsed name equals or starts with a canonical name, but is not an exact canonical `h2`, fails (`E_HEADING_TEXT` or `E_HEADING_LEVEL`). Examples: `Locked decisions`, `Locked Decisions extra`, `#### Locked Decisions`.
   - At most one `h1` is allowed, and only as the first heading.
-  - The canonical sections are `h2` headings named exactly `Locked Decisions`, `Definition of Done` and `CI Commands` (each appearing exactly once), plus at least one `Phase <digits>: <text>`.
+  - The canonical sections are `h2` headings named exactly `Locked Decisions`, `Definition of Done` and `CI Commands` (each appearing exactly once, otherwise `E_SECTION_MISSING` or `E_SECTION_DUPLICATE`), plus at least one `Phase <digits>: <text>`.
   - A canonical section runs from its heading to the next `h1`/`h2`.
 - **Raw HTML.** Any `html_block` or `html_inline` token anywhere fails closed.
-- **Citations.** `[claim:id]` and `[judgment:id]` are collected only from `text` children of `inline` tokens inside canonical sections. Text inside links, `code_inline`, `fence`, `code_block` and HTML never counts. A link whose text or reference label matches the citation pattern fails closed. A citation-shaped string in an ineligible position therefore cannot satisfy a record.
+- **Citations.** `[claim:id]` and `[judgment:id]` are collected only from `text` children of `inline` tokens inside canonical sections. Text inside links, `code_inline`, `fence`, `code_block` and HTML never counts. A citation-shaped string in an ineligible position therefore cannot satisfy a record.
+- **Citation look-alike links.** Two cases fail closed (`E_LINK_CITATION`):
+  - a link whose text matches the citation pattern;
+  - a link reference definition whose label matches it. These labels appear in the parser's `env["references"]`.
 - **Citation rules.**
   - Every claim and judgment is cited exactly once in eligible canonical prose.
   - Every citation resolves to a record.
@@ -143,30 +154,45 @@ governance/remediation closure: NOT DETERMINED BY THIS GATE
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | Structure valid and every claim `VERIFIED` |
+| 0 | Structure valid and every claim `VERIFIED`; legacy plans are reported as `LEGACY` and not evaluated |
 | 1 | Any structural, schema, citation or claim failure |
 | 2 | Invalid invocation or an unresolvable revision |
 
 Output is written with `errors="backslashreplace"`.
 
+**Reason codes:**
+
+| Group | Codes |
+| --- | --- |
+| Input encoding and size | `E_SIZE`, `E_ENCODING`, `E_CONTROL` (BOM, NUL, C0, bare CR, U+2028/2029) |
+| Legacy and HTML | `E_LEGACY_MANIFEST`, `E_HTML` |
+| Headings and sections | `E_NESTED_HEADING`, `E_HEADING_TEXT`, `E_HEADING_LEVEL`, `E_HEADING_ORDER`, `E_SECTION_MISSING`, `E_SECTION_DUPLICATE` |
+| Parser limits | `E_NESTING`, `E_PARSE_TIME` |
+| Citations | `E_LINK_CITATION`, `E_CITATION_MISSING`, `E_CITATION_DANGLING`, `E_CITATION_DUPLICATE`, `E_CITATION_OUTSIDE` |
+| Inventory | `E_SCHEMA`, `E_KIND_UNSUPPORTED`, `E_REF`, `E_PATH`, `E_OBJECT`, `E_ANCESTRY` |
+| Evaluation | `E_CLAIM_FAILED`, `E_INVOCATION` |
+
 ## 8. Required-check architecture and bootstrap
 
 - **`plan-evidence-gate`** (`pull_request_target`) runs on every PR, with no path filter.
   - It checks out the base SHA with a SHA-pinned `actions/checkout` and `persist-credentials: false`.
-  - It installs the hash-pinned parser with `pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt`.
+  - It creates an isolated venv (`python3 -m venv "$RUNNER_TEMP/plan-evidence"`; ubuntu-24.04's system Python is PEP 668 externally managed). From the base checkout's requirements file, it installs the hash-pinned parser with `pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt`.
+  - Any venv, install or network failure exits non-zero for **every** PR, including unrelated ones. There is no nominal success; this availability trade-off is accepted and documented.
+  - The job has `timeout-minutes: 5`.
   - It fetches `refs/pull/N/head` as objects only and runs the base copy of `scripts/plan_evidence_gate.py`.
   - It has `contents: read`, no secrets, and SHAs reach the shell only through env vars.
 - **Outcomes.**
   - When no governed path changed, the gate exits 0 with an explicit `not applicable`.
   - Governed paths are: `docs/plan-qor-phase*.md`, `docs/plan-qor-phase*.evidence.json`, `scripts/plan_evidence_*.py`, `tests/test_plan_evidence_*.py`, `tests/plan_evidence_fixture.py`, `governance/requirements-plan-evidence.txt`, `.github/workflows/*` and `.github/CODEOWNERS`.
-  - When a governed path changed, every gated plan at the head is verified.
+  - When a governed path changed, every gated plan at the head is verified, and legacy plans are listed as `LEGACY`. Because the iteration-4 plan is legacy, a valid governed PR can reach success.
   - Workflow name spoofing is detected on a best-effort basis only. The real control is code-owner review on `.github/workflows/` (D1).
 - **`plan-evidence-selftest`** (`pull_request`, unprivileged, path-filtered) runs the PR head's own suites. It is informational and must never be the required check.
 - **Bootstrap.** `pull_request_target` runs only workflows already on the base branch. The PR that introduces the gate therefore cannot be gated by it, and branch-local or self-test runs do not prove enforcement. Enforcement exists only after:
-  1. the gate is merged by an operator-approved process;
+  1. the gate reaches the base branch through an operator-approved route (not decided by this plan);
   2. an unrelated PR shows a completed `not applicable` success;
-  3. an invalid governed PR shows a failure;
-  4. D1 is configured.
+  3. a valid governed PR shows a completed success;
+  4. an invalid governed PR shows a failure;
+  5. D1 is configured.
 
 ## 9. Dependency admission (proposed for audit)
 
@@ -174,6 +200,15 @@ Output is written with `errors="backslashreplace"`.
 | --- | --- | --- | --- | --- |
 | markdown-it-py | 4.2.0 | `9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a` | MIT | Pure Python, `requires-python >=3.10`, sole runtime dependency `mdurl`; PyPI lists no known vulnerabilities (checked 2026-10-12) |
 | mdurl | 0.1.2 | `84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8` | MIT | Pure Python; no known vulnerabilities |
+
+**Provenance (from audit #110):**
+
+- PyPI publishes no PEP 740 attestations for these releases.
+- The installed code is byte-identical to the upstream git tags `v4.2.0` (markdown-it-py) and `0.1.2` (mdurl).
+- The wheel RECORD hashes re-verify.
+- OSV and PyPI list no vulnerabilities. CVE-2023-26302 and CVE-2023-26303 were fixed in 2.2.0.
+
+**Decision:** ADMITTED by independent audit #110.
 
 **Why it is needed:** CommonMark structure is the defect class behind VETOs #104, #106 and #108. A conformant, maintained parser replaces about 120 lines of homemade state machine.
 
@@ -200,20 +235,65 @@ Output is written with `errors="backslashreplace"`.
 - The two Phase 16 events stay `addressed_pending: true`, `addressed: false`.
 - The Phase 17 iteration-4 plan has no v3 inventory, so it fails the v3 gate. That is truthful and expected. Iteration 5 is not authorized.
 - Self-application: this phase's own plan carries a v3 inventory and must pass the v3 checker.
+- No pull request or merge route is decided here (V1). The plan's `pr_target` is intentionally absent.
 
 ## 11. Test plan (written red-first)
 
+**Converted reviewer corpus (V4).** Every judge-a2 probe (p00-p19, s2, s3) and every judge-a3 probe (n00-n22, b01-b08) is committed as a v3 fixture. Each fixture:
+
+- keeps its Markdown payload;
+- moves its v2 manifest content into a v3 inventory against the fixture repository;
+- carries an expected outcome and reason code.
+
+No probe may fail on `E_LEGACY_MANIFEST`. Expected outcomes:
+
+| Expected outcome | Probes |
+| --- | --- |
+| `E_HTML` | n02, p03, p18 |
+| `E_SECTION_DUPLICATE` | n03, p14 |
+| `E_HEADING_TEXT` | n04, n05, n06, n07, n08, n09, n10, n12 |
+| `E_CONTROL` | n11 (BOM), n18 (NUL), p05 (form feed), p05b (U+2028) |
+| `E_NESTED_HEADING` | n15, n16 |
+| `E_HEADING_LEVEL` | p15 |
+| PASS, with `free-form prose completeness: NOT MECHANICALLY ASSERTED` | n00, n01, n13, n14, n17, n19, n20, n21, n22, p00, p01, p02, p04, p06, p06b, p07, p07b, p07c, p08, p09, p10, p11, p12, p13, p16, p17, p19, s2, s3, b01-b08 |
+
+The PASS rows are the honest limitation: prose such as "more than", "over" or "not N lines", or a second subject in a sentence, is not interpreted. Only the typed predicate is evaluated.
+
+**Other fixtures:**
+
 | Area | Fixtures | Expected |
 | --- | --- | --- |
-| Amendment 3 Markdown probes | Escaped backtick plus `<h2>`; backtick in fence info string; heading in blockquote; heading in list; NBSP, ZWSP, Cyrillic and double-space headings; BOM; multi-line code span hiding a citation; HTML comment and `<pre>`; four-backtick and tilde fences | Structural FAIL or citation not counted, decided by parser tokens with no lexical special case |
-| Amendment 3 predicate probes | "more than / not N lines"; two subjects in one sentence | Prose is not interpreted. Only the typed predicate is evaluated; the report keeps `NOT MECHANICALLY ASSERTED` and the auditor owns the prose |
-| Amendment 3 source probes | `for await (…) /re/`, `o.in / 2`, `declare function`, `satisfies`, `require("x" + y)` | Any `function-lines` or `import-edge` record is rejected as unsupported, so no measurement is attempted |
-| Schema | Unknown or held kinds; extra keys; duplicate IDs; duplicate JSON keys; v2 masquerading as v3; wrong `plan`; empty claims; oversize; deep or huge numbers; judgment without owner; duplicate rationales | FAIL, with a coded error |
-| Binding | Uncited record; citation used twice; dangling citation; citation in code, link, HTML or a non-canonical section; a record whose `commit`, `path`, `line`, `text` or `predicate` does not match the source | FAIL |
-| R3/R4 | Executable payload fields; hostile blob contents; traversal, option-like, absolute and symlink paths; HEAD, branch, tag, short and uppercase SHAs; non-commit objects; a caller `GIT_DIR` override; zero subprocesses before validation; `.git` and worktree snapshot unchanged | FAIL with no execution and no writes |
-| Gate | Unrelated change → `not applicable`, exit 0; valid governed → 0; invalid → 1; PR head that rewrites the checker cannot self-certify; spoofed check-name workflow → 1; non-SHA → 2 | As stated |
-| Honest limitation | A plan with fact-like uncited prose and valid inventory | Exit 0, and the report states `NOT MECHANICALLY ASSERTED` |
-| Razor | All gate modules and tests | ≤ 250 lines per file, ≤ 40 lines per function, nesting ≤ 3 (elif = 1), no nested ternary |
+| Source probes | `function-lines` or `import-edge` records shaped like `for await (...) /re/`, `o.in / 2`, `declare function`, `satisfies` and `require("x" + y)` | `E_KIND_UNSUPPORTED`; no measurement is attempted |
+| Parser limits | Content nested 25 deep, with HTML and text at the bottom | `E_NESTING` |
+| | Pathological 128 KiB `![` input | Within the parse budget |
+| | Over-cap plan | `E_SIZE` |
+| Heading names | Entity in a heading (`Locked&#32;Decisions`); emphasis or code in a heading | `E_HEADING_TEXT` |
+| Citation look-alikes | Link reference definition labelled `claim:x`; link text `[claim:x](u)` | `E_LINK_CITATION` |
+| Schema | Unknown or held kinds; extra keys; duplicate IDs; duplicate JSON keys; v2 masquerading as v3; wrong `plan`; empty claims; oversize; deep or huge numbers; lone surrogate; judgment without owner; duplicate rationales | `E_SCHEMA` or `E_KIND_UNSUPPORTED` |
+| Binding | Uncited record | `E_CITATION_MISSING` |
+| | Citation used twice | `E_CITATION_DUPLICATE` |
+| | Dangling citation | `E_CITATION_DANGLING` |
+| | Citation in code, link or HTML | Not counted, so `E_CITATION_MISSING` |
+| | Citation outside canonical sections | `E_CITATION_OUTSIDE` |
+| | Record whose `commit`, `path`, `line`, `text` or `predicate` does not match the source | `E_CLAIM_FAILED` |
+| CRLF | CRLF source with `line-equals`; `text-absent` containing LF | Correct result; LF is rejected by the schema |
+| Reachability | Claim commit not an ancestor of the head | `E_ANCESTRY` |
+| R3/R4 | Executable payload fields; hostile blob contents | Rejected; no execution |
+| | Traversal, option-like, absolute and symlink paths | `E_PATH` or `E_OBJECT` |
+| | HEAD, branch, tag, short and uppercase SHAs | `E_REF` |
+| | Non-commit objects | `E_OBJECT` |
+| | Caller `GIT_DIR` override | No effect |
+| | Validation stage | Zero subprocesses before validation |
+| | All runs | `.git` and worktree snapshot unchanged |
+| Gate | Unrelated change | `not applicable`, exit 0 |
+| | Valid governed change (with the legacy iteration-4 plan present) | Exit 0, legacy listed |
+| | Invalid governed change | Exit 1 |
+| | PR head rewriting the checker | Cannot self-certify |
+| | Spoofed check-name workflow | Exit 1 |
+| | Non-SHA input | Exit 2 |
+| | Workflow structure | `pull_request_target`, no `paths`, venv, `--require-hashes`, `timeout-minutes`, env-only SHAs, `persist-credentials: false`, no secrets |
+| End to end | The combined VETO #108 plan, converted to v3 | Outcomes exactly as listed in the corpus table |
+| Razor | All gate modules and tests | At most 250 lines per file, at most 40 lines per function, nesting at most 3 (elif counts as 1), no nested ternary |
 
 Tests run offline. Hosted Actions are reserved for one consolidated candidate.
 

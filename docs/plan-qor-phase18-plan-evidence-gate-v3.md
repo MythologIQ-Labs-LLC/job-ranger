@@ -11,13 +11,13 @@
 **boundaries**:
 - limitations: mechanically verifies declared typed records and document structure only; free-form prose completeness is not asserted
 - non_goals: function, import or enum measurement; test-outcome receipts (D3); ruleset changes (D1); Qor-logic-plus changes (D2); remediation re-emit or event closure; Phase 17 iteration 5; provider work
-- exclusions: no change to PR #232, #233 or #238; no application source or `package.json` change; no merge
+- exclusions: no change to PR #232, #233 or #238; no application source or `package.json` change; no pull request opened and no merge under this plan
 
-**pr_target**: feature/136-provider-tranche-governed-plan
+**iteration**: 2
 
 **risk_grade**: L2 (untrusted PR data on a privileged-trigger workflow; one new governance-tooling dependency)
 
-Specification: `docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md`. The original proposal, `docs/design/PLAN_EVIDENCE_GATE_V3_PROPOSAL.md`, is kept unchanged. Operator decision: Option A (#267). The phase-17 remediation (VETO #108) stands, and this plan is not an amendment to it.
+Iteration 2 amends iteration 1 after the independent design VETO at META_LEDGER #110 (V1-V5); the same audit ADMITTED the parser dependency. Specification: `docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md` (iteration 2). The original proposal, `docs/design/PLAN_EVIDENCE_GATE_V3_PROPOSAL.md`, is kept unchanged. Operator decision: Option A (#267). The phase-17 remediation (VETO #108) stands, and this plan is not an amendment to it.
 
 ## Open Questions
 
@@ -25,11 +25,13 @@ None. Dependency admission is decided at the design audit (spec section 9).
 
 ## Locked Decisions
 
-- The v2 base-revision gate already runs on `pull_request_target` [claim:v2-gate-trigger]. v3 keeps that trust model and replaces the checker.
+- The v2 gate workflow at the PR #232 head is configured with `pull_request_target` [claim:v2-gate-trigger]. It has never executed, because it is not on the base branch. v3 keeps that trust model and replaces the checker.
 - The v2 binding module being replaced is large and lexical [claim:v2-prose-size]. v3 deletes it rather than extending it.
 - The remediation gate's enforcer still names the v2 suite [claim:v2-enforcer]. This plan leaves the artifact untouched, and a separately authorized re-emit must change it.
 - Runtime kinds are a closed union in source [claim:runtime-kind]. v3 does not claim such facts through enum parsing; a `line-equals` record is the supported form.
 - Hash-pinned wheel admission versus vendoring is a design choice, not an observation [judgment:dependency-choice].
+- Delivery: the branch is pushed for review only. It carries the PR #232 governance-record lineage, so any pull request, target branch or merge route needs a separate, recorded operator decision.
+- Plans that predate v3 (phase below 18 and no inventory) are reported as `LEGACY` and not evaluated. That makes the Phase 17 iteration-4 plan legacy, so a valid governed change can pass. A later Phase 17 iteration opts in by adding its inventory.
 
 ## Phase 1: Red-first adversarial suites
 

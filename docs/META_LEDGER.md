@@ -3053,6 +3053,28 @@ The Governor amends the plan and spec text and re-runs an independent /qor-audit
 
 ---
 
+### Entry #111: PLAN (Phase 18 Plan Evidence Gate v3, iteration 2)
+
+**Timestamp**: 2026-10-12T16:17:31Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase18-plan-evidence-gate-v3.md
+
+**Content Hash**: `752c1b208b987947b8498fd0e388b4ef8c3fe969ae2885f14cfb15837b9b22f2`
+
+**Previous Hash**: `684cb67c886aebee1546e2bfb705d4ad2d55e988c895f3b0526263c40a90d6a3`
+
+**Chain Hash**: `5b2bcad01df09929d6307854132e828387c860ef83afe7c1712d214c0b7dc06a`
+
+**Decision**: Plan iteration 2 amends iteration 1 after independent design VETO #110 (V1-V5). It is a single bounded correction.
+V1: no PR is opened under this plan; the delivery route is left to a separate operator decision; pre-v3 plans are reported LEGACY.
+V2: Locked Decision 1 reworded. V3: nesting fails closed at level 10. V4: the full reviewer corpus is converted, each probe with a reason code.
+V5: parse budget, text-absent limits, heading-name definition, claim-commit ancestry, CI venv and install-failure semantics.
+The dependency was ADMITTED at #110. The Phase 17 remediation gate, VETO #108 and both pending Phase 16 events are unchanged.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3072,5 +3094,5 @@ The Governor amends the plan and spec text and re-runs an independent /qor-audit
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110 (design; dependency ADMIT); amend plan/spec*
-*Next required action: Governor amends docs/plan-qor-phase18-plan-evidence-gate-v3.md and PLAN_EVIDENCE_GATE_V3_SPEC.md per Entry #110 (V1-V5), then a fresh independent design /qor-audit (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110; PLAN it.2 #111; independent design re-audit pending*
+*Next required action: independent design re-audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md iteration 2 (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
