@@ -1,6 +1,6 @@
 # Specification: plan evidence gate v3
 
-**Status:** refined specification, iteration 2, for independent design audit (#267). Iteration 1 was VETOed at ledger #110 (findings V1-V5); the same audit ADMITTED the dependency. It refines `PLAN_EVIDENCE_GATE_V3_PROPOSAL.md` and does not replace it. Neither document is a remediation amendment, closes an event, or authorizes D1 or D2.
+**Status:** refined specification, iteration 3 and final authorized design iteration, for independent design audit (#267). Iteration 1 was VETOed at ledger #110 (findings V1-V5), and that audit ADMITTED the dependency. Iteration 2 was VETOed at ledger #112 (findings R1-R5, advisories A1-A6). Iteration 3 changes only what those findings require. It refines `PLAN_EVIDENCE_GATE_V3_PROPOSAL.md` and does not replace it. Neither document is a remediation amendment, closes an event, or authorizes D1 or D2.
 **Branch:** `impl/267-plan-evidence-gate-v3`. This is a new branch: it starts from PR #232 head `cb9b7b1bc0e27c96085be7c6da423369995d6fac`, with the proposal commit cherry-picked on top. Basing it on that head keeps the remediation session and ledger chain continuous. PR #232's own branch is not modified.
 **Delivery (V1):** no pull request is opened under this plan. The branch is pushed for review only. It carries PR #232's governance-record lineage, including the vetoed Phase 17 records and ledger #95-#108. A PR, a target branch or any merge route therefore needs a separate, recorded operator decision.
 **Operator decision:** Option A, the structural redesign. No Amendment 4 and no Phase 17 plan iteration 5.
@@ -17,17 +17,39 @@ v3 does **not** claim to find empirical assertions in free-form prose, and does 
 ## 2. Unchanged invariants (R3/R4)
 
 - **No execution of PR material.** PR content (plan, inventory, code, tests, workflows) is data only. The verifier code, its parser dependency and its workflow come from the protected base revision.
-- **Fixed, read-only git calls.** Git is invoked only as `cat-file -t|-s|blob`, `ls-tree -z`, `merge-base` and `diff --name-only -z`. Arguments are list-form, there is no shell, the environment is scrubbed, `GIT_OPTIONAL_LOCKS=0` is set, and there is no checkout or worktree.
+- **Fixed, read-only git calls.** Git is invoked only as `cat-file -t|-s|blob`, `ls-tree -z`, `merge-base` (including `--is-ancestor`) and `diff --name-status -z --no-renames <commit> <commit>`. Arguments are list-form, there is no shell, the environment is scrubbed, `GIT_OPTIONAL_LOCKS=0` is set, and there is no checkout or worktree.
 - **Immutable references.** Commits are full 40-character lowercase SHAs that resolve to commit objects. `HEAD`, branches, tags, short SHAs and expressions are rejected before any git call.
 - **Validated paths.** A path is repository-relative. Each `/`-separated segment matches `[A-Za-z0-9_.][A-Za-z0-9_.-]*` and is not `.` or `..`. The object must be a blob with mode `100644` or `100755`, so symlinks and gitlinks are rejected.
 - **No nominal success.** Anything that cannot be evaluated exits non-zero. There is no "warning and pass".
 
-## 3. Artifact layout
+## 3. Artifact layout and applicability
 
-- A governed plan is `docs/plan-qor-phaseNN-slug.md`. `NN` has no leading zero; a name with a leading zero is rejected, not grandfathered.
-- A plan is **gated** when NN >= 18, or when its sibling inventory exists, whatever the phase. Any other plan is reported as `LEGACY (pre-v3, not evaluated)`; it is never reported as passing. The Phase 17 iteration-4 plan is legacy. A future Phase 17 iteration opts in simply by adding its inventory, and the Phase 17 remediation record must require that.
-- Its inventory is the sibling file `docs/plan-qor-phaseNN-slug.evidence.json`. The path is derived from the plan path, never declared inside the plan, so there is nothing to spoof.
-- A plan that still contains a v2 embedded `json qor-plan-claims` fence is rejected with a migration message. An inventory with `version` instead of `schema_version`, or with `schema_version` other than 3, is rejected. There is no silent reinterpretation.
+**File-name grammar (A5).**
+
+| File | Pattern |
+| --- | --- |
+| Governed plan | `docs/plan-qor-phase<N>-<slug>.md` |
+| Its inventory | `docs/plan-qor-phase<N>-<slug>.evidence.json` (always derived from the plan path, never declared inside the plan) |
+
+- `<N>` is `0`, or `[1-9][0-9]{0,2}`, so leading zeros are not allowed.
+- `<slug>` is `[a-z0-9]+(-[a-z0-9]+)*`.
+- A changed path that matches the glob `docs/plan-qor-phase*` but neither pattern fails with `E_PLAN_NAME`. That includes leading-zero, uppercase and missing-slug names.
+
+**Applicability (R1).** In the PR gate, only trusted data decides which plans are evaluated: the gate code from the protected base revision B, and the immutable change list between the merge base M of B and the head H. M is computed with `git merge-base`, and the change list with `git diff --name-status -z --no-renames M H`. With rename detection off, a rename or copy appears as a deletion plus an addition, so neither can evade the rules below. This is decided before any head-supplied plan text, inventory, `schema_version` or metadata is read. Phase numbers and the presence of an inventory play no part.
+
+| Change (M to H) | Result |
+| --- | --- |
+| Plan added or modified, any phase (`A`, `M`, or the addition half of a rename or copy) | **Gated.** The plan and its inventory are read at H and fully evaluated. A missing inventory fails with `E_INVENTORY_MISSING`. |
+| Inventory added or modified | Its plan is **gated**, even if the plan file itself did not change |
+| Plan deleted (`D`, including the deletion half of a rename) | `E_GOVERNED_DELETION` |
+| Inventory deleted | `E_INVENTORY_DELETED` |
+| Plan and inventory both untouched | Not evaluated in this PR. Their bytes are identical to the reviewed objects at M. The report lists them as `UNCHANGED (not evaluated)`, never as passing. |
+
+- **Phase 17 iteration 4.** The iteration-4 plan is grandfathered only while it stays byte-identical to the merge base and has no related inventory change. Any change that touches it gates it, and with no inventory it fails with `E_INVENTORY_MISSING`.
+- **There is no `LEGACY` status.** Nothing a PR adds or changes can be exempted by its name, its phase, or the absence of an inventory.
+- **CLI mode.** The command line evaluates exactly the plans named on it, read from git objects at the mandatory `--head`. A named plan is always gated, so it needs a valid name and an inventory.
+
+**Legacy manifests.** A plan that still contains a v2 embedded `json qor-plan-claims` fence is rejected with `E_LEGACY_MANIFEST` and a migration message. An inventory that uses `version` instead of `schema_version`, or a `schema_version` other than 3, is rejected. There is no silent reinterpretation.
 
 ## 4. Inventory schema v3 (closed)
 
@@ -120,26 +142,32 @@ The plan bytes are size-checked and decoded as strict UTF-8, then rejected if th
 
 The text is then parsed with `MarkdownIt("commonmark")` from `markdown-it-py`, with `maxNesting` left at 20. The parser runs from the trusted base install.
 
+- **Bracket runs (A4).** More than 19 consecutive `[` characters in any inline token's `content` fail closed with `E_NESTING`. At that depth markdown-it's inline nesting limit makes it emit text where CommonMark would produce a link, so the run is rejected rather than accepted as an accepted divergence.
 - **Nesting (V3).** Any token with `level >= 10` fails closed (`E_NESTING`). Content nested deeply enough to reach markdown-it's limit of 20 must first pass through levels 10-19, so silently dropped content is always detected before it is lost.
 - **Parse budget (V5-a).** The plan is capped at 128 KiB. If parsing takes longer than 10 s of wall time, the result is `E_PARSE_TIME`. The gate job has `timeout-minutes: 5`. A worst-case fixture (pathological `![` repetition at the cap) must parse within the budget on the reference runner, or the test fails.
 
 - **Headings.**
   - Every `heading_open` token must have nesting `level == 0`. A heading inside a list or blockquote fails closed.
   - **Heading name (V5-c).** The name is the heading's `inline.content`, and the inline token must have exactly one `text` child whose content equals `inline.content`. Entities, escapes, emphasis, code or links in a heading therefore fail closed (`E_HEADING_TEXT`). The name must be printable ASCII with no double spaces, so NBSP, zero-width and confusable letters fail.
-  - A heading at any level whose case-folded, whitespace-collapsed name equals or starts with a canonical name, but is not an exact canonical `h2`, fails (`E_HEADING_TEXT` or `E_HEADING_LEVEL`). Examples: `Locked decisions`, `Locked Decisions extra`, `#### Locked Decisions`.
+  - **Near-matches (A3).** A heading name is compared case-sensitively and exactly. A near-match is any heading, at any level, whose name, once case-folded and with whitespace runs collapsed to one space, equals or starts with a canonical name without being an exact canonical `h2`.
+    - The exact canonical text at another level is `E_HEADING_LEVEL`, for example `#### Locked Decisions`.
+    - Every other near-match is `E_HEADING_TEXT`, for example `Locked decisions` or `Locked Decisions extra`.
   - At most one `h1` is allowed, and only as the first heading.
   - The canonical sections are `h2` headings named exactly `Locked Decisions`, `Definition of Done` and `CI Commands` (each appearing exactly once, otherwise `E_SECTION_MISSING` or `E_SECTION_DUPLICATE`), plus at least one `Phase <digits>: <text>`.
   - A canonical section runs from its heading to the next `h1`/`h2`.
 - **Raw HTML.** Any `html_block` or `html_inline` token anywhere fails closed.
 - **Citations.** `[claim:id]` and `[judgment:id]` are collected only from `text` children of `inline` tokens inside canonical sections. Text inside links, `code_inline`, `fence`, `code_block` and HTML never counts. A citation-shaped string in an ineligible position therefore cannot satisfy a record.
+- **Citation pattern (A2).**
+  - In eligible text, a citation is exactly `[claim:<id>]` or `[judgment:<id>]`, lowercase, with `<id>` matching `[a-z0-9][a-z0-9-]{0,48}`.
+  - An eligible text fragment that matches `\[(claim|judgment):` case-insensitively but is not a well-formed lowercase citation fails with `E_CITATION_DANGLING`.
 - **Citation look-alike links.** Two cases fail closed (`E_LINK_CITATION`):
-  - a link whose text matches the citation pattern;
-  - a link reference definition whose label matches it. These labels appear in the parser's `env["references"]`.
+  - a link whose joined text children, trimmed, match `(claim|judgment):[A-Za-z0-9-]*` case-insensitively;
+  - a link reference definition whose label matches `(CLAIM|JUDGMENT):` case-insensitively. markdown-it stores these labels upper-case normalized in `env["references"]`, which is why the match ignores case.
 - **Citation rules.**
   - Every claim and judgment is cited exactly once in eligible canonical prose.
   - Every citation resolves to a record.
   - Eligible citations outside canonical sections fail.
-- **Error reporting.** Errors name the rule and the source line from the parser token `map`. They never echo hidden content.
+- **Error reporting.** Errors name the rule and the source line from the parser token `map`. They never echo hidden content. Ordering, precedence and output bounds are defined in section 7.
 
 ## 7. Report and exit status
 
@@ -154,8 +182,8 @@ governance/remediation closure: NOT DETERMINED BY THIS GATE
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | Structure valid and every claim `VERIFIED`; legacy plans are reported as `LEGACY` and not evaluated |
-| 1 | Any structural, schema, citation or claim failure |
+| 0 | Every gated plan has valid structure and every claim `VERIFIED`. In the gate, untouched plans are listed as `UNCHANGED (not evaluated)`. With no governed change, the result is `not applicable`. |
+| 1 | Any applicability, structural, schema, citation or claim failure, including truncated output |
 | 2 | Invalid invocation or an unresolvable revision |
 
 Output is written with `errors="backslashreplace"`.
@@ -165,6 +193,7 @@ Output is written with `errors="backslashreplace"`.
 | Group | Codes |
 | --- | --- |
 | Input encoding and size | `E_SIZE`, `E_ENCODING`, `E_CONTROL` (BOM, NUL, C0, bare CR, U+2028/2029) |
+| Applicability | `E_PLAN_NAME`, `E_INVENTORY_MISSING`, `E_INVENTORY_DELETED`, `E_GOVERNED_DELETION` |
 | Legacy and HTML | `E_LEGACY_MANIFEST`, `E_HTML` |
 | Headings and sections | `E_NESTED_HEADING`, `E_HEADING_TEXT`, `E_HEADING_LEVEL`, `E_HEADING_ORDER`, `E_SECTION_MISSING`, `E_SECTION_DUPLICATE` |
 | Parser limits | `E_NESTING`, `E_PARSE_TIME` |
@@ -172,19 +201,48 @@ Output is written with `errors="backslashreplace"`.
 | Inventory | `E_SCHEMA`, `E_KIND_UNSUPPORTED`, `E_REF`, `E_PATH`, `E_OBJECT`, `E_ANCESTRY` |
 | Evaluation | `E_CLAIM_FAILED`, `E_INVOCATION` |
 
+**Precedence (A3).** Each gated plan is evaluated in fixed stages:
+
+1. applicability and name;
+2. bytes: size, UTF-8 and control characters;
+3. legacy manifest;
+4. parse, including nesting, bracket runs and time;
+5. raw HTML;
+6. headings, checked in the order nested, text, level, order, then missing or duplicate section;
+7. inventory schema and kinds;
+8. citations;
+9. references, objects and ancestry;
+10. claim evaluation.
+
+The first stage that produces errors ends evaluation of that plan. All of that stage's errors are reported, in source order. A fixture's "expected code" is the code of its first reported error. Plans are processed in byte order of their paths.
+
+**Bounded output (R5).**
+
+- A run reports at most 50 errors in total.
+- Each message is truncated to 300 characters, with the marker `[...]`.
+- Total output is capped at 64 KiB.
+- Once a cap is reached, collection stops and the gate prints exactly one line: `TRUNCATED: <n> further errors not shown`.
+- Truncation always exits 1. It can never turn a failing run into success.
+- With the stage order fixed and errors sorted, the same input always produces byte-identical output.
+
 ## 8. Required-check architecture and bootstrap
 
 - **`plan-evidence-gate`** (`pull_request_target`) runs on every PR, with no path filter.
-  - It checks out the base SHA with a SHA-pinned `actions/checkout` and `persist-credentials: false`.
+  - It checks out the base SHA with a SHA-pinned `actions/checkout`, `fetch-depth: 0` (full history, A1) and `persist-credentials: false`.
   - It creates an isolated venv (`python3 -m venv "$RUNNER_TEMP/plan-evidence"`; ubuntu-24.04's system Python is PEP 668 externally managed). From the base checkout's requirements file, it installs the hash-pinned parser with `pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt`.
   - Any venv, install or network failure exits non-zero for **every** PR, including unrelated ones. There is no nominal success; this availability trade-off is accepted and documented.
   - The job has `timeout-minutes: 5`.
-  - It fetches `refs/pull/N/head` as objects only and runs the base copy of `scripts/plan_evidence_gate.py`.
+  - It fetches `refs/pull/N/head` with full history, as objects only, and runs the base copy of `scripts/plan_evidence_gate.py`.
+  - If the merge base or any cited commit cannot be resolved, the run fails with `E_REF` or `E_ANCESTRY` and exits non-zero. A shallow clone can never cause a skip.
   - It has `contents: read`, no secrets, and SHAs reach the shell only through env vars.
 - **Outcomes.**
   - When no governed path changed, the gate exits 0 with an explicit `not applicable`.
   - Governed paths are: `docs/plan-qor-phase*.md`, `docs/plan-qor-phase*.evidence.json`, `scripts/plan_evidence_*.py`, `tests/test_plan_evidence_*.py`, `tests/plan_evidence_fixture.py`, `governance/requirements-plan-evidence.txt`, `.github/workflows/*` and `.github/CODEOWNERS`.
-  - When a governed path changed, every gated plan at the head is verified, and legacy plans are listed as `LEGACY`. Because the iteration-4 plan is legacy, a valid governed PR can reach success.
+  - When a governed path changed, the section 3 applicability table decides which plans are evaluated.
+    - Gated plans are fully evaluated.
+    - Deletions fail.
+    - Untouched plans are listed as `UNCHANGED (not evaluated)`.
+  - A governed change that leaves every plan untouched (for example a gate-code change, which still needs code-owner review) can therefore succeed, and so can a change that adds a conforming plan with its inventory. So "a valid governed PR shows success" is reachable without any exemption controlled by the head.
   - Workflow name spoofing is detected on a best-effort basis only. The real control is code-owner review on `.github/workflows/` (D1).
 - **`plan-evidence-selftest`** (`pull_request`, unprivileged, path-filtered) runs the PR head's own suites. It is informational and must never be the required check.
 - **Bootstrap.** `pull_request_target` runs only workflows already on the base branch. The PR that introduces the gate therefore cannot be gated by it, and branch-local or self-test runs do not prove enforcement. Enforcement exists only after:
@@ -233,7 +291,10 @@ Output is written with `errors="backslashreplace"`.
 - The v2 modules `scripts/plan_claims_*.py`, their suites and `plan-claims*.yml` are removed on this branch and replaced by `scripts/plan_evidence_*.py`, `tests/test_plan_evidence_*.py` and `plan-evidence*.yml`. Git history keeps them.
 - The canonical gate `.qor/gates/2026-10-10T0443-9d3df3/remediate.json`, Amendments 1–3, ledger entries #95–#108 and all reports are not modified. Its `closure_enforcer` still names the v2 suite. Only a separately authorized re-emit may point it at the v3 suite.
 - The two Phase 16 events stay `addressed_pending: true`, `addressed: false`.
-- The Phase 17 iteration-4 plan has no v3 inventory, so it fails the v3 gate. That is truthful and expected. Iteration 5 is not authorized.
+- The Phase 17 iteration-4 plan has no v3 inventory.
+  - While it is byte-identical to the merge base and has no inventory change, the gate does not evaluate it and lists it as `UNCHANGED (not evaluated)`. It is never listed as passing.
+  - Any PR that edits, renames, copies or deletes it is gated or rejected under section 3. With no inventory, that fails.
+  - Iteration 5 is not authorized.
 - Self-application: this phase's own plan carries a v3 inventory and must pass the v3 checker.
 - No pull request or merge route is decided here (V1). The plan's `pr_target` is intentionally absent.
 
@@ -245,6 +306,23 @@ Output is written with `errors="backslashreplace"`.
 - moves its v2 manifest content into a v3 inventory against the fixture repository;
 - carries an expected outcome and reason code.
 
+**Conversion procedure (R4).**
+
+- **What is removed.** Exactly one region is removed: the v2 fence, from its opening line `json qor-plan-claims` to its closing backticks, together with that closing line's newline.
+- **What is kept.** Every other byte stays, including every heading such as `## Plan Claims` and any text that follows the fence.
+- **Moving the records.** The fence's claims and judgments become the v3 inventory, with these mappings:
+  - `file-lines` with `max`/`equals` becomes `predicate`;
+  - `commit` and `path` are rebound to the fixture repository;
+  - a removed or held kind is kept as-is, so it yields `E_KIND_UNSUPPORTED`.
+- **n19.** n19 tests that a tab-indented `## Locked Decisions` is an indented code block, not a heading. Scanner and renderer must agree, so the run succeeds and the code-block text is inert.
+  - Its intent depends on the preceding `## Plan Claims` heading being kept. If that heading were removed, the line would become a list continuation and, in effect, a different probe.
+  - Expected: PASS, with prose `NOT MECHANICALLY ASSERTED`.
+
+**Reconciliation.** The corpus is 57 distinct probe files: 26 from judge-a2 and 31 from judge-a3.
+
+- With this procedure and s3 corrected, an independent section 6 harness run on markdown-it-py 4.2.0 reproduces 57 of 57 expectations, with 0 mismatches.
+- Audit #112 reported "58/60". Its two mismatches were s3 and n19. Its denominator does not match the number of probe files, so this spec counts files.
+
 No probe may fail on `E_LEGACY_MANIFEST`. Expected outcomes:
 
 | Expected outcome | Probes |
@@ -255,7 +333,8 @@ No probe may fail on `E_LEGACY_MANIFEST`. Expected outcomes:
 | `E_CONTROL` | n11 (BOM), n18 (NUL), p05 (form feed), p05b (U+2028) |
 | `E_NESTED_HEADING` | n15, n16 |
 | `E_HEADING_LEVEL` | p15 |
-| PASS, with `free-form prose completeness: NOT MECHANICALLY ASSERTED` | n00, n01, n13, n14, n17, n19, n20, n21, n22, p00, p01, p02, p04, p06, p06b, p07, p07b, p07c, p08, p09, p10, p11, p12, p13, p16, p17, p19, s2, s3, b01-b08 |
+| `E_KIND_UNSUPPORTED` | s3 (its only record is `function-lines`) |
+| PASS, with `free-form prose completeness: NOT MECHANICALLY ASSERTED` | n00, n01, n13, n14, n17, n19, n20, n21, n22, p00, p01, p02, p04, p06, p06b, p07, p07b, p07c, p08, p09, p10, p11, p12, p13, p16, p17, p19, s2, b01-b08 |
 
 The PASS rows are the honest limitation: prose such as "more than", "over" or "not N lines", or a second subject in a sentence, is not interpreted. Only the typed predicate is evaluated.
 
@@ -263,6 +342,28 @@ The PASS rows are the honest limitation: prose such as "more than", "over" or "n
 
 | Area | Fixtures | Expected |
 | --- | --- | --- |
+| Applicability, end to end through the base-revision gate (R1) | Head adds a phase-17 plan without an inventory | `E_INVENTORY_MISSING`, exit 1 |
+| | Head edits the iteration-4-style plan | `E_INVENTORY_MISSING`, exit 1 |
+| | Head renames a plan | `E_GOVERNED_DELETION` plus the added path gated, exit 1 |
+| | Head copies a plan under a new name | The copy is gated, `E_INVENTORY_MISSING` |
+| | Head deletes a plan | `E_GOVERNED_DELETION` |
+| | Head deletes an inventory | `E_INVENTORY_DELETED` |
+| | Head changes only an inventory | Its plan is gated |
+| | Head adds `plan-qor-phase016-x.md`, `plan-qor-phase18.md` or `Plan-qor-phase18-x.md` under `docs/` | `E_PLAN_NAME` |
+| | Head adds a low-phase plan with a valid inventory | Exit 0 |
+| | Head rewrites the gate scripts and also adds a failing plan | Exit 1; the base code decides |
+| | Untouched legacy plan plus an unrelated governed change | Exit 0, listed `UNCHANGED (not evaluated)` |
+| | Unrelated change only | `not applicable` |
+| CLI (R3) | No `--head`; `--head HEAD`, `--head main`, short SHA, uppercase SHA | Exit 2 |
+| | Full SHA | Evaluates the named plans |
+| Bounded output (R5) | A plan producing 10,000 citation errors | Exactly 50 errors plus one `TRUNCATED` line, exit 1, output at most 64 KiB, byte-identical across two runs |
+| | A 5,000-character message | Truncated to 300 characters |
+| | A truncated run | Never exits 0 |
+| Advisories | Workflow structure includes `fetch-depth: 0` | (A1) |
+| | Reference label `[CLAIM:x]: /u` and link text ` claim:x ` | `E_LINK_CITATION` (A2) |
+| | `[Claim:x]` in eligible text | `E_CITATION_DANGLING` (A2) |
+| | 21 consecutive `[` before a citation | `E_NESTING` (A4) |
+| | Precedence fixture: a plan with both HTML and a duplicate section | First code `E_HTML` (A3) |
 | Source probes | `function-lines` or `import-edge` records shaped like `for await (...) /re/`, `o.in / 2`, `declare function`, `satisfies` and `require("x" + y)` | `E_KIND_UNSUPPORTED`; no measurement is attempted |
 | Parser limits | Content nested 25 deep, with HTML and text at the bottom | `E_NESTING` |
 | | Pathological 128 KiB `![` input | Within the parse budget |

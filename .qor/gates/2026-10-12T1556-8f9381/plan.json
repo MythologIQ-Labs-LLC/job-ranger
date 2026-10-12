@@ -1,7 +1,7 @@
 {
   "phase": "plan",
   "session_id": "2026-10-12T1556-8f9381",
-  "ts": "2026-10-12T16:17:31Z",
+  "ts": "2026-10-12T16:52:33Z",
   "plan_path": "docs/plan-qor-phase18-plan-evidence-gate-v3.md",
   "phases": [
     "Phase 1: Red-first adversarial suites",
@@ -10,12 +10,12 @@
   "ci_commands": [
     "python -m pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt",
     "python -m unittest discover -s tests -p \"test_plan_evidence_*.py\"",
-    "python scripts/plan_evidence_check.py --repo . --head <sha> docs/plan-qor-phase18-plan-evidence-gate-v3.md"
+    "python scripts/plan_evidence_check.py --repo . --head \"$(git rev-parse HEAD)\" docs/plan-qor-phase18-plan-evidence-gate-v3.md"
   ],
   "open_questions": [],
   "doc_tier": "standard",
   "high_risk_target": false,
-  "originating_remediation": "issue #267; design VETO #110",
+  "originating_remediation": "issue #267; design VETOs #110 and #112",
   "terms": [
     {
       "term": "evidence inventory",
@@ -29,6 +29,6 @@
     "host": "unknown",
     "model_family": "opus",
     "human_oversight": "absent",
-    "ts": "2026-10-12T16:17:31Z"
+    "ts": "2026-10-12T16:52:33Z"
   }
 }

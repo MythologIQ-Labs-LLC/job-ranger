@@ -13,11 +13,11 @@
 - non_goals: function, import or enum measurement; test-outcome receipts (D3); ruleset changes (D1); Qor-logic-plus changes (D2); remediation re-emit or event closure; Phase 17 iteration 5; provider work
 - exclusions: no change to PR #232, #233 or #238; no application source or `package.json` change; no pull request opened and no merge under this plan
 
-**iteration**: 2
+**iteration**: 3
 
 **risk_grade**: L2 (untrusted PR data on a privileged-trigger workflow; one new governance-tooling dependency)
 
-Iteration 2 amends iteration 1 after the independent design VETO at META_LEDGER #110 (V1-V5); the same audit ADMITTED the parser dependency. Specification: `docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md` (iteration 2). The original proposal, `docs/design/PLAN_EVIDENCE_GATE_V3_PROPOSAL.md`, is kept unchanged. Operator decision: Option A (#267). The phase-17 remediation (VETO #108) stands, and this plan is not an amendment to it.
+Iteration 3 is the final authorized design iteration (operator decision #267 comment 6128584663). It amends iteration 2 strictly for independent design VETO #112 (R1-R5, advisories A1-A6). Iteration 1 was VETOed at #110, and that audit ADMITTED the parser dependency. Specification: `docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md` (iteration 2). The original proposal, `docs/design/PLAN_EVIDENCE_GATE_V3_PROPOSAL.md`, is kept unchanged. Operator decision: Option A (#267). The phase-17 remediation (VETO #108) stands, and this plan is not an amendment to it.
 
 ## Open Questions
 
@@ -31,7 +31,7 @@ None. Dependency admission is decided at the design audit (spec section 9).
 - Runtime kinds are a closed union in source [claim:runtime-kind]. v3 does not claim such facts through enum parsing; a `line-equals` record is the supported form.
 - Hash-pinned wheel admission versus vendoring is a design choice, not an observation [judgment:dependency-choice].
 - Delivery: the branch is pushed for review only. It carries the PR #232 governance-record lineage, so any pull request, target branch or merge route needs a separate, recorded operator decision.
-- Plans that predate v3 (phase below 18 and no inventory) are reported as `LEGACY` and not evaluated. That makes the Phase 17 iteration-4 plan legacy, so a valid governed change can pass. A later Phase 17 iteration opts in by adding its inventory.
+- In the PR gate, only trusted base-revision code and the immutable merge-base-to-head change list (renames off) decide which plans are evaluated. Every added or modified plan is gated whatever its phase, and a missing inventory fails. Deleted plans and deleted inventories fail. A plan is grandfathered only while it is byte-identical to the merge base and has no inventory change, and then it is reported as `UNCHANGED (not evaluated)`, never as passing. There is no head-controlled `LEGACY` exemption.
 
 ## Phase 1: Red-first adversarial suites
 
@@ -42,7 +42,8 @@ None. Dependency admission is decided at the design audit (spec section 9).
 - `tests/test_plan_evidence_structure.py` (new) - Amendment 3 Markdown probes, decided by parser tokens
 - `tests/test_plan_evidence_claims.py` (new) - claim evaluation, binding failures, honest-limitation report
 - `tests/test_plan_evidence_security.py` (new) - R3/R4: no execution, no writes, path and ref rejection, env scrub
-- `tests/test_plan_evidence_gate.py` (new) - not-applicable, governed pass and fail, tamper, spoof, workflow architecture, razor
+- `tests/test_plan_evidence_gate.py` (new) - applicability end to end through the base-revision gate (add, edit, rename, copy or delete plans; delete or change inventories; file-name grammar), not-applicable, tamper, spoof, workflow architecture, razor
+- `tests/test_plan_evidence_output.py` (new) - mandatory `--head` (missing or mutable is rejected); bounded, deterministic, truncated output that always exits 1
 
 ### Unit Tests
 
@@ -65,7 +66,7 @@ None. Dependency admission is decided at the design audit (spec section 9).
 
 ### Unit Tests
 
-- All Phase 1 suites go green, twice. This plan passes `python scripts/plan_evidence_check.py --repo . docs/plan-qor-phase18-plan-evidence-gate-v3.md`.
+- All Phase 1 suites go green, twice. This plan passes `python scripts/plan_evidence_check.py --repo . --head "$(git rev-parse HEAD)" docs/plan-qor-phase18-plan-evidence-gate-v3.md`. The head is a full 40-character commit SHA taken from the invoking checkout; a missing or mutable `--head` exits 2.
 
 ## Definition of Done
 
@@ -78,4 +79,4 @@ None. Dependency admission is decided at the design audit (spec section 9).
 
 - `python -m pip install --require-hashes --no-deps --only-binary=:all: -r governance/requirements-plan-evidence.txt` - pinned parser
 - `python -m unittest discover -s tests -p "test_plan_evidence_*.py"` - v3 suites (run twice)
-- `python scripts/plan_evidence_check.py --repo . docs/plan-qor-phase18-plan-evidence-gate-v3.md` - self-application
+- `python scripts/plan_evidence_check.py --repo . --head "$(git rev-parse HEAD)" docs/plan-qor-phase18-plan-evidence-gate-v3.md` - self-application at an immutable head

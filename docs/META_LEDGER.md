@@ -3110,6 +3110,28 @@ The operator decides whether a further correction is authorized. Phase 17 remain
 
 ---
 
+### Entry #113: PLAN (Phase 18 Plan Evidence Gate v3, iteration 3, final)
+
+**Timestamp**: 2026-10-12T16:52:33Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase18-plan-evidence-gate-v3.md
+
+**Content Hash**: `a9dd7e466ffe4588eb7e0d4caea8b04172b89df457add8533e4b7996f0d2aa1e`
+
+**Previous Hash**: `0e4ae35ade9e213fcaaa5adb45446228f4f6450c5a468c37b196f8de68208d02`
+
+**Chain Hash**: `23c2f1425e0ecfa2d8e6e4dbba5268ca1056b4361975c1fa10e9b5e9759a29d7`
+
+**Decision**: Plan iteration 3 is the final authorized design iteration (operator #267 comment 6128584663). It is limited to independent VETO #112 R1-R5 and advisories A1-A6.
+R1: the head-controlled LEGACY exemption is removed. Applicability comes from base-revision code and the merge-base..head --no-renames change list. Added or modified plans are gated whatever their phase; deleted plans and inventories fail; untouched plans are UNCHANGED (not evaluated).
+R2: sections 3, 7, 8, 10 and LD7 are reconciled. R3: the self-check requires a full-SHA --head. R4: s3 is E_KIND_UNSUPPORTED and the conversion keeps all headings (n19 PASS); 57/57 corpus files reproduce on markdown-it-py 4.2.0.
+R5: at most 50 errors, 300-character messages, 64 KiB output, a TRUNCATED line and exit 1. A1-A6: fetch-depth 0, case-insensitive label matching, stage precedence, bracket-run rejection, file-name grammar, E_INVENTORY_MISSING.
+The dependency admission from #110 is unchanged. The Phase 17 remediation gate, VETO #108 and both pending Phase 16 events are unchanged.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3129,5 +3151,5 @@ The operator decides whether a further correction is authorized. Phase 17 remain
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110; PLAN it.2 #111; VETO #112 (design re-audit, iteration 2)*
-*Next required action: operator decision on a further bounded correction per Entry #112 (R1-R5); if authorized, Governor amends plan and spec, then a fresh independent /qor-audit (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109/#111/#113; VETO #110/#112; final independent design audit (iteration 3) pending*
+*Next required action: independent design audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md iteration 3 (final) (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
