@@ -40,10 +40,20 @@ Requirements: Python 3.10+ (exercised on 3.11.9 only), and Git in an absolute `P
 
 ```sh
 SHA=$(git rev-parse HEAD)
-python scripts/local_evidence_cli.py --repo . --head "$SHA" --inventory docs/example.evidence.json
+python scripts/local_evidence_cli.py --repo . --head "$SHA" --inventory docs/examples/local-evidence-sample.evidence.json
 ```
 
 `--head` must be a full lowercase 40-character SHA of a commit; `HEAD`, branch names, tags and abbreviations are rejected. The inventory is read from that commit, not from the working tree.
+
+
+The checked-in [sample inventory](../examples/local-evidence-sample.evidence.json) is a real, runnable four-claim fixture, not a placeholder. All four supported kinds target `GOVERNANCE.md` at the immutable source commit `296cac2f55cacc95a564c4c18dbd35033af2a9a2`, an ancestor of this spike. The source's first line and exact phrase were checked against the GitHub object, and its line count is 203. A normal local run should report `VERIFIED 4/4` when every claimed object is present. **That expected result is not a recorded exact-head local execution of the new sample.**
+
+PowerShell equivalent:
+
+```powershell
+$sha = git rev-parse HEAD
+py -3 scripts/local_evidence_cli.py --repo . --head $sha --inventory docs/examples/local-evidence-sample.evidence.json
+```
 
 Example inventory (placeholder SHA, not a factual repository claim):
 
