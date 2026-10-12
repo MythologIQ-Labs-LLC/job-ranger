@@ -2927,6 +2927,35 @@ Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events st
 
 ---
 
+### Entry #107: REMEDIATE (Phase 17 Gate-Loop Remediation, Amendment 3)
+
+**Timestamp**: 2026-10-12T14:45:18Z
+**Phase**: REMEDIATE
+**Author**: Governor
+**Risk Grade**: L2
+**Gate**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json
+
+**Content Hash**: `7bbc1e245dacbaab4d831a24de04a98cbab9e8722e3f5f456784f1b2edc3e970`
+
+**Previous Hash**: `18c0463e900f24928432421f9e3da6e85b9aa7c3221aa75220da5db38672f165`
+
+**Chain Hash**: `0d4b0b548703c6e63c8de896828827b095bd84a78ba7f19fc16febd3c5781b47`
+
+**Decision**: Amendment 3, addressing the findings of independent VETO #106 (V1-A, V1-B, V1-C, V2, Razor), resumed on operator instruction to continue the remediation.
+Re-emitted through the runtime at the canonical gate path, superseding fa0e6924. Entries #101-#106 are unchanged.
+Tests came first at fb3cbb0 (97 run: 32 failed, 5 errors). The fixes landed at 6a86c90 (97/97, twice).
+- V1-A: restricted Markdown subset that fails closed (HTML, fence and heading forms, non-LF/CRLF separators).
+- V1-B: subjects taken from the assertion itself; exact sizes bind only to equals; one item per judgment.
+- V1-C: exact Unit Tests heading, with only code-span vectors exempt.
+- V2: generic lists with (, { or => fail closed; template and non-literal specifiers handled.
+- Razor: nesting depth is now tested.
+- Pre-D1: check-name spoofing is rejected and CODEOWNERS covers all workflows.
+Disclosure: the green commit also corrects the test's nesting measure to count elif chains as one level, and makes fixtures write LF.
+Events 1f15661a and f0b67f91 remain addressed_pending; no IDs are missing.
+Status: HOLD. Closure requires an independent PASS plus D1 and D2.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -2945,5 +2974,5 @@ Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events st
 *Phase 14 Inference Slice A: SEALED (Entry #78); PR #165 merged*
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
-*Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105; VETO #102/#104/#106; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Next required action: Governor amends the remediation per Entry #106 findings (V1-A, V1-B, V1-C, V2, Razor) via /qor-remediate (Amendment 3), then a fresh independent /qor-audit reviews-remediate; event closure also requires D1 and D2*
+*Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106; HOLD on review, D1, D2; Phase 2 WWR HELD*
+*Next required action: fresh independent /qor-audit reviews-remediate:.qor/gates/2026-10-10T0443-9d3df3/remediate.json; closure also requires D1 and D2*
