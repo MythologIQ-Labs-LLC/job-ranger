@@ -161,10 +161,6 @@ textarea {
     overflow-y: auto;
   }
 
-  .app-sidebar-footer {
-    display: none;
-  }
-
   .app-main {
     min-width: 0;
     min-height: 0;

@@ -18,7 +18,8 @@ test("in-app Help works offline and links to real Career Ops routes", async ({ p
   await page.goto(`${server.url}#/help`);
   await waitForRuntime(page);
 
-  const helpNavigation = page.getByRole("navigation", { name: "Primary navigation" })
+  // Help sits with Settings in the pinned utility navigation (#271).
+  const helpNavigation = page.getByRole("navigation", { name: "Utility navigation" })
     .getByRole("link", { name: "Help", exact: true });
   await expect(helpNavigation).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: /Find a better path/i })).toBeVisible();
