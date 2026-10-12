@@ -146,13 +146,18 @@ test("a deep-linked nested destination is scrolled into the short-screen sidebar
   expect(await page.locator(".app-main").evaluate(el => el.scrollTop)).toBe(0);
 });
 
-test("the mobile menu button is a comfortable touch target", async ({ page }) => {
+test("the mobile menu button is a comfortable touch target", async ({ page, context }) => {
+  // Measure a settled page: Home swaps its loading shell for onboarding, which remounts
+  // the layout and can leave boundingBox() reading a detached button (null box).
+  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 700 });
-    await page.goto(server.url);
+    await page.goto(`${server.url}#/applications`);
+    await page.reload();
     await waitForRuntime(page);
     for (const name of ["Open navigation menu", "Close navigation menu"]) {
       const button = page.getByRole("button", { name });
+      await expect(button).toBeVisible();
       const box = await button.boundingBox();
       expect(box!.width, `${name} width at ${width}px`).toBeGreaterThanOrEqual(44);
       expect(box!.height, `${name} height at ${width}px`).toBeGreaterThanOrEqual(44);
