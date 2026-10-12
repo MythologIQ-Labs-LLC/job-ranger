@@ -670,4 +670,39 @@ None in this cycle. The Governor amends the plan and spec per AUDIT_REPORT V1-V5
 
 ---
 
+## Failure Entry #22
+
+**Date**: 2026-10-12T16:31:08Z
+**Verdict ID**: Entry #112 (GATE TRIBUNAL Phase 18 Plan Evidence Gate v3 Design Re-audit, iteration 2)
+**Failure Mode**: owasp-violation (A04) / specification-drift / coverage-gap. A bounded correction that fixed reachability by opening a fail-open classification.
+
+### What Failed
+
+The Phase 18 design iteration 2: docs/plan-qor-phase18-plan-evidence-gate-v3.md (content hash 752c1b20), its inventory, and docs/design/PLAN_EVIDENCE_GATE_V3_SPEC.md iteration 2.
+The parser boundary (V3), the LD1 wording (V2) and most of V5 were closed and empirically confirmed. The dependency ADMIT stands.
+
+### Why It Failed
+
+- To make "a valid governed PR passes" reachable (V1), the spec exempted plans as LEGACY when the phase number is below 18 and no inventory exists. Both inputs are PR-head data. A new low-phase plan, an edited Phase 17 plan, a deleted opt-in inventory or a renamed plan therefore exits 0 unevaluated, contradicting the spec's own "No nominal success" invariant.
+- The opt-in obligation was delegated to an artifact (the Phase 17 remediation record) that the plan may not modify and the gate never reads.
+- Section 10 was not updated and still says the iteration-4 plan fails the gate.
+- The plan's self-application command omitted the --head argument that the spec made mandatory, while plan.json recorded it.
+- The converted-corpus table asserted PASS for a probe (s3) whose only record is a removed kind. It also left the conversion procedure unspecified, which changes n19's outcome.
+
+### Pattern to Avoid
+
+An exemption is an authority decision. Never derive "is this subject to the gate?" from data the gated party controls: file names, self-declared numbers, or the presence or absence of an opt-in file. Fix exemptions as a closed set on the trusted side (paths plus blob hashes), or gate everything the change touches. Treat deletion of an opt-in artifact as a failure.
+
+When a correction changes one section's outcome for a case, search every section for statements about that case.
+
+Every command the plan cites must be checked against the spec's CLI contract.
+
+Every expected outcome in a fixture table must be reachable under the spec's own rules, and the fixture conversion procedure must be written down.
+
+### Remediation Attempted
+
+None in this cycle. Under #267, the operator allowed one bounded correction after VETO #110, and this entry records the review of that correction. Any further correction (R1-R5, A1-A6 in AUDIT_REPORT) requires an operator decision. Phase 17 remains VETO #108, and events 1f15661a and f0b67f91 remain addressed_pending.
+
+---
+
 *Shadow Genome updated. Pattern documented for future avoidance.*

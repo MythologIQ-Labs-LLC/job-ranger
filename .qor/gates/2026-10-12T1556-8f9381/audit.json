@@ -1,24 +1,23 @@
 {
   "phase": "audit",
   "session_id": "2026-10-12T1556-8f9381",
-  "ts": "2026-10-12T16:10:13Z",
+  "ts": "2026-10-12T16:31:08Z",
   "target": "docs/plan-qor-phase18-plan-evidence-gate-v3.md",
   "verdict": "VETO",
   "report_path": ".agent/staging/AUDIT_REPORT.md",
   "risk_grade": "L2",
   "findings_categories": [
-    "infrastructure-mismatch",
     "owasp-violation",
-    "coverage-gap",
-    "specification-drift"
+    "specification-drift",
+    "coverage-gap"
   ],
-  "target_content_hash": "d034403b5f4d653295a3bcd02c0a2282bd288a6b9502edc83e21829a619bf2a7",
+  "target_content_hash": "752c1b208b987947b8498fd0e388b4ef8c3fe969ae2885f14cfb15837b9b22f2",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "unknown",
     "host": "unknown",
     "model_family": "opus",
     "human_oversight": "veto",
-    "ts": "2026-10-12T16:12:27Z"
+    "ts": "2026-10-12T16:31:08Z"
   }
 }

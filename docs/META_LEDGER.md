@@ -3075,6 +3075,41 @@ The dependency was ADMITTED at #110. The Phase 17 remediation gate, VETO #108 an
 
 ---
 
+### Entry #112: GATE TRIBUNAL (Phase 18 Plan Evidence Gate v3 Design Re-audit, iteration 2)
+
+**Timestamp**: 2026-10-12T16:31:08Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: docs/plan-qor-phase18-plan-evidence-gate-v3.md (design iteration 2; target content hash 752c1b20)
+
+**Verdict**: VETO
+
+**Content Hash**: `a81608e846157bc08824ffab775689f6301607f11548996f92d97011cbc7292f`
+
+**Previous Hash**: `5b2bcad01df09929d6307854132e828387c860ef83afe7c1712d214c0b7dc06a`
+
+**Chain Hash**: `0e4ae35ade9e213fcaaa5adb45446228f4f6450c5a468c37b196f8de68208d02`
+
+**Decision**: VETO for the Phase 18 v3 design iteration 2, from a fresh-context subagent review (not a human or separately authenticated approval). This is the single bounded re-audit after VETO #110.
+
+Closure of #110:
+- V2 closed: LD1 is true. The v2 gate file is configured with pull_request_target and has never run.
+- V3 closed: level >= 10 catches the depth-20 drop, demonstrated at depths 20, 21 and 25.
+- V5 b, c, d and e closed. V5-a is closed for time: worst case 4.13 s at 128 KiB against a 10 s budget.
+- V1 and V4 are partial. Dependency ADMIT stands, re-verified. Self-application passes mechanically.
+
+Findings:
+- (R1, owasp-violation A04) LEGACY classification fails open on PR-controlled data. Any plan with phase below 18 and no inventory exits 0: a new plan, an edited Phase 17 plan, a deleted opt-in inventory, or a renamed plan. This contradicts section 2 "No nominal success" and #267.
+- (R2, specification-drift) Section 10 says the iteration-4 plan fails the gate. Sections 3, 8 and 11 and LD7 say it is LEGACY and passes.
+- (R3, specification-drift) The plan's self-application and CI command omit the mandatory --head SHA. plan.json records it.
+- (R4, coverage-gap) s3 expected PASS is unreachable, because function-lines is a removed kind. n19's PASS depends on an unspecified conversion.
+- (R5, specification-drift) The #267 error-count bound is still absent.
+
+The operator decides whether a further correction is authorized. Phase 17 remains VETO #108, the events stay addressed_pending, and closure still requires D1 and D2.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -3094,5 +3129,5 @@ The dependency was ADMITTED at #110. The Phase 17 remediation gate, VETO #108 an
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
 *Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
-*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110; PLAN it.2 #111; independent design re-audit pending*
-*Next required action: independent design re-audit of docs/plan-qor-phase18-plan-evidence-gate-v3.md iteration 2 (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
+*Phase 18 Plan Evidence Gate v3 (#267): PLAN #109; VETO #110; PLAN it.2 #111; VETO #112 (design re-audit, iteration 2)*
+*Next required action: operator decision on a further bounded correction per Entry #112 (R1-R5); if authorized, Governor amends plan and spec, then a fresh independent /qor-audit (Phase 17 remediation remains VETO #108; closure also requires D1 and D2)*
