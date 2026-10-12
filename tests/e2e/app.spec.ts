@@ -23,6 +23,13 @@ async function navigateTo(
     | "Filters"
     | "Settings",
 ) {
+  const career = ["Career Profile", "Resume"];
+  const search = ["Companies", "Filters"];
+  const group = career.includes(destination) ? "My Career" : search.includes(destination) ? "Search Tools" : null;
+  if (group) {
+    const toggle = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: group });
+    if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  }
   await page.getByRole("link", { name: destination, exact: true }).click();
 }
 
