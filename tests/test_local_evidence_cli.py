@@ -86,6 +86,15 @@ class LocalEvidenceTests(unittest.TestCase):
                 self.assertNotEqual(r.returncode, 0)
                 self.assertFalse((self.repo / 'HACKED').exists())
 
+    def test_wrongly_typed_kind_is_a_controlled_failure(self):
+        for bad in ([], {}, 1, None):
+            with self.subTest(bad=bad):
+                inv = json.loads(json.dumps(self.good)); inv['claims'][0]['kind'] = bad
+                r = self.run_cli(self.commit_inventory(inv))
+                self.assertEqual(r.returncode, 1)
+                self.assertIn('FAILED: unsupported claim kind', r.stdout)
+                self.assertNotIn('Traceback', r.stderr)
+
     def test_duplicate_json_keys_rejected(self):
         raw = '{"schema_version":3,"schema_version":3,"plan":"docs/a.md","claims":[],"judgments":[]}'
         r = self.run_cli(self.commit_inventory(raw=raw))
