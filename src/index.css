@@ -495,11 +495,36 @@ textarea {
     transform 140ms ease;
 }
 
-.sidebar-link:hover,
+/* Hover is a neutral tint; only the current page gets the brand fill (#274). */
+.sidebar-link:hover:not(.sidebar-link-active) {
+  color: var(--color-text-inverse);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .sidebar-link-active {
   color: var(--color-text-inverse);
   background: color-mix(in srgb, var(--color-primary) 28%, transparent);
   transform: translateX(2px);
+}
+
+/* Visually hidden until keyboard focus reaches it (#274). */
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 60;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--color-panel-strong);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  box-shadow: 0 8px 24px var(--color-shadow);
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .sidebar-link-icon {
