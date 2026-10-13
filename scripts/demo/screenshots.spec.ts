@@ -42,6 +42,14 @@ async function openAssessment(page: Page) {
   return toggle;
 }
 
+async function homeWorkspace(page: Page): Promise<void> {
+  await go(page, "#/", { route: "#/", heading: "Make the next career move count.", content: ["One decision at a time", "Search at a glance"] });
+  await expect(page.locator(".dashboard-hero a.primary-button")).toHaveCount(1);
+  await expect(page.locator(".dashboard-step")).toHaveCount(4);
+  await expect(page.locator("details.dashboard-diagnostics")).not.toHaveAttribute("open");
+  await capture(page, "home-workspace.png");
+}
+
 async function careerDirection(page: Page): Promise<void> {
   await go(page, "#/target-tracks", { route: "#/target-tracks", heading: "Keep different career directions separate.", content: [TARGET_TRACK, "Patient services (current)"] });
   await page.getByRole("button", { name: new RegExp(`^${TARGET_TRACK}`) }).first().click();
@@ -100,6 +108,7 @@ test("curated README screenshots", async () => {
     await seedDemo(page);
     await page.reload();
     await waitForRuntime(page);
+    await homeWorkspace(page);
     await careerDirection(page);
     await assessment(page);
     await deliberateApplication(page);
