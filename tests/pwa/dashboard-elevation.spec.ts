@@ -26,7 +26,7 @@ test("empty workspace puts one actionable source link above diagnostics", async 
   const hero = page.locator(".dashboard-hero");
   await expect(hero.locator("a.primary-button")).toHaveCount(1);
   await expect(hero.getByRole("link", { name: "Add your first job source" })).toHaveAttribute("href", "#/companies");
-  await expect(page.getByRole("region", { name: "One decision at a time" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "One decision at a time" })).toHaveCount(1);
   const journey = page.getByRole("heading", { name: "One decision at a time" });
   await expect(journey).toBeVisible();
   await expect(page.locator(".dashboard-step")).toHaveCount(4);
@@ -80,9 +80,8 @@ for (const viewport of [
     await expect(page.locator(".dashboard-step")).toHaveCount(4);
     const state = await page.evaluate(() => ({
       pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
-      mainOverflow: document.querySelector("#main-content")
-        ? (document.querySelector("#main-content") as HTMLElement).scrollWidth -
-          (document.querySelector("#main-content") as HTMLElement).clientWidth : 0,
+      mainOverflow: (document.querySelector(".app-main") as HTMLElement).scrollWidth -
+        (document.querySelector(".app-main") as HTMLElement).clientWidth,
       primaryHeight: (document.querySelector(".dashboard-hero .primary-button") as HTMLElement).getBoundingClientRect().height,
     }));
     expect(state.pageOverflow).toBeLessThanOrEqual(0);
