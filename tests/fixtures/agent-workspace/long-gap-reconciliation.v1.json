@@ -86,7 +86,7 @@
         ],
         "gate_status": "not_checked"
       },
-      "expected": "import_draft_gate_not_checked"
+      "expected": "preserve_draft_needs_rebase"
     },
     {
       "day": 20,
@@ -213,8 +213,8 @@
   "expected": {
     "unique_operation_ids": 9,
     "event_count": 11,
-    "accepted_drafts_only": 4,
-    "stage_or_conflict": 5,
+    "accepted_drafts_only": 3,
+    "stage_or_conflict": 6,
     "replay_noop": 1,
     "rejected_collision": 1,
     "canonical_evidence_revision_unchanged": "revision_new_002",
@@ -225,6 +225,7 @@
     "This is an acceptance oracle, not a production reader or importer.",
     "A structurally valid agent submission never authenticates its actor claim or confirms a user fact.",
     "No model output can assert Truth Gate PASS.",
-    "Event 10 replays the operation identity and all operation fields (including payload) from event 5; day and expected outcome are transport/oracle metadata, not operation bytes."
+    "Event 10 replays the operation identity and all operation fields (including payload) from event 5; day and expected outcome are transport/oracle metadata, not operation bytes.",
+    "At day 60 the local canonical evidence revision differs from the export: both original and revised cover-letter versions retain their text but need rebase and Truth Gate re-evaluation. An offline agent cannot establish canonical correctness retroactively."
   ]
 }
