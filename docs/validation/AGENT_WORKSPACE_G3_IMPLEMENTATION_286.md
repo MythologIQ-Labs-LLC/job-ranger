@@ -86,7 +86,7 @@
 
 Adversarial reviewer, separate from the implementer, working only from probes and reading code.
 
-1. **VETO at `88f8fe5`.** Five confirmed defects:
+1. **VETO at `e43720f`.** Five confirmed defects:
    - a schema-valid 7- or 128-character batch ID blocked every sync;
    - stdin text mode on Windows dropped CR, and Ctrl-Z broke a sync;
    - a pending or refused variant was not counted, so a later different version imported cleanly;
