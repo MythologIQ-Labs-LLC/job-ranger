@@ -1,0 +1,233 @@
+{
+  "format": "jr-agent-long-gap-oracle",
+  "schema_version": 1,
+  "status": "synthetic_reference_only_not_runtime_PASS",
+  "simulation": {
+    "start": "2026-10-13T00:00:00Z",
+    "end": "2026-12-12T00:00:00Z",
+    "day_count": 60,
+    "job_ranger_closed_while_agents_work": true,
+    "workspace_id": "workspace_synthetic_01",
+    "source_export_id": "ex_synthetic_first_setup",
+    "trusted_local_receipt_present": true,
+    "standing_permissions": [
+      "import_agent_owned_drafts_only"
+    ],
+    "canonical_evidence_at_export": {
+      "id": "evidence_example_001",
+      "revision": "revision_initial_001"
+    },
+    "canonical_evidence_at_return": {
+      "id": "evidence_example_001",
+      "revision": "revision_new_002"
+    },
+    "canonical_submitted_application_count": 0
+  },
+  "events": [
+    {
+      "day": 1,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_note_create",
+      "kind": "workspace_note_version",
+      "record_id": "note_employer_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "title": "Employer research, unverified",
+        "body": "The job listing claims a remote policy; the agent must not certify it."
+      },
+      "expected": "import_draft"
+    },
+    {
+      "day": 6,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_note_revision",
+      "kind": "workspace_note_version",
+      "record_id": "note_employer_01",
+      "base_revision": "revision_alpha_create",
+      "previous_operation_id": "op_alpha_note_create",
+      "payload": {
+        "title": "Employer research follow-up",
+        "body": "Confirmed recruiter contact is still unknown."
+      },
+      "expected": "conflict_preserve_fork"
+    },
+    {
+      "day": 8,
+      "agent": "agent_beta",
+      "operation_id": "op_beta_note_fork",
+      "kind": "workspace_note_version",
+      "record_id": "note_employer_01",
+      "base_revision": "revision_alpha_create",
+      "previous_operation_id": "op_alpha_note_create",
+      "payload": {
+        "title": "Different research assessment",
+        "body": "Competing edit to the same old revision; preserve both branches."
+      },
+      "expected": "conflict_preserve_fork"
+    },
+    {
+      "day": 12,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_letter_create",
+      "kind": "material_draft_version",
+      "record_id": "material_letter_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "material_kind": "cover_letter",
+        "title": "Application letter draft",
+        "body": "Fictional experience summary, needs trusted evidence review.",
+        "source_evidence_refs": [
+          {
+            "record_id": "evidence_example_001",
+            "revision": "revision_initial_001"
+          }
+        ],
+        "gate_status": "not_checked"
+      },
+      "expected": "preserve_draft_needs_rebase"
+    },
+    {
+      "day": 20,
+      "agent": "agent_beta",
+      "operation_id": "op_beta_annotation_create",
+      "kind": "opportunity_annotation",
+      "record_id": "opportunity_annotation_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "opportunity_id": "opportunity_example_001",
+        "title": "Potential role",
+        "notes": "Company role investigated, not accepted as a verified source.",
+        "observed_at": "2026-11-02T10:00:00Z"
+      },
+      "expected": "reject_operation_id_collision"
+    },
+    {
+      "day": 26,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_plan_create",
+      "kind": "follow_up_plan",
+      "record_id": "plan_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "label": "Follow up on application draft",
+        "description": "Agent-suggested reminder, not evidence that outreach occurred.",
+        "due_at": "2026-12-11T09:00:00Z"
+      },
+      "expected": "import_plan_proposal"
+    },
+    {
+      "day": 37,
+      "agent": "agent_beta",
+      "operation_id": "op_beta_application_claim",
+      "kind": "application_status_claim",
+      "record_id": "status_claim_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "application_id": "application_example_001",
+        "claimed_status": "submitted",
+        "reported_context": "Agent claims a submitted application, not independently attested."
+      },
+      "expected": "stage_attestation_required"
+    },
+    {
+      "day": 45,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_evidence_change",
+      "kind": "evidence_change_proposal",
+      "record_id": "evidence_proposal_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "evidence_id": "evidence_example_001",
+        "change_reason": "New role responsibility mentioned by agent",
+        "proposed_text": "Suggested new evidence, must be confirmed by user",
+        "source_evidence_refs": [
+          {
+            "record_id": "evidence_example_001",
+            "revision": "revision_initial_001"
+          }
+        ]
+      },
+      "expected": "stage_canonical_review"
+    },
+    {
+      "day": 50,
+      "agent": "agent_alpha",
+      "operation_id": "op_alpha_letter_revision",
+      "kind": "material_draft_version",
+      "record_id": "material_letter_01",
+      "base_revision": "revision_letter_initial",
+      "previous_operation_id": "op_alpha_letter_create",
+      "payload": {
+        "material_kind": "cover_letter",
+        "title": "Application letter, revised",
+        "body": "Edited after a local evidence revision; retain text but treat source as stale.",
+        "source_evidence_refs": [
+          {
+            "record_id": "evidence_example_001",
+            "revision": "revision_initial_001"
+          }
+        ],
+        "gate_status": "not_checked"
+      },
+      "expected": "preserve_draft_needs_rebase"
+    },
+    {
+      "day": 54,
+      "agent": "agent_beta",
+      "operation_id": "op_beta_annotation_create",
+      "kind": "opportunity_annotation",
+      "record_id": "opportunity_annotation_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "opportunity_id": "opportunity_example_001",
+        "title": "Potential role",
+        "notes": "Company role investigated, not accepted as a verified source.",
+        "observed_at": "2026-11-02T10:00:00Z"
+      },
+      "expected": "reject_operation_id_collision"
+    },
+    {
+      "day": 59,
+      "agent": "agent_beta",
+      "operation_id": "op_beta_annotation_create",
+      "kind": "opportunity_annotation",
+      "record_id": "opportunity_annotation_01",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "payload": {
+        "opportunity_id": "opportunity_example_001",
+        "title": "Potential role",
+        "notes": "Same operation ID but changed bytes, must be rejected.",
+        "observed_at": "2026-11-02T10:00:00Z"
+      },
+      "expected": "reject_operation_id_collision"
+    }
+  ],
+  "expected": {
+    "unique_operation_ids": 9,
+    "event_count": 11,
+    "accepted_drafts_only": 1,
+    "stage_or_conflict": 7,
+    "replay_noop": 0,
+    "rejected_collision": 3,
+    "canonical_evidence_revision_unchanged": "revision_new_002",
+    "canonical_submitted_application_count_unchanged": 0,
+    "second_reconciliation_makes_no_additional_writes": true
+  },
+  "notes": [
+    "This is an acceptance oracle, not a production reader or importer.",
+    "A structurally valid agent submission never authenticates its actor claim or confirms a user fact.",
+    "No model output can assert Truth Gate PASS.",
+    "Event 10 replays the operation identity and all operation fields (including payload) from event 5; day and expected outcome are transport/oracle metadata, not operation bytes.",
+    "At day 60 the local canonical evidence revision differs from the export: both original and revised cover-letter versions retain their text but need rebase and Truth Gate re-evaluation. An offline agent cannot establish canonical correctness retroactively.",
+    "Both children of the same operation predecessor are marked conflicted regardless of which Drive item is listed first; neither writer is automatically preferred.",
+    "If a single offline reconciliation set contains two different byte versions with the same operation_id, quarantine every appearance of that ID; no file-listing order may select the accepted payload. Pure replay with identical bytes is independently tested."
+  ]
+}
