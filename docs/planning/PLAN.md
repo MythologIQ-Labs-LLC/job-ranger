@@ -1,6 +1,6 @@
 # Job Ranger Roadmap
 
-**Current as of:** 2026-10-07
+**Current as of:** 2026-10-13 (priority-order update; historical implementation notes below need separate reconciliation)
 
 This is the active roadmap. Historical phase/remediation plans remain implementation provenance only.
 
@@ -22,6 +22,24 @@ The universal product contract remains:
 > **US-0:** As a job seeker, I want Job Ranger to adapt to the way my career works without requiring me to understand how Job Ranger works.
 
 See [`../design/UNIVERSAL_USER_STORIES.md`](../design/UNIVERSAL_USER_STORIES.md).
+
+## Current implementation sequence: Drive interoperability first, release hardening in parallel (2026-10-13)
+
+**Owner priority:** finish a genuinely useful, permissioned, provider-neutral **Google Drive agent workspace** before investing in v1.3.0 release tagging and general distribution promotion. This is a **snapshot/document interchange** project, not cloud-authoritative Career Ops state or a requirement to build an MCP for every agent. A local-only application remains fully functional with Drive disconnected. The roadmap below supersedes the older numbered headings in this document for **scheduling**; it does not silently alter already accepted distribution or data contracts.
+
+| Track | Order and status | Deliverable / merge discipline |
+| --- | --- | --- |
+| **A. Drive agent interchange** | **Primary product track: now** | #249 + #255 choose the separately permissioned agent-readable projection (versus private full backup), #285 versions typed export/proposal format and deterministic validator. Prove local export and one agent consumption first, then real Drive upload/authorized read. |
+| **B. Release security and data integrity** | **Active concurrently, never paused** | #194 QOR Harden, #278 with fix PR #282 as a high-severity data-loss regression, #275 source pause/reschedule, #276 settings persistence/accessibility, portable backup/restore, Truth Gate, source-network/CSP/credential checks, actual platform tests. |
+| **C. Drive authorization and availability** | **Follows proof of data contract; security work can run in parallel** | #258 OAuth behavior per PWA/native runtime, #264 isolated browser OAuth boundary, draft #261/262 (do not merge just because they exist), #252 actual Google client, #251 retention/prune, #256 explicit upload trigger, #254 trust/help copy. Require provider-backed, per-user authorized end-to-end receipts; do not promise unattended PWA token refresh. |
+| **D. UX/demo and release freeze** | **After material Drive and hardening evidence** | Preserve merged grouped sidebar, accessibility and responsive work; one restrained consistency/empty-state pass under #248 if validated. Freeze code, QOR Harden residual review, record a fresh truthful end-to-end synthetic demo, refresh exact-head evidence and docs. Tag `v1.3.0-rc.N` only with separate owner approval and release/Store/PWA package gates. |
+| **E. New capability candidates** | **Queued, not interrupting A or B** | #283 Wellfound provider: independently verify whether a suitable public job-listing API, usable license/auth/CORS and stable schema actually exist before proposing an implementation. #284 Built In: first examine ToS/robots, access stability and actual unique coverage; scraping is **not** approved. Both follow the existing #136 provider tranche and its governance VETOs. #277 `resume:read` is a later MCP adapter option; the selective Drive export should cover agent resume-reading needs first without claiming to provide live API queries. |
+
+**Recommended Drive acceptance ladder:** (1) decision on separate backup vs export access and a closed versioned field schema (#255/#285); (2) deterministic local exporter + validation, exact provenance/authority and immutable local export receipt; (3) a real agent reads the packet, returns an allowlisted typed draft proposal, and the app rejects malformed/stale/false-authority revisions; (4) minimal-scope real Google Drive OAuth + upload/retrieval verification and distinct agent access; (5) independent privacy/security review and a cross-platform user-driven demonstration. **Agents may draft documents, but only Job Ranger's deterministic importer, unchanged Truth/Parseability Gates and human review can accept changes.** Do not parse edited Markdown, PDF or Google Docs prose as authoritative Career Evidence.
+
+**Release freeze rule:** new providers, additional inference/MCP features and speculative UX work do **not** enter the stabilization train. Critical data loss, security, backup recoverability and already approved product repairs do. Keep Drive implementation on independent reviewed branches until it earns explicit scope acceptance. Hardening may complete before Drive and should not wait for OAuth credentials; the owner's present milestone priority puts the **Drive proof ahead of tagging v1.3.0**, subject to a conscious scope decision after end-to-end evidence.
+
+**Authority/status:** This is a roadmap priority change, not proof that #249's format, #256 trigger or OAuth design has been accepted, and not approval to merge draft PRs, publish a Drive integration, retire Electron, alter provider VETOs, or cut a release tag. The full Drive formatting and intake proposal is [`../design/DRIVE_AGENT_INTERCHANGE_CONTRACT.md`](../design/DRIVE_AGENT_INTERCHANGE_CONTRACT.md) (draft, #285).
 
 ## Current release boundary
 
@@ -86,7 +104,7 @@ Narrower fields/capabilities that did not earn core placement remain deferred ra
 
 The unsigned/unnotarized v1.2.0 exception does not define the future distribution architecture.
 
-## Active priority 0: distribution architecture — external validation and launch
+## Parallel distribution/readiness track: external validation and launch
 
 ### Windows Microsoft Store / #125
 
@@ -125,7 +143,7 @@ Azure Artifact Signing is opt-in only and does not block this work.
 
 The PWA is not a reduced "Lite" edition; remaining differences are browser-platform limitations listed in the parity matrix.
 
-## Active priority 1: source discovery and quality
+## Queued provider expansion and continuously maintained source quality
 
 ### Post-v1.2 provider tranche / #136
 
@@ -234,7 +252,7 @@ Do not schedule these without new evidence:
 - DOCX resume export;
 - federal-resume/academic-CV specialized projections;
 - universal travel/relocation/sponsorship fields;
-- cloud sync / hosted account;
+- cloud-authoritative sync / hosted accounts (distinct from the active, explicit Drive export/interchange track #249);
 - native macOS distribution;
 - native Linux distribution;
 - Apple Developer ID/notarization;
