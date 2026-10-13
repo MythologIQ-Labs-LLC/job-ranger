@@ -48,7 +48,7 @@ changed.evidence[0].evidence.updatedAt = "2026-12-01T00:00:00.000Z";
 const changedReader = { ...reader, career: { ...reader.career, listEvidence: () => Promise.resolve(changed.evidence) } };
 assert.notEqual((await gatherCanonicalSnapshot(changedReader)).sourceRevision, first.sourceRevision, "a canonical change changes the revision");
 
-const exported = await createAgentExport(first, { exportId: "ex_from_services", createdAt: "2026-10-13T16:30:00Z", build: "test", scopes: ["confirmed_evidence"], selectedJobIds: [], selectedResumeIds: [], selectedCoverLetterIds: [], schemaDocuments: [] });
+const exported = await createAgentExport(first, { exportId: "ex_from_services", workspaceId: "workspace_synthetic_01", createdAt: "2026-10-13T16:30:00Z", build: "test", scopes: ["confirmed_evidence"], selectedJobIds: [], selectedResumeIds: [], selectedCoverLetterIds: [], schemaDocuments: [] });
 assert.equal(exported.receipt.source_revision, first.sourceRevision);
 
 console.log("agent-workspace snapshot tests passed");

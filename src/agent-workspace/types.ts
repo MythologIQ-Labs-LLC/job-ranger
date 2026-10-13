@@ -36,18 +36,24 @@ export interface CanonicalSnapshot {
 
 export type ExportScope =
   | "tracks"
+  | "career_direction"
   | "confirmed_evidence"
   | "selected_opportunities"
+  | "selected_applications"
   | "resume_templates"
   | "selected_resumes"
   | "selected_cover_letters";
 
 export interface ExportRequest {
   exportId: string;
+  /** Trusted local workspace identity (D13); agents must echo it in every batch. */
+  workspaceId: string;
   createdAt: string;
   build: string;
   scopes: ExportScope[];
   selectedJobIds: string[];
+  /** Explicitly selected applications (D06); unselected applications never leave. */
+  selectedApplicationIds?: string[];
   selectedResumeIds: string[];
   selectedCoverLetterIds: string[];
   /** Published JSON Schema documents, copied into schema/ verbatim. */
@@ -64,8 +70,9 @@ export interface ExportFile {
 /** Locally trusted record of a publication. Remote manifests are checked against it. */
 export interface ExportReceipt {
   format: "jr-agent-export-receipt";
-  schema_version: 1;
+  schema_version: 2;
   export_id: string;
+  workspace_id: string;
   created_at: string;
   job_ranger_build: string;
   source_revision: string;

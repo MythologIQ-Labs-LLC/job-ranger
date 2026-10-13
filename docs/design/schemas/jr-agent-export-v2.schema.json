@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-export-v2.schema.json",
+  "title": "Job Ranger agent export manifest v2 - CANDIDATE (#286 G3)",
+  "description": "Closed structural envelope; does not verify file hashes, provenance, consent or Drive origin. The trusted copy is the local jr-agent-export-receipt. D06 adds career_direction and selected_applications; D14 excluded_by_default is a stable privacy-policy class list, and omitted_scopes lists what this export did not select.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "export_id",
+    "workspace_id",
+    "created_at",
+    "job_ranger_build",
+    "source_revision",
+    "selection",
+    "files"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-export"
+    },
+    "schema_version": {
+      "const": 2
+    },
+    "export_id": {
+      "type": "string",
+      "minLength": 9,
+      "maxLength": 96,
+      "pattern": "^ex_[A-Za-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 32,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "job_ranger_build": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scopes",
+        "omitted_scopes",
+        "excluded_by_default"
+      ],
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "tracks",
+              "career_direction",
+              "confirmed_evidence",
+              "selected_opportunities",
+              "selected_applications",
+              "resume_templates",
+              "selected_resumes",
+              "selected_cover_letters"
+            ]
+          }
+        },
+        "omitted_scopes": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "tracks",
+              "career_direction",
+              "confirmed_evidence",
+              "selected_opportunities",
+              "selected_applications",
+              "resume_templates",
+              "selected_resumes",
+              "selected_cover_letters"
+            ]
+          }
+        },
+        "excluded_by_default": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 15,
+          "items": {
+            "enum": [
+              "application_private_notes",
+              "unapproved_evidence",
+              "credentials",
+              "contact_identity",
+              "unselected_contacts",
+              "raw_source_documents",
+              "unselected_applications",
+              "unselected_resumes",
+              "unselected_cover_letters",
+              "compensation_and_location_preferences"
+            ]
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "role",
+          "media_type",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240,
+            "pattern": "^(?:data|materials|schema)/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*$"
+          },
+          "role": {
+            "enum": [
+              "tracks",
+              "career_direction",
+              "confirmed_evidence",
+              "selected_opportunities",
+              "selected_applications",
+              "resume_templates",
+              "selected_resumes",
+              "selected_cover_letters",
+              "gate_report",
+              "guide",
+              "schema"
+            ]
+          },
+          "media_type": {
+            "enum": [
+              "application/json",
+              "text/markdown",
+              "application/pdf",
+              "text/plain",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ]
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20971520
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,12 +2,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { parseOperationBatch, parseCommitMarker, LIMITS } from "../src/agent-workspace/index.ts";
-import { bytesOf, makeBatch, makeOperation } from "./support/agent-workspace-helpers.mjs";
+import { attachmentRef, bytesOf, makeBatch, makeOperation } from "./support/agent-workspace-helpers.mjs";
 
-const example = readFileSync(new URL("../docs/design/examples/jr-agent-60-day-batch.synthetic.json", import.meta.url));
+const example = readFileSync(new URL("../docs/design/examples/jr-agent-60-day-batch.v2.synthetic.json", import.meta.url));
 const ok = parseOperationBatch(new Uint8Array(example));
 assert.equal(ok.ok, true, JSON.stringify(ok.diagnostics));
-assert.equal(ok.batch.operations.length, 3);
+assert.equal(ok.batch.operations.length, 4);
+// The G2 v1 example is refused explicitly, never reinterpreted as v2.
+const legacy = parseOperationBatch(new Uint8Array(readFileSync(new URL("../docs/design/examples/jr-agent-60-day-batch.synthetic.json", import.meta.url))));
+assert.equal(legacy.ok, false);
+assert.deepEqual(legacy.diagnostics.map((d) => d.code), ["superseded_schema_version"]);
 
 const codes = (result) => result.ok ? [] : result.diagnostics.map((d) => d.code);
 const expectCode = (input, code, message) => {
@@ -38,7 +42,9 @@ expectCode(new Uint8Array([0xef, 0xbb, 0xbf, ...bytesOf(base())]), "bom_present"
 expectCode(new Uint8Array([...bytesOf(base()).slice(0, 20), 0xc3, 0x28, ...bytesOf(base()).slice(20)]), "invalid_utf8", "invalid UTF-8");
 expectCode("{not json", "invalid_json", "malformed JSON");
 expectCode("[]", "invalid_type", "non-object envelope");
-expectCode({ ...base(), schema_version: 2 }, "unsupported_schema_version", "future major version");
+expectCode({ ...base(), schema_version: 3 }, "unsupported_schema_version", "future major version");
+expectCode({ ...base(), schema_version: 1 }, "superseded_schema_version", "superseded v1");
+expectCode({ ...base(), workspace_id: "../other" }, "invalid_format", "path-like workspace ID");
 expectCode({ ...base(), format: "jr-agent-proposal" }, "unsupported_format", "wrong format");
 expectCode({ ...base(), approved: true }, "unknown_field", "unknown top-level field");
 {
@@ -112,6 +118,42 @@ for (const kind of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
 }
 expectCode(JSON.stringify(base()).replace('"title"', '"__proto__":{"polluted":1},"title"'), "unknown_field", "__proto__ key in a payload");
 assert.equal({}.polluted, undefined, "Object.prototype is never modified");
+
+// D05: evidence proposals say whether they are new or a correction, consistently.
+const proposal = (payload) => {
+  const batch = base();
+  batch.operations[0] = makeOperation({ operation_id: "op_prop_001", record_id: "agent_prop_001", authored_at: "2026-10-20T09:00:00Z", kind: "evidence_change_proposal", payload: { change_reason: "r", proposed_text: "t", source_evidence_refs: [], ...payload } });
+  return batch;
+};
+assert.equal(parseOperationBatch(bytesOf(proposal({ proposal_kind: "new", evidence_id: null }))).ok, true);
+assert.equal(parseOperationBatch(bytesOf(proposal({ proposal_kind: "correction", evidence_id: "ev_confirmed_scheduling" }))).ok, true);
+expectCode(proposal({ proposal_kind: "new", evidence_id: "ev_fabricated_001" }), "invalid_value", "a new proposal cannot name an evidence ID");
+expectCode(proposal({ proposal_kind: "correction", evidence_id: null }), "invalid_value", "a correction must name its target");
+expectCode(proposal({ evidence_id: null }), "missing_field", "proposal_kind is required");
+
+// D02: drafts reference attachments exactly; two references to one path must agree.
+const pdf = bytesOf("%PDF-1.4 draft");
+const draftWith = (id, attachments) => makeOperation({ operation_id: id, record_id: `agent_${id}`, authored_at: "2026-10-20T09:00:00Z", kind: "material_draft_version", payload: { material_kind: "resume", title: "R", body: "B", source_evidence_refs: [], gate_status: "not_checked", attachments } });
+{
+  const batch = base();
+  batch.operations = [draftWith("op_att_001", [attachmentRef("workspace/attachments/r/draft.pdf", pdf)])];
+  assert.equal(parseOperationBatch(bytesOf(batch)).ok, true);
+  batch.operations.push(draftWith("op_att_002", [attachmentRef("workspace/attachments/r/draft.pdf", bytesOf("%PDF-1.4 other"))]));
+  expectCode(batch, "attachment_conflict", "one path described as two different files");
+}
+{
+  const batch = base();
+  batch.operations = [draftWith("op_att_003", [attachmentRef("workspace/attachments/r/a.pdf", pdf), attachmentRef("workspace/attachments/R/A.pdf", pdf)])];
+  expectCode(batch, "duplicate_item", "case-folded duplicate attachment paths");
+  batch.operations = [draftWith("op_att_004", [attachmentRef("workspace/attachments/r/a.pdf", pdf, "text/html")])];
+  expectCode(batch, "invalid_value", "HTML attachment media type");
+  batch.operations = [draftWith("op_att_005", [{ ...attachmentRef("workspace/attachments/r/a.pdf", pdf), bytes: 0 }])];
+  expectCode(batch, "out_of_range", "zero-length attachment");
+  batch.operations = [draftWith("op_att_006", [])];
+  expectCode(batch, "too_few_items", "empty attachment list");
+  batch.operations = [draftWith("op_att_007", [attachmentRef("workspace/attachments/../secrets.pdf", pdf)])];
+  expectCode(batch, "invalid_format", "traversal in an attachment reference");
+}
 
 // Commit markers bind the batch bytes and declared attachments.
 const marker = parseCommitMarker(bytesOf({ format: "jr-agent-batch-commit", schema_version: 1, batch_id: "batch_valid_001", batch_sha256: "b".repeat(64), batch_bytes: 10, attachments: [{ path: "workspace/attachments/abc/draft.pdf", media_type: "application/pdf", bytes: 5, sha256: "c".repeat(64) }] }));

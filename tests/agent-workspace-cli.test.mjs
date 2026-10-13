@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, sy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { bytesOf, makeBatch, makeOperation, makeSubmission } from "./support/agent-workspace-helpers.mjs";
+import { attachmentRef, bytesOf, makeBatch, makeOperation, makeSubmission } from "./support/agent-workspace-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const cli = join(root, "scripts", "agent-workspace-cli.mjs");
@@ -18,7 +18,7 @@ const temp = mkdtempSync(join(tmpdir(), "jr-agent-cli-"));
 try {
   // Export a packet and its local receipt.
   const exported = JSON.parse(run("export", "--canonical", fixture, "--out", join(temp, "exports"), "--receipt-out", join(temp, "receipts", "ex_cli_day0.json"),
-    "--export-id", "ex_cli_day0", "--created-at", "2026-10-13T16:30:00Z", "--build", "cli-test", "--scopes", "confirmed_evidence,selected_opportunities",
+    "--export-id", "ex_cli_day0", "--workspace-id", "workspace_synthetic_01", "--created-at", "2026-10-13T16:30:00Z", "--build", "cli-test", "--scopes", "confirmed_evidence,selected_opportunities",
     "--jobs", "job_selected_001", "--schema-dir", join(root, "docs", "design", "schemas")));
   assert.match(exported.manifest_sha256, /^[a-f0-9]{64}$/);
   const manifestBytes = readFileSync(join(temp, "exports", "ex_cli_day0", "manifest.json"));
@@ -47,7 +47,7 @@ try {
   mkdirSync(join(workspace, "workspace", "attachments"), { recursive: true });
   let linked = true;
   try { symlinkSync(outside, join(workspace, "workspace", "attachments", "evil"), process.platform === "win32" ? "junction" : "dir"); } catch { linked = false; }
-  const draft = makeOperation({ operation_id: "op_cli_draft_v1", record_id: "agent_draft_cli", authored_at: "2026-10-21T09:00:00Z", kind: "material_draft_version", payload: { material_kind: "resume", title: "Draft", body: "See attachment.", source_evidence_refs: [], gate_status: "not_checked" } });
+  const draft = makeOperation({ operation_id: "op_cli_draft_v1", record_id: "agent_draft_cli", authored_at: "2026-10-21T09:00:00Z", kind: "material_draft_version", payload: { material_kind: "resume", title: "Draft", body: "See attachment.", source_evidence_refs: [], gate_status: "not_checked", attachments: [attachmentRef("workspace/attachments/evil/secret.pdf", secret)] } });
   writeSubmission(makeSubmission(makeBatch({ batchId: "batch_cli_002", actorId: "agent_cli_alpha", createdAt: "2026-10-21T10:00:00Z", exportId: "ex_cli_day0", manifestSha256: exported.manifest_sha256, operations: [draft] }), {
     attachments: { "workspace/attachments/evil/secret.pdf": { declared: secret, actual: null } },
   }));
@@ -74,7 +74,7 @@ try {
   // reconcile: the note is imported, the linked attachment is never read.
   const reportPath = join(temp, "out", "report.json");
   const ledgerPath = join(temp, "out", "ledger.json");
-  const counts = JSON.parse(run("reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture,
+  const counts = JSON.parse(run("reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "receipts"), "--canonical", fixture,
     "--auto-import", "workspace_note_version,material_draft_version", "--report-out", reportPath, "--ledger-out", ledgerPath)).counts;
   assert.equal(counts.imported_draft, 1);
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
@@ -89,24 +89,37 @@ try {
 
   // A second run with the ledger is idempotent.
   const ledgerBefore = readFileSync(ledgerPath, "utf8");
-  const again = JSON.parse(run("reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture,
+  const again = JSON.parse(run("reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "receipts"), "--canonical", fixture,
     "--auto-import", "workspace_note_version", "--ledger", ledgerPath, "--ledger-out", ledgerPath)).counts;
   assert.equal(again.imported_draft, 0);
   assert.equal(again.already_reconciled, 1);
   assert.equal(readFileSync(ledgerPath, "utf8"), ledgerBefore);
 
   // Consequential kinds can never be auto-imported.
-  const refused = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture, "--auto-import", "application_status_claim"], { encoding: "utf8" });
+  const refused = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "receipts"), "--canonical", fixture, "--auto-import", "application_status_claim"], { encoding: "utf8" });
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /invalid_policy/);
   // Missing inputs and outputs aimed at the workspace fail cleanly, without stack traces.
-  const missing = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "no-such-receipts"), "--canonical", fixture], { encoding: "utf8" });
+  const missing = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "no-such-receipts"), "--canonical", fixture], { encoding: "utf8" });
   assert.equal(missing.status, 1);
   assert.ok(!/\n\s+at /.test(missing.stderr), missing.stderr);
-  const intoWorkspace = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture, "--ledger-out", join(workspace, "imports", "ledger.json")], { encoding: "utf8" });
+  const intoWorkspace = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "receipts"), "--canonical", fixture, "--ledger-out", join(workspace, "imports", "ledger.json")], { encoding: "utf8" });
   assert.equal(intoWorkspace.status, 1);
   assert.match(intoWorkspace.stderr, /outside the workspace/);
   assert.equal(snapshotWorkspace(), before, "refused outputs never touch the workspace");
+
+  // A v1 (G2) ledger is refused by reconcile and migrated only by an explicit command.
+  const v1Path = join(temp, "out", "ledger-v1.json");
+  writeFileSync(v1Path, JSON.stringify({ format: "jr-agent-reconcile-ledger", schema_version: 1, operations: {}, batches: { batch_cli_001: "a".repeat(64) } }));
+  const refusedV1 = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--workspace-id", "workspace_synthetic_01", "--receipts", join(temp, "receipts"), "--canonical", fixture, "--ledger", v1Path], { encoding: "utf8" });
+  assert.equal(refusedV1.status, 1);
+  assert.match(refusedV1.stderr, /invalid_ledger: .*migrate/);
+  const migratedPath = join(temp, "out", "ledger-v2.json");
+  const migratedSummary = JSON.parse(run("migrate-ledger", "--ledger", v1Path, "--ledger-out", migratedPath));
+  assert.equal(migratedSummary.migrated_batches, 1);
+  assert.equal(JSON.parse(readFileSync(migratedPath, "utf8")).schema_version, 2);
+  const inPlace = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "migrate-ledger", "--ledger", v1Path, "--ledger-out", v1Path], { encoding: "utf8" });
+  assert.equal(inPlace.status, 1, "migration never overwrites the v1 ledger");
 
   console.log(`agent-workspace CLI tests passed${linked ? "" : " (link creation unavailable; containment path not exercised)"}`);
 } finally {

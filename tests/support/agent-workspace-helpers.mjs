@@ -20,7 +20,7 @@ export function makeOperation(fields) {
 export function makeBatch({ batchId, actorId, createdAt, previousBatchId = null, operations, exportId, manifestSha256, workspaceId = "workspace_synthetic_01" }) {
   return {
     format: "jr-agent-operation-batch",
-    schema_version: 1,
+    schema_version: 2,
     workspace_id: workspaceId,
     batch_id: batchId,
     source_export_id: exportId,
@@ -30,6 +30,13 @@ export function makeBatch({ batchId, actorId, createdAt, previousBatchId = null,
     previous_batch_id: previousBatchId,
     operations,
   };
+}
+
+export const WORKSPACE_ID = "workspace_synthetic_01";
+
+/** A draft's reference to an attachment; the same entry must appear in the commit marker. */
+export function attachmentRef(path, bytes, mediaType = "application/pdf") {
+  return { path, media_type: mediaType, bytes: bytes.length, sha256: sha256(bytes) };
 }
 
 /** A submission as discovered in a local (or later Drive) workspace folder. */

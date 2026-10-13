@@ -6,16 +6,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createAgentExport, operationEligibility, reconcileWorkspace } from "../src/agent-workspace/index.ts";
-import { makeBatch, makeOperation, makeSubmission } from "./support/agent-workspace-helpers.mjs";
+import { makeBatch, makeOperation, makeSubmission, WORKSPACE_ID } from "./support/agent-workspace-helpers.mjs";
 
 const snapshot = JSON.parse(readFileSync(new URL("./fixtures/agent-workspace/canonical-snapshot.synthetic.json", import.meta.url), "utf8"));
 const canonicalBefore = JSON.stringify(snapshot);
-const exported = await createAgentExport(snapshot, { exportId: "ex_late_day0", createdAt: "2026-10-13T16:30:00Z", build: "late-conflict", scopes: ["confirmed_evidence"], selectedJobIds: [], selectedResumeIds: [], selectedCoverLetterIds: [], schemaDocuments: [] });
+const exported = await createAgentExport(snapshot, { exportId: "ex_late_day0", workspaceId: WORKSPACE_ID, createdAt: "2026-10-13T16:30:00Z", build: "late-conflict", scopes: ["confirmed_evidence"], selectedJobIds: [], selectedResumeIds: [], selectedCoverLetterIds: [], schemaDocuments: [] });
 const receipts = [exported.receipt];
 const src = { exportId: "ex_late_day0", manifestSha256: exported.manifestSha256 };
 const policy = { autoImportKinds: ["workspace_note_version", "material_draft_version"] };
 const persist = (ledger) => JSON.parse(JSON.stringify(ledger));
-const reconcile = (submissions, ledger) => reconcileWorkspace({ receipts, canonical: snapshot, policy, ledger, submissions });
+const reconcile = (submissions, ledger) => reconcileWorkspace({ workspaceId: WORKSPACE_ID, receipts, canonical: snapshot, policy, ledger, submissions });
 const opResults = (result, id) => result.report.operations.filter((o) => o.operation_id === id);
 const note = (id, record, body, prev = null) => makeOperation({ operation_id: id, record_id: record, previous_operation_id: prev, authored_at: "2026-10-20T09:00:00Z", kind: "workspace_note_version", payload: { title: "Note", body } });
 const submit = (batchId, actorId, ops, previousBatchId = null) => makeSubmission(makeBatch({ ...src, batchId, actorId, createdAt: "2026-10-20T10:00:00Z", previousBatchId, operations: ops }));

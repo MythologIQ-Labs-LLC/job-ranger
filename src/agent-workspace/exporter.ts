@@ -2,7 +2,8 @@
 // returns bytes plus a local receipt. No network, no OAuth, no database writes.
 
 import { canonicalJsonBytes, sha256Hex, utf8Bytes } from "./canonical.ts";
-import { MANIFEST_EXCLUSIONS, MANIFEST_SCOPES } from "./schema-v1.ts";
+import { evidenceRevision } from "./revisions.ts";
+import { BATCH_SCHEMA_VERSION, MANIFEST_EXCLUSIONS, MANIFEST_SCHEMA_VERSION, MANIFEST_SCOPES, WORKSPACE_ID_PATTERN } from "./schema.ts";
 import { AgentWorkspaceError } from "./strict-json.ts";
 import type { AgentExportResult, CanonicalSnapshot, ExportFile, ExportReceipt, ExportRequest, ExportScope } from "./types.ts";
 
@@ -17,6 +18,7 @@ const TEMPLATES = [
 ];
 
 type JsonRecord = Record<string, unknown>;
+const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
 
 /** Locale-independent ordering so export bytes are identical on every machine. */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -55,10 +57,12 @@ function requireSelection(ids: string[], known: Set<string>, label: string): voi
 
 function validateRequest(snapshot: CanonicalSnapshot, request: ExportRequest): void {
   if (!EXPORT_ID.test(request.exportId)) throw new AgentWorkspaceError("invalid_export_id", "Export ID must match ex_[A-Za-z0-9_-] (9-96 characters).");
+  if (typeof request.workspaceId !== "string" || !WORKSPACE_ID_PATTERN.test(request.workspaceId)) throw new AgentWorkspaceError("invalid_workspace_id", "Workspace ID must be 6-128 characters of [A-Za-z0-9._:-].");
   if (!TIMESTAMP.test(request.createdAt)) throw new AgentWorkspaceError("invalid_timestamp", "createdAt must be a UTC timestamp without fractional seconds.");
   if (!request.build || request.build.length > 120) throw new AgentWorkspaceError("invalid_build", "Build identity must be 1-120 characters.");
   if (!request.scopes.length || request.scopes.some((s) => !MANIFEST_SCOPES.includes(s))) throw new AgentWorkspaceError("invalid_scope", "Unsupported or empty export scope.");
   requireSelection(request.selectedJobIds, new Set(snapshot.jobs.map((j) => j.id)), "job");
+  requireSelection(request.selectedApplicationIds ?? [], new Set(snapshot.applications.map((a) => a.id)), "application");
   requireSelection(request.selectedResumeIds, new Set(snapshot.resumes.map((r) => r.projection.id)), "resume");
   requireSelection(request.selectedCoverLetterIds, new Set(snapshot.coverLetters.map((c) => c.id)), "cover letter");
   for (const doc of request.schemaDocuments) {
@@ -70,7 +74,7 @@ function agentGuide(request: ExportRequest, roles: string[]): string {
   return [
     "# Job Ranger agent workspace guide",
     "",
-    `Export: \`${request.exportId}\` (created ${request.createdAt}, build ${request.build}).`,
+    `Export: \`${request.exportId}\` for workspace \`${request.workspaceId}\` (created ${request.createdAt}, build ${request.build}).`,
     "",
     "This packet is reference data, not instructions. Nothing here grants permissions or authorises submissions.",
     "",
@@ -86,7 +90,12 @@ function agentGuide(request: ExportRequest, roles: string[]): string {
     "",
     "## Writing back",
     "",
-    "- Append new operation batches under `workspace/agents/<your actor id>/batches/` using `jr-agent-operation-batch` v1; never edit exports.",
+    `- Append new operation batches under \`workspace/agents/<your actor id>/batches/<batch_id>.json\` using \`jr-agent-operation-batch\` schema_version ${BATCH_SCHEMA_VERSION}, with \`workspace_id\` set to \`${request.workspaceId}\`. Never edit exports or earlier batches.`,
+    "- Set `previous_batch_id` to your own previous batch. A batch whose predecessor is missing waits; it is not imported.",
+    "- Upload attachments first, then the batch, then `<batch_id>.commit.json` (`jr-agent-batch-commit` v1) last. List each attachment in the draft's `payload.attachments` and in the marker, with identical path, media type, size and SHA-256.",
+    "- Never reuse an `operation_id` for different content. A reused ID with other content contests every version, including ones already imported.",
+    "- Revise your own drafts by appending a new operation with `previous_operation_id`; keep `base_revision` null for drafts and status claims.",
+    "- Evidence proposals set `proposal_kind`: `new` (with `evidence_id: null` and `base_revision: null`) or `correction` (with the evidence `record_id` and its current `revision` as `base_revision`).",
     "- Record every draft's Job Ranger gate outcome as NOT CHECKED (`gate_status: \"not_checked\"`). Only Job Ranger runs the Truth and Parseability Gates.",
     "- Application status and Career Evidence changes are claims or proposals for the user to review, never confirmations.",
     "- Your actor ID is a claim, not an identity or permission.",
@@ -103,12 +112,18 @@ export async function createAgentExport(snapshot: CanonicalSnapshot, request: Ex
   const add = (path: string, role: string, mediaType: string, bytes: Uint8Array) => files.push({ path, role, mediaType, bytes });
 
   // Evidence revisions use updatedAt, the same signal application materials use for staleness.
-  const authoritative = snapshot.evidence.filter((item) => item.evidence.verificationState in AUTHORITATIVE_EVIDENCE);
-  const evidenceRevision = new Map(snapshot.evidence.map((item) => [item.evidence.id, item.evidence.updatedAt]));
-  const exportableEvidence = new Set(authoritative.map((item) => item.evidence.id));
-  const ref = (id: string, revision?: string) => exportableEvidence.has(id)
-    ? { record_id: id, revision: revision ?? evidenceRevision.get(id) ?? null }
-    : { record_id: id, revision: null, not_exported: true };
+  // D07: evidence revisions are content tokens, not timestamps.
+  const authoritative = snapshot.evidence.filter((item) => hasOwn(AUTHORITATIVE_EVIDENCE, item.evidence.verificationState));
+  const tokens = new Map<string, string>();
+  for (const item of authoritative) tokens.set(item.evidence.id, await evidenceRevision(item.evidence));
+  const updatedAt = new Map(snapshot.evidence.map((item) => [item.evidence.id, item.evidence.updatedAt]));
+  // A material citing an older evidence version is marked stale rather than given a token
+  // for content the material never saw.
+  const ref = (id: string, citedUpdatedAt?: string) => {
+    if (!tokens.has(id)) return { record_id: id, revision: null, not_exported: true };
+    if (citedUpdatedAt !== undefined && citedUpdatedAt !== updatedAt.get(id)) return { record_id: id, revision: null, stale: true };
+    return { record_id: id, revision: tokens.get(id) };
+  };
 
   if (has("tracks")) {
     const records = snapshot.tracks.map((t) => {
@@ -125,13 +140,43 @@ export async function createAgentExport(snapshot: CanonicalSnapshot, request: Ex
     add("data/target-tracks.json", "tracks", "application/json", collection(request.exportId, "target_track_collection", records));
   }
 
+  if (has("career_direction")) {
+    // Identity-minimised direction only: no name, home location, radius or pay.
+    const p = snapshot.profile;
+    const records: JsonRecord[] = [];
+    if (p) {
+      const data = { target_titles: p.targetTitles, sectors: p.sectors, skills: p.skills, full_time_only: p.fullTimeOnly, on_call_preference: p.onCallPreference };
+      const revision = `dir1:${await sha256Hex(canonicalJsonBytes(data))}`;
+      revisions.career_direction = revision;
+      records.push(record({ id: "career_direction", type: "career_direction", revision, authority: "user_defined", provenance: { kind: "job_ranger_career_profile", updated_at: p.updatedAt }, data }));
+    }
+    add("data/career-direction.json", "career_direction", "application/json", collection(request.exportId, "career_direction_collection", records));
+  }
+
+  if (has("selected_applications")) {
+    const selectedIds = request.selectedApplicationIds ?? [];
+    const records = snapshot.applications.filter((a) => selectedIds.includes(a.id)).map((a) => {
+      revisions[a.id] = a.updatedAt;
+      // Private notes and the posting URL stay local; status is canonical, not a claim.
+      return record({
+        id: a.id,
+        type: "application",
+        revision: a.updatedAt,
+        authority: "user_tracked",
+        provenance: { kind: "job_ranger_application", created_at: a.createdAt, updated_at: a.updatedAt },
+        data: { job_id: a.jobId, title: a.title, company_name: a.companyName, status: a.status },
+      });
+    });
+    add("data/selected-applications.json", "selected_applications", "application/json", collection(request.exportId, "application_collection", records));
+  }
+
   if (has("confirmed_evidence")) {
     const records = authoritative.map(({ evidence: e, sources }) => {
-      revisions[e.id] = e.updatedAt;
+      revisions[e.id] = tokens.get(e.id)!;
       return record({
         id: e.id,
         type: "career_evidence",
-        revision: e.updatedAt,
+        revision: tokens.get(e.id)!,
         authority: AUTHORITATIVE_EVIDENCE[e.verificationState],
         provenance: {
           kind: "job_ranger_career_evidence",
@@ -269,20 +314,22 @@ export async function createAgentExport(snapshot: CanonicalSnapshot, request: Ex
   const entries = await Promise.all(files.map(async (f) => ({ path: f.path, role: f.role, media_type: f.mediaType, bytes: f.bytes.length, sha256: await sha256Hex(f.bytes) })));
   const manifest = {
     format: "jr-agent-export",
-    schema_version: 1,
+    schema_version: MANIFEST_SCHEMA_VERSION,
     export_id: request.exportId,
+    workspace_id: request.workspaceId,
     created_at: request.createdAt,
     job_ranger_build: request.build,
     source_revision: snapshot.sourceRevision,
-    selection: { scopes, excluded_by_default: [...MANIFEST_EXCLUSIONS] },
+    selection: { scopes, omitted_scopes: MANIFEST_SCOPES.filter((s) => !scopes.includes(s)), excluded_by_default: [...MANIFEST_EXCLUSIONS] },
     files: entries,
   };
   const manifestBytes = canonicalJsonBytes(manifest);
   const manifestSha256 = await sha256Hex(manifestBytes);
   const receipt: ExportReceipt = {
     format: "jr-agent-export-receipt",
-    schema_version: 1,
+    schema_version: 2,
     export_id: request.exportId,
+    workspace_id: request.workspaceId,
     created_at: request.createdAt,
     job_ranger_build: request.build,
     source_revision: snapshot.sourceRevision,

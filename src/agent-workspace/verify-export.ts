@@ -3,7 +3,7 @@
 // first, and only then are its file entries used to check file bytes.
 
 import { sha256Hex } from "./canonical.ts";
-import { parseExportManifest } from "./schema-v1.ts";
+import { parseExportManifest } from "./schema.ts";
 import type { Diagnostic } from "./strict-json.ts";
 import type { ExportReceipt } from "./types.ts";
 

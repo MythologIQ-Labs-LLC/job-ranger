@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-reconcile-ledger-v2.schema.json",
+  "title": "Local jr-agent-reconcile-ledger v2 - G3 candidate with durable contest state (#289)",
+  "description": "Trusted local idempotency ledger, persisted only in Job Ranger's local database. v2 adds durable, accumulate-only contest reasons and every content hash seen per operation ID (#289, D09), and records each batch's claimed actor for D13 chain checks. A v1 ledger must be migrated explicitly; it is never read as v2. Runtime also requires: variants sorted and unique and including content_sha256; more than one variant only with operation_id_conflict; outcome contested only with a reason.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "operations",
+    "batches"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-reconcile-ledger"
+    },
+    "schema_version": {
+      "const": 2
+    },
+    "operations": {
+      "type": "object",
+      "maxProperties": 1000000,
+      "patternProperties": {
+        "^op_[A-Za-z0-9_-]{4,125}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "content_sha256",
+            "outcome",
+            "batch_id",
+            "record_id",
+            "kind",
+            "previous_operation_id",
+            "contest",
+            "variants"
+          ],
+          "properties": {
+            "content_sha256": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "outcome": {
+              "enum": [
+                "imported_draft",
+                "staged_draft",
+                "staged_for_review",
+                "needs_rebase",
+                "contested"
+              ]
+            },
+            "batch_id": {
+              "type": "string",
+              "minLength": 7,
+              "maxLength": 128,
+              "pattern": "^batch_[A-Za-z0-9_-]{2,121}$"
+            },
+            "record_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            "kind": {
+              "enum": [
+                "workspace_note_version",
+                "opportunity_annotation",
+                "material_draft_version",
+                "follow_up_plan",
+                "application_status_claim",
+                "evidence_change_proposal"
+              ]
+            },
+            "previous_operation_id": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 7,
+                  "maxLength": 128,
+                  "pattern": "^op_[A-Za-z0-9_-]{4,125}$"
+                }
+              ]
+            },
+            "contest": {
+              "type": "array",
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "ancestor_contested",
+                  "fork",
+                  "operation_id_conflict",
+                  "record_kind_conflict"
+                ]
+              }
+            },
+            "variants": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10000,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 64,
+                "maxLength": 64,
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "batches": {
+      "type": "object",
+      "maxProperties": 1000000,
+      "patternProperties": {
+        "^batch_[A-Za-z0-9_-]{2,121}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "actor_claim"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "actor_claim": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 6,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

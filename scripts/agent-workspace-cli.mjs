@@ -4,11 +4,12 @@
 //
 // Commands (all offline; no network, no server, no OAuth, no database access):
 //   export          --canonical <snapshot.json> --out <dir> --receipt-out <file> --export-id <ex_...>
-//                   --created-at <UTC> --build <id> --scopes <a,b> [--jobs ids] [--resumes ids]
-//                   [--cover-letters ids] [--schema-dir <dir>]
+//                   --workspace-id <id> --created-at <UTC> --build <id> --scopes <a,b> [--jobs ids]
+//                   [--applications ids] [--resumes ids] [--cover-letters ids] [--schema-dir <dir>]
 //   validate-batch  <batch.json> [--commit <batch.commit.json>]
-//   reconcile       --workspace <dir> --receipts <file|dir> --canonical <snapshot.json>
+//   reconcile       --workspace <dir> --workspace-id <id> --receipts <file|dir> --canonical <snapshot.json>
 //                   [--ledger <ledger.json>] [--auto-import kinds] [--report-out <file>] [--ledger-out <file>]
+//   migrate-ledger  --ledger <v1 ledger.json> --ledger-out <v2 ledger.json>
 //
 // reconcile only reads the workspace folder: workspace/agents/<actor>/batches/<batch_id>.json,
 // its <batch_id>.commit.json marker and the attachments that marker declares. It never follows
@@ -25,6 +26,7 @@ import {
   decodeStrictUtf8,
   parseCommitMarker,
   parseOperationBatch,
+  migrateLedgerV1,
   parseStrictJson,
   reconcileWorkspace,
 } from "../src/agent-workspace/index.ts";
@@ -71,17 +73,19 @@ function writeOutput(path, text) {
 const list = (value) => (value ? value.split(",").map((s) => s.trim()).filter(Boolean) : []);
 
 async function exportCommand({ options }) {
-  for (const key of ["canonical", "out", "receipt-out", "export-id", "created-at", "build", "scopes"]) if (!options[key]) fail(`export requires --${key}`);
+  for (const key of ["canonical", "out", "receipt-out", "export-id", "workspace-id", "created-at", "build", "scopes"]) if (!options[key]) fail(`export requires --${key}`);
   const snapshot = JSON.parse(JSON.stringify(readJsonFile(options.canonical)));
   const schemaDocuments = options["schema-dir"]
     ? readdirSync(options["schema-dir"]).filter((f) => f.endsWith(".schema.json")).sort().map((f) => ({ path: `schema/${f}`, text: decodeStrictUtf8(readRegularFile(join(options["schema-dir"], f))) }))
     : [];
   const result = await createAgentExport(snapshot, {
     exportId: options["export-id"],
+    workspaceId: options["workspace-id"],
     createdAt: options["created-at"],
     build: options.build,
     scopes: list(options.scopes),
     selectedJobIds: list(options.jobs),
+    selectedApplicationIds: list(options.applications),
     selectedResumeIds: list(options.resumes),
     selectedCoverLetterIds: list(options["cover-letters"]),
     schemaDocuments,
@@ -158,7 +162,7 @@ function loadReceipts(path) {
 }
 
 async function reconcileCommand({ options }) {
-  for (const key of ["workspace", "receipts", "canonical"]) if (!options[key]) fail(`reconcile requires --${key}`);
+  for (const key of ["workspace", "workspace-id", "receipts", "canonical"]) if (!options[key]) fail(`reconcile requires --${key}`);
   // Outputs are local records; they must never be written where agents can edit them.
   const workspaceRoot = realpathSync(options.workspace);
   for (const key of ["report-out", "ledger-out"]) {
@@ -168,6 +172,7 @@ async function reconcileCommand({ options }) {
   }
   const { submissions, skipped } = discover(options.workspace);
   const result = await reconcileWorkspace({
+    workspaceId: options["workspace-id"],
     receipts: loadReceipts(options.receipts),
     canonical: JSON.parse(JSON.stringify(readJsonFile(options.canonical))),
     policy: { autoImportKinds: list(options["auto-import"]) },
@@ -179,6 +184,8 @@ async function reconcileCommand({ options }) {
     skipped,
     drafts: result.drafts,
     staged: result.staged,
+    contested: result.contested,
+    downgrades: result.downgrades,
     quarantine: result.quarantine.map(({ bytes, ...rest }) => ({ ...rest, byte_length: bytes?.length ?? null })),
     history: result.history,
   };
@@ -187,12 +194,22 @@ async function reconcileCommand({ options }) {
   process.stdout.write(canonicalJson({ counts: result.report.counts, skipped: skipped.length }));
 }
 
+/** Explicit, one-way v1 to v2 ledger migration; v1 ledgers are never read as v2. */
+function migrateLedgerCommand({ options }) {
+  for (const key of ["ledger", "ledger-out"]) if (!options[key]) fail(`migrate-ledger requires --${key}`);
+  if (resolve(options.ledger) === resolve(options["ledger-out"])) fail("migrate-ledger writes a new file; keep the v1 ledger as a backup", 1);
+  const migrated = migrateLedgerV1(JSON.parse(JSON.stringify(readJsonFile(options.ledger))));
+  writeOutput(options["ledger-out"], canonicalJson(migrated));
+  process.stdout.write(canonicalJson({ migrated_operations: Object.keys(migrated.operations).length, migrated_batches: Object.keys(migrated.batches).length }));
+}
+
 const args = parseArgs(process.argv.slice(2));
 try {
   if (args.command === "export") await exportCommand(args);
   else if (args.command === "validate-batch") validateBatchCommand(args);
   else if (args.command === "reconcile") await reconcileCommand(args);
-  else fail("usage: agent-workspace-cli.mjs <export|validate-batch|reconcile> [options]");
+  else if (args.command === "migrate-ledger") migrateLedgerCommand(args);
+  else fail("usage: agent-workspace-cli.mjs <export|validate-batch|reconcile|migrate-ledger> [options]");
 } catch (error) {
   // Report every failure as a short message; never print a raw stack trace or partial output.
   if (error instanceof AgentWorkspaceError) fail(`${error.code}: ${error.message}`, 1);

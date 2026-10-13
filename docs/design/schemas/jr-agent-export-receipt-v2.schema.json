@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-export-receipt-v2.schema.json",
+  "title": "Local jr-agent-export-receipt v2 - G3 candidate",
+  "description": "Private trusted local receipt stored in Job Ranger's local database, never in an agent-writable folder, and never accepted from an agent. Bound to the local workspace ID (D08/D13). Closed structural validation is not cryptographic provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "export_id",
+    "workspace_id",
+    "created_at",
+    "job_ranger_build",
+    "source_revision",
+    "manifest_sha256",
+    "manifest_bytes",
+    "scopes",
+    "files",
+    "record_revisions"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-export-receipt"
+    },
+    "schema_version": {
+      "const": 2
+    },
+    "export_id": {
+      "type": "string",
+      "minLength": 9,
+      "maxLength": 96,
+      "pattern": "^ex_[A-Za-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 32,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "job_ranger_build": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "manifest_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 262144
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "tracks",
+          "career_direction",
+          "confirmed_evidence",
+          "selected_opportunities",
+          "selected_applications",
+          "resume_templates",
+          "selected_resumes",
+          "selected_cover_letters"
+        ]
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240,
+            "pattern": "^(?:data|materials|schema)/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*$"
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20971520
+          }
+        }
+      }
+    },
+    "record_revisions": {
+      "type": "object",
+      "maxProperties": 10000,
+      "patternProperties": {
+        "^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

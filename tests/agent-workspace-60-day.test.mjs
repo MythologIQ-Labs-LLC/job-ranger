@@ -2,8 +2,10 @@
 // Job Ranger restarts and reconciles deterministically without surrendering authority.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createAgentExport, reconcileWorkspace } from "../src/agent-workspace/index.ts";
-import { bytesOf, makeBatch, makeOperation, makeSubmission } from "./support/agent-workspace-helpers.mjs";
+import { createAgentExport, evidenceRevision, operationEligibility, reconcileWorkspace as reconcileCore } from "../src/agent-workspace/index.ts";
+import { attachmentRef, bytesOf, makeBatch, makeOperation, makeSubmission, WORKSPACE_ID } from "./support/agent-workspace-helpers.mjs";
+
+const reconcileWorkspace = (input) => reconcileCore({ workspaceId: WORKSPACE_ID, ...input });
 
 const deepFreeze = (value) => {
   if (value && typeof value === "object") {
@@ -19,6 +21,7 @@ const day = (n, hour = 10) => new Date(Date.UTC(2026, 9, 13 + n, hour)).toISOStr
 const day0 = deepFreeze(loadSnapshot());
 const exported = await createAgentExport(day0, {
   exportId: "ex_synthetic_day0",
+  workspaceId: WORKSPACE_ID,
   createdAt: day(0),
   build: "test-build-0001",
   scopes: ["tracks", "confirmed_evidence", "selected_opportunities", "selected_resumes", "selected_cover_letters"],
@@ -29,8 +32,10 @@ const exported = await createAgentExport(day0, {
 });
 const receipts = [exported.receipt];
 const src = { exportId: "ex_synthetic_day0", manifestSha256: exported.manifestSha256 };
-const evRev = "2026-09-02T12:00:00.000Z";
-const insuranceRev = "2026-09-03T12:00:00.000Z";
+// Agents cite the evidence revision tokens they read in the export (D07).
+const evRev = exported.receipt.record_revisions.ev_confirmed_scheduling;
+const insuranceRev = exported.receipt.record_revisions.ev_authored_insurance;
+assert.equal(evRev, await evidenceRevision(day0.evidence.find((e) => e.evidence.id === "ev_confirmed_scheduling").evidence));
 
 // 2-10. Days 1-60: Job Ranger is closed. Two agents write append-only batches.
 const note1v1 = makeOperation({ operation_id: "op_alpha_note1_v1", record_id: "agent_note_harbor", authored_at: day(2), kind: "workspace_note_version", payload: { title: "Harbor Health research", body: "Initial research. Unverified.", source_links: ["https://example.invalid/harbor"] } });
@@ -45,10 +50,11 @@ const statusClaim = makeOperation({ operation_id: "op_alpha_status_v1", record_i
 const alpha2 = makeBatch({ ...src, batchId: "batch_alpha_002", actorId: "agent_alpha", createdAt: day(23, 18), previousBatchId: "batch_alpha_001", operations: [note1alpha2, letter1v2, followUp, statusClaim] });
 
 // Alpha's day-45 batch carries a resume draft attachment that is corrupted in storage.
-const resumeDraft = makeOperation({ operation_id: "op_alpha_resume_v1", record_id: "agent_resume_harbor", authored_at: day(45), kind: "material_draft_version", payload: { material_kind: "resume", title: "Harbor resume draft", body: "See attachment.", source_evidence_refs: [{ record_id: "ev_authored_insurance", revision: insuranceRev }], gate_status: "not_checked" } });
-const alpha3 = makeBatch({ ...src, batchId: "batch_alpha_003", actorId: "agent_alpha", createdAt: day(45, 18), previousBatchId: "batch_alpha_002", operations: [resumeDraft] });
 const declaredPdf = bytesOf("%PDF-1.4 synthetic resume draft");
 const corruptedPdf = bytesOf("%PDF-1.4 synthetic resume draft (bit rot)");
+const resumePath = "workspace/attachments/alpha/resume-draft.pdf";
+const resumeDraft = makeOperation({ operation_id: "op_alpha_resume_v1", record_id: "agent_resume_harbor", authored_at: day(45), kind: "material_draft_version", payload: { material_kind: "resume", title: "Harbor resume draft", body: "See attachment.", source_evidence_refs: [{ record_id: "ev_authored_insurance", revision: insuranceRev }], gate_status: "not_checked", attachments: [attachmentRef(resumePath, declaredPdf)] } });
+const alpha3 = makeBatch({ ...src, batchId: "batch_alpha_003", actorId: "agent_alpha", createdAt: day(45, 18), previousBatchId: "batch_alpha_002", operations: [resumeDraft] });
 
 // Alpha later revises the resume draft whose base sits in the corrupted batch.
 const resumeV2 = makeOperation({ operation_id: "op_alpha_resume_v2", record_id: "agent_resume_harbor", previous_operation_id: "op_alpha_resume_v1", authored_at: day(55), kind: "material_draft_version", payload: { material_kind: "resume", title: "Harbor resume draft", body: "Revision two.", source_evidence_refs: [{ record_id: "ev_authored_insurance", revision: insuranceRev }], gate_status: "not_checked" } });
@@ -57,8 +63,8 @@ const alpha4 = makeBatch({ ...src, batchId: "batch_alpha_004", actorId: "agent_a
 // Beta independently revises the same research note from Alpha's v1 (a fork), proposes a
 // new qualification and a correction, and replays Alpha's annotation verbatim.
 const note1beta2 = makeOperation({ operation_id: "op_beta_note1_v2", record_id: "agent_note_harbor", previous_operation_id: "op_alpha_note1_v1", authored_at: day(19), kind: "workspace_note_version", payload: { title: "Harbor Health research", body: "Beta revision: clinic is expanding." } });
-const newQualification = makeOperation({ operation_id: "op_beta_evidence_new", record_id: "agent_proposal_bls", authored_at: day(25), kind: "evidence_change_proposal", payload: { evidence_id: "ev_proposed_bls_cert", change_reason: "User mentioned holding a BLS certification.", proposed_text: "Holds current BLS certification.", source_evidence_refs: [] } });
-const correction = makeOperation({ operation_id: "op_beta_evidence_fix", record_id: "agent_proposal_insurance", base_revision: insuranceRev, authored_at: day(26), kind: "evidence_change_proposal", payload: { evidence_id: "ev_authored_insurance", change_reason: "Clarify scope.", proposed_text: "Verified insurance eligibility for about 40 new patients each week.", source_evidence_refs: [{ record_id: "ev_authored_insurance", revision: insuranceRev }] } });
+const newQualification = makeOperation({ operation_id: "op_beta_evidence_new", record_id: "agent_proposal_bls", authored_at: day(25), kind: "evidence_change_proposal", payload: { proposal_kind: "new", evidence_id: null, change_reason: "User mentioned holding a BLS certification.", proposed_text: "Holds current BLS certification.", source_evidence_refs: [] } });
+const correction = makeOperation({ operation_id: "op_beta_evidence_fix", record_id: "agent_proposal_insurance", base_revision: insuranceRev, authored_at: day(26), kind: "evidence_change_proposal", payload: { proposal_kind: "correction", evidence_id: "ev_authored_insurance", change_reason: "Clarify scope.", proposed_text: "Verified insurance eligibility for about 40 new patients each week.", source_evidence_refs: [{ record_id: "ev_authored_insurance", revision: insuranceRev }] } });
 const beta1 = makeBatch({ ...src, batchId: "batch_beta_001", actorId: "agent_beta", createdAt: day(26, 18), operations: [note1beta2, newQualification, correction] });
 const beta2 = makeBatch({ ...src, batchId: "batch_beta_002", actorId: "agent_beta", createdAt: day(31, 18), previousBatchId: "batch_beta_001", operations: [annotation] });
 
@@ -78,7 +84,7 @@ const canonicalBefore = JSON.stringify(day60);
 const submissions = [
   makeSubmission(alpha1),
   makeSubmission(alpha2),
-  makeSubmission(alpha3, { attachments: { "workspace/attachments/alpha/resume-draft.pdf": { declared: declaredPdf, actual: corruptedPdf } } }),
+  makeSubmission(alpha3, { attachments: { [resumePath]: { declared: declaredPdf, actual: corruptedPdf } } }),
   makeSubmission(alpha4),
   makeSubmission(beta1),
   makeSubmission(beta2),
@@ -120,7 +126,7 @@ assert.equal(outcome("op_alpha_status_v1").outcome, "staged_for_review");
 assert.ok(outcome("op_alpha_status_v1").flags.includes("claim_differs_from_canonical"));
 assert.equal(day60.applications[0].status, "interested");
 assert.equal(outcome("op_beta_evidence_new").outcome, "staged_for_review");
-assert.ok(outcome("op_beta_evidence_new").flags.includes("proposes_new_evidence"));
+assert.deepEqual(outcome("op_beta_evidence_new").flags, [], "a new qualification is an explicit proposal, not a fabricated ID");
 assert.equal(outcome("op_beta_evidence_fix").outcome, "staged_for_review");
 assert.ok(!day60.evidence.some((e) => e.evidence.id === "ev_proposed_bls_cert"));
 
@@ -134,8 +140,11 @@ assert.equal(batchStatus("batch_alpha_003").status, "incomplete");
 assert.ok(batchStatus("batch_alpha_003").reasons.includes("attachment_digest_mismatch"));
 assert.equal(outcome("op_alpha_resume_v1"), undefined);
 assert.ok(run1.quarantine.some((q) => q.batch_id === "batch_alpha_003" && q.bytes.length > 0));
-// ...and its dependent revision waits for the missing predecessor instead of being lost.
-assert.equal(outcome("op_alpha_resume_v2").outcome, "pending_predecessor");
+// ...and Alpha's next batch waits for it (D13) instead of importing out of causal order.
+assert.equal(batchStatus("batch_alpha_004").status, "incomplete");
+assert.deepEqual(batchStatus("batch_alpha_004").reasons, ["previous_batch_unavailable"]);
+assert.equal(outcome("op_alpha_resume_v2"), undefined);
+assert.ok(run1.quarantine.some((q) => q.batch_id === "batch_alpha_004" && q.bytes.length > 0), "the waiting batch is preserved");
 
 // Malicious batch: rejected with diagnostics, quarantined read-only, nothing applied.
 assert.equal(batchStatus("batch_beta_003").status, "rejected");
@@ -164,19 +173,25 @@ assert.ok(run2.report.operations.filter((o) => o.outcome !== "pending_predecesso
 assert.deepEqual(run2.ledger, run1.ledger);
 assert.equal(JSON.stringify(day60), canonicalBefore);
 
-// A later replay of an operation ID with different content is a conflict, never an overwrite.
-const hijack = makeBatch({ ...src, batchId: "batch_beta_004", actorId: "agent_beta", createdAt: day(61, 18), operations: [
+// A later replay of an operation ID with different content is a conflict, never an overwrite:
+// both versions are contested and the earlier imported draft loses eligibility (#289).
+assert.equal(operationEligibility(run2.ledger, "op_alpha_note1_v1").eligible, true);
+const hijack = makeBatch({ ...src, batchId: "batch_beta_004", actorId: "agent_beta", createdAt: day(61, 18), previousBatchId: "batch_beta_002", operations: [
   makeOperation({ ...note1v1, payload: { title: "Harbor Health research", body: "Overwritten by beta." } }),
 ] });
 const run3 = await reconcileWorkspace({ receipts, canonical: day60, policy, ledger: run2.ledger, submissions: [...submissions, makeSubmission(hijack)] });
 const hijacked = run3.report.operations.find((o) => o.operation_id === "op_alpha_note1_v1" && o.batch_id === "batch_beta_004");
-assert.equal(hijacked.outcome, "rejected");
+assert.equal(hijacked.outcome, "contested");
 assert.ok(hijacked.flags.includes("operation_id_conflict"));
 assert.equal(run3.report.counts.imported_draft, 0);
+assert.equal(operationEligibility(run3.ledger, "op_alpha_note1_v1").eligible, false);
+assert.ok(run3.downgrades.some((d) => d.operation_id === "op_alpha_note1_v1" && d.previous_outcome === "imported_draft"));
+assert.ok(run3.contested.some((c) => c.operation.payload.body === "Overwritten by beta."));
+assert.ok(run3.contested.some((c) => c.operation.payload.body === "Initial research. Unverified."));
 
 // Once the user re-uploads the attachment intact, the held revision chain completes.
 const repaired = submissions.map((s) => (s.location.endsWith("batch_alpha_003.json")
-  ? makeSubmission(alpha3, { attachments: { "workspace/attachments/alpha/resume-draft.pdf": { declared: declaredPdf, actual: declaredPdf } } })
+  ? makeSubmission(alpha3, { attachments: { [resumePath]: { declared: declaredPdf, actual: declaredPdf } } })
   : s));
 const run4 = await reconcileWorkspace({ receipts, canonical: day60, policy, ledger: run2.ledger, submissions: repaired });
 assert.equal(run4.report.operations.find((o) => o.operation_id === "op_alpha_resume_v1").outcome, "imported_draft");
