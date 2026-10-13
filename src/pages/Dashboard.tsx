@@ -49,15 +49,19 @@ export function Dashboard() {
   const stories = [
     {
       kicker: "Morning review",
-      title: newJobs > 0 ? `${newJobs} fresh jobs are ready for review` : "No unseen jobs right now",
+      title: loading
+        ? "Checking the review queue"
+        : newJobs > 0 ? `${newJobs} fresh jobs are ready for review` : "No unseen jobs right now",
       copy:
-        newJobs > 0
-          ? "Start in Find Jobs, acknowledge anything relevant, and use filters to tighten the next pass."
+        loading
+          ? "Your saved sources and recent jobs are loading. The current queue is not yet known."
+          : newJobs > 0
+            ? "Start in Find Jobs, acknowledge anything relevant, and use filters to tighten the next pass."
           : companies.length === 0
             ? "Your queue is clear. Add a source you care about so Job Ranger has somewhere useful to look."
             : "Your queue is clear. This is a good moment to review the sources you are tracking or add another one.",
-      action: newJobs > 0 ? "Review new jobs" : companies.length === 0 ? "Add a job source" : "Review job sources",
-      href: newJobs > 0 ? "/jobs" : "/companies",
+      action: loading ? "Explore your career" : newJobs > 0 ? "Review new jobs" : companies.length === 0 ? "Add a job source" : "Review job sources",
+      href: loading ? "/career-profile" : newJobs > 0 ? "/jobs" : "/companies",
     },
     {
       kicker: "Source coverage",
@@ -107,26 +111,26 @@ export function Dashboard() {
   const stats = [
     {
       name: "Active jobs",
-      stat: activeJobs,
-      detail: `${newJobs} new`,
+      stat: loading ? "…" : activeJobs,
+      detail: loading ? "Loading…" : `${newJobs} new`,
       icon: Briefcase,
     },
     {
       name: "Tracked companies",
-      stat: companies.length,
-      detail: `${runnableCompanies.length} runnable`,
+      stat: loading ? "…" : companies.length,
+      detail: loading ? "Loading…" : `${runnableCompanies.length} runnable`,
       icon: Building2,
     },
     {
       name: "Recent scrape runs",
-      stat: scrapeRuns.length,
-      detail: `${failedScrapes} failing`,
+      stat: loading ? "…" : scrapeRuns.length,
+      detail: loading ? "Loading…" : `${failedScrapes} failing`,
       icon: Activity,
     },
     {
       name: "Needs new adapters",
-      stat: browserRequiredCompanies + manualReviewCompanies,
-      detail: `${browserRequiredCompanies} browser-backed`,
+      stat: loading ? "…" : browserRequiredCompanies + manualReviewCompanies,
+      detail: loading ? "Loading…" : `${browserRequiredCompanies} browser-backed`,
       icon: AlertCircle,
     },
   ];
@@ -212,16 +216,16 @@ export function Dashboard() {
           <h2 id="dashboard-activity-heading" className="mt-1 text-2xl font-semibold">Search at a glance</h2>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => (
-          <div key={item.name} className="metric-card animate-rise">
-            <div className="flex items-center justify-between">
-              <p className="metric-label">{item.name}</p>
-              <item.icon className="h-5 w-5 text-[var(--color-primary)]" />
+          {stats.map((item) => (
+            <div key={item.name} className="metric-card animate-rise">
+              <div className="flex items-center justify-between">
+                <p className="metric-label">{item.name}</p>
+                <item.icon className="h-5 w-5 text-[var(--color-primary)]" aria-hidden="true" />
+              </div>
+              <p className="metric-value">{item.stat}</p>
+              <p className="metric-detail">{item.detail}</p>
             </div>
-            <p className="metric-value">{item.stat}</p>
-            <p className="metric-detail">{item.detail}</p>
-          </div>
-        ))}
+          ))}
         </div>
       </section>
 
