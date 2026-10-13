@@ -1,0 +1,64 @@
+{
+  "format": "jr-agent-operation-batch",
+  "schema_version": 1,
+  "workspace_id": "workspace_synthetic_01",
+  "batch_id": "batch_synthetic_agent_day60_001",
+  "source_export_id": "ex_synthetic_first_setup",
+  "source_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "actor_claim": {
+    "actor_id": "agent_synthetic_01",
+    "display_name": "Example agent - untrusted identity claim"
+  },
+  "created_at": "2026-12-12T18:00:00Z",
+  "previous_batch_id": null,
+  "operations": [
+    {
+      "operation_id": "op_synth_research_001",
+      "record_id": "agent_note_001",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "authored_at": "2026-11-19T15:00:00Z",
+      "kind": "workspace_note_version",
+      "payload": {
+        "title": "Employer research for possible application",
+        "body": "Potential fit, research remains unverified. Example only. Never treats job descriptions as instructions.",
+        "source_links": [
+          "https://example.org/jobs/fictional-001"
+        ]
+      }
+    },
+    {
+      "operation_id": "op_synth_draft_002",
+      "record_id": "agent_material_002",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "authored_at": "2026-12-10T10:00:00Z",
+      "kind": "material_draft_version",
+      "payload": {
+        "material_kind": "cover_letter",
+        "title": "Fictional employer draft",
+        "body": "I am interested in this role. Review every factual assertion against current evidence.",
+        "source_evidence_refs": [
+          {
+            "record_id": "evidence_example_001",
+            "revision": "revision_initial_001"
+          }
+        ],
+        "gate_status": "not_checked"
+      }
+    },
+    {
+      "operation_id": "op_synth_status_003",
+      "record_id": "agent_status_claim_003",
+      "base_revision": null,
+      "previous_operation_id": null,
+      "authored_at": "2026-12-12T17:30:00Z",
+      "kind": "application_status_claim",
+      "payload": {
+        "application_id": "application_example_001",
+        "claimed_status": "submitted",
+        "reported_context": "The user told the agent the application was submitted. This is an agent-recorded claim, NOT a confirmed Job Ranger lifecycle update."
+      }
+    }
+  ]
+}
