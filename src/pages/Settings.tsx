@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, Database, Save, Settings2, SwatchBook } from "lucide-react";
 import { BackupRestorePanel } from "../components/BackupRestorePanel";
 import { RuntimePanel } from "../components/RuntimePanel";
+import { GoogleDriveAuthPanel } from "../components/GoogleDriveAuthPanel";
 import { useRuntimeInfo } from "../services/runtime";
 import { JsonResumePanel } from "../components/JsonResumePanel";
 import { Layout } from "../components/Layout";
@@ -226,6 +227,7 @@ export function Settings() {
         </section>
 
         <RuntimePanel />
+        {webRuntime && <GoogleDriveAuthPanel />}
         <BackupRestorePanel />
         <JsonResumePanel />
 

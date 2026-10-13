@@ -35,6 +35,15 @@ function gitCommit(): string {
 const commit = gitCommit();
 const buildId = process.env.JOB_RANGER_BUILD_ID?.trim() || `${packageJson.version}+${commit.slice(0, 12)}`;
 
+// Public Web OAuth client ID only; never embed a client secret or token.
+// Omission leaves the baseline no-Google-network CSP and runtime behavior intact.
+const googleWebClientId = (process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID ?? "").trim();
+if (googleWebClientId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(googleWebClientId)) {
+  throw new Error("Invalid VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID format");
+}
+const webAuthSecurity = { googleOAuthEnabled: googleWebClientId.length > 0 };
+
+
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
     root,
@@ -95,7 +104,7 @@ function listFiles(directory: string, base = directory): string[] {
 }
 
 function headersFile(): string {
-  const headers = buildSecurityHeaders();
+  const headers = buildSecurityHeaders(webAuthSecurity);
   const lines = ["/*", ...Object.entries(headers).map(([key, value]) => `  ${key}: ${value}`)];
   lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "");
   lines.push("/assets/*", "  Cache-Control: public, max-age=31536000, immutable", "");
@@ -109,7 +118,7 @@ function shellManifestPlugin(): Plugin {
     apply: "build",
     transformIndexHtml(html) {
       return html
-        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy().replace(/; frame-ancestors 'none'/, ""))
+        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy(webAuthSecurity).replace(/; frame-ancestors 'none'/, ""))
         .replace("%JOB_RANGER_BUILD_ID%", buildId);
     },
     closeBundle() {
@@ -150,7 +159,7 @@ function shellManifestPlugin(): Plugin {
             commit,
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
-            contentSecurityPolicy: buildContentSecurityPolicy(),
+            contentSecurityPolicy: buildContentSecurityPolicy(webAuthSecurity),
             assets,
             onDemandAssets: {
               purpose: "resume PDF fonts for text outside Windows-1252, loaded only when a resume needs them",
@@ -177,6 +186,7 @@ export default defineConfig({
   define: {
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
+    __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: JSON.stringify(googleWebClientId),
   },
   worker: {
     format: "es",
@@ -197,7 +207,7 @@ export default defineConfig({
     port: 5174,
     strictPort: true,
     headers: {
-      ...buildSecurityHeaders(),
+      ...buildSecurityHeaders(webAuthSecurity),
       // Vite's dev client needs inline/eval support; the production CSP is
       // enforced by the built index.html meta tag and the _headers file.
       "Content-Security-Policy": "",
@@ -207,6 +217,6 @@ export default defineConfig({
     host: "localhost",
     port: 4174,
     strictPort: true,
-    headers: buildSecurityHeaders(),
+    headers: buildSecurityHeaders(webAuthSecurity),
   },
 });
