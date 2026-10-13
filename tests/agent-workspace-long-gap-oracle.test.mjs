@@ -189,3 +189,48 @@ test('pure byte-identical replay is a no-op when no conflicting value exists', (
   assert.equal(result.classified[4].verdict, 'import_draft');
   assert.equal(result.classified[9].verdict, 'duplicate_replay_noop');
 });
+
+test('256 deterministic Drive listing permutations do not change classifications', () => {
+  const canonical = Object.freeze({
+    evidenceId: golden.simulation.canonical_evidence_at_return.id,
+    evidenceRevision: golden.simulation.canonical_evidence_at_return.revision,
+    submittedApplications: 0,
+  });
+  const expected = replayIntoDraftLedger(golden.events, canonical);
+  const summarize = result => result.classified.map(x => `${x.id}:${x.verdict}`).sort();
+  let state = 0x286f00d;
+  const rand = () => ((state ^= state << 13, state ^= state >>> 17,
+    state ^= state << 5) >>> 0) / 4294967296;
+  for (let attempt = 0; attempt < 256; attempt++) {
+    const shuffled = [...golden.events];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const result = replayIntoDraftLedger(shuffled, canonical);
+    assert.deepEqual(summarize(result), summarize(expected), `listing permutation ${attempt}`);
+    assert.equal(result.inserted, expected.inserted, `unsafe import at ${attempt}`);
+    assert.equal(result.drafts.filter(x => x.conflict).length, 2);
+    assert.equal(result.drafts.filter(x => x.stale).length, 2);
+  }
+  assert.equal(canonical.evidenceRevision, 'revision_new_002');
+  assert.equal(canonical.submittedApplications, 0);
+});
+
+test('missing causal parent stays quarantined rather than inferred from timestamps', () => {
+  const canonical = Object.freeze({
+    evidenceId: golden.simulation.canonical_evidence_at_return.id,
+    evidenceRevision: golden.simulation.canonical_evidence_at_return.revision,
+    submittedApplications: 0,
+  });
+  const orphan = {
+    ...golden.events[1],
+    operation_id: 'op_missing_parent_test',
+    record_id: 'unrelated_agent_draft_01',
+    previous_operation_id: 'op_does_not_exist_in_export',
+    expected: 'needs_parent_or_quarantine',
+  };
+  const result = replayIntoDraftLedger([...golden.events, orphan], canonical);
+  assert.equal(result.classified.at(-1).verdict, 'needs_parent_or_quarantine');
+  assert.ok(!result.drafts.some(x => x.key === orphan.operation_id));
+});
