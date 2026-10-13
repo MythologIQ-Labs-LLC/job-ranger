@@ -804,3 +804,96 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .applications-card { transition: none; }
 }
+
+
+/* #248 Find Jobs: explicit filter controls and evidence-forward listing density.
+   Visual marks only echo existing local-source completeness, not probability. */
+.jobs-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 94% 5%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 42%),
+    linear-gradient(130deg, var(--color-panel-strong), var(--color-panel));
+}
+
+.jobs-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.25rem;
+  background: linear-gradient(180deg, var(--color-primary), var(--color-accent));
+  pointer-events: none;
+}
+
+.jobs-filter-panel, .jobs-results, .jobs-filter-field {
+  min-width: 0;
+}
+
+.jobs-filter-field > .jobs-filter-control {
+  min-width: 0;
+  padding-inline-start: 2.85rem;
+}
+
+/* Unlayered padding overrides both base component and utility declarations.
+   This prevents the legacy Find Jobs icon/text overlap. */
+.jobs-filter-field > select.jobs-filter-control {
+  padding-inline-end: 2.1rem;
+}
+
+.jobs-filter-field > .jobs-filter-icon {
+  z-index: 1;
+}
+
+.jobs-opportunity-card {
+  position: relative;
+  min-width: 0;
+  border-color: var(--color-border-strong);
+  background: linear-gradient(160deg, var(--color-panel-strong), var(--color-panel));
+  overflow-wrap: anywhere;
+  transition: border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.jobs-opportunity-card::before {
+  content: "";
+  position: absolute;
+  inset: 1.15rem auto 1.15rem 0;
+  width: 0.2rem;
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  pointer-events: none;
+}
+
+.jobs-opportunity-card[data-source-completeness="full"]::before {
+  background: var(--color-success);
+}
+
+.jobs-opportunity-card:hover,
+.jobs-opportunity-card:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  box-shadow: 0 20px 38px -27px var(--color-shadow);
+}
+
+.jobs-opportunity-title {
+  max-width: 100%;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.jobs-opportunity-title:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+.jobs-opportunity-actions > button { min-height: 2.75rem; }
+.jobs-source-meta { min-width: 0; overflow-wrap: anywhere; }
+.jobs-empty { min-width: 0; }
+
+@media (max-width: 767px), (max-height: 700px) {
+  .jobs-opportunity-card::before { inset-block: 0.85rem; }
+  .jobs-opportunity-actions { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jobs-opportunity-card { transition: none; }
+}

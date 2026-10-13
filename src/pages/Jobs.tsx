@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  ArrowRight,
   Building2,
   CheckCircle2,
   ExternalLink,
@@ -88,6 +89,13 @@ export function Jobs() {
       );
   }, [jobs, searchTerm, locationTerm, companyFilter]);
 
+  const hasActiveFilters = Boolean(searchTerm.trim() || locationTerm.trim() || companyFilter !== "all");
+  const clearFilters = () => {
+    setSearchTerm("");
+    setLocationTerm("");
+    setCompanyFilter("all");
+  };
+
   const handleTrackJob = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
     try {
@@ -116,12 +124,12 @@ export function Jobs() {
 
   return (
     <Layout>
-      <section className="panel panel-strong px-6 py-7 sm:px-8">
+      <section className="jobs-hero panel panel-strong px-6 py-7 sm:px-8" aria-labelledby="jobs-title">
         <span className="alpha-pill">
           <Sparkles className="h-3.5 w-3.5" />
           Find Jobs
         </span>
-        <h1 className="page-title mt-4">
+        <h1 id="jobs-title" className="page-title mt-4">
           Spend your time on the jobs that look worth it.
         </h1>
         <p className="page-copy">
@@ -155,32 +163,48 @@ export function Jobs() {
         </section>
       )}
 
-      <section className="panel panel-muted mt-6 p-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+      <section className="jobs-filter-panel panel panel-muted mt-6 p-4 sm:p-5" aria-label="Refine job listings">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">Refine your search</h2>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+              Filters narrow visible listings. The target track changes assessment context, not which jobs appear.
+            </p>
+          </div>
+          {hasActiveFilters && (
+            <button type="button" className="secondary-button" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <label className="jobs-filter-field relative block min-w-0">
+            <span className="sr-only">Search job title or description</span>
+            <Search aria-hidden="true" className="jobs-filter-icon pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search title or description"
-              className="input-shell pl-11"
+              className="jobs-filter-control input-shell"
             />
           </label>
-          <label className="relative">
-            <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="jobs-filter-field relative block min-w-0">
+            <span className="sr-only">Filter by location</span>
+            <MapPin aria-hidden="true" className="jobs-filter-icon pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               value={locationTerm}
               onChange={(event) => setLocationTerm(event.target.value)}
               placeholder="Filter by location"
-              className="input-shell pl-11"
+              className="jobs-filter-control input-shell"
             />
           </label>
-          <label className="relative">
-            <Building2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="jobs-filter-field relative block min-w-0">
+            <span className="sr-only">Filter by company</span>
+            <Building2 aria-hidden="true" className="jobs-filter-icon pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <select
               value={companyFilter}
               onChange={(event) => setCompanyFilter(event.target.value)}
-              className="select-shell pl-11"
+              className="jobs-filter-control select-shell"
             >
               <option value="all">All companies</option>
               {companies.map((company) => (
@@ -190,13 +214,13 @@ export function Jobs() {
               ))}
             </select>
           </label>
-          <label className="relative">
-            <Target className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="jobs-filter-field relative block min-w-0">
+            <span className="sr-only">Assessment target track</span>
+            <Target aria-hidden="true" className="jobs-filter-icon pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <select
-              aria-label="Assessment target track"
               value={selectedTargetTrackId}
               onChange={(event) => setSelectedTargetTrackId(event.target.value)}
-              className="select-shell pl-11"
+              className="jobs-filter-control select-shell"
               disabled={targetTracksLoading || targetTracks.length === 0}
             >
               {targetTracksLoading && <option value="">Loading target tracks...</option>}
@@ -213,14 +237,39 @@ export function Jobs() {
         </div>
       </section>
 
-      <div className="mt-8 space-y-4">
-        {filteredJobs.length === 0 && (
-          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-            {loading
-              ? "Loading jobs..."
-              : "No jobs match the current filters. Try widening the search or run another company scan."}
-          </div>
-        )}
+      <section className="jobs-results mt-8" aria-label="Job search results">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold">Opportunity listings</h2>
+          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+            {loading ? "Loading jobs..." : `Showing ${filteredJobs.length} of ${jobs.length} locally collected ${jobs.length === 1 ? "job" : "jobs"}`}
+          </p>
+        </div>
+        <div className="space-y-4">
+          {filteredJobs.length === 0 && (
+            <div className="jobs-empty panel panel-strong px-5 py-9 text-center sm:px-6">
+              <Search className="mx-auto h-7 w-7 text-[var(--color-primary)]" aria-hidden="true" />
+              <h3 className="mt-3 text-lg font-semibold">
+                {loading ? "Loading jobs..." : jobs.length === 0 ? "No collected jobs yet." : "No jobs match these filters."}
+              </h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--color-text-secondary)]">
+                {loading
+                  ? "The local job list is being loaded."
+                  : jobs.length === 0
+                    ? "Add a careers-page source and run a collection before reviewing listings."
+                    : "Try widening your search terms, location, or company filter. Existing listings have not been removed."}
+              </p>
+              {!loading && jobs.length === 0 && (
+                <button type="button" className="primary-button mt-5" onClick={() => navigate("/companies")}>
+                  Add a job source <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </button>
+              )}
+              {!loading && jobs.length > 0 && hasActiveFilters && (
+                <button type="button" className="secondary-button mt-5" onClick={clearFilters}>
+                  Show all collected jobs
+                </button>
+              )}
+            </div>
+          )}
 
         {filteredJobs.map((job) => {
           const company = companies.find(
@@ -231,10 +280,11 @@ export function Jobs() {
           return (
             <article
               key={job.id}
-              className="panel panel-strong p-6 transition hover:-translate-y-0.5"
+              className="jobs-opportunity-card panel panel-strong p-5 sm:p-6"
+              data-source-completeness={job.sourceCompleteness}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     {selectedTargetTrack && (
                       <span className="soft-badge">
@@ -258,14 +308,16 @@ export function Jobs() {
                           : "Listing-only source"}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void getDesktopApi().openExternal(job.url)}
-                    className="surface-link-button mt-3 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
-                  >
-                    {job.title}
-                    <ExternalLink className="h-4 w-4" />
-                  </button>
+                  <h3 className="mt-3 text-xl font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => void getDesktopApi().openExternal(job.url)}
+                      className="jobs-opportunity-title surface-link-button inline-flex items-start gap-2 text-left text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
+                    >
+                      <span className="min-w-0">{job.title}</span>
+                      <ExternalLink aria-hidden="true" className="mt-1 h-4 w-4 shrink-0" />
+                    </button>
+                  </h3>
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)]">
                     <span className="inline-flex items-center gap-1.5">
                       <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
@@ -286,7 +338,7 @@ export function Jobs() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="jobs-opportunity-actions flex min-w-0 flex-wrap items-center gap-2">
                   {job.isNew && (
                     <button
                       type="button"
@@ -319,7 +371,7 @@ export function Jobs() {
                 />
               )}
 
-              <div className="border-divider mt-4 flex flex-wrap items-center gap-4 border-t pt-4 text-xs text-[var(--color-text-muted)]">
+              <div className="jobs-source-meta border-divider mt-4 flex flex-wrap items-center gap-4 border-t pt-4 text-xs text-[var(--color-text-muted)]">
                 <span>
                   First seen{" "}
                   {formatDistanceToNow(new Date(job.createdAt), {
@@ -347,7 +399,8 @@ export function Jobs() {
             </article>
           );
         })}
-      </div>
+        </div>
+      </section>
     </Layout>
   );
 }
