@@ -234,3 +234,23 @@ test('missing causal parent stays quarantined rather than inferred from timestam
   assert.equal(result.classified.at(-1).verdict, 'needs_parent_or_quarantine');
   assert.ok(!result.drafts.some(x => x.key === orphan.operation_id));
 });
+
+test('a late ID collision makes the earlier remote draft ineligible for automatic import', () => {
+  const canonical = Object.freeze({
+    evidenceId: golden.simulation.canonical_evidence_at_return.id,
+    evidenceRevision: golden.simulation.canonical_evidence_at_return.revision,
+    submittedApplications: 0,
+  });
+  const beforeCollision = replayIntoDraftLedger(golden.events.slice(0, 10), canonical);
+  assert.equal(beforeCollision.classified[4].verdict, 'import_draft');
+  assert.equal(beforeCollision.classified[9].verdict, 'duplicate_replay_noop');
+  const afterCollision = replayIntoDraftLedger(golden.events, canonical);
+  for (const index of [4, 9, 10]) {
+    assert.equal(afterCollision.classified[index].verdict, 'reject_operation_id_collision');
+  }
+  assert.ok(!afterCollision.drafts.some(x => x.key === 'op_beta_annotation_create'));
+  // This is whole-set reference reclassification only: the production
+  // persistent ledger must retroactively downgrade a previously imported
+  // remote draft when a conflicting same-ID submission arrives later.
+  assert.equal(canonical.submittedApplications, 0);
+});
