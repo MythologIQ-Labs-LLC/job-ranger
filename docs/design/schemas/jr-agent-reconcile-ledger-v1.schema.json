@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-reconcile-ledger-v1.schema.json",
+  "title": "Local jr-agent-reconcile-ledger v1 - G2 shape / G3 upgrade pending",
+  "description": "Closed structural schema for current G2 local ledger; MUST be persisted in trusted local storage, never in agent-writable Drive. G3 #289 needs additional durable conflict/tombstone state; this shape is NOT sufficient for acceptance of late ID collisions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "operations",
+    "batches"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-reconcile-ledger"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "operations": {
+      "type": "object",
+      "maxProperties": 1000000,
+      "patternProperties": {
+        "^op_[A-Za-z0-9_-]{4,125}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "content_sha256",
+            "outcome",
+            "batch_id",
+            "record_id",
+            "kind",
+            "previous_operation_id"
+          ],
+          "properties": {
+            "content_sha256": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "outcome": {
+              "enum": [
+                "imported_draft",
+                "staged_draft",
+                "staged_for_review",
+                "needs_rebase"
+              ]
+            },
+            "batch_id": {
+              "type": "string",
+              "minLength": 7,
+              "maxLength": 128,
+              "pattern": "^batch_[A-Za-z0-9_-]{2,121}$"
+            },
+            "record_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            "kind": {
+              "enum": [
+                "workspace_note_version",
+                "opportunity_annotation",
+                "material_draft_version",
+                "follow_up_plan",
+                "application_status_claim",
+                "evidence_change_proposal"
+              ]
+            },
+            "previous_operation_id": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 7,
+                  "maxLength": 128,
+                  "pattern": "^op_[A-Za-z0-9_-]{4,125}$"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "batches": {
+      "type": "object",
+      "maxProperties": 1000000,
+      "patternProperties": {
+        "^batch_[A-Za-z0-9_-]{2,121}$": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
