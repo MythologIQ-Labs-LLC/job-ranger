@@ -78,9 +78,11 @@ test("edits made while Save is pending remain unsaved and can be saved again", a
   await expect(page.getByRole("button", { name: "Save career profile" })).toBeEnabled();
   await expect(payBasis).toHaveValue(later);
   await expect(page.getByText("Saved on this device")).not.toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Changes made during saving are still here");
 
   await page.getByRole("button", { name: "Save career profile" }).click();
   await expect(page.getByText("Saved on this device")).toBeVisible();
+  await expect(page.getByRole("status")).toHaveCount(0);
   expect(await page.evaluate(() => window.electronAPI.career.getProfile()))
     .toMatchObject({ payBasis: later });
 });
