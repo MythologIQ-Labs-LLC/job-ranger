@@ -164,6 +164,14 @@ class Parser {
           if (!Object.prototype.hasOwnProperty.call(simple, e)) this.fail("invalid_json", "Invalid escape sequence.", path);
           out += simple[e];
         }
+      } else if (c >= 0xd800 && c <= 0xdbff) {
+        // Strings handed in directly (not decoded from UTF-8) can carry raw lone surrogates.
+        const low = this.text.charCodeAt(this.index + 1);
+        if (!(low >= 0xdc00 && low <= 0xdfff)) this.fail("invalid_string", "Lone high surrogate.", path);
+        out += this.text.slice(this.index, this.index + 2);
+        this.index += 2;
+      } else if (c >= 0xdc00 && c <= 0xdfff) {
+        this.fail("invalid_string", "Lone low surrogate.", path);
       } else {
         out += this.text[this.index];
         this.index += 1;
