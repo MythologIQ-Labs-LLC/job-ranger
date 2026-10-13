@@ -19,6 +19,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { focusMainContent, requestMainFocus } from "./mainFocus";
 
 type NavItem = { name: string; href: string; icon: LucideIcon };
 type NavGroup = { id: string; label: string; icon: LucideIcon; links: NavItem[] };
@@ -74,12 +75,12 @@ function SidebarNavLink({
   item: NavItem;
   active: boolean;
   nested?: boolean;
-  onNavigate: () => void;
+  onNavigate: (href: string) => void;
 }) {
   return (
     <Link
       to={item.href}
-      onClick={onNavigate}
+      onClick={() => onNavigate(item.href)}
       aria-current={active ? "page" : undefined}
       className={`sidebar-link group flex min-h-11 items-center rounded-xl py-2.5 text-sm
         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
@@ -123,7 +124,28 @@ export function Sidebar() {
     else if (activeBox.top < navBox.top) nav.scrollTop -= navBox.top - activeBox.top + 12;
   }, [location.pathname, openGroup, mobileOpen]);
 
-  const closeMobileMenu = () => setMobileOpen(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  // Escape closes the open mobile menu and returns focus to the button that opened it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
+  // Choosing a destination from the mobile menu hides that link, so hand focus to the
+  // destination page's main content instead of leaving it on a hidden element.
+  const closeMobileMenu = (href: string) => {
+    if (mobileOpen) {
+      if (href === location.pathname) focusMainContent();
+      else requestMainFocus();
+    }
+    setMobileOpen(false);
+  };
 
   return (
     <aside className="app-sidebar flex h-screen flex-col">
@@ -135,6 +157,7 @@ export function Sidebar() {
           <h1 className="text-xl font-bold !text-white">Job Ranger</h1>
           <button
             type="button"
+            ref={toggleRef}
             className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 text-white md:hidden"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
@@ -181,7 +204,10 @@ export function Sidebar() {
                   onClick={() => setOpenGroup(current => current === group.id ? null : group.id)}
                 >
                   <group.icon className="mr-3 h-5 w-5 shrink-0 !text-white/60 group-hover:!text-white" aria-hidden="true" />
-                  <span className="flex-1">{group.label}</span>
+                  <span className="flex-1">
+                    {group.label}
+                    {containsCurrentPage && !expanded && <span className="sr-only"> (contains current page)</span>}
+                  </span>
                   <ChevronRight
                     className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
                     aria-hidden="true"
