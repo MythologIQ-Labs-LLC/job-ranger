@@ -99,6 +99,15 @@ try {
   const refused = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture, "--auto-import", "application_status_claim"], { encoding: "utf8" });
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /invalid_policy/);
+  // Missing inputs and outputs aimed at the workspace fail cleanly, without stack traces.
+  const missing = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "no-such-receipts"), "--canonical", fixture], { encoding: "utf8" });
+  assert.equal(missing.status, 1);
+  assert.ok(!/\n\s+at /.test(missing.stderr), missing.stderr);
+  const intoWorkspace = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "reconcile", "--workspace", workspace, "--receipts", join(temp, "receipts"), "--canonical", fixture, "--ledger-out", join(workspace, "imports", "ledger.json")], { encoding: "utf8" });
+  assert.equal(intoWorkspace.status, 1);
+  assert.match(intoWorkspace.stderr, /outside the workspace/);
+  assert.equal(snapshotWorkspace(), before, "refused outputs never touch the workspace");
+
   console.log(`agent-workspace CLI tests passed${linked ? "" : " (link creation unavailable; containment path not exercised)"}`);
 } finally {
   rmSync(temp, { recursive: true, force: true });

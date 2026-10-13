@@ -5,6 +5,9 @@
 // never mutates canonical data; any later canonical change must go through existing
 // services and their approval boundaries. Times are display-only; ordering comes from
 // operation IDs, content hashes and declared causal predecessors.
+//
+// The ledger and receipts are local trust anchors. They must be stored with Job Ranger's
+// local data, never in a folder an agent can write to; both are validated before use.
 
 import { canonicalJsonBytes, sha256Hex } from "./canonical.ts";
 import {
@@ -67,6 +70,7 @@ export interface ReconcileInput {
 }
 
 const LOCATION = /^workspace\/agents\/([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\/batches\/(batch_[A-Za-z0-9_-]{2,121})\.json$/;
+const SHA256 = /^[a-f0-9]{64}$/;
 const AUTHORITATIVE = new Set(["user-confirmed", "user-authored"]);
 // The draft batch schema's claim vocabulary differs from ApplicationStatus (#286 ambiguity).
 const CLAIM_TO_CANONICAL: Record<string, string> = {
@@ -78,10 +82,54 @@ const CLAIM_TO_CANONICAL: Record<string, string> = {
   withdrawn: "withdrawn",
 };
 const REBASE_FLAGS = new Set(["stale_evidence", "unknown_or_unconfirmed_evidence", "stale_base_revision", "missing_base_revision"]);
+// Outcomes a ledger may record. "pending_predecessor" and "rejected" are never ledgered.
+const LEDGER_OUTCOMES = new Set<string>(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase"]);
+const ALL_KINDS = new Set<string>([...AGENT_OWNED_KINDS, ...CONSEQUENTIAL_KINDS]);
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
+const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
 
 function sortedObject<T>(entries: [string, T][]): Record<string, T> {
   return Object.fromEntries(entries.sort(([a], [b]) => byCodeUnit(a, b)));
+}
+
+function closedKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const actual = Object.keys(value);
+  return actual.length === keys.length && keys.every((k) => hasOwn(value, k));
+}
+
+/** The ledger is a local trust anchor; a malformed or forged one is refused, never repaired. */
+function validateLedger(value: unknown): ReconcileLedger {
+  const fail = (message: string): never => { throw new AgentWorkspaceError("invalid_ledger", message); };
+  if (!isRecord(value) || !closedKeys(value, ["format", "schema_version", "operations", "batches"])) fail("Ledger must be a closed jr-agent-reconcile-ledger object.");
+  const ledger = value as Record<string, unknown>;
+  if (ledger.format !== "jr-agent-reconcile-ledger" || ledger.schema_version !== 1) fail("Unsupported ledger format or version.");
+  if (!isRecord(ledger.operations) || !isRecord(ledger.batches)) fail("Ledger operations and batches must be objects.");
+  for (const [id, entry] of Object.entries(ledger.operations as Record<string, unknown>)) {
+    if (!/^op_[A-Za-z0-9_-]+$/.test(id) || !isRecord(entry) || !closedKeys(entry, ["content_sha256", "outcome", "batch_id", "record_id", "kind", "previous_operation_id"])) fail(`Ledger entry ${id.slice(0, 64)} is malformed.`);
+    const e = entry as Record<string, unknown>;
+    if (typeof e.content_sha256 !== "string" || !SHA256.test(e.content_sha256)) fail(`Ledger entry ${id} has an invalid content hash.`);
+    if (typeof e.outcome !== "string" || !LEDGER_OUTCOMES.has(e.outcome)) fail(`Ledger entry ${id} has an invalid outcome.`);
+    if (typeof e.kind !== "string" || !ALL_KINDS.has(e.kind)) fail(`Ledger entry ${id} has an invalid kind.`);
+    if (typeof e.batch_id !== "string" || typeof e.record_id !== "string") fail(`Ledger entry ${id} is missing identifiers.`);
+    if (e.previous_operation_id !== null && typeof e.previous_operation_id !== "string") fail(`Ledger entry ${id} has an invalid predecessor.`);
+  }
+  for (const [id, digest] of Object.entries(ledger.batches as Record<string, unknown>)) {
+    if (!/^batch_[A-Za-z0-9_-]+$/.test(id) || typeof digest !== "string" || !SHA256.test(digest)) fail(`Ledger batch ${id.slice(0, 64)} is malformed.`);
+  }
+  return value as ReconcileLedger;
+}
+
+function validateReceipt(value: unknown): ExportReceipt {
+  const fail = (message: string): never => { throw new AgentWorkspaceError("invalid_receipt", message); };
+  if (!isRecord(value)) fail("Receipt must be an object.");
+  const r = value as Record<string, unknown>;
+  if (r.format !== "jr-agent-export-receipt" || r.schema_version !== 1) fail("Unsupported receipt format or version.");
+  if (typeof r.export_id !== "string" || !/^ex_[A-Za-z0-9_-]{6,93}$/.test(r.export_id)) fail("Receipt export ID is invalid.");
+  if (typeof r.manifest_sha256 !== "string" || !SHA256.test(r.manifest_sha256)) fail(`Receipt ${String(r.export_id)} has an invalid manifest digest.`);
+  if (!Number.isInteger(r.manifest_bytes) || (r.manifest_bytes as number) < 1) fail("Receipt manifest size is invalid.");
+  if (!Array.isArray(r.files) || !isRecord(r.record_revisions)) fail("Receipt files and record revisions are required.");
+  return value as ExportReceipt;
 }
 
 interface Occurrence {
@@ -91,14 +139,55 @@ interface Occurrence {
   sha: string;
 }
 
+/** Minimal binary heap keyed by (authored_at, operation_id) for deterministic history order. */
+class OrderedQueue<T extends { authored_at: string; operation_id: string }> {
+  private items: T[] = [];
+  private less(a: T, b: T): boolean {
+    return byCodeUnit(a.authored_at, b.authored_at) < 0 || (a.authored_at === b.authored_at && byCodeUnit(a.operation_id, b.operation_id) < 0);
+  }
+  get size(): number { return this.items.length; }
+  push(item: T): void {
+    const items = this.items;
+    items.push(item);
+    for (let i = items.length - 1; i > 0;) {
+      const parent = (i - 1) >> 1;
+      if (!this.less(items[i], items[parent])) break;
+      [items[i], items[parent]] = [items[parent], items[i]];
+      i = parent;
+    }
+  }
+  pop(): T {
+    const items = this.items;
+    const top = items[0];
+    const last = items.pop() as T;
+    if (items.length) {
+      items[0] = last;
+      for (let i = 0; ;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < items.length && this.less(items[l], items[m])) m = l;
+        if (r < items.length && this.less(items[r], items[m])) m = r;
+        if (m === i) break;
+        [items[i], items[m]] = [items[m], items[i]];
+        i = m;
+      }
+    }
+    return top;
+  }
+}
+
 export async function reconcileWorkspace(input: ReconcileInput) {
-  const { receipts, canonical, policy, submissions } = input;
+  const { canonical, policy, submissions } = input;
   for (const kind of policy.autoImportKinds) {
     if (!(AGENT_OWNED_KINDS as readonly string[]).includes(kind)) {
       throw new AgentWorkspaceError("invalid_policy", `"${kind}" cannot be imported automatically; consequential kinds always need review.`);
     }
   }
-  const ledger: ReconcileLedger = input.ledger ?? { format: "jr-agent-reconcile-ledger", schema_version: 1, operations: {}, batches: {} };
+  const ledger: ReconcileLedger = input.ledger === null
+    ? { format: "jr-agent-reconcile-ledger", schema_version: 1, operations: {}, batches: {} }
+    : validateLedger(input.ledger);
+  const receipts = input.receipts.map(validateReceipt);
   const receiptById = new Map(receipts.map((r) => [r.export_id, r]));
   const evidence = new Map(canonical.evidence.map(({ evidence: e }) => [e.id, { revision: e.updatedAt, authoritative: AUTHORITATIVE.has(e.verificationState) }]));
   const applications = new Map(canonical.applications.map((a) => [a.id, a.status as string]));
@@ -146,7 +235,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
           else if (marker.value.batch_id !== batch.batch_id || marker.value.batch_sha256 !== sha || marker.value.batch_bytes !== s.batchBytes.length) fail("incomplete", "commit_marker_mismatch");
           else {
             for (const attachment of marker.value.attachments) {
-              const bytes = Object.prototype.hasOwnProperty.call(s.attachments, attachment.path) ? s.attachments[attachment.path] : undefined;
+              const bytes = hasOwn(s.attachments, attachment.path) ? s.attachments[attachment.path] : undefined;
               if (!bytes) fail("incomplete", "attachment_missing");
               else if (bytes.length !== attachment.bytes || (await sha256Hex(bytes)) !== attachment.sha256) fail("incomplete", "attachment_digest_mismatch");
             }
@@ -163,7 +252,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
   for (const c of candidates) byBatchId.set(c.batch.batch_id, [...(byBatchId.get(c.batch.batch_id) ?? []), c]);
   const accepted: typeof candidates = [];
   for (const [batchId, group] of byBatchId) {
-    const known = ledger.batches[batchId];
+    const known = hasOwn(ledger.batches, batchId) ? ledger.batches[batchId] : undefined;
     const hashes = new Set([...group.map((c) => c.entry.sha256), ...(known ? [known] : [])]);
     if (hashes.size > 1) {
       group.forEach((c) => { c.entry.status = "rejected"; c.entry.reasons.push("batch_id_conflict"); });
@@ -194,6 +283,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
   const results: Result[] = [];
   const duplicates: { operation_id: string; batch_id: string }[] = [];
   const live = new Map<string, Occurrence>();
+  const rejectedOccurrences: { o: Occurrence; flags: string[] }[] = [];
   const resultFor = (o: Occurrence, outcome: Outcome, flags: string[] = []): Result => ({
     operation_id: o.op.operation_id, record_id: o.op.record_id, kind: o.op.kind, batch_id: o.batch.batch_id,
     actor_claim: o.batch.actor_claim.actor_id, authored_at: o.op.authored_at, outcome, flags,
@@ -201,13 +291,13 @@ export async function reconcileWorkspace(input: ReconcileInput) {
   const byOpId = new Map<string, Occurrence[]>();
   for (const o of occurrences) byOpId.set(o.op.operation_id, [...(byOpId.get(o.op.operation_id) ?? []), o]);
   for (const [opId, group] of byOpId) {
-    const prior = ledger.operations[opId];
+    const prior = hasOwn(ledger.operations, opId) ? ledger.operations[opId] : undefined;
     const reference = prior?.content_sha256 ?? (new Set(group.map((o) => o.sha)).size === 1 ? group[0].sha : null);
     let kept = false;
     for (const o of group) {
       if (reference === null || o.sha !== reference) {
         results.push(resultFor(o, "rejected", ["operation_id_conflict"]));
-        quarantine.push({ kind: "operation", location: `workspace/agents/${o.batch.actor_claim.actor_id}/batches/${o.batch.batch_id}.json`, batch_id: o.batch.batch_id, operation_id: opId, sha256: o.sha, operation: o.op, reasons: ["operation_id_conflict"] });
+        rejectedOccurrences.push({ o, flags: ["operation_id_conflict"] });
       } else if (kept) {
         duplicates.push({ operation_id: opId, batch_id: o.batch.batch_id });
       } else {
@@ -218,46 +308,58 @@ export async function reconcileWorkspace(input: ReconcileInput) {
     }
   }
 
-  // 4. Causal evaluation. Known operations include earlier runs' ledger entries.
-  const known = new Map<string, { record_id: string; kind: OperationKind; previous_operation_id: string | null }>();
+  // 4. Causal evaluation, iterative (no recursion depth limit). Known operations include
+  // earlier runs' ledger entries; each operation has at most one predecessor.
+  type Node = { record_id: string; kind: OperationKind; previous_operation_id: string | null };
+  const known = new Map<string, Node>();
   for (const [id, e] of Object.entries(ledger.operations)) known.set(id, e);
   for (const [id, o] of live) known.set(id, { record_id: o.op.record_id, kind: o.op.kind, previous_operation_id: o.op.previous_operation_id });
   const recordKinds = new Map<string, Set<OperationKind>>();
-  for (const k of known.values()) recordKinds.set(k.record_id, new Set([...(recordKinds.get(k.record_id) ?? []), k.kind]));
   const siblings = new Map<string, number>();
-  for (const k of known.values()) {
+  const children = new Map<string, string[]>();
+  for (const [id, k] of known) {
+    recordKinds.set(k.record_id, new Set([...(recordKinds.get(k.record_id) ?? []), k.kind]));
     const key = `${k.record_id}\u0000${k.previous_operation_id ?? ""}`;
     siblings.set(key, (siblings.get(key) ?? 0) + 1);
+    if (k.previous_operation_id) children.set(k.previous_operation_id, [...(children.get(k.previous_operation_id) ?? []), id]);
+  }
+
+  // Cycle detection over predecessor pointers (a functional graph): colour each node once.
+  const cyclic = new Set<string>();
+  const colour = new Map<string, 1 | 2>();
+  for (const start of [...live.keys()].sort(byCodeUnit)) {
+    const path: string[] = [];
+    let current: string | null = start;
+    while (current && known.has(current) && !colour.has(current)) {
+      colour.set(current, 1);
+      path.push(current);
+      current = known.get(current)!.previous_operation_id;
+    }
+    if (current && colour.get(current) === 1) {
+      for (let i = path.indexOf(current); i >= 0 && i < path.length; i += 1) cyclic.add(path[i]);
+    }
+    for (const id of path) colour.set(id, 2);
   }
 
   const outcomes = new Map<string, Outcome>(Object.entries(ledger.operations).map(([id, e]) => [id, e.outcome]));
-  const evaluating = new Set<string>();
-  const evaluate = (opId: string): Outcome => {
-    const cached = outcomes.get(opId);
-    if (cached) return cached;
-    const o = live.get(opId);
-    if (!o) return "pending_predecessor";
-    if (evaluating.has(opId)) return "rejected";
-    evaluating.add(opId);
+  const flagsById = new Map<string, Set<string>>();
+  const decide = (opId: string, predecessorOutcome: Outcome | null): Outcome => {
+    const o = live.get(opId)!;
     const { op } = o;
     const flags = new Set<string>();
-    let outcome: Outcome | null = null;
+    flagsById.set(opId, flags);
     const consequential = (CONSEQUENTIAL_KINDS as readonly string[]).includes(op.kind);
+    let outcome: Outcome | null = null;
 
+    if (cyclic.has(opId)) { flags.add("predecessor_cycle"); outcome = "rejected"; }
     if (canonicalIds.has(op.record_id)) { flags.add("record_id_shadows_canonical"); outcome = "rejected"; }
     if ((recordKinds.get(op.record_id)?.size ?? 0) > 1) { flags.add("record_kind_conflict"); outcome = "rejected"; }
-    if (!consequential && op.base_revision !== null) { flags.add("base_revision_not_applicable"); outcome = "rejected"; }
-    if (op.kind === "application_status_claim" && op.base_revision !== null) { flags.add("base_revision_not_applicable"); outcome = "rejected"; }
-
-    let predecessorOutcome: Outcome | null = null;
+    if ((!consequential || op.kind === "application_status_claim") && op.base_revision !== null) { flags.add("base_revision_not_applicable"); outcome = "rejected"; }
     if (!outcome && op.previous_operation_id) {
       const prev = known.get(op.previous_operation_id);
       if (!prev) { flags.add("missing_predecessor"); outcome = "pending_predecessor"; }
       else if (prev.record_id !== op.record_id) { flags.add("predecessor_record_mismatch"); outcome = "rejected"; }
-      else {
-        predecessorOutcome = evaluate(op.previous_operation_id);
-        if (predecessorOutcome === "rejected" || predecessorOutcome === "pending_predecessor") { flags.add("predecessor_unavailable"); outcome = "pending_predecessor"; }
-      }
+      else if (predecessorOutcome === "rejected" || predecessorOutcome === "pending_predecessor" || predecessorOutcome === null) { flags.add("predecessor_unavailable"); outcome = "pending_predecessor"; }
     }
     if ((siblings.get(`${op.record_id}\u0000${op.previous_operation_id ?? ""}`) ?? 0) > 1) flags.add("fork");
 
@@ -289,27 +391,58 @@ export async function reconcileWorkspace(input: ReconcileInput) {
       else if (predecessorOutcome && predecessorOutcome !== "imported_draft") { flags.add("predecessor_not_imported"); outcome = "staged_draft"; }
       else outcome = policy.autoImportKinds.includes(op.kind) ? "imported_draft" : "staged_draft";
     }
-    evaluating.delete(opId);
-    outcomes.set(opId, outcome);
-    results.push(resultFor(o, outcome, [...flags].sort(byCodeUnit)));
     return outcome;
   };
-  for (const opId of [...live.keys()].sort(byCodeUnit)) evaluate(opId);
-  // Already-reconciled entries report the outcome recorded when they were first reconciled.
-  for (const r of results) if (r.outcome === "already_reconciled" && r.previous_outcome === undefined) r.previous_outcome = ledger.operations[r.operation_id]?.outcome;
+
+  // Process roots first, then children once their predecessor is decided.
+  const queue: string[] = [];
+  for (const id of [...live.keys()].sort(byCodeUnit)) {
+    const prev = live.get(id)!.op.previous_operation_id;
+    if (!prev || !live.has(prev) || cyclic.has(id)) queue.push(id);
+  }
+  const decided = new Set<string>();
+  for (let head = 0; head < queue.length; head += 1) {
+    const id = queue[head];
+    if (decided.has(id)) continue;
+    const prev = live.get(id)!.op.previous_operation_id;
+    const predecessorOutcome = prev ? (outcomes.get(prev) ?? null) : null;
+    const outcome = decide(id, predecessorOutcome);
+    outcomes.set(id, outcome);
+    decided.add(id);
+    for (const child of (children.get(id) ?? []).filter((c) => live.has(c) && !decided.has(c)).sort(byCodeUnit)) queue.push(child);
+  }
+  for (const id of [...live.keys()].sort(byCodeUnit)) {
+    // Anything unreached hangs off a cycle; it waits for a valid predecessor.
+    if (!decided.has(id)) { outcomes.set(id, decide(id, null)); decided.add(id); }
+    const o = live.get(id)!;
+    const flags = [...(flagsById.get(id) ?? [])].sort(byCodeUnit);
+    const outcome = outcomes.get(id)!;
+    results.push(resultFor(o, outcome, flags));
+    if (outcome === "rejected") rejectedOccurrences.push({ o, flags });
+  }
 
   results.sort((a, b) => byCodeUnit(a.operation_id, b.operation_id) || byCodeUnit(a.batch_id, b.batch_id));
   duplicates.sort((a, b) => byCodeUnit(a.operation_id, b.operation_id) || byCodeUnit(a.batch_id, b.batch_id));
 
+  // Every rejected operation is preserved with its content, and its batch says so.
+  const entryByBatch = new Map(accepted.map((c) => [c.batch.batch_id, c.entry]));
+  for (const { o, flags } of rejectedOccurrences.sort((a, b) => byCodeUnit(a.o.op.operation_id, b.o.op.operation_id) || byCodeUnit(a.o.batch.batch_id, b.o.batch.batch_id))) {
+    quarantine.push({ kind: "operation", location: `workspace/agents/${o.batch.actor_claim.actor_id}/batches/${o.batch.batch_id}.json`, batch_id: o.batch.batch_id, operation_id: o.op.operation_id, sha256: o.sha, operation: o.op, reasons: flags });
+    const entry = entryByBatch.get(o.batch.batch_id);
+    if (entry && !entry.warnings.includes("operations_rejected")) entry.warnings.push("operations_rejected");
+  }
+
   // 5. Per-record heads: alternatives are preserved, never resolved by time or listing order.
-  const activeOutcome = (id: string) => outcomes.get(id);
+  const active = (id: string) => {
+    const state = outcomes.get(id);
+    return state !== undefined && state !== "rejected" && state !== "pending_predecessor";
+  };
   const records = new Map<string, { kind: OperationKind; heads: string[]; fork: boolean }>();
   for (const [id, k] of known) {
-    const state = activeOutcome(id);
-    if (!state || state === "rejected" || state === "pending_predecessor") continue;
-    const hasChild = [...known].some(([childId, c]) => c.previous_operation_id === id && c.record_id === k.record_id && !["rejected", "pending_predecessor", undefined].includes(activeOutcome(childId)));
+    if (!active(id)) continue;
+    const hasActiveChild = (children.get(id) ?? []).some((c) => active(c) && known.get(c)?.record_id === k.record_id);
     const rec = records.get(k.record_id) ?? { kind: k.kind, heads: [], fork: false };
-    if (!hasChild) rec.heads.push(id);
+    if (!hasActiveChild) rec.heads.push(id);
     records.set(k.record_id, rec);
   }
   for (const rec of records.values()) {
@@ -333,29 +466,34 @@ export async function reconcileWorkspace(input: ReconcileInput) {
     if (r.outcome === "imported_draft") drafts.push(base);
     else if (r.outcome !== "rejected") staged.push({ ...base, outcome: r.outcome, flags: r.flags });
   }
-  const historyPool = results.filter((r) => r.outcome !== "rejected");
-  const placed = new Set<string>();
+  // Kahn's algorithm over predecessor edges; ties ordered by (authored_at, operation_id).
+  const pool = results.filter((r) => r.outcome !== "rejected");
+  const inPool = new Set(pool.map((r) => r.operation_id));
+  const byId = new Map(pool.map((r) => [r.operation_id, r]));
+  const ready = new OrderedQueue<Result>();
+  for (const r of pool) {
+    const prev = known.get(r.operation_id)?.previous_operation_id;
+    if (!prev || !inPool.has(prev)) ready.push(r);
+  }
   const history: Result[] = [];
-  const remaining = [...historyPool].sort((a, b) => byCodeUnit(a.authored_at, b.authored_at) || byCodeUnit(a.operation_id, b.operation_id));
-  while (remaining.length) {
-    const next = remaining.findIndex((r) => {
-      const prev = known.get(r.operation_id)?.previous_operation_id;
-      return !prev || placed.has(prev) || !remaining.some((x) => x.operation_id === prev);
-    });
-    const [item] = remaining.splice(next === -1 ? 0 : next, 1);
+  const placed = new Set<string>();
+  while (ready.size) {
+    const item = ready.pop();
+    if (placed.has(item.operation_id)) continue;
     placed.add(item.operation_id);
     history.push(item);
+    for (const child of children.get(item.operation_id) ?? []) if (byId.has(child) && !placed.has(child)) ready.push(byId.get(child)!);
   }
 
   // 7. Ledger: final outcomes only (pending work is retried, rejections are not recorded).
   const newOps: [string, LedgerEntry][] = Object.entries(ledger.operations);
   for (const r of results) {
     const o = live.get(r.operation_id);
-    if (!o || o.batch.batch_id !== r.batch_id || r.outcome === "pending_predecessor" || r.outcome === "rejected") continue;
+    if (!o || o.batch.batch_id !== r.batch_id || !LEDGER_OUTCOMES.has(r.outcome)) continue;
     newOps.push([r.operation_id, { content_sha256: o.sha, outcome: r.outcome, batch_id: r.batch_id, record_id: r.record_id, kind: r.kind, previous_operation_id: o.op.previous_operation_id }]);
   }
   const newBatches: [string, string][] = Object.entries(ledger.batches);
-  for (const c of accepted) if (!ledger.batches[c.batch.batch_id]) newBatches.push([c.batch.batch_id, c.entry.sha256]);
+  for (const c of accepted) if (!hasOwn(ledger.batches, c.batch.batch_id)) newBatches.push([c.batch.batch_id, c.entry.sha256]);
   const nextLedger: ReconcileLedger = { format: "jr-agent-reconcile-ledger", schema_version: 1, operations: sortedObject(newOps), batches: sortedObject(newBatches) };
 
   const counts: Record<string, number> = { imported_draft: 0, staged_draft: 0, staged_for_review: 0, needs_rebase: 0, pending_predecessor: 0, already_reconciled: 0, rejected: 0, duplicates: duplicates.length };

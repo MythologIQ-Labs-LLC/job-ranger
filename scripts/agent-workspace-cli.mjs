@@ -159,6 +159,13 @@ function loadReceipts(path) {
 
 async function reconcileCommand({ options }) {
   for (const key of ["workspace", "receipts", "canonical"]) if (!options[key]) fail(`reconcile requires --${key}`);
+  // Outputs are local records; they must never be written where agents can edit them.
+  const workspaceRoot = realpathSync(options.workspace);
+  for (const key of ["report-out", "ledger-out"]) {
+    if (!options[key]) continue;
+    const rel = relative(workspaceRoot, resolve(options[key]));
+    if (!rel.startsWith("..") && !isAbsolute(rel)) fail(`--${key} must be outside the workspace folder`, 1);
+  }
   const { submissions, skipped } = discover(options.workspace);
   const result = await reconcileWorkspace({
     receipts: loadReceipts(options.receipts),
@@ -187,6 +194,7 @@ try {
   else if (args.command === "reconcile") await reconcileCommand(args);
   else fail("usage: agent-workspace-cli.mjs <export|validate-batch|reconcile> [options]");
 } catch (error) {
+  // Report every failure as a short message; never print a raw stack trace or partial output.
   if (error instanceof AgentWorkspaceError) fail(`${error.code}: ${error.message}`, 1);
-  throw error;
+  fail(`${error?.code ?? "error"}: ${error?.message ?? String(error)}`, 1);
 }

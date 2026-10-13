@@ -39,7 +39,7 @@ export async function gatherCanonicalSnapshot(api: SnapshotReader): Promise<Cano
   ]);
   const resumes = await Promise.all(resumeList.map(async (summary) => {
     const detail = await api.resume.get(summary.id);
-    const newestFirst = [...detail.artifacts].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const newestFirst = [...detail.artifacts].sort((a, b) => (a.createdAt === b.createdAt ? (a.id < b.id ? 1 : -1) : a.createdAt < b.createdAt ? 1 : -1));
     return {
       projection: detail.projection,
       statements: detail.statements,
