@@ -175,6 +175,27 @@ await scenario("pending claim", async ({ store, status, submit, sync, items }) =
   await assert.rejects(store.decide({ operationId: item.operationId, contentSha256: item.contentSha256, action: "record_status_applied", applicationId: app.id, appliedStatus: "applied" }), /not_allowed/);
 });
 
+// Re-review N2: work still waiting for its predecessor can never be kept, even once contested.
+await scenario("pending contested keep", async ({ store, note, submit, sync, items }) => {
+  // The waiting version becomes contested when another version of its ID arrives.
+  await sync([submit("batch_rv_orphan", [note("op_rv_orphan", "Waits for a parent.", "op_rv_never")])]);
+  await sync([submit("batch_rv_orphan_b", [note("op_rv_orphan", "Another version, no parent.")], "agent_review_beta")]);
+  const item = (await items()).find((i) => i.operationId === "op_rv_orphan" && i.outcome === "pending_predecessor");
+  assert.ok(item && item.state === "contested" && !item.eligible, JSON.stringify(item));
+  await assert.rejects(store.decide({ operationId: item.operationId, contentSha256: item.contentSha256, action: "keep_draft", acknowledgeContest: true }), /not_allowed/);
+});
+
+// Re-review N4: a database from an earlier preview build gains the acknowledgement column.
+await scenario("acknowledgement column migration", async ({ status, dir, note, submit, sync }) => {
+  await sync([submit("batch_rv_mig", [note("op_rv_mig", "Before upgrade.")])]);
+  await new sqliteModule.SqliteClient(status.databasePath, status.sqliteBinaryPath).transaction(["ALTER TABLE agent_workspace_items DROP COLUMN acknowledged_json;"]);
+  const reopened = await open(dir);
+  const [row] = (await reopened.store.listItems({ limit: 10 })).rows;
+  assert.equal(row.eligible, true);
+  const kept = await reopened.store.decide({ operationId: row.operationId, contentSha256: row.contentSha256, action: "keep_draft" });
+  assert.equal(kept.state, "kept");
+});
+
 void bytesOf;
 assert.deepEqual(failures, [], `failed: ${failures.join(", ")}`);
 console.log(`agent-workspace review regressions passed on ${engineName}`);

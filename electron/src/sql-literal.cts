@@ -1,26 +1,18 @@
 // Runtime-neutral SQL literal encoding shared by every SQLite engine adapter
 // (sqlite3 CLI in Electron, SQLite WASM in the browser runtime).
 
-// Control characters never appear raw in SQL text: the Windows sqlite3 CLI reads scripts in
-// text mode (CR is dropped, Ctrl-Z ends input) and NUL cannot cross a process boundary. They
-// are spliced in with char(), which yields the identical string on every engine.
-const CONTROL = /[\u0000-\u001f\u007f]/;
+// Control characters other than tab and newline never appear raw in SQL text: the Windows
+// sqlite3 CLI reads scripts in text mode (CR is dropped, Ctrl-Z ends input) and NUL cannot
+// cross a process boundary. Such values are written as one UTF-8 blob cast to text, which
+// stores the identical string on every engine at constant expression depth.
+const UNSAFE_CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/;
+const utf8 = new TextEncoder();
 
 function escapeSqlString(value: string): string {
-  if (!CONTROL.test(value)) return `'${value.replace(/'/g, "''")}'`;
-  const parts: string[] = [];
-  let run = "";
-  for (const ch of value) {
-    if (CONTROL.test(ch)) {
-      if (run) parts.push(`'${run.replace(/'/g, "''")}'`);
-      run = "";
-      parts.push(`char(${ch.charCodeAt(0)})`);
-    } else {
-      run += ch;
-    }
-  }
-  if (run) parts.push(`'${run.replace(/'/g, "''")}'`);
-  return `(${parts.join(" || ")})`;
+  if (!UNSAFE_CONTROL.test(value)) return `'${value.replace(/'/g, "''")}'`;
+  let hex = "";
+  for (const byte of utf8.encode(value)) hex += byte.toString(16).padStart(2, "0");
+  return `CAST(X'${hex}' AS TEXT)`;
 }
 
 export function toSqlLiteral(value: unknown): string {

@@ -224,7 +224,7 @@ export function AgentItemReview({
 
           {!decided && (
             <section aria-label="Actions" className="flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] pt-4">
-              {agentOwned && detail.state !== "pending" && (
+              {agentOwned && detail.state !== "pending" && detail.outcome !== "pending_predecessor" && (
                 <>
                   {contested && (
                     <label className="flex w-full items-center gap-3 text-sm">

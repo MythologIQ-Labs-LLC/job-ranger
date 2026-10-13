@@ -264,6 +264,11 @@ export class AgentWorkspaceBackend {
             VALUES (1, ${`ws_${randomUUID().replace(/-/g, "")}`}, ${JSON.stringify({ autoImportKinds: [] })}, 0, ${now}, ${now});`,
       ]);
     }
+    // Databases created by an early G3 preview build lack the acknowledgement column.
+    const columns = await this.sqlite.queryAll<{ name: string }>("PRAGMA table_info(agent_workspace_items);");
+    if (!columns.some((c) => c.name === "acknowledged_json")) {
+      await this.sqlite.transaction(["ALTER TABLE agent_workspace_items ADD COLUMN acknowledged_json TEXT NOT NULL DEFAULT '[]';"]);
+    }
   }
 
   private async stateRow(): Promise<{ workspace_id: string; policy_json: string; ledger_revision: number; updated_at: string }> {
@@ -624,7 +629,7 @@ export class AgentWorkspaceBackend {
     switch (decision.action) {
       case "keep_draft":
         if (!agentOwned) throw new AgentWorkspaceError("not_allowed", "Claims and proposals cannot be kept as drafts; review them instead.");
-        if (item.state === "pending") throw new AgentWorkspaceError("not_allowed", "This draft is waiting for an earlier version that has not arrived intact.");
+        if (item.state === "pending" || item.outcome === "pending_predecessor") throw new AgentWorkspaceError("not_allowed", "This draft is waiting for an earlier version that has not arrived intact.");
         if ((item.state === "contested" || item.contest.length) && decision.acknowledgeContest !== true) {
           throw new AgentWorkspaceError("contest_not_acknowledged", "Review every competing version before keeping one.");
         }
