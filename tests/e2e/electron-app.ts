@@ -86,6 +86,11 @@ export async function closeElectronApp(fixture: ElectronAppFixture): Promise<voi
 export async function navigateTo(page: Page, route: string): Promise<void> {
   const sidebar = page.locator("nav");
   const link = sidebar.locator(`a[href="#${route}"]`);
+  // Grouped navigation (#271): open the collapsed group that contains the link, as a person would.
+  if (!(await link.isVisible())) {
+    const panelId = await link.evaluate((element) => element.closest("[id^='job-ranger-nav-group-']")?.id ?? null);
+    if (panelId) await sidebar.locator(`button[aria-controls="${panelId}"]`).click();
+  }
   await link.click();
   await page.waitForTimeout(300);
 }

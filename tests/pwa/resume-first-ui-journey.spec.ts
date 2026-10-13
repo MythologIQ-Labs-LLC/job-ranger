@@ -12,6 +12,18 @@ test.afterAll(async () => {
   await server.close();
 });
 
+/** Open supporting destinations without assuming that every link is always expanded. */
+async function navigateSidebar(page: import("@playwright/test").Page, destination: string) {
+  const group = ["Resume", "Career Profile", "Target Tracks", "Career Evidence", "Career Stories"].includes(destination)
+    ? "My Career"
+    : ["Companies", "Filters", "Search Insights"].includes(destination) ? "Search Tools" : null;
+  if (group) {
+    const toggle = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: group });
+    if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  }
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: destination, exact: true }).click();
+}
+
 /**
  * B1/B4: a genuine user-driven resume-first journey.
  *
@@ -77,11 +89,11 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
     item.evidence.verificationState === "user-authored",
   )).toBe(false);
 
-  await page.getByRole("link", { name: "Resume", exact: true }).click();
+  await navigateSidebar(page, "Resume");
   await expect(page.getByText("Confirm Career Evidence in Career Profile before creating a resume.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create truthful draft" })).toBeDisabled();
 
-  await page.getByRole("link", { name: "Career Profile" }).click();
+  await navigateSidebar(page, "Career Profile");
   await expect(page.getByRole("button", { name: "Confirm", exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "Confirm", exact: true }).first().click();
   await expect.poll(async () => {
@@ -110,7 +122,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
   await expect(page.getByText("Saved on this device")).toBeVisible();
 
   // US-4/5: explicit search direction. Nothing is inferred from a job title.
-  await page.getByRole("link", { name: "Target Tracks" }).click();
+  await navigateSidebar(page, "Target Tracks");
   await expect(page.getByRole("heading", { name: "Keep different career directions separate." })).toBeVisible();
   await page.getByRole("textbox", { name: "Track name" }).fill("Healthcare operations");
   await page.getByRole("textbox", { name: "Roles in this track" })
@@ -121,7 +133,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
   // US-13: a source becomes monitored only through an explicit user action.
   // PWA fixture route simulates the public Greenhouse read, never a real
   // employer account or externally submitted job application.
-  await page.getByRole("link", { name: "Companies" }).click();
+  await navigateSidebar(page, "Companies");
   await page.getByRole("button", { name: "Add a source manually" }).click();
   const sourceDialog = page.getByRole("dialog", { name: "Add job source" });
   await sourceDialog.getByRole("textbox", { name: "Name" }).fill("Harbor Health");
@@ -138,7 +150,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
   await expect(sourceRow).toContainText(/success/i, { timeout: 30_000 });
   await expect(sourceRow.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
 
-  await page.getByRole("link", { name: "Find Jobs" }).click();
+  await navigateSidebar(page, "Find Jobs");
   const job = page.locator("article").filter({ has: page.getByRole("button", {
     name: "Medical Office Coordinator", exact: true,
   }) });
@@ -164,7 +176,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
 
   // US-19/22: prepare the resume from the real job's assessment, so both
   // the known job and the tracked application are linked to the export.
-  await page.getByRole("link", { name: "Find Jobs" }).click();
+  await navigateSidebar(page, "Find Jobs");
   const jobAgain = page.locator("article").filter({ has: page.getByRole("button", {
     name: "Medical Office Coordinator", exact: true,
   }) });
