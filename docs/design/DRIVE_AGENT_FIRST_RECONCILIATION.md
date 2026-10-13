@@ -13,6 +13,8 @@
 
 **Sufficient agent utility requires editable agent-owned structured workspace data, not only one-off suggested paragraphs.** Drive is a durable *workspace* for agent-created content; it is **not** an untrusted database engine that may write Job Ranger's canonical SQLite/OPFS directly.
 
+**Cooperative agent skills packet (draft):** [`examples/JOB_RANGER_AGENT_GUIDE.template.md`](./examples/JOB_RANGER_AGENT_GUIDE.template.md) describes how a separately authorized agent should read selected exports, keep append-only versioned drafts, publish complete JSON batches, cite evidence revisions, distinguish `not_checked` from PASS, and prepare a safe long-gap handoff. This is **untrusted reference documentation**, not an instruction that can override another agent's higher-priority rules or a grant of Drive access. It has not been published to an actual Google folder or validated against a production agent connector.
+
 ## Authority classes and default standing capability matrix
 
 | Operation class | Agent may perform while Job Ranger closed | On reopening Job Ranger | Why |
