@@ -333,6 +333,156 @@
         }
       ],
       "reason": "Valid observation must not update canonical application lifecycle automatically."
+    },
+    {
+      "id": "safe-attachment-reference",
+      "layer": "semantic",
+      "expect_structure": "accept",
+      "expect_reconcile": "quarantine-until-verified-bytes",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "application/pdf",
+              "bytes": 800,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/operations/1/payload/attachment_sha256",
+          "value": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "reason": "Schema permits a declared PDF, but no actual bytes means remote upload is not verified."
+    },
+    {
+      "id": "unsafe-attachment-traversal",
+      "layer": "schema",
+      "expect_structure": "reject",
+      "expect_reconcile": "reject",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/../secrets.json",
+              "media_type": "application/pdf",
+              "bytes": 800,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      ],
+      "reason": "Refuse dot segments and traversal independent of filesystem."
+    },
+    {
+      "id": "attachment-bad-mime",
+      "layer": "schema",
+      "expect_structure": "reject",
+      "expect_reconcile": "reject",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "text/html",
+              "bytes": 800,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      ],
+      "reason": "No arbitrary executable or HTML attachment types."
+    },
+    {
+      "id": "attachment-zero-length",
+      "layer": "schema",
+      "expect_structure": "reject",
+      "expect_reconcile": "reject",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "application/pdf",
+              "bytes": 0,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      ],
+      "reason": "Empty or missing document cannot silently count as a valid artifact."
+    },
+    {
+      "id": "attachment-missing-digest",
+      "layer": "schema",
+      "expect_structure": "reject",
+      "expect_reconcile": "reject",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "application/pdf",
+              "bytes": 800
+            }
+          ]
+        }
+      ],
+      "reason": "Attachment declaration requires content digest."
+    },
+    {
+      "id": "orphan-material-attachment",
+      "layer": "semantic",
+      "expect_structure": "accept",
+      "expect_reconcile": "quarantine-unreferenced-byte-digest",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/operations/1/payload/attachment_sha256",
+          "value": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "reason": "Valid-looking material digest with no matching complete batch attachment cannot be imported."
+    },
+    {
+      "id": "attachment-name-conflict",
+      "layer": "semantic",
+      "expect_structure": "accept",
+      "expect_reconcile": "reject-duplicate-file-path",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/attachments",
+          "value": [
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "application/pdf",
+              "bytes": 800,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "path": "attachments/document/cover-letter.pdf",
+              "media_type": "application/pdf",
+              "bytes": 800,
+              "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            }
+          ]
+        }
+      ],
+      "reason": "Multiple claimed payloads at the same path require unique content-addressed identity."
     }
   ],
   "scenarios": [
@@ -395,6 +545,15 @@
       ],
       "expected": "trusted-receipt-bootstrap-needed",
       "reason": "A remote hash does not authenticate authoritative local identity."
+    },
+    {
+      "id": "drive-file-conversion",
+      "steps": [
+        "agent uploads application/json batch but Drive converts it to a native Google Doc",
+        "Job Ranger downloads provider metadata"
+      ],
+      "expected": "reject-mime-conversion",
+      "reason": "Native Google Doc is not exact JSON bytes."
     }
   ]
 }
