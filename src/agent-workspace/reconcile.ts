@@ -515,3 +515,9 @@ export async function reconcileWorkspace(input: ReconcileInput) {
     ledger: nextLedger,
   };
 }
+
+/** Whether a ledgered operation is an eligible imported draft (no durable contest). */
+export function operationEligibility(ledger: ReconcileLedger, operationId: string): { eligible: boolean; contest: string[] } {
+  const entry = hasOwn(ledger.operations, operationId) ? ledger.operations[operationId] : undefined;
+  return { eligible: entry?.outcome === "imported_draft", contest: [] };
+}
