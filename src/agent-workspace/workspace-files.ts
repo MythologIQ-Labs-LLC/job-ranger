@@ -45,8 +45,8 @@ export function scanWorkspaceFiles(files: WorkspaceFile[]): WorkspaceScan {
     if (!BATCH.test(path) || path.endsWith(".commit.json")) continue;
     const batchBytes = byPath.get(path)!;
     if (batchBytes.length > LIMITS.maxBatchBytes) {
-      // Still reported: the reconciler rejects it as too large and keeps its digest.
-      submissions.push({ location: path, batchBytes: batchBytes.subarray(0, LIMITS.maxBatchBytes + 1), commitBytes: null, attachments: {} });
+      // Still reported: the reconciler rejects it as too large and records its full digest.
+      submissions.push({ location: path, batchBytes, commitBytes: null, attachments: {} });
       continue;
     }
     const commitPath = path.replace(/\.json$/, ".commit.json");

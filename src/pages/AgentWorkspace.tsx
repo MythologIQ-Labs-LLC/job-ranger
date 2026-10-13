@@ -77,7 +77,10 @@ export function AgentWorkspace() {
     const states = VIEWS.find((v) => v.id === view)!.states;
     return ws.items.filter((i) => states.includes(i.state));
   }, [ws.items, view]);
-  const counts = useMemo(() => Object.fromEntries(VIEWS.map((v) => [v.id, v.id === "problems" ? ws.quarantine.filter((q) => q.status === "open").length : ws.items.filter((i) => v.states.includes(i.state)).length])), [ws.items, ws.quarantine]);
+  // Counts come from the store, not from the (possibly truncated) loaded list.
+  const counts = useMemo(() => Object.fromEntries(VIEWS.map((v) => [v.id, v.id === "problems"
+    ? ws.state?.openQuarantine ?? 0
+    : v.states.reduce((n, s) => n + (ws.state?.itemCounts[s] ?? 0), 0)])), [ws.state]);
 
   const onFolder = async (files: FileList | null) => {
     if (!files || !files.length) return;
@@ -136,9 +139,9 @@ export function AgentWorkspace() {
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             Choose the shared workspace folder. Only <code>workspace/agents</code> and <code>workspace/attachments</code> are read, and nothing is written back to it.
           </p>
-          <input ref={folderInput} id="agent-folder" type="file" multiple className="sr-only" {...{ webkitdirectory: "", directory: "" }}
+          <input ref={folderInput} id="agent-folder" type="file" multiple className="sr-only" tabIndex={-1} {...{ webkitdirectory: "", directory: "" }}
             onChange={(e) => void onFolder(e.target.files)} disabled={syncing} data-testid="agent-folder-input" />
-          <label htmlFor="agent-folder" className={`primary-button mt-4 cursor-pointer ${syncing ? "opacity-60" : ""}`} tabIndex={0}
+          <label htmlFor="agent-folder" className={`primary-button mt-4 cursor-pointer ${syncing ? "opacity-60" : ""}`} tabIndex={0} role="button" aria-disabled={syncing}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); folderInput.current?.click(); } }}>
             {syncing ? "Syncing…" : "Choose folder and sync"}
           </label>
@@ -235,7 +238,7 @@ export function AgentWorkspace() {
               ))}
             </ul>
           )
-        ) : visible.length === 0 ? (
+        ) : visible.length === 0 && counts[view] === 0 ? (
           <p className="support-note mt-4 px-5 py-4 text-sm">{view === "review" ? "Nothing is waiting for review." : view === "drafts" ? "No agent drafts yet. Sync a workspace folder to see their work." : "No decisions yet."}</p>
         ) : (
           <ul className="mt-4 space-y-3" data-testid="agent-items">

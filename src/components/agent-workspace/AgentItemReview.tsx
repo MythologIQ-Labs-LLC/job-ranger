@@ -63,6 +63,8 @@ export function AgentItemReview({
 
   useEffect(() => {
     let cancelled = false;
+    // Acknowledging one version's conflict never carries over to another version.
+    setAcknowledged(false);
     if (!selected) { setDetail(null); return; }
     setError(null);
     void (async () => {
@@ -236,7 +238,7 @@ export function AgentItemReview({
                   </button>
                 </>
               )}
-              {claim?.canApply && !contested && (
+              {claim?.canApply && !contested && detail.state === "proposal" && (
                 <button type="button" className="primary-button" disabled={pending} onClick={() => setConfirmStatus(true)}>
                   Change status to {STATUS_LABELS[claim.mappedStatus!]}…
                 </button>

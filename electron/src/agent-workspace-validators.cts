@@ -19,14 +19,14 @@ export const AGENT_OWNED_KINDS = ["workspace_note_version", "opportunity_annotat
 export const CONSEQUENTIAL_KINDS = ["application_status_claim", "evidence_change_proposal"] as const;
 const ALL_KINDS = new Set<string>([...AGENT_OWNED_KINDS, ...CONSEQUENTIAL_KINDS]);
 const ITEM_OUTCOMES = new Set(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase", "pending_predecessor", "contested"]);
-const LEDGER_OUTCOMES = new Set(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase", "contested"]);
+const LEDGER_OUTCOMES = new Set(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase", "contested", "pending_predecessor", "rejected"]);
 const CONTEST = new Set(["ancestor_contested", "fork", "operation_id_conflict", "record_kind_conflict"]);
 const STATES = new Set<AgentItemState>(["draft", "staged", "proposal", "needs_rebase", "pending", "contested", "kept", "dismissed", "rejected_by_user", "applied"]);
 const ACTIONS = new Set<AgentDecisionAction>(["keep_draft", "dismiss", "reject_proposal", "record_status_applied"]);
 const SCOPES = new Set(["tracks", "career_direction", "confirmed_evidence", "selected_opportunities", "selected_applications", "resume_templates", "selected_resumes", "selected_cover_letters"]);
 const APPLICATION_STATUSES = new Set(["interested", "applied", "interview", "offer", "rejected", "withdrawn"]);
 const OP_ID = /^op_[A-Za-z0-9_-]{4,125}$/;
-const BATCH_ID = /^batch_[A-Za-z0-9_-]{2,121}$/;
+const BATCH_ID = /^batch_[A-Za-z0-9_-]{1,122}$/;
 const RECORD_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const ACTOR_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$/;
 const EXPORT_ID = /^ex_[A-Za-z0-9_-]{6,93}$/;
@@ -36,7 +36,7 @@ const LOCATION = /^workspace\/[A-Za-z0-9._/:-]{1,400}$/;
 const FLAG = /^[a-z][a-z0-9_]{1,63}$/;
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 const MAX_OPERATION_JSON = 400_000;
-const MAX_ITEMS = 20_000;
+const MAX_ITEMS = 200_000;
 
 function fail(message: string): never {
   throw new Error(message);

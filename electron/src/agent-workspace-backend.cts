@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS agent_workspace_items (
   previous_state TEXT,
   flags_json TEXT NOT NULL,
   contest_json TEXT NOT NULL,
+  -- Contest reasons the user saw and accepted when keeping this version.
+  acknowledged_json TEXT NOT NULL DEFAULT '[]',
   title TEXT NOT NULL,
   operation_json TEXT NOT NULL,
   first_seen_run INTEGER NOT NULL,
@@ -141,7 +143,7 @@ CREATE TABLE IF NOT EXISTS agent_workspace_decisions (
 );
 `;
 
-const DECISION_STATES = new Set<AgentItemState>(["kept", "dismissed", "rejected_by_user", "applied"]);
+const FINAL_STATES = new Set<AgentItemState>(["dismissed", "rejected_by_user", "applied"]);
 const OUTCOME_STATE: Record<string, AgentItemState> = {
   imported_draft: "draft",
   staged_draft: "staged",
@@ -167,6 +169,7 @@ type ItemRow = {
   previous_state: AgentItemState | null;
   flags_json: string;
   contest_json: string;
+  acknowledged_json: string;
   title: string;
   operation_json?: string;
   first_seen_run: number;
@@ -216,6 +219,21 @@ function titleOf(item: AgentItemInput): string {
   const candidate = payload.title ?? payload.label ?? payload.change_reason ?? payload.reported_context ?? item.recordId;
   const text = typeof candidate === "string" ? candidate : item.recordId;
   return text.replace(/\s+/g, " ").trim().slice(0, 160) || item.recordId;
+}
+
+/**
+ * The state a stored version takes after a sync. Final decisions stand; a kept version whose
+ * conflicts grow beyond what the user acknowledged goes back to review; any contest makes a
+ * version unusable until the user decides. Nothing here can make a version eligible.
+ */
+function nextItemState(prior: ItemRow | undefined, outcomeState: AgentItemState, contest: string[]): AgentItemState {
+  if (prior && FINAL_STATES.has(prior.state)) return prior.state;
+  if (prior && prior.state === "kept") {
+    const acknowledged = parseJson<string[]>(prior.acknowledged_json, "acknowledged contest");
+    return contest.every((c) => acknowledged.includes(c)) ? "kept" : "contested";
+  }
+  if (contest.length || prior?.state === "contested") return "contested";
+  return outcomeState;
 }
 
 function quarantineKey(entry: AgentQuarantineInput): string {
@@ -343,7 +361,7 @@ export class AgentWorkspaceBackend {
       const chunk = operationIds.slice(i, i + 200);
       const list = chunk.map((id) => sql`${id}`).join(", ");
       const rows = await this.sqlite.queryAll<ItemRow>(`
-        SELECT operation_id, content_sha256, state, previous_state, contest_json, first_seen_run
+        SELECT operation_id, content_sha256, state, previous_state, contest_json, acknowledged_json, first_seen_run
         FROM agent_workspace_items WHERE operation_id IN (${list});
       `);
       for (const row of rows) byOperation.set(row.operation_id, [...(byOperation.get(row.operation_id) ?? []), row]);
@@ -368,8 +386,23 @@ export class AgentWorkspaceBackend {
       sql`INSERT INTO agent_workspace_guard (stale) SELECT 1 WHERE (SELECT ledger_revision FROM agent_workspace_state WHERE id = 1) <> ${commit.expectedRevision};`,
       sql`UPDATE agent_workspace_state SET ledger_revision = ${runId}, updated_at = ${now} WHERE id = 1;`,
     ];
+    // Contest reasons and recorded variants never shrink, whatever a plan says.
+    const storedEntries = new Map<string, Record<string, unknown>>();
+    const ledgerIds = commit.ledgerOperations.map((o) => o.operationId);
+    for (let i = 0; i < ledgerIds.length; i += 200) {
+      const list = ledgerIds.slice(i, i + 200).map((id) => sql`${id}`).join(", ");
+      const rows = await this.sqlite.queryAll<{ operation_id: string; entry_json: string }>(`SELECT operation_id, entry_json FROM agent_workspace_ledger_operations WHERE operation_id IN (${list});`);
+      rows.forEach((r) => storedEntries.set(r.operation_id, parseJson(r.entry_json, `ledger entry ${r.operation_id}`)));
+    }
     for (const op of commit.ledgerOperations) {
-      statements.push(sql`INSERT INTO agent_workspace_ledger_operations (operation_id, entry_json) VALUES (${op.operationId}, ${JSON.stringify(op.entry)})
+      const stored = storedEntries.get(op.operationId);
+      let entry = op.entry;
+      if (stored) {
+        const variants = sortedUnique([...(stored.variants as string[]), ...(op.entry.variants as string[])]);
+        const contest = sortedUnique([...(stored.contest as string[]), ...(op.entry.contest as string[]), ...(variants.length > 1 ? ["operation_id_conflict"] : [])]);
+        entry = { ...op.entry, contest, variants };
+      }
+      statements.push(sql`INSERT INTO agent_workspace_ledger_operations (operation_id, entry_json) VALUES (${op.operationId}, ${JSON.stringify(entry)})
         ON CONFLICT (operation_id) DO UPDATE SET entry_json = excluded.entry_json;`);
     }
     for (const b of commit.ledgerBatches) {
@@ -384,12 +417,8 @@ export class AgentWorkspaceBackend {
       const prior = existing.get(item.operationId)?.find((r) => r.content_sha256 === item.contentSha256);
       const outcomeState = OUTCOME_STATE[item.outcome];
       const contest = sortedUnique([...item.contest, ...(prior ? contestOf(prior) : [])]);
-      let nextState: AgentItemState = contest.length && outcomeState === "draft" ? "contested" : outcomeState;
-      let previousState: AgentItemState | null = prior?.previous_state ?? null;
-      if (prior && DECISION_STATES.has(prior.state)) nextState = prior.state;
-      // A version that was contested stays contested until the user decides.
-      else if (prior && prior.state === "contested") nextState = "contested";
-      if (prior && prior.state !== nextState) previousState = prior.state;
+      const nextState = nextItemState(prior, outcomeState, contest);
+      const previousState: AgentItemState | null = prior && prior.state !== nextState ? prior.state : prior?.previous_state ?? null;
       statements.push(sql`INSERT INTO agent_workspace_items (
           operation_id, content_sha256, record_id, kind, batch_id, actor_claim, source_export_id, authored_at, location,
           outcome, state, previous_state, flags_json, contest_json, title, operation_json, first_seen_run, last_seen_run, updated_at)
@@ -407,7 +436,7 @@ export class AgentWorkspaceBackend {
       for (const row of existing.get(downgrade.operationId) ?? []) {
         if (commit.items.some((i) => i.operationId === row.operation_id && i.contentSha256 === row.content_sha256)) continue;
         const contest = sortedUnique([...contestOf(row), ...downgrade.contest]);
-        const nextState: AgentItemState = DECISION_STATES.has(row.state) ? row.state : row.state === "draft" || row.state === "staged" ? "contested" : row.state;
+        const nextState = nextItemState(row, row.state, contest);
         statements.push(sql`UPDATE agent_workspace_items SET contest_json = ${JSON.stringify(contest)}, state = ${nextState},
             previous_state = ${nextState === row.state ? row.previous_state : row.state}, last_seen_run = ${runId}, updated_at = ${now}
           WHERE operation_id = ${row.operation_id} AND content_sha256 = ${row.content_sha256};`);
@@ -483,7 +512,8 @@ export class AgentWorkspaceBackend {
       firstSeenRun: row.first_seen_run,
       lastSeenRun: row.last_seen_run,
       updatedAt: row.updated_at,
-      eligible: row.state === "kept" || (row.state === "draft" && contest.length === 0),
+      eligible: (row.state === "draft" && contest.length === 0) ||
+        (row.state === "kept" && contest.every((c) => parseJson<string[]>(row.acknowledged_json, "acknowledged contest").includes(c))),
     };
   }
 
@@ -493,7 +523,7 @@ export class AgentWorkspaceBackend {
     const cursor = filter.cursor ?? "";
     const rows = await this.sqlite.queryAll<ItemRow>(`
       SELECT operation_id, content_sha256, record_id, kind, batch_id, actor_claim, source_export_id, authored_at, location,
-        outcome, state, previous_state, flags_json, contest_json, title, first_seen_run, last_seen_run, updated_at
+        outcome, state, previous_state, flags_json, contest_json, acknowledged_json, title, first_seen_run, last_seen_run, updated_at
       FROM agent_workspace_items
       WHERE (operation_id || '|' || content_sha256) > ${sql`${cursor}`} ${states}
       ORDER BY operation_id, content_sha256 LIMIT ${filter.limit + 1};
@@ -588,7 +618,7 @@ export class AgentWorkspaceBackend {
     if (!item) throw new AgentWorkspaceError("not_found", "That agent item is not stored locally.");
     const consequential = (CONSEQUENTIAL_KINDS as readonly string[]).includes(item.kind);
     const agentOwned = (AGENT_OWNED_KINDS as readonly string[]).includes(item.kind);
-    if (DECISION_STATES.has(item.state)) throw new AgentWorkspaceError("already_decided", `This item was already ${item.state.replace(/_/g, " ")}.`);
+    if (FINAL_STATES.has(item.state) || item.state === "kept") throw new AgentWorkspaceError("already_decided", `This item was already ${item.state.replace(/_/g, " ")}.`);
     let toState: AgentItemState;
     const detail: Record<string, unknown> = {};
     switch (decision.action) {
@@ -610,7 +640,8 @@ export class AgentWorkspaceBackend {
         break;
       case "record_status_applied": {
         if (item.kind !== "application_status_claim") throw new AgentWorkspaceError("not_allowed", "Only application status claims can record a status change.");
-        if (item.contest.length || item.state === "contested") throw new AgentWorkspaceError("not_allowed", "A contested claim cannot be applied.");
+        if (item.state !== "proposal") throw new AgentWorkspaceError("not_allowed", "Only a claim waiting for review can be applied.");
+        if (item.contest.length) throw new AgentWorkspaceError("not_allowed", "A contested claim cannot be applied.");
         const payload = (item.operation.payload ?? {}) as Record<string, unknown>;
         const expected = CLAIM_STATUS[payload.claimed_status as string];
         if (decision.applicationId !== payload.application_id || decision.appliedStatus !== expected) {
@@ -632,7 +663,10 @@ export class AgentWorkspaceBackend {
     await this.sqlite.transaction([
       sql`INSERT INTO agent_workspace_guard (stale) SELECT 1 WHERE (SELECT state FROM agent_workspace_items
           WHERE operation_id = ${item.operationId} AND content_sha256 = ${item.contentSha256}) <> ${item.state};`,
-      sql`UPDATE agent_workspace_items SET state = ${toState}, previous_state = ${item.state}, updated_at = ${now}
+      // A decision advances the revision, so a sync planned before it is refused and replanned.
+      sql`UPDATE agent_workspace_state SET ledger_revision = ledger_revision + 1, updated_at = ${now} WHERE id = 1;`,
+      sql`UPDATE agent_workspace_items SET state = ${toState}, previous_state = ${item.state}, updated_at = ${now},
+          acknowledged_json = ${JSON.stringify(toState === "kept" ? item.contest : [])}
           WHERE operation_id = ${item.operationId} AND content_sha256 = ${item.contentSha256};`,
       sql`INSERT INTO agent_workspace_decisions (operation_id, content_sha256, action, from_state, to_state, note, detail_json, decided_at)
           VALUES (${item.operationId}, ${item.contentSha256}, ${decision.action}, ${item.state}, ${toState}, ${decision.note ?? null}, ${JSON.stringify(detail)}, ${now});`,

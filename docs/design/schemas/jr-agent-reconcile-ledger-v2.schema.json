@@ -48,14 +48,16 @@
                 "staged_draft",
                 "staged_for_review",
                 "needs_rebase",
-                "contested"
+                "contested",
+                "pending_predecessor",
+                "rejected"
               ]
             },
             "batch_id": {
               "type": "string",
               "minLength": 7,
               "maxLength": 128,
-              "pattern": "^batch_[A-Za-z0-9_-]{2,121}$"
+              "pattern": "^batch_[A-Za-z0-9_-]{1,122}$"
             },
             "record_id": {
               "type": "string",
@@ -120,7 +122,7 @@
       "type": "object",
       "maxProperties": 1000000,
       "patternProperties": {
-        "^batch_[A-Za-z0-9_-]{2,121}$": {
+        "^batch_[A-Za-z0-9_-]{1,122}$": {
           "type": "object",
           "additionalProperties": false,
           "required": [

@@ -40,6 +40,8 @@ const timestamp: Spec = { t: "string", min: 20, max: 32, pattern: TIMESTAMP, tim
 export const RECORD_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 export const WORKSPACE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$/;
 const recordId = str(6, 128, RECORD_ID_PATTERN);
+// IDs of Job Ranger's own records (jobs use stringified integers such as "42").
+const canonicalId = str(1, 128, RECORD_ID_PATTERN);
 const operationId = str(7, 128, /^op_[A-Za-z0-9_-]+$/);
 const batchId = str(7, 128, /^batch_[A-Za-z0-9_-]+$/);
 const exportId = str(9, 96, /^ex_[A-Za-z0-9_-]+$/);
@@ -49,7 +51,7 @@ const title = str(1, 240);
 const evidenceRefs: Spec = {
   t: "array",
   max: 120,
-  items: { t: "object", required: { record_id: recordId, revision: str(6, 160) } },
+  items: { t: "object", required: { record_id: canonicalId, revision: str(6, 160) } },
 };
 
 export const AGENT_OWNED_KINDS = ["workspace_note_version", "opportunity_annotation", "material_draft_version", "follow_up_plan"] as const;
@@ -92,7 +94,7 @@ const payloadSpecs: Record<OperationKind, Spec> = {
   },
   opportunity_annotation: {
     t: "object",
-    required: { opportunity_id: recordId, title, notes: longText, observed_at: timestamp },
+    required: { opportunity_id: canonicalId, title, notes: longText, observed_at: timestamp },
   },
   material_draft_version: {
     t: "object",
@@ -113,7 +115,7 @@ const payloadSpecs: Record<OperationKind, Spec> = {
   application_status_claim: {
     t: "object",
     required: {
-      application_id: recordId,
+      application_id: canonicalId,
       claimed_status: { t: "enum", values: Object.keys(CLAIM_STATUS_MAPPING.map) },
       reported_context: longText,
     },
@@ -123,7 +125,7 @@ const payloadSpecs: Record<OperationKind, Spec> = {
     required: {
       // D05: "new" has no target; "correction" names an existing evidence record.
       proposal_kind: { t: "enum", values: ["new", "correction"] },
-      evidence_id: { t: "nullable", of: recordId },
+      evidence_id: { t: "nullable", of: canonicalId },
       change_reason: longText,
       proposed_text: longText,
       source_evidence_refs: evidenceRefs,

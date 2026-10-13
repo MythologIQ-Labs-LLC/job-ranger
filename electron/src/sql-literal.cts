@@ -1,8 +1,26 @@
 // Runtime-neutral SQL literal encoding shared by every SQLite engine adapter
 // (sqlite3 CLI in Electron, SQLite WASM in the browser runtime).
 
+// Control characters never appear raw in SQL text: the Windows sqlite3 CLI reads scripts in
+// text mode (CR is dropped, Ctrl-Z ends input) and NUL cannot cross a process boundary. They
+// are spliced in with char(), which yields the identical string on every engine.
+const CONTROL = /[\u0000-\u001f\u007f]/;
+
 function escapeSqlString(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`;
+  if (!CONTROL.test(value)) return `'${value.replace(/'/g, "''")}'`;
+  const parts: string[] = [];
+  let run = "";
+  for (const ch of value) {
+    if (CONTROL.test(ch)) {
+      if (run) parts.push(`'${run.replace(/'/g, "''")}'`);
+      run = "";
+      parts.push(`char(${ch.charCodeAt(0)})`);
+    } else {
+      run += ch;
+    }
+  }
+  if (run) parts.push(`'${run.replace(/'/g, "''")}'`);
+  return `(${parts.join(" || ")})`;
 }
 
 export function toSqlLiteral(value: unknown): string {

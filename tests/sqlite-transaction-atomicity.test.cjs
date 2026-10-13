@@ -32,6 +32,13 @@ async function run() {
     // Quotes and newlines inside literals survive the stdin path.
     await db.transaction(["INSERT INTO r VALUES (length('a''b\nc;\nCOMMIT;'));"]);
     assert.equal((await db.queryOne('SELECT MAX(n) AS n FROM r;')).n, 2999);
+    // Control characters survive exactly: the Windows CLI reads stdin in text mode, so they
+    // must never appear raw in SQL text (CR would be dropped, Ctrl-Z would end the input).
+    const { sql } = require('../electron-runtime/electron/src/sqlite.cjs');
+    await db.exec('CREATE TABLE c (v TEXT);');
+    const tricky = 'a\r\nb\u001ac\u0000d\te\u007ff';
+    await db.transaction([sql`INSERT INTO c VALUES (${tricky});`, sql`INSERT INTO c VALUES (${"it's \r fine"});`]);
+    assert.deepEqual((await db.queryAll('SELECT hex(v) AS h FROM c ORDER BY rowid;')).map((r) => r.h), [Buffer.from(tricky).toString('hex').toUpperCase(), Buffer.from("it's \r fine").toString('hex').toUpperCase()]);
     console.log('SQLite transaction atomicity test passed');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

@@ -98,18 +98,21 @@ export interface ReconcileInput {
   submissions: Submission[];
 }
 
-const LOCATION = /^workspace\/agents\/([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\/batches\/(batch_[A-Za-z0-9_-]{2,121})\.json$/;
+const LOCATION = /^workspace\/agents\/([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\/batches\/(batch_[A-Za-z0-9_-]{1,122})\.json$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const AUTHORITATIVE = new Set(["user-confirmed", "user-authored"]);
 const REBASE_FLAGS = new Set(["stale_evidence", "unknown_or_unconfirmed_evidence", "legacy_evidence_revision", "stale_base_revision"]);
-// Outcomes a ledger may record. "pending_predecessor" and "rejected" are never ledgered.
-const LEDGER_OUTCOMES = new Set<string>(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase", "contested"]);
+// Outcomes a ledger may record. Waiting and refused operations are recorded too, so that a
+// later different version of the same ID is always recognised as a conflict; they are
+// re-evaluated on every run rather than treated as settled.
+const LEDGER_OUTCOMES = new Set<string>(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase", "contested", "pending_predecessor", "rejected"]);
+const REEVALUATED = new Set<string>(["pending_predecessor", "rejected"]);
 const V1_LEDGER_OUTCOMES = new Set<string>(["imported_draft", "staged_draft", "staged_for_review", "needs_rebase"]);
 const CONTEST_SET = new Set<string>(CONTEST_REASONS);
 const ALL_KINDS = new Set<string>([...AGENT_OWNED_KINDS, ...CONSEQUENTIAL_KINDS]);
 const SCOPES = new Set(["tracks", "career_direction", "confirmed_evidence", "selected_opportunities", "selected_applications", "resume_templates", "selected_resumes", "selected_cover_letters"]);
 const OP_ID = /^op_[A-Za-z0-9_-]{4,125}$/;
-const BATCH_ID = /^batch_[A-Za-z0-9_-]{2,121}$/;
+const BATCH_ID = /^batch_[A-Za-z0-9_-]{1,122}$/;
 const RECORD_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const ACTOR_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$/;
 const TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/;
@@ -464,7 +467,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
       }
       const variants = sortedUnique(allVariants);
       if (prior) {
-        idConflicts.set(opId, { ...prior, contest: sortedUnique([...prior.contest, "operation_id_conflict" as const]), variants });
+        idConflicts.set(opId, { ...prior, outcome: REEVALUATED.has(prior.outcome) ? "contested" : prior.outcome, contest: sortedUnique([...prior.contest, "operation_id_conflict" as const]), variants });
       } else {
         // No version was ever accepted: record the lowest hash as a deterministic representative.
         const rep = [...group].sort((a, b) => byCodeUnit(a.sha, b.sha) || byCodeUnit(a.batch.batch_id, b.batch.batch_id))[0];
@@ -478,7 +481,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
     for (const o of group) {
       if (seenSha.has(o.sha)) { duplicates.push({ operation_id: opId, batch_id: o.batch.batch_id }); continue; }
       seenSha.add(o.sha);
-      if (prior) results.push({ ...resultFor(o, "already_reconciled"), previous_outcome: prior.outcome });
+      if (prior && !REEVALUATED.has(prior.outcome)) results.push({ ...resultFor(o, "already_reconciled"), previous_outcome: prior.outcome });
       else live.set(opId, o);
     }
   }
@@ -613,7 +616,8 @@ export async function reconcileWorkspace(input: ReconcileInput) {
   };
   for (const id of known.keys()) for (const reason of contestOf(id)) addContest(id, reason);
   for (const group of siblings.values()) {
-    const members = group.filter(ledgerable);
+    // Only usable versions compete as fork branches; waiting or refused ones do not.
+    const members = group.filter((id) => ledgerable(id) && !REEVALUATED.has(outcomes.get(id) ?? ""));
     if (members.length > 1) members.forEach((id) => addContest(id, "fork"));
   }
   for (const [id, k] of known) if ((recordKinds.get(k.record_id)?.size ?? 0) > 1) addContest(id, "record_kind_conflict");

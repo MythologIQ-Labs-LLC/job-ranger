@@ -15,7 +15,6 @@ import { CareerStories } from "./pages/CareerStories";
 import { EvidenceEntry } from "./pages/EvidenceEntry";
 import { TargetTracks } from "./pages/TargetTracks";
 import { Resume } from "./pages/Resume";
-import { AgentWorkspace } from "./pages/AgentWorkspace";
 import { Onboarding } from "./pages/Onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
@@ -88,7 +87,8 @@ const router = createHashRouter([{
     { path: "career-profile", element: <CareerProfile /> },
     { path: "target-tracks", element: <TargetTracks /> },
     { path: "resume", element: <Resume /> },
-    { path: "agent-workspace", element: <AgentWorkspace /> },
+    // Loaded on demand so the agent-workspace core never weighs on app start-up.
+    { path: "agent-workspace", lazy: async () => ({ Component: (await import("./pages/AgentWorkspace")).AgentWorkspace }) },
     { path: "companies", element: <Companies /> },
     { path: "filters", element: <Filters /> },
     { path: "settings", element: <Settings /> },

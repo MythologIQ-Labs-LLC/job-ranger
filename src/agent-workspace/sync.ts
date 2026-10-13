@@ -53,6 +53,10 @@ export function safeLocation(location: string): string {
   return (cleaned.startsWith("workspace/") ? cleaned : `workspace/(outside)/${cleaned}`).slice(0, 400);
 }
 
+// Batch IDs in summaries come from agent files; anything outside the format is dropped so one
+// odd file name can never make the whole commit invalid.
+const safeBatchId = (id: string | null) => (id !== null && /^batch_[A-Za-z0-9_-]{1,122}$/.test(id) ? id : null);
+
 const sameEntry = (a: LedgerEntry | undefined, b: LedgerEntry) => a !== undefined && JSON.stringify(a) === JSON.stringify(b);
 
 /** Turns a reconciliation result into the store's atomic commit. */
@@ -87,7 +91,7 @@ export function planCommit(result: ReconcileResult, before: ReconcileLedger, exp
   const quarantine: AgentQuarantineInput[] = result.quarantine.map((q) => ({
     kind: q.kind,
     location: safeLocation(q.location),
-    batchId: q.batch_id,
+    batchId: safeBatchId(q.batch_id),
     operationId: q.operation_id ?? null,
     sha256: q.sha256,
     reasons: q.reasons,
@@ -113,7 +117,7 @@ export function planCommit(result: ReconcileResult, before: ReconcileLedger, exp
     quarantine,
     acceptedBatchShas: result.report.batches.filter((b) => b.status === "accepted").map((b) => b.sha256),
     counts: result.report.counts,
-    batches: result.report.batches.map((b) => ({ location: safeLocation(b.location), batchId: b.batch_id, status: b.status, reasons: b.reasons })),
+    batches: result.report.batches.map((b) => ({ location: safeLocation(b.location), batchId: safeBatchId(b.batch_id), status: b.status, reasons: b.reasons })),
   };
 }
 

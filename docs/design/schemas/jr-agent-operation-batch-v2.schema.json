@@ -256,7 +256,7 @@
                 "properties": {
                   "opportunity_id": {
                     "type": "string",
-                    "minLength": 6,
+                    "minLength": 1,
                     "maxLength": 128,
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
                   },
@@ -381,7 +381,7 @@
                       "properties": {
                         "record_id": {
                           "type": "string",
-                          "minLength": 6,
+                          "minLength": 1,
                           "maxLength": 128,
                           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
                         },
@@ -607,7 +607,7 @@
                 "properties": {
                   "application_id": {
                     "type": "string",
-                    "minLength": 6,
+                    "minLength": 1,
                     "maxLength": 128,
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
                   },
@@ -713,7 +713,7 @@
                       },
                       {
                         "type": "string",
-                        "minLength": 6,
+                        "minLength": 1,
                         "maxLength": 128,
                         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
                       }
@@ -742,7 +742,7 @@
                       "properties": {
                         "record_id": {
                           "type": "string",
-                          "minLength": 6,
+                          "minLength": 1,
                           "maxLength": 128,
                           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
                         },
