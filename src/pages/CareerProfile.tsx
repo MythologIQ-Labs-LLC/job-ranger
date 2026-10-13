@@ -84,21 +84,17 @@ export function CareerProfile() {
   const [editingType, setEditingType] = useState<EvidenceSubjectType>("other");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
 
-  // A refresh (for example after a save elsewhere) produces a new profile object. Replace
-  // the form only when it has no unsaved edits relative to the last stored profile it
-  // showed, so a background refresh never discards what the person is typing (#278).
-  const shownProfile = useRef<CareerProfileValue | null>(null);
-  // A synchronous counter distinguishes a save's original snapshot from edits
-  // made before that asynchronous save resolves. React state alone cannot
-  // reliably disambiguate queued edits from its eventual completion (#288).
+  // Count user edits synchronously so a refresh cannot mistake a newer edit
+  // for a pristine form merely because its value matches an older snapshot
+  // (#278/#288). This also covers edits queued during an async save.
   const editVersion = useRef(0);
+  const syncedEditVersion = useRef(0);
   useEffect(() => {
-    if (loading) return;
-    const previous = shownProfile.current;
-    shownProfile.current = profile;
-    setDraft((current) =>
-      previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
-    );
+    if (!loading && editVersion.current === syncedEditVersion.current) {
+      // The user has not changed the draft since the last successful sync.
+      // Otherwise, preserve their work until they explicitly save it.
+      setDraft(profile);
+    }
   }, [loading, profile]);
 
   const targetText = useMemo(() => joinLines(draft.targetTitles), [draft.targetTitles]);
@@ -129,6 +125,10 @@ export function CareerProfile() {
     setSaveNotice(null);
     try {
       const next = await save(draft);
+      // Only the version submitted to storage is confirmed as persisted.
+      // Edits made after the click must remain distinct even if the persisted
+      // result causes a background profile refresh.
+      syncedEditVersion.current = versionAtSave;
       if (editVersion.current === versionAtSave) {
         // No later edits: apply any storage normalization and show success.
         setDraft(next);
