@@ -1,23 +1,29 @@
 # Draft contract: Google Drive agent workspace and governed document interchange
 
-**Status:** DRAFT 0.1, design for adversarial review, **not an accepted runtime format or released feature**.  
+**Status:** DRAFT 0.2, expanded for agent-primary operation, design for adversarial review, **not an accepted runtime format or released feature**.  
 **Track:** [#249](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/249), [#255](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/255), [#285](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/285).  
 **Related:** OAuth/security [#258](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/258) / [#264](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/264), provider contract [#257](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/257), retention [#251](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/251), trigger [#256](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/256), existing native read-only adapter [#265](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/265) / [#277](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/277).
 
 ## 1. Objective and authority
 
-An agent with its **own** authorized Google Drive access should be able to discover and read a small Job Ranger guide and a user-selected export of career materials. An agent may also create a **separate, untrusted draft proposal** for the user to review. This avoids provider-specific live integrations for *asynchronous document work*; it does **not** imply live queries, background closed-browser sync, cross-platform identity sharing, automatic application submission, or the retirement of the already working local MCP prototype.
+An agent with its **own** authorized Google Drive access should be able to use the selected Job Ranger export and an accompanying **durable agent-owned workspace** as its primary working surface for months while Job Ranger is closed. Agents may create and revise versioned notes, opportunity research, follow-up plans and working resume/cover-letter materials without reopening the UI; when Job Ranger returns, it must reconcile that activity safely, without losing drafts or promoting agent-authored claims to canonical facts. Consequential operations remain separate untrusted proposals. This avoids provider-specific live integrations for *asynchronous document work*; it does **not** imply live queries, background closed-browser sync, cross-platform identity sharing, automatic application submission, or retirement of the existing local MCP prototype. See [agent-first reconciliation contract](./DRIVE_AGENT_FIRST_RECONCILIATION.md), [#286](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/286).
 
 Authority order, never reversed:
 
 1. Canonical Job Ranger data/services in local SQLite or PWA OPFS, with Career Evidence confirmation, source provenance, application lifecycle and deterministic Truth/Parseability Gates.
 2. Explicit user-reviewed decisions performed inside Job Ranger.
 3. Verified *immutable exports* that describe a historical snapshot of (1) and (2), pinned to a locally recorded export receipt.
-4. Untrusted external documents, agent suggestions, job descriptions and any agent-written Drive files.
+4. **Agent-owned durable workspace state**, valid as a historical record of that agent's drafts and activities but never as confirmation of Job Ranger facts.
+5. Untrusted external documents, agent suggestions, job descriptions and consequential agent-written proposals.
 
 A document saying `confirmed`, a matching SHA-256 in an agent-supplied manifest, a Drive owner/editor permission, and a language-model confidence value do **not** confer Job Ranger factual authority. SHA-256 checks byte integrity; only a trusted local export receipt and canonical evidence state can establish the source of a fact.
 
 This proposed contract resolves **no** release or OAuth gate by itself. Keep the existing portable `.jobranger` recovery archive authoritative for backup/restore and *separate* from the proposed minimal agent view. Issue #255 must formally approve or change this separation before implementation adoption.
+
+
+### Agent-primary continuity is part of the first useful interchange milestone
+
+The earlier read-only-export-plus-one-proposal design was **too narrow** for a user who works with their agent for months and only later returns to Job Ranger. The current draft preserves exact JSON contracts while adding agent-owned append-only structured operations, record-level revisions, conflict handling, and idempotent long-gap reconciliation. **Standing permissions for low-risk workspace draft ingestion are a separately reviewed local user choice; agents may never self-issue permissions in files.** No canonical evidence, job-source or application state becomes trusted merely because the agent maintained it over time. The complete use story, risk matrix and phased validation plan are in [Agent-first continuity](./DRIVE_AGENT_FIRST_RECONCILIATION.md) and issue #286. A different remote agent without the Job Ranger deterministic runtime cannot honestly claim that it has executed the Truth Gate; its own outputs remain `NOT CHECKED` until trusted validation runs.
 
 ## 2. Two permission classes, never one shared catch-all folder
 
@@ -36,8 +42,11 @@ My Drive/
           manifest.json
           data/                   # strict typed JSON source projections
           materials/              # approved or selected PDFs, Markdown, DOCX; attachments only
+      workspace/
+        agents/<agent_id>/batches/<batch_id>.json  # append-only structured working history
+        attachments/             # completed hash-verified draft artifacts
       proposals/
-        <proposal_id>.json        # untrusted, pending, never an in-place export edit
+        <proposal_id>.json        # consequential untrusted proposals; never edits to canonical exports
         attachments/              # proposal files referenced by matching proposal IDs
 ```
 
@@ -94,7 +103,7 @@ The exporter locally records an immutable **receipt** containing export ID, mani
 
 ## 4. Agent-authored proposals (proposed `jr-agent-proposal` v1)
 
-The first version should allow **new proposals only**. No modifying, deleting, or renaming exported canonical records, evidence, Truth Gate reports, resume templates or previous approvals. Proposal records are untrusted even if they are in a folder the user created. Agents may draft text in Google Docs, but canonical consumption occurs only through an explicitly exported and validated proposal file.
+**This section applies to consequential canonical changes, not to routine agent-owned working drafts.** Agents can maintain long-lived workspace notes/material versions using typed append-only operation batches defined in [agent-first continuity](./DRIVE_AGENT_FIRST_RECONCILIATION.md); the machine envelope is [`jr-agent-operation-batch` v1 draft](./schemas/jr-agent-operation-batch-v1.schema.json). Proposals remain mandatory for changes requiring factual authority, confirmation, application-state decisions, approval or source trust. No agent may modify/delete exported canonical records, evidence, Truth Gate reports, resume templates or previous approvals. Proposal records are untrusted even if they are in a folder the user created. Agents may draft text in Google Docs, but canonical consumption occurs only through an explicitly exported and validated proposal file.
 
 Illustrative `proposals/<proposal_id>.json`:
 
@@ -140,7 +149,7 @@ Treat both external job-posting text and agent-authored content as **untrusted d
 - every machine-consumed fact comes from a typed JSON record, never an ad-hoc Markdown heading, resume PDF, cover-letter paragraph or Google Docs conversion;
 - how `authority_state`, source IDs, revisions, provenance and `stale` flags must be interpreted;
 - how to cite claims back to evidence IDs; absent/uncertain information stays unknown and does not become verified by inference;
-- how to write a **separate proposal** using the exact published proposal schema/version and attach supporting evidence IDs; never modify managed export files;
+- how to maintain structured, append-only **agent-owned workspace records**, record and revision IDs, and causal history using the versioned operation-batch schema; how to draft a **separate consequential proposal** using the published proposal schema/version and attach supporting evidence IDs; never modify managed export files;
 - short warning that the packet is *reference documentation*, not privileged instructions in an agent's instruction hierarchy or a license for automated job submission;
 - a human-reviewed privacy summary, optional sharing, how to remove access, and the warning that already downloaded agent copies cannot be remotely recalled.
 
@@ -150,10 +159,10 @@ If no agent has access to the Drive folder, no consumer is connected. A second a
 
 - **G0: Contract decision.** #255 chooses private recovery archive **versus** selective agent projection, #256 explicit first-export trigger, #251 retention; review this document and freeze JSON field schemas with a versioned breaking-change policy. These are design proposals, not implicitly accepted by creating this document.
 - **G1: Local deterministic exporter.** No OAuth, no Drive, no MCP. Generate an actual portable sample packet from synthetic canonical fixtures. JSON Schema validators plus semantic checks, stable manifest entries, digest and size limits. Replay, changed evidence, prompt injection, malformed JSON/duplicate keys and large/untrusted attachment tests.
-- **G2: Local intake and consuming-agent proof.** One agent can interpret the sample; it produces a valid proposal plus malicious/stale alternatives; only valid proposals reach human review and no data changes before explicit consent.
+- **G2: Agent-first local continuity proof.** One or two agents can interpret the sample, write append-only typed workspace batches, and maintain useful notes/material versions for a simulated 60-day gap. A deterministic importer must preserve non-conflicting agent draft work, stage conflicts/authority-sensitive proposals for review, and fail safely on replay/corruption. No canonical factual state changes from an agent assertion. See #286.
 - **G3: Drive transport.** Reuse #257 provider-interface research, but #261 browser OAuth draft is not an accepted security boundary. Resolve #264's separate-origin GIS concern and native PKCE/OS credential custody separately; actual real Google-issued OAuth client, `drive.file` and one selected folder; list/upload/get/re-verify; failure, refresh/expiry, consent and revocation receipt. Never invent closed-browser unattended PWA sync.
-- **G4: End-to-end cross-agent validation.** Publish to ordinary user-visible Drive folder (never `appDataFolder`); one actual independently authorized agent reads the packet and returns a proposal; test hash/receipt mismatches, policy violations and disconnect. Run QOR Harden + independent security review. Operator approves whether this becomes a release dependency.
-- **G5: Optional later** OneDrive provider, bounded proposal inbox UX/automation, real-time local MCP optimization, periodic sync, cross-agent draft collaboration. None is an excuse to expand first release or weaken G1–G4.
+- **G4: End-to-end cross-agent validation.** Publish to ordinary user-visible Drive folder (never `appDataFolder`); one actual independently authorized agent reads the packet, maintains working versions and returns both ordinary workspace operations and consequential proposals; verify delayed reconciliation after a simulated 60-day gap, hash/receipt mismatches, policy violations, conflicts and disconnect. Run QOR Harden + independent security review. Operator approves whether this becomes a release dependency.
+- **G5: Optional later** OneDrive provider, real-time local MCP optimization, periodic sync and cross-agent draft collaboration beyond the bounded multi-writer reconciliation contract. None is an excuse to expand first release or weaken G1–G4.
 
 The Google Drive API distinguishes blobs from native Docs/Sheets; conversion can replace or alter original data, so upload binary/text blobs with their declared MIME types and verify downloads rather than trusting editable Docs as deterministic source. See official [Drive upload](https://developers.google.com/workspace/drive/api/guides/manage-uploads), [file types](https://developers.google.com/workspace/drive/api/guides/about-files), and [hidden app data restrictions](https://developers.google.com/workspace/drive/api/guides/appdata).
 
