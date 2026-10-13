@@ -50,7 +50,7 @@
         "title": "Employer research follow-up",
         "body": "Confirmed recruiter contact is still unknown."
       },
-      "expected": "import_draft"
+      "expected": "conflict_preserve_fork"
     },
     {
       "day": 8,
@@ -102,7 +102,7 @@
         "notes": "Company role investigated, not accepted as a verified source.",
         "observed_at": "2026-11-02T10:00:00Z"
       },
-      "expected": "import_draft"
+      "expected": "reject_operation_id_collision"
     },
     {
       "day": 26,
@@ -191,7 +191,7 @@
         "notes": "Company role investigated, not accepted as a verified source.",
         "observed_at": "2026-11-02T10:00:00Z"
       },
-      "expected": "duplicate_replay_noop"
+      "expected": "reject_operation_id_collision"
     },
     {
       "day": 59,
@@ -213,10 +213,10 @@
   "expected": {
     "unique_operation_ids": 9,
     "event_count": 11,
-    "accepted_drafts_only": 3,
-    "stage_or_conflict": 6,
-    "replay_noop": 1,
-    "rejected_collision": 1,
+    "accepted_drafts_only": 1,
+    "stage_or_conflict": 7,
+    "replay_noop": 0,
+    "rejected_collision": 3,
     "canonical_evidence_revision_unchanged": "revision_new_002",
     "canonical_submitted_application_count_unchanged": 0,
     "second_reconciliation_makes_no_additional_writes": true
@@ -226,6 +226,8 @@
     "A structurally valid agent submission never authenticates its actor claim or confirms a user fact.",
     "No model output can assert Truth Gate PASS.",
     "Event 10 replays the operation identity and all operation fields (including payload) from event 5; day and expected outcome are transport/oracle metadata, not operation bytes.",
-    "At day 60 the local canonical evidence revision differs from the export: both original and revised cover-letter versions retain their text but need rebase and Truth Gate re-evaluation. An offline agent cannot establish canonical correctness retroactively."
+    "At day 60 the local canonical evidence revision differs from the export: both original and revised cover-letter versions retain their text but need rebase and Truth Gate re-evaluation. An offline agent cannot establish canonical correctness retroactively.",
+    "Both children of the same operation predecessor are marked conflicted regardless of which Drive item is listed first; neither writer is automatically preferred.",
+    "If a single offline reconciliation set contains two different byte versions with the same operation_id, quarantine every appearance of that ID; no file-listing order may select the accepted payload. Pure replay with identical bytes is independently tested."
   ]
 }
