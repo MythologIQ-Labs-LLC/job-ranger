@@ -74,6 +74,14 @@ A batch is a claimed record of work, **not a Job Ranger import receipt or model 
 
 An optional **user-invoked local headless CLI** should execute the **same** deterministic importer/validators as the UI, enabling an agent operating on the user's authorized machine to reconcile without opening the graphical interface. This is not equivalent to remote Drive access running the local core, and a fully unattended background service is a separate credential/session security decision.
 
+## Contract-hardening findings for real attachments and batch completion (audit draft)
+
+The original versioned batch schema covered typed text operations but did not yet describe how binary/text attachments can be **content-verified** when an agent works without Job Ranger running. The audit lane proposes an optional closed `attachments[]` declaration on `jr-agent-operation-batch` v1, a `material_draft_version.payload.attachment_sha256` pointer, and a separate [`jr-agent-batch-complete` v1](./schemas/jr-agent-batch-complete-v1.schema.json) JSON marker written **last** after all attachment and batch bytes. The [draft operation schema](./schemas/jr-agent-operation-batch-v1.schema.json) bounds size, MIME types and paths. This is **not** a claim that Drive behaves transactionally or that a marker is an authenticated user approval.
+
+Deterministic import must verify a complete marker for each declared batch, exact expected parent folder/file IDs, actual provider MIME types, downloaded raw byte length and SHA-256 for every declared file, unique attachment paths/digests, valid batch ownership linkage, and content-addressed matches to the locally trusted receipt when relevant. A JSON Schema-only PASS **does not** establish any of these facts. Missing attachment, converted Google Doc, duplicate filename with different content, absent final marker, stale canonical record revision or operation-ID collision means no partial canonical application; retain recoverable diagnostics. A third-party writer with edit/delete access could remove historical batches: the append-only convention alone cannot guarantee retention against a malicious or malfunctioning writer. Explicit backup and export-history policies must address that limitation, rather than falsely promising immutable Drive storage.
+
+Independent [adversarial fixture corpus](../../tests/fixtures/agent-workspace/governance-vectors.v1.json) defines **31 input vectors** and **seven multi-step scenarios**, including structural invalidity, syntactically valid privilege spoofing, fake but valid-looking hashes, duplicate operation IDs, 60-day reconciliation, multi-agent forks and content-loss recovery. The [standalone subset schema probe](../../tests/agent-workspace-governance-corpus.test.mjs) is developer-only. These are draft contract changes awaiting genuine runtime and independent security review, not a certified implementation.
+
 ## Failure and threat matrix
 
 | Condition | Required result |
