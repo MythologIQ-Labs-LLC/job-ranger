@@ -35,6 +35,12 @@ Read-only immutable export + local receipt remains distinct from:
 
 These decisions deliberately separate **already implemented G2 semantics** from **G3/G4 format or authorization changes**. In particular, D02, D05, D06, D07, D09 (persisted ledger), D11, D12, and D13 need implementation/negative tests before promotion to normative supported v1. Design approval alone does not validate code.
 
+## Security gate discovered during executable test planning: #290
+
+Independent G2 source review found two **additional G3 trust-anchor requirements** recorded in [#290](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/290). The current local `validateReceipt` checks only a subset of required receipt fields, not the full nested closed contract; the batch's `workspace_id` is accepted syntactically without comparison to a trusted local workspace identity. Both become blocking before persistent agent draft imports or remote Drive download, even though G2 cannot write canonical data. An isolated [five-case fail-first regression file](https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/audit/286-g3-trust-regressions/tests/agent-workspace-g3-trust-regressions.test.mjs) targets these two issues plus persisted late ID collision (#289), with an identical-replay control. **The file is committed, not yet executed against a complete G2/G3 checkout; do not claim a test PASS or reproduce a runtime exploit without execution.**
+
+This qualifies D11 and D13: local trusted receipts must be fully validated on load and migration; every incoming batch must match the locally established `workspace_id`. Correct export hashes do not establish either trust condition.
+
 ## Cross-system acceptance gates
 
 **A. Contract / fail-closed tests:** Closed JSON-Schema and executable validator must agree on object field sets, kind vocabularies, status mapping, exact attachment lists, marker bytes/digests, path rules, missing source refs, and disallowed privilege keys. Use the independent 31-case audit corpus and original-binary fixture compiler; do not silently swap an accepted schema version while an agent is writing.
