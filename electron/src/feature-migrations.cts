@@ -14,6 +14,7 @@ export const FEATURE_MIGRATIONS = {
   personalBrandLinkedInAnalytics: { version: 1007, name: "personal_brand_linkedin_native_exports" },
   personalBrandHistoricalLinkedIn: { version: 1008, name: "personal_brand_historical_linkedin_posts" },
   personalBrandLinkedInTopics: { version: 1009, name: "personal_brand_linkedin_topic_attestations" },
+  agentWorkspace: { version: 1010, name: "agent_workspace_local_state" },
 } as const;
 
 export const FEATURE_MIGRATION_VERSIONS: ReadonlySet<number> = new Set(

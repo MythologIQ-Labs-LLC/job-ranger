@@ -15,6 +15,7 @@ import { registerCoreIpcHandlers } from "../../../electron/src/core-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "../../../electron/src/evidence-extension-ipc.cjs";
 import { initializeResumeIpc } from "../../../electron/src/resume-ipc.cjs";
 import { initializeBackupIpc } from "../../../electron/src/backup-ipc.cjs";
+import { initializeAgentWorkspaceIpc } from "../../../electron/src/agent-workspace-ipc.cjs";
 import { applyPendingRestore } from "../../../electron/src/backup-service.cjs";
 import type { RuntimeInfo } from "../../shared/runtime";
 import { WEB_CAPABILITIES, WEB_RUNNABLE_SOURCE_TYPES } from "../../shared/runtime";
@@ -281,6 +282,10 @@ async function boot(): Promise<void> {
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
     initializeEvidenceExtensionIpc({
+      databasePath: systemStatus.databasePath,
+      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+    });
+    initializeAgentWorkspaceIpc({
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });

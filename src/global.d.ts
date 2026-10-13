@@ -1,3 +1,4 @@
+import type { AgentWorkspaceDesktopApi } from "./shared/agent-workspace-api";
 /// <reference types="vite/client" />
 
 import type { DesktopApi } from "./shared/contracts";
@@ -30,7 +31,8 @@ declare global {
       ApplicationInsightsDesktopApi &
       JsonResumeDesktopApi &
       RuntimeDesktopApi &
-      LegacyInstallDesktopApi;
+      LegacyInstallDesktopApi &
+      AgentWorkspaceDesktopApi;
   }
 }
 

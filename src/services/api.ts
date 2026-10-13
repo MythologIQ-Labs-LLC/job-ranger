@@ -1,3 +1,4 @@
+import type { AgentWorkspaceDesktopApi } from "../shared/agent-workspace-api";
 import type { DesktopApi } from "../shared/contracts";
 import type { ApplicationInsightsDesktopApi } from "../shared/application-insights";
 import type { ApplicationLifecycleDesktopApi } from "../shared/application-lifecycle";
@@ -26,7 +27,8 @@ export type JobRangerDesktopApi = DesktopApi &
   ApplicationInsightsDesktopApi &
   JsonResumeDesktopApi &
   RuntimeDesktopApi &
-  LegacyInstallDesktopApi;
+  LegacyInstallDesktopApi &
+  AgentWorkspaceDesktopApi;
 
 export class DesktopApiError extends Error {
   constructor(message: string) {

@@ -436,7 +436,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
   const duplicates: { operation_id: string; batch_id: string }[] = [];
   const live = new Map<string, Occurrence>();
   const rejectedOccurrences: { o: Occurrence; flags: string[] }[] = [];
-  const contested: { operation_id: string; batch_id: string; location: string; content_sha256: string; actor_claim: string; operation: Operation; reasons: ContestReason[] }[] = [];
+  const contested: { operation_id: string; batch_id: string; location: string; content_sha256: string; actor_claim: string; source_export_id: string; operation: Operation; reasons: ContestReason[] }[] = [];
   // Ledger entries to write for operation IDs whose identity is contested this run.
   const idConflicts = new Map<string, LedgerEntry>();
   const resultFor = (o: Occurrence, outcome: Outcome, flags: string[] = []): Result => ({
@@ -460,7 +460,7 @@ export async function reconcileWorkspace(input: ReconcileInput) {
           continue;
         }
         results.push(resultFor(o, "contested", ["operation_id_conflict"]));
-        contested.push({ operation_id: opId, batch_id: o.batch.batch_id, location: locationOf(o.batch), content_sha256: o.sha, actor_claim: o.batch.actor_claim.actor_id, operation: o.op, reasons: ["operation_id_conflict"] });
+        contested.push({ operation_id: opId, batch_id: o.batch.batch_id, location: locationOf(o.batch), content_sha256: o.sha, actor_claim: o.batch.actor_claim.actor_id, source_export_id: o.batch.source_export_id, operation: o.op, reasons: ["operation_id_conflict"] });
       }
       const variants = sortedUnique(allVariants);
       if (prior) {

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { AgentWorkspaceDesktopApi } from "../../src/shared/agent-workspace-api.js";
 import type { DesktopApi } from "../../src/shared/contracts.js";
 import type { ApplicationInsightsDesktopApi } from "../../src/shared/application-insights.js";
 import type { ApplicationLifecycleDesktopApi } from "../../src/shared/application-lifecycle.js";
@@ -14,7 +15,7 @@ import type { SourceDiscoveryDesktopApi } from "../../src/shared/source-discover
 import type { RuntimeDesktopApi } from "../../src/shared/runtime.js";
 import type { LegacyInstallDesktopApi } from "../../src/shared/legacy-install.js";
 
-const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & SourceDiscoveryDesktopApi & ApplicationLifecycleDesktopApi & InterviewPrepDesktopApi & CareerStoriesDesktopApi & PersonalBrandDesktopApi & ApplicationMaterialsDesktopApi & BackupDesktopApi & ApplicationInsightsDesktopApi & JsonResumeDesktopApi & RuntimeDesktopApi & LegacyInstallDesktopApi = {
+const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & SourceDiscoveryDesktopApi & ApplicationLifecycleDesktopApi & InterviewPrepDesktopApi & CareerStoriesDesktopApi & PersonalBrandDesktopApi & ApplicationMaterialsDesktopApi & BackupDesktopApi & ApplicationInsightsDesktopApi & JsonResumeDesktopApi & RuntimeDesktopApi & LegacyInstallDesktopApi & AgentWorkspaceDesktopApi = {
   getAppVersion: () => ipcRenderer.invoke("app:get-version"),
   getPlatform: () => ipcRenderer.invoke("app:get-platform"),
   getRuntimeInfo: () => ipcRenderer.invoke("app:get-runtime-info"),
@@ -152,6 +153,21 @@ const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & 
     deleteOffer: (applicationId) =>
       ipcRenderer.invoke("application-insights:delete-offer", applicationId),
     getSearchLearning: () => ipcRenderer.invoke("application-insights:search-learning"),
+  },
+  agentWorkspace: {
+    getState: () => ipcRenderer.invoke("agent-workspace:get-state"),
+    setPolicy: (policy) => ipcRenderer.invoke("agent-workspace:set-policy", policy),
+    recordExport: (receipt) => ipcRenderer.invoke("agent-workspace:record-export", receipt),
+    listReceipts: () => ipcRenderer.invoke("agent-workspace:list-receipts"),
+    ledgerOperations: (cursor, limit) => ipcRenderer.invoke("agent-workspace:ledger-operations", cursor, limit),
+    ledgerBatches: (cursor, limit) => ipcRenderer.invoke("agent-workspace:ledger-batches", cursor, limit),
+    commitReconciliation: (commit) => ipcRenderer.invoke("agent-workspace:commit-reconciliation", commit),
+    listItems: (filter) => ipcRenderer.invoke("agent-workspace:list-items", filter),
+    getItem: (operationId, contentSha256) => ipcRenderer.invoke("agent-workspace:get-item", operationId, contentSha256),
+    listQuarantine: () => ipcRenderer.invoke("agent-workspace:list-quarantine"),
+    getQuarantine: (key) => ipcRenderer.invoke("agent-workspace:get-quarantine", key),
+    listRuns: (limit) => ipcRenderer.invoke("agent-workspace:list-runs", limit),
+    decide: (decision) => ipcRenderer.invoke("agent-workspace:decide", decision),
   },
   backups: {
     create: () => ipcRenderer.invoke("backups:create"),

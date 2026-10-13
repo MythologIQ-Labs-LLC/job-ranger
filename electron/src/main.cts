@@ -6,6 +6,7 @@ import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "./evidence-extension-ipc.cjs";
 import { initializeBackupIpc } from "./backup-ipc.cjs";
+import { initializeAgentWorkspaceIpc } from "./agent-workspace-ipc.cjs";
 import { applyPendingRestore } from "./backup-service.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
@@ -283,6 +284,10 @@ app.whenReady().then(async () => {
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
     initializeEvidenceExtensionIpc({
+      databasePath: systemStatus.databasePath,
+      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+    });
+    initializeAgentWorkspaceIpc({
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
