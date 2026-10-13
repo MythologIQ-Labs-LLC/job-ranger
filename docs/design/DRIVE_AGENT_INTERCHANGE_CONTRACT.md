@@ -86,7 +86,7 @@ The example values and digest are **illustrative and not a verified working fixt
 - `stale`/superseded status or fail-closed omission when source evidence was changed after material generation;
 - no internal credentials, tokens, full backup, raw application notes, unrelated contacts, private source documents or full Career Profile identity by default. Sensitive classes require explicit per-export selection and prominent human confirmation, not automatic widening by agent request.
 
-Field shapes, enumeration names, limits and record types must be frozen by a versioned JSON Schema and exercised against **real deterministic fixtures** before this draft becomes normative. Proposed initial types: target tracks, confirmed evidence, selected opportunities, resume template metadata, selected resume artifacts + Truth/Parseability reports, and selected cover-letter material. Referenced binary/artifact bytes remain ordinary attachments, not parsed authority.
+Draft closed-envelope schemas have now been checked in as [export manifest v1](./schemas/jr-agent-export-v1.schema.json) and [agent proposal v1](./schemas/jr-agent-proposal-v1.schema.json). They are **proposals for structural validation**, not proofs of local receipts, Drive permissions, authoritative evidence, file-hash verification, or a runtime importer. Semantics, accepted field sets and limits still require independent review and actual deterministic fixtures before either schema can become normative. Proposed initial types: target tracks, confirmed evidence, selected opportunities, resume template metadata, selected resume artifacts + Truth/Parseability reports, and selected cover-letter material. Referenced binary/artifact bytes remain ordinary attachments, not parsed authority.
 
 The exporter locally records an immutable **receipt** containing export ID, manifest digest, selected field classes, local snapshot revision and timestamps. Export processing verifies those local receipts; remote manifest hashes alone are forgeable by a Drive editor.
 
@@ -107,15 +107,18 @@ Illustrative `proposals/<proposal_id>.json`:
   "kind": "cover_letter_draft",
   "source_export_id": "ex_20261013_4b8e7c",
   "source_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "supports_evidence_ids": ["evidence-example-001"],
+  "source_record_refs": [
+    {"record_id": "evidence-example-001", "revision": "example-evidence-revision"}
+  ],
   "artifact": {
+    "title": "Cover letter draft for review",
     "media_type": "text/plain",
     "text": "Example proposal: review all factual claims before use."
   }
 }
 ```
 
-Again, this is **not** evidence of a conformant fixture. The initial allowlisted `kind` set should be `cover_letter_draft`, `resume_draft`, `job_notes_draft`, and `worksheet_draft`. A proposal must identify its exported base, exact referenced evidence IDs/revisions (the draft above omits revisions for brevity, so is **not** a complete authorizable import), typed content, optional attachment digest list, and proposal-only authority. No agent can set `confirmed`, `approved`, `submitted`, `verified_remote`, or `applied` status.
+Again, this is **not** evidence of a conformant fixture. The initial allowlisted `kind` set should be `cover_letter_draft`, `resume_draft`, `job_notes_draft`, and `worksheet_draft`. A proposal must identify its exported base, exact referenced evidence IDs/revisions (the example shows record IDs and revisions but **cannot** be authorized against actual local receipts or career data), typed content, optional attachment digest list, and proposal-only authority. No agent can set `confirmed`, `approved`, `submitted`, `verified_remote`, or `applied` status.
 
 **Strict intake stages, all fail closed:**
 
