@@ -4,7 +4,10 @@ import {
   ArrowRight,
   Briefcase,
   Building2,
+  ChevronDown,
+  Compass,
   Database,
+  FileText,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -84,6 +87,23 @@ export function Dashboard() {
     },
   ];
 
+  // The strongest action is driven only by known, observed source/job data.
+  // A loading workspace must not claim that the queue is empty.
+  const nextAction = loading
+    ? { label: "Explore your career", href: "/career-profile", note: "Your workspace is loading." }
+    : newJobs > 0
+      ? { label: `Review ${newJobs} new job${newJobs === 1 ? "" : "s"}`, href: "/jobs", note: "New listings are ready for your judgment." }
+      : companies.length === 0
+        ? { label: "Add your first job source", href: "/companies", note: "Start with employers and roles that matter to you." }
+        : { label: "Review job sources", href: "/companies", note: "No unseen listings are currently reported." };
+
+  const journey = [
+    { number: "01", title: "Know your direction", description: "Shape the work you want to pursue.", href: "/career-profile", icon: Compass },
+    { number: "02", title: "Find promising work", description: "Review opportunities, not just listings.", href: "/jobs", icon: Briefcase },
+    { number: "03", title: "Ground your evidence", description: "Keep claims traceable to real experience.", href: "/career-evidence/new", icon: ShieldCheck },
+    { number: "04", title: "Track what happens", description: "Stay deliberate about each application.", href: "/applications", icon: FileText },
+  ];
+
   const stats = [
     {
       name: "Active jobs",
@@ -113,22 +133,35 @@ export function Dashboard() {
 
   return (
     <Layout>
-      <section className="panel panel-strong overflow-hidden px-6 py-7 sm:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+
+      <section className="panel panel-strong dashboard-hero overflow-hidden px-6 py-7 sm:px-8" aria-labelledby="dashboard-heading">
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(15rem,0.65fr)] lg:items-center">
+          <div className="min-w-0">
             <span className="alpha-pill">
-              <Sparkles className="h-3.5 w-3.5" />
-              Local workspace
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Your career workspace
             </span>
-            <h1 className="page-title mt-4">Build a calmer review ritual around the jobs you actually want.</h1>
+            <h1 id="dashboard-heading" className="page-title mt-4">Make the next career move count.</h1>
             <p className="page-copy">
-              Job Ranger keeps the search grounded: detect the source family, run the best available extraction path, and surface when a portal still needs a dedicated or browser-backed adapter.
+              Choose a direction, find work worth considering, and build every application on evidence you can stand behind.
+              Your decisions stay yours.
             </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link to={nextAction.href} className="primary-button min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--color-primary)]">
+                {nextAction.label}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link to="/target-tracks" className="secondary-button min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--color-primary)]">
+                Explore target tracks
+              </Link>
+            </div>
           </div>
-          <div className="panel panel-muted max-w-md rounded-[1.4rem] px-5 py-4">
-            <p className="metric-label">Local backend</p>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              SQLite persisted at <span className="font-mono text-xs">{systemStatus?.databasePath ?? "Loading..."}</span>
+          <div className="dashboard-hero-note min-w-0">
+            <p className="dashboard-hero-note-label">Your next useful action</p>
+            <p className="mt-3 text-lg font-semibold text-[var(--color-text-primary)]">{nextAction.label}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">{nextAction.note}</p>
+            <p className="mt-4 border-t border-divider pt-3 text-xs leading-5 text-[var(--color-text-muted)]">
+              Job Ranger supports your judgment. It does not automatically apply or treat inferred experience as fact.
             </p>
           </div>
         </div>
@@ -140,7 +173,45 @@ export function Dashboard() {
         </div>
       )}
 
-      <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+      <section className="mt-7" aria-labelledby="dashboard-journey-heading">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="story-kicker">Your path</p>
+            <h2 id="dashboard-journey-heading" className="mt-1 text-2xl font-semibold">One decision at a time</h2>
+          </div>
+          <p className="max-w-md text-sm text-[var(--color-text-secondary)]">
+            These are places to work, not completion scores. Start where you need to.
+          </p>
+        </div>
+        <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+          {journey.map((step) => (
+            <li key={step.number} className="min-w-0">
+              <Link to={step.href} className="dashboard-step group flex h-full items-start gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+                <span className="dashboard-step-index" aria-hidden="true">{step.number}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="font-semibold leading-5 text-[var(--color-text-primary)]">{step.title}</span>
+                    <step.icon className="h-4 w-4 shrink-0 text-[var(--color-primary)]" aria-hidden="true" />
+                  </span>
+                  <span className="mt-2 block text-sm leading-6 text-[var(--color-text-secondary)]">{step.description}</span>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)]">
+                    Open workspace
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mt-8" aria-labelledby="dashboard-activity-heading">
+        <div className="mb-4">
+          <p className="story-kicker">Observed activity</p>
+          <h2 id="dashboard-activity-heading" className="mt-1 text-2xl font-semibold">Search at a glance</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <div key={item.name} className="metric-card animate-rise">
             <div className="flex items-center justify-between">
@@ -151,9 +222,10 @@ export function Dashboard() {
             <p className="metric-detail">{item.detail}</p>
           </div>
         ))}
+        </div>
       </section>
 
-      <section className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <section className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-3" aria-label="Recommended actions">
         {stories.map((story) => (
           <article key={story.kicker} className="story-card animate-rise">
             <p className="story-kicker">{story.kicker}</p>
@@ -220,35 +292,41 @@ export function Dashboard() {
           </div>
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-5" aria-label="Workspace integrity and diagnostics">
           <div className="story-card">
             <div className="flex items-center gap-3">
-              <Database className="h-5 w-5 text-[var(--color-primary)]" />
-              <h2 className="text-xl font-semibold">Ground truth</h2>
+              <ShieldCheck className="h-5 w-5 text-[var(--color-success)]" />
+              <h2 className="text-xl font-semibold">Product promises</h2>
             </div>
-            <dl className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+              <li>Job listings are observations. Source limitations remain visible.</li>
+              <li>Qualifications and resume claims need supporting Career Evidence.</li>
+              <li>Applications remain deliberate decisions, not automated submissions.</li>
+            </ul>
+          </div>
+          <details className="dashboard-diagnostics story-card">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+              <span className="inline-flex items-center gap-3">
+                <Database className="h-5 w-5 text-[var(--color-primary)]" aria-hidden="true" />
+                Local diagnostics
+              </span>
+              <ChevronDown className="dashboard-diagnostics-chevron h-4 w-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
+            </summary>
+            <dl className="mt-4 space-y-3 border-t border-divider pt-4 text-sm text-[var(--color-text-secondary)]">
               <div>
                 <dt className="font-semibold text-[var(--color-text-primary)]">Platform</dt>
                 <dd>{systemStatus?.platform ?? "Loading..."}</dd>
               </div>
               <div>
                 <dt className="font-semibold text-[var(--color-text-primary)]">SQLite binary</dt>
-                <dd className="break-all">{systemStatus?.sqliteBinaryPath ?? "Loading..."}</dd>
+                <dd className="break-all font-mono text-xs">{systemStatus?.sqliteBinaryPath ?? "Loading..."}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-[var(--color-text-primary)]">Database location</dt>
+                <dd className="break-all font-mono text-xs">{systemStatus?.databasePath ?? "Loading..."}</dd>
               </div>
             </dl>
-          </div>
-
-          <div className="story-card">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-[var(--color-success)]" />
-              <h2 className="text-xl font-semibold">Product promises</h2>
-            </div>
-            <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
-              <li>What you see here is persisted locally and survives restarts.</li>
-              <li>Job Ranger detects a wider range of ATS families and generic careers pages.</li>
-              <li>When a page still needs a dedicated or browser-backed adapter, it stays explicit.</li>
-            </ul>
-          </div>
+          </details>
         </section>
       </div>
     </Layout>
