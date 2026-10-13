@@ -183,12 +183,14 @@ export function TargetTracks() {
   };
 
   const deleteTarget = targetTracks.tracks.find((track) => track.id === deleteTargetId) ?? null;
+  const activeTrackCount = targetTracks.tracks.filter((track) => track.isActive).length;
+  const pausedTrackCount = targetTracks.tracks.length - activeTrackCount;
 
   return (
     <Layout>
-      <section className="panel panel-strong px-6 py-7 sm:px-8">
+      <section className="target-tracks-hero panel panel-strong px-6 py-7 sm:px-8" aria-labelledby="target-tracks-title">
         <span className="alpha-pill"><Compass className="h-3.5 w-3.5" /> Search intent</span>
-        <h1 className="page-title mt-4">Keep different career directions separate.</h1>
+        <h1 id="target-tracks-title" className="page-title mt-4">Keep different career directions separate.</h1>
         <p className="page-copy">
           A target track groups the roles and constraints that belong to one search direction.
           Create another track when the rules materially change. Empty fields stay irrelevant.
@@ -201,14 +203,39 @@ export function TargetTracks() {
         </section>
       )}
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="panel panel-strong p-4">
+      {!targetTracks.loading && (
+        <section className="target-tracks-overview mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Saved career direction summary">
+          <div className="metric-card target-tracks-summary-card">
+            <p className="metric-label">Saved directions</p>
+            <p className="metric-value">{targetTracks.tracks.length}</p>
+            <p className="metric-detail">Independently defined search paths</p>
+          </div>
+          <div className="metric-card target-tracks-summary-card">
+            <p className="metric-label">Active tracks</p>
+            <p className="metric-value">{activeTrackCount}</p>
+            <p className="metric-detail">Available for opportunity assessment</p>
+          </div>
+          <div className="metric-card target-tracks-summary-card">
+            <p className="metric-label">Paused tracks</p>
+            <p className="metric-value">{pausedTrackCount}</p>
+            <p className="metric-detail">Retained without active assessment</p>
+          </div>
+        </section>
+      )}
+
+      <section className="target-tracks-workspace mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]" aria-label="Career direction editor">
+        <aside className="target-tracks-list panel panel-strong p-4" aria-label="Saved target tracks">
           <div className="flex items-center justify-between gap-3 px-2 py-2">
             <h2 className="text-lg font-semibold">Target tracks</h2>
             <button type="button" className="secondary-button" onClick={startNew}>
               <Plus className="h-4 w-4" /> New
             </button>
           </div>
+          {!targetTracks.loading && targetTracks.tracks.length > 0 && (
+            <p className="px-2 text-xs text-[var(--color-text-secondary)]">
+              Choose a saved direction to edit its own roles and constraints.
+            </p>
+          )}
           <div className="mt-3 space-y-2">
             {targetTracks.loading && <p className="px-2 py-4 text-sm text-[var(--color-text-muted)]">Loading tracks...</p>}
             {!targetTracks.loading && targetTracks.tracks.length === 0 && (
@@ -221,11 +248,14 @@ export function TargetTracks() {
                 key={track.id}
                 type="button"
                 onClick={() => edit(track)}
-                className={`w-full rounded-2xl border px-4 py-3 text-left ${editingId === track.id ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)] bg-[var(--color-surface)]"}`}
+                aria-pressed={editingId === track.id}
+                data-selected={editingId === track.id}
+                data-active={track.isActive}
+                className="target-track-choice w-full rounded-2xl border px-4 py-3 text-left"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-semibold">{track.name}</span>
-                  {!track.isActive && <span className="text-xs text-[var(--color-text-muted)]">Paused</span>}
+                  <span className="min-w-0 break-words font-semibold">{track.name}</span>
+                  {!track.isActive && <span className="soft-badge soft-badge-warning">Paused</span>}
                 </div>
                 <p className="mt-1 text-xs capitalize text-[var(--color-text-muted)]">
                   {track.relation} · {track.roleTitles.length} role{track.roleTitles.length === 1 ? "" : "s"}
@@ -238,11 +268,11 @@ export function TargetTracks() {
           </div>
         </aside>
 
-        <div className="panel panel-strong p-6 sm:p-8">
+        <div className="target-tracks-editor panel panel-strong p-5 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <span className="metric-label">{editingTrack ? "Edit track" : "New track"}</span>
-              <h2 className="mt-2 text-2xl font-semibold">{editingTrack?.name || "Define a search direction"}</h2>
+              <h2 className="mt-2 break-words text-2xl font-semibold">{editingTrack?.name || "Define a search direction"}</h2>
             </div>
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input type="checkbox" checked={draft.isActive} onChange={(event) => markChanged({ ...draft, isActive: event.target.checked })} /> Active
