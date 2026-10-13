@@ -75,6 +75,7 @@ export function CareerProfile() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteLabel, setPasteLabel] = useState("Previous resume");
   const [pasteText, setPasteText] = useState("");
@@ -87,6 +88,10 @@ export function CareerProfile() {
   // the form only when it has no unsaved edits relative to the last stored profile it
   // showed, so a background refresh never discards what the person is typing (#278).
   const shownProfile = useRef<CareerProfileValue | null>(null);
+  // A synchronous counter distinguishes a save's original snapshot from edits
+  // made before that asynchronous save resolves. React state alone cannot
+  // reliably disambiguate queued edits from its eventual completion (#288).
+  const editVersion = useRef(0);
   useEffect(() => {
     if (loading) return;
     const previous = shownProfile.current;
@@ -102,24 +107,38 @@ export function CareerProfile() {
   const sectorText = useMemo(() => joinLines(draft.sectors), [draft.sectors]);
 
   const update = <K extends keyof CareerProfileValue,>(key: K, value: CareerProfileValue[K]) => {
+    editVersion.current += 1;
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
     setSaveError(null);
+    setSaveNotice(null);
   };
 
   const reset = () => {
+    editVersion.current += 1;
     setDraft(emptyCareerProfile);
     setSaved(false);
     setSaveError(null);
+    setSaveNotice(null);
   };
 
   const handleSave = async () => {
+    const versionAtSave = editVersion.current;
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
     try {
       const next = await save(draft);
-      setDraft(next);
-      setSaved(true);
+      if (editVersion.current === versionAtSave) {
+        // No later edits: apply any storage normalization and show success.
+        setDraft(next);
+        setSaved(true);
+      } else {
+        // Save persisted its original snapshot. A more recent edit is still
+        // an unsaved draft; never replace it or show a misleading Saved cue.
+        setSaved(false);
+        setSaveNotice("Changes made during saving are still here. Save again to keep them.");
+      }
     } catch (saveFailure) {
       setSaved(false);
       setSaveError(
@@ -382,6 +401,7 @@ export function CareerProfile() {
             </button>
             <div className="flex items-center gap-3">
               {saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved on this device</span>}
+              {saveNotice && <span role="status" className="max-w-sm text-xs text-[var(--color-text-secondary)]">{saveNotice}</span>}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={loading || saving}>
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save career profile"}
