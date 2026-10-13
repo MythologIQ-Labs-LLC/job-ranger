@@ -75,7 +75,8 @@ A design document may preserve detailed implementation rationale even after its 
 ## Active proposals and bounded interoperability research (not shipped)
 
 - [`design/DRIVE_AGENT_INTERCHANGE_CONTRACT.md`](./design/DRIVE_AGENT_INTERCHANGE_CONTRACT.md) — **draft** agent-neutral Google Drive export/proposal authority and formatting rules (#249/#255/#285); no OAuth, import, sync or connected agent is implemented by this document.
-- [`design/schemas/jr-agent-export-v1.schema.json`](./design/schemas/jr-agent-export-v1.schema.json) and [`design/schemas/jr-agent-proposal-v1.schema.json`](./design/schemas/jr-agent-proposal-v1.schema.json) — **draft** closed JSON envelope schemas. They do not replace a deterministic validator, immutable source receipt, semantic provenance checks, existing Truth Gate or human approval.
+- [`design/DRIVE_AGENT_FIRST_RECONCILIATION.md`](./design/DRIVE_AGENT_FIRST_RECONCILIATION.md) — **draft** agent-first, months-long workspace continuity and deterministic reconciliation for read/write agent-owned records (#286).
+- [`design/schemas/jr-agent-export-v1.schema.json`](./design/schemas/jr-agent-export-v1.schema.json), [`design/schemas/jr-agent-operation-batch-v1.schema.json`](./design/schemas/jr-agent-operation-batch-v1.schema.json) and [`design/schemas/jr-agent-proposal-v1.schema.json`](./design/schemas/jr-agent-proposal-v1.schema.json) — **draft** closed JSON envelope schemas for exports, durable agent-owned operation batches and consequential proposals. They do not replace a deterministic validator, immutable source receipt, semantic provenance checks, existing Truth Gate or human approval.
 - [`planning/PLAN.md`](./planning/PLAN.md) — current implementation order: Drive interoperability first, release hardening concurrently, new provider candidates queued.
 
 ## Validation evidence
