@@ -104,7 +104,15 @@ export function parseStrictAgentJson(input, { maxBytes = SCANNER_LIMIT_BYTES } =
     }
     numberToken.lastIndex = i;
     const match = numberToken.exec(source);
-    if (match) { i = numberToken.lastIndex; return; }
+    if (match) {
+      const numeric = Number(match[0]);
+      if (!Number.isFinite(numeric) ||
+          (Number.isInteger(numeric) && !Number.isSafeInteger(numeric))) {
+        throw new SyntaxError('Agent JSON numeric value is unsafe');
+      }
+      i = numberToken.lastIndex;
+      return;
+    }
     throw new SyntaxError('Unexpected JSON token');
   }
   readValue(0);
