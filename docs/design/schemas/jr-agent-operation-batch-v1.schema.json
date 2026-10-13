@@ -1,0 +1,708 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-operation-batch-v1.schema.json",
+  "title": "Job Ranger agent workspace operation batch v1 - DRAFT / NON-NORMATIVE",
+  "description": "Closed structure only; does not grant permissions, authenticate author, verify local receipts or adjudicate factual claims. No runtime importer exists in this branch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "workspace_id",
+    "batch_id",
+    "source_export_id",
+    "source_manifest_sha256",
+    "actor_claim",
+    "created_at",
+    "previous_batch_id",
+    "operations"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-operation-batch"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 128
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 128,
+      "pattern": "^batch_[A-Za-z0-9_-]+$"
+    },
+    "source_export_id": {
+      "type": "string",
+      "minLength": 9,
+      "maxLength": 96,
+      "pattern": "^ex_[A-Za-z0-9_-]+$"
+    },
+    "source_manifest_sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "actor_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "display_name"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 32,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "previous_batch_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 128,
+          "pattern": "^batch_[A-Za-z0-9_-]+$"
+        }
+      ]
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "workspace_note_version"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "body"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "source_links": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024,
+                      "pattern": "^https://"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "opportunity_annotation"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "opportunity_id",
+                  "title",
+                  "notes",
+                  "observed_at"
+                ],
+                "properties": {
+                  "opportunity_id": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "observed_at": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 32,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "material_draft_version"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "material_kind",
+                  "title",
+                  "body",
+                  "source_evidence_refs",
+                  "gate_status"
+                ],
+                "properties": {
+                  "material_kind": {
+                    "enum": [
+                      "resume",
+                      "cover_letter",
+                      "worksheet",
+                      "interview_prep"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "source_evidence_refs": {
+                    "type": "array",
+                    "maxItems": 120,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "record_id",
+                        "revision"
+                      ],
+                      "properties": {
+                        "record_id": {
+                          "type": "string",
+                          "minLength": 6,
+                          "maxLength": 128,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                        },
+                        "revision": {
+                          "type": "string",
+                          "minLength": 6,
+                          "maxLength": 160
+                        }
+                      }
+                    }
+                  },
+                  "gate_status": {
+                    "const": "not_checked"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "follow_up_plan"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "description",
+                  "due_at"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "due_at": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 20,
+                        "maxLength": 32,
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "application_status_claim"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "application_id",
+                  "claimed_status",
+                  "reported_context"
+                ],
+                "properties": {
+                  "application_id": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "claimed_status": {
+                    "enum": [
+                      "drafted",
+                      "submitted",
+                      "interviewing",
+                      "offered",
+                      "rejected",
+                      "withdrawn"
+                    ]
+                  },
+                  "reported_context": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operation_id",
+              "record_id",
+              "base_revision",
+              "previous_operation_id",
+              "authored_at",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "operation_id": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 128,
+                "pattern": "^op_[A-Za-z0-9_-]+$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "base_revision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 160
+                  }
+                ]
+              },
+              "previous_operation_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 7,
+                    "maxLength": 128,
+                    "pattern": "^op_[A-Za-z0-9_-]+$"
+                  }
+                ]
+              },
+              "authored_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 32,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "kind": {
+                "const": "evidence_change_proposal"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "evidence_id",
+                  "change_reason",
+                  "proposed_text",
+                  "source_evidence_refs"
+                ],
+                "properties": {
+                  "evidence_id": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "change_reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "proposed_text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "source_evidence_refs": {
+                    "type": "array",
+                    "maxItems": 120,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "record_id",
+                        "revision"
+                      ],
+                      "properties": {
+                        "record_id": {
+                          "type": "string",
+                          "minLength": 6,
+                          "maxLength": 128,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                        },
+                        "revision": {
+                          "type": "string",
+                          "minLength": 6,
+                          "maxLength": 160
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
