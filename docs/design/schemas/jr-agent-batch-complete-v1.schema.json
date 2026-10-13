@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/job-ranger/blob/main/docs/design/schemas/jr-agent-batch-complete-v1.schema.json",
+  "title": "Job Ranger batch completion marker v1 - DRAFT / NON-NORMATIVE",
+  "description": "Publication marker only. It never authenticates a remote actor, establishes human approval or proves remote recovery without actual byte rechecks and a trusted local receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "workspace_id",
+    "batch_id",
+    "source_export_id",
+    "batch_sha256",
+    "attachments"
+  ],
+  "properties": {
+    "format": {
+      "const": "jr-agent-batch-complete"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 128
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 128,
+      "pattern": "^batch_[A-Za-z0-9_-]+$"
+    },
+    "source_export_id": {
+      "type": "string",
+      "minLength": 9,
+      "maxLength": 96,
+      "pattern": "^ex_[A-Za-z0-9_-]+$"
+    },
+    "batch_sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220,
+            "pattern": "^attachments/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*$"
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20971520
+          }
+        }
+      }
+    }
+  }
+}
