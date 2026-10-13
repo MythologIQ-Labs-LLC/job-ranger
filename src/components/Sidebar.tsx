@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   BarChart3,
   BookOpenText,
+  Bot,
   Briefcase,
   Building2,
   ChevronRight,
@@ -43,6 +44,7 @@ const navGroups: NavGroup[] = [
       { name: "Career Evidence", href: "/career-evidence/new", icon: Library },
       { name: "Career Stories", href: "/career-stories", icon: BookOpenText },
       { name: "Resume", href: "/resume", icon: FileText },
+      { name: "Agent Workspace", href: "/agent-workspace", icon: Bot },
     ],
   },
   {
