@@ -21,6 +21,21 @@ function operationBytes(event) {
 function replayIntoDraftLedger(input, trustedCanonical) {
   const canonicalBefore = JSON.stringify(trustedCanonical);
   const seen = new Map();
+  // Discover all unique operation identities before classification. A Drive
+  // listing is unordered; a sibling fork must affect BOTH competing edits.
+  const initialById = new Map();
+  const variants = new Map();
+  const siblings = new Map();
+  for (const event of input) {
+    if (!variants.has(event.operation_id)) variants.set(event.operation_id, new Set());
+    variants.get(event.operation_id).add(operationBytes(event));
+    if (initialById.has(event.operation_id)) continue;
+    initialById.set(event.operation_id, event);
+    if (event.previous_operation_id === null) continue;
+    const forkKey = JSON.stringify([event.record_id, event.previous_operation_id]);
+    if (!siblings.has(forkKey)) siblings.set(forkKey, new Set());
+    siblings.get(forkKey).add(event.operation_id);
+  }
   const current = new Map();
   const classified = [];
   const drafts = [];
@@ -31,7 +46,11 @@ function replayIntoDraftLedger(input, trustedCanonical) {
     const key = event.operation_id;
     const bytes = operationBytes(event);
     let verdict;
-    if (seen.has(key)) {
+    if (variants.get(key).size > 1) {
+      // Even the first-seen value is unsafe: a different value with the same
+      // identity means an unordered Drive listing cannot choose a winner.
+      verdict = 'reject_operation_id_collision';
+    } else if (seen.has(key)) {
       verdict = seen.get(key) === bytes ? 'duplicate_replay_noop' : 'reject_operation_id_collision';
     } else {
       seen.set(key, bytes);
@@ -49,9 +68,16 @@ function replayIntoDraftLedger(input, trustedCanonical) {
         // Preserve draft material even when stale, but do not canonically approve it.
         drafts.push({ key, record_id: event.record_id, stale, canonical: false });
         current.set(event.record_id, key);
-      } else if (current.has(event.record_id) &&
-                 event.previous_operation_id !== current.get(event.record_id)) {
+      } else if (event.previous_operation_id !== null &&
+                 (siblings.get(JSON.stringify([event.record_id,
+                   event.previous_operation_id]))?.size ?? 0) > 1) {
+        // Neither branch can win simply because a Drive listing returned it
+        // first. Keep both versions staged for a deliberate resolution.
         verdict = 'conflict_preserve_fork';
+        drafts.push({ key, record_id: event.record_id, conflict: true, canonical: false });
+      } else if (event.previous_operation_id !== null &&
+                 !initialById.has(event.previous_operation_id)) {
+        verdict = 'needs_parent_or_quarantine';
       } else {
         verdict = 'import_draft';
         current.set(event.record_id, key);
@@ -130,4 +156,36 @@ test('duplicate-operation replay is byte-identical; collisions are not', () => {
   assert.equal(first.operation_id, collision.operation_id);
   assert.equal(operationBytes(first), operationBytes(replay));
   assert.notEqual(operationBytes(first), operationBytes(collision));
+});
+
+test('competing edits from the same parent are both held for review', () => {
+  const candidates = golden.events.filter(event =>
+    event.record_id === 'note_employer_01' && event.previous_operation_id === 'op_alpha_note_create');
+  assert.equal(candidates.length, 2);
+  for (const event of candidates) assert.equal(event.expected, 'conflict_preserve_fork');
+});
+
+test('classification of forked operations does not depend on Drive listing order', () => {
+  const canonical = Object.freeze({
+    evidenceId: golden.simulation.canonical_evidence_at_return.id,
+    evidenceRevision: golden.simulation.canonical_evidence_at_return.revision,
+    submittedApplications: 0,
+  });
+  const original = replayIntoDraftLedger(golden.events, canonical);
+  // Simulate reverse listing order, preserving the same complete set. Report
+  // by operation ID+bytes so the deliberately conflicting duplicate is kept.
+  const reversed = replayIntoDraftLedger([...golden.events].reverse(), canonical);
+  const summarize = output => output.classified
+    .map(x => x.id + ':' + x.verdict).sort();
+  assert.deepEqual(summarize(reversed), summarize(original));
+  assert.equal(reversed.inserted, original.inserted);
+  assert.equal(reversed.drafts.filter(x => x.conflict).length, 2);
+});
+
+test('pure byte-identical replay is a no-op when no conflicting value exists', () => {
+  const canonical = Object.freeze({ evidenceId: 'evidence_example_001', evidenceRevision: 'revision_new_002', submittedApplications: 0 });
+  const clean = golden.events.filter((_, i) => i !== 10);
+  const result = replayIntoDraftLedger(clean, canonical);
+  assert.equal(result.classified[4].verdict, 'import_draft');
+  assert.equal(result.classified[9].verdict, 'duplicate_replay_noop');
 });
