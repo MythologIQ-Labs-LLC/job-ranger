@@ -572,12 +572,12 @@ export class JobScoutRepository {
         UPDATE filters
         SET
           name = ${update.name?.trim() ?? current.name},
-          company_id = ${update.companyId ?? current.companyId},
+          company_id = ${update.companyId === undefined ? current.companyId : update.companyId},
           title_include = ${serializeArray(update.titleInclude ?? current.titleInclude)},
           title_exclude = ${serializeArray(update.titleExclude ?? current.titleExclude)},
           keywords_include = ${serializeArray(update.keywordsInclude ?? current.keywordsInclude)},
           keywords_exclude = ${serializeArray(update.keywordsExclude ?? current.keywordsExclude)},
-          salary_min = ${update.salaryMin ?? current.salaryMin},
+          salary_min = ${update.salaryMin === undefined ? current.salaryMin : update.salaryMin},
           location_include = ${serializeArray(update.locationInclude ?? current.locationInclude)},
           location_exclude = ${serializeArray(update.locationExclude ?? current.locationExclude)},
           is_active = ${update.isActive ?? current.isActive},
