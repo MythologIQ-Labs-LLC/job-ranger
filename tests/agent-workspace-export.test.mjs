@@ -19,6 +19,8 @@ const deepFreeze = (value) => {
   }
   return value;
 };
+// Parsed objects are prototype-free by design; compare their JSON structure.
+const plain = (value) => JSON.parse(JSON.stringify(value));
 const loadSnapshot = () => JSON.parse(readFileSync(fixtureUrl, "utf8"));
 const schemaDocuments = [
   "jr-agent-operation-batch-v1.schema.json",
@@ -122,7 +124,7 @@ assert.equal(tracks.records[0].authority_state, "user_defined");
 const resumes = json("data/selected-resumes.json");
 assert.equal(resumes.records[0].record_id, "resume_ops_001");
 assert.equal(resumes.records[0].data.contact, undefined, "resume contact identity is excluded by default");
-assert.deepEqual(resumes.records[0].data.statements[0].evidence_refs, [{ record_id: "ev_confirmed_scheduling", revision: "2026-09-02T12:00:00.000Z" }]);
+assert.deepEqual(plain(resumes.records[0].data.statements[0].evidence_refs), [{ record_id: "ev_confirmed_scheduling", revision: "2026-09-02T12:00:00.000Z" }]);
 const gates = json("data/gate-reports.json");
 assert.deepEqual(gates.records.map((r) => [r.record_id, r.data.truth_gate.passed, r.data.parseability_gate.passed]), [["gate_resume_ops_001", true, true]]);
 assert.equal(gates.records[0].authority_state, "job_ranger_deterministic_result");
@@ -130,7 +132,7 @@ assert.equal(gates.records[0].authority_state, "job_ranger_deterministic_result"
 const letters = json("data/selected-cover-letters.json");
 assert.equal(letters.records[0].record_id, "material_cl_001");
 assert.equal(letters.records[0].stale, false);
-assert.deepEqual(letters.records[0].data.sections[1].evidence_refs, [{ record_id: "ev_confirmed_scheduling", revision: "2026-09-02T12:00:00.000Z" }]);
+assert.deepEqual(plain(letters.records[0].data.sections[1].evidence_refs), [{ record_id: "ev_confirmed_scheduling", revision: "2026-09-02T12:00:00.000Z" }]);
 
 const templates = json("data/resume-templates.json");
 assert.deepEqual(templates.records.map((r) => r.record_id), ["ats-compact-v1", "ats-standard-v1"]);

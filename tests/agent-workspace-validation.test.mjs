@@ -79,7 +79,7 @@ expectCode({ ...base(), approved: true }, "unknown_field", "unknown top-level fi
 }
 {
   const batch = base();
-  batch.created_at = "2026-10-20 10:00";
+  batch.created_at = "2026-10-20 10:00:00Z";
   expectCode(batch, "invalid_format", "non-UTC timestamp");
 }
 {
@@ -104,6 +104,11 @@ expectCode("[".repeat(100) + "]".repeat(100), "depth_exceeded", "excessive nesti
   const batch = base();
   batch.workspace_id = 7;
   expectCode(batch, "invalid_type", "wrong field type");
+}
+for (const kind of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
+  const batch = base();
+  batch.operations[0].kind = kind;
+  expectCode(batch, "unknown_kind", `prototype-named kind ${kind}`);
 }
 expectCode(JSON.stringify(base()).replace('"title"', '"__proto__":{"polluted":1},"title"'), "unknown_field", "__proto__ key in a payload");
 assert.equal({}.polluted, undefined, "Object.prototype is never modified");
