@@ -14,3 +14,4 @@ export { createAgentExport } from "./exporter.ts";
 export { verifyExportPacket } from "./verify-export.ts";
 export { reconcileWorkspace, type ReconcileLedger, type ReconcilePolicy, type Submission } from "./reconcile.ts";
 export type { AgentExportResult, CanonicalSnapshot, ExportReceipt, ExportRequest } from "./types.ts";
+export { gatherCanonicalSnapshot, type SnapshotReader } from "./snapshot.ts";

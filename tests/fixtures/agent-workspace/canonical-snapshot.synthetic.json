@@ -264,7 +264,7 @@
       "id": "material_cl_001",
       "applicationId": "app_harbor_001",
       "jobId": "job_selected_001",
-      "kind": "cover_letter",
+      "kind": "cover-letter",
       "version": 1,
       "status": "draft",
       "sections": [
