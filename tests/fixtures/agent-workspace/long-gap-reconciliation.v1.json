@@ -188,7 +188,7 @@
       "payload": {
         "opportunity_id": "opportunity_example_001",
         "title": "Potential role",
-        "notes": "Exact bytes reused as a replay, not a new operation.",
+        "notes": "Company role investigated, not accepted as a verified source.",
         "observed_at": "2026-11-02T10:00:00Z"
       },
       "expected": "duplicate_replay_noop"
@@ -224,7 +224,7 @@
   "notes": [
     "This is an acceptance oracle, not a production reader or importer.",
     "A structurally valid agent submission never authenticates its actor claim or confirms a user fact.",
-    "Event 10 represents a byte-identical replay *of event 5*, except for outcome metadata; downstream fixture compiler must reconstruct original event bytes.",
-    "No model output can assert Truth Gate PASS."
+    "No model output can assert Truth Gate PASS.",
+    "Event 10 replays the operation identity and all operation fields (including payload) from event 5; day and expected outcome are transport/oracle metadata, not operation bytes."
   ]
 }
