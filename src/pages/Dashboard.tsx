@@ -113,22 +113,22 @@ export function Dashboard() {
 
   return (
     <Layout>
-      <section className="panel panel-strong overflow-hidden px-6 py-7 sm:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <section className="dashboard-hero panel panel-strong overflow-hidden px-6 py-7 sm:px-8" aria-labelledby="dashboard-title">
+        <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <span className="alpha-pill">
               <Sparkles className="h-3.5 w-3.5" />
               Local workspace
             </span>
-            <h1 className="page-title mt-4">Build a calmer review ritual around the jobs you actually want.</h1>
+            <h1 id="dashboard-title" className="page-title mt-4">Build a calmer review ritual around the jobs you actually want.</h1>
             <p className="page-copy">
               Job Ranger keeps the search grounded: detect the source family, run the best available extraction path, and surface when a portal still needs a dedicated or browser-backed adapter.
             </p>
           </div>
-          <div className="panel panel-muted max-w-md rounded-[1.4rem] px-5 py-4">
+          <div className="dashboard-hero-status panel panel-muted max-w-md rounded-[1.4rem] px-5 py-4">
             <p className="metric-label">Local backend</p>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              SQLite persisted at <span className="font-mono text-xs">{systemStatus?.databasePath ?? "Loading..."}</span>
+              SQLite persisted at <span className="block break-all font-mono text-xs">{systemStatus?.databasePath ?? "Loading..."}</span>
             </p>
           </div>
         </div>
@@ -140,9 +140,9 @@ export function Dashboard() {
         </div>
       )}
 
-      <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="dashboard-metrics mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Job search overview">
         {stats.map((item) => (
-          <div key={item.name} className="metric-card animate-rise">
+          <div key={item.name} className="metric-card dashboard-metric animate-rise">
             <div className="flex items-center justify-between">
               <p className="metric-label">{item.name}</p>
               <item.icon className="h-5 w-5 text-[var(--color-primary)]" />
@@ -153,9 +153,9 @@ export function Dashboard() {
         ))}
       </section>
 
-      <section className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <section className="dashboard-actions mt-8 grid grid-cols-1 gap-5 xl:grid-cols-3" aria-label="Recommended next steps">
         {stories.map((story) => (
-          <article key={story.kicker} className="story-card animate-rise">
+          <article key={story.kicker} className="story-card dashboard-action-card animate-rise">
             <p className="story-kicker">{story.kicker}</p>
             <h2 className="story-title">{story.title}</h2>
             <p className="story-copy">{story.copy}</p>
@@ -170,7 +170,7 @@ export function Dashboard() {
         ))}
       </section>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="dashboard-detail mt-8 grid grid-cols-1 gap-8 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="panel panel-strong overflow-hidden">
           <div className="border-b border-divider px-6 py-5">
             <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Recent runs</h2>
