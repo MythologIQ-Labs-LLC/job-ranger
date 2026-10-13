@@ -6,6 +6,13 @@ let server: PwaServer;
 test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
+async function navigateToCareerProfile(page: import("@playwright/test").Page) {
+  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const group = navigation.getByRole("button", { name: "My Career" });
+  if (await group.getAttribute("aria-expanded") !== "true") await group.click();
+  await navigation.getByRole("link", { name: "Career Profile", exact: true }).click();
+}
+
 async function seedTrackedApplication(page: import("@playwright/test").Page) {
   await page.route("https://boards-api.greenhouse.io/**", async (route) => route.fulfill({
     status: 200, contentType: "application/json",
@@ -82,7 +89,7 @@ test("a pending status write blocks route navigation until the canonical update 
   await select.selectOption("interview");
   await expect(page.getByRole("status", { name: "Application status save status" }))
     .toContainText("Saving status");
-  await page.getByRole("link", { name: "Career Profile" }).click();
+  await navigateToCareerProfile(page);
   const dialog = page.getByRole("dialog", { name: "Leave with unsaved changes?" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Stay on this page" }).click();
@@ -92,7 +99,7 @@ test("a pending status write blocks route navigation until the canonical update 
     .toContainText("Saved");
   expect((await page.evaluate(() => window.electronAPI.applications.list()))
     .find((row) => row.id === id)?.status).toBe("interview");
-  await page.getByRole("link", { name: "Career Profile" }).click();
+  await navigateToCareerProfile(page);
   await expect(page).toHaveURL(/#\/career-profile$/);
 });
 
@@ -142,7 +149,7 @@ test("reverting text or status during a pending write cannot bypass the unsaved 
   await expect(status).toHaveValue("interested");
   await expect(page.getByRole("status", { name: "Application status save status" }))
     .toContainText("Saving status");
-  await page.getByRole("link", { name: "Career Profile" }).click();
+  await navigateToCareerProfile(page);
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Stay on this page" }).click();
   await page.evaluate(() => (window as unknown as { releaseFirstStatus: () => void }).releaseFirstStatus());

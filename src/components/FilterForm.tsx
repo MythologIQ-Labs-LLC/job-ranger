@@ -3,6 +3,7 @@ import type { Company, FilterDraft } from "../types";
 
 interface FilterFormProps {
   companies: Company[];
+  initial?: FilterDraft;
   onSubmit: (draft: FilterDraft) => Promise<void>;
   onCancel: () => void;
 }
@@ -20,6 +21,23 @@ const emptyDraft: FilterDraft = {
   isActive: true,
 };
 
+type TagField =
+  | "titleInclude"
+  | "titleExclude"
+  | "keywordsInclude"
+  | "keywordsExclude"
+  | "locationInclude"
+  | "locationExclude";
+
+const tagFields: { field: TagField; id: string; label: string; placeholder: string }[] = [
+  { field: "titleInclude", id: "filter-title-include", label: "Title includes", placeholder: "engineer, platform" },
+  { field: "titleExclude", id: "filter-title-exclude", label: "Title excludes", placeholder: "senior, manager" },
+  { field: "keywordsInclude", id: "filter-keywords-include", label: "Keywords include", placeholder: "typescript, api" },
+  { field: "keywordsExclude", id: "filter-keywords-exclude", label: "Keywords exclude", placeholder: "on-call, overnight" },
+  { field: "locationInclude", id: "filter-location-include", label: "Location includes", placeholder: "remote, new york" },
+  { field: "locationExclude", id: "filter-location-exclude", label: "Location excludes", placeholder: "relocation required" },
+];
+
 function parseTags(value: string): string[] {
   return value
     .split(",")
@@ -27,12 +45,20 @@ function parseTags(value: string): string[] {
     .filter(Boolean);
 }
 
-export function FilterForm({ companies, onSubmit, onCancel }: FilterFormProps) {
-  const [draft, setDraft] = useState<FilterDraft>(emptyDraft);
+// Tag inputs keep the raw text while typing (so commas and spaces can be typed);
+// lists are parsed only when the filter is saved.
+function tagText(draft: FilterDraft): Record<TagField, string> {
+  return Object.fromEntries(tagFields.map(({ field }) => [field, draft[field].join(", ")])) as Record<TagField, string>;
+}
+
+export function FilterForm({ companies, initial, onSubmit, onCancel }: FilterFormProps) {
+  const [draft, setDraft] = useState<FilterDraft>(initial ?? emptyDraft);
+  const [tags, setTags] = useState<Record<TagField, string>>(() => tagText(initial ?? emptyDraft));
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    await onSubmit(draft);
+    const parsed = Object.fromEntries(tagFields.map(({ field }) => [field, parseTags(tags[field])]));
+    await onSubmit({ ...draft, ...parsed });
   };
 
   return (
@@ -70,66 +96,19 @@ export function FilterForm({ companies, onSubmit, onCancel }: FilterFormProps) {
         </select>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="filter-title-include" className="block text-sm font-medium">Title includes</label>
-          <input
-            id="filter-title-include"
-            type="text"
-            placeholder="engineer, platform"
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                titleInclude: parseTags(event.target.value),
-              }))
-            }
-            className="input-shell mt-1"
-          />
-        </div>
-        <div>
-          <label htmlFor="filter-title-exclude" className="block text-sm font-medium">Title excludes</label>
-          <input
-            id="filter-title-exclude"
-            type="text"
-            placeholder="senior, manager"
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                titleExclude: parseTags(event.target.value),
-              }))
-            }
-            className="input-shell mt-1"
-          />
-        </div>
-        <div>
-          <label htmlFor="filter-keywords-include" className="block text-sm font-medium">Keywords include</label>
-          <input
-            id="filter-keywords-include"
-            type="text"
-            placeholder="typescript, api"
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                keywordsInclude: parseTags(event.target.value),
-              }))
-            }
-            className="input-shell mt-1"
-          />
-        </div>
-        <div>
-          <label htmlFor="filter-location-include" className="block text-sm font-medium">Location includes</label>
-          <input
-            id="filter-location-include"
-            type="text"
-            placeholder="remote, new york"
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                locationInclude: parseTags(event.target.value),
-              }))
-            }
-            className="input-shell mt-1"
-          />
-        </div>
+        {tagFields.map(({ field, id, label, placeholder }) => (
+          <div key={field}>
+            <label htmlFor={id} className="block text-sm font-medium">{label}</label>
+            <input
+              id={id}
+              type="text"
+              placeholder={placeholder}
+              value={tags[field]}
+              onChange={(event) => setTags((current) => ({ ...current, [field]: event.target.value }))}
+              className="input-shell mt-1"
+            />
+          </div>
+        ))}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
@@ -138,6 +117,7 @@ export function FilterForm({ companies, onSubmit, onCancel }: FilterFormProps) {
             id="filter-salary-min"
             type="number"
             min={0}
+            value={draft.salaryMin ?? ""}
             onChange={(event) =>
               setDraft((current) => ({
                 ...current,
