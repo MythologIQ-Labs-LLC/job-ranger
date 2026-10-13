@@ -245,6 +245,106 @@ textarea {
   background: var(--color-panel-muted);
 }
 
+/* #291: an action-first Home that inherits the current theme tokens. Keep this
+   scoped to the dashboard rather than changing every form/card during release
+   hardening. All background effects are decorative; no meaning is color-only. */
+.dashboard-hero {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 54%),
+    linear-gradient(125deg, var(--color-panel-strong), color-mix(in srgb, var(--color-panel) 90%, var(--color-canvas)));
+}
+
+.dashboard-hero::before {
+  content: "";
+  position: absolute;
+  inset: 1.25rem auto 1.25rem 0;
+  width: 0.25rem;
+  border-radius: 0 1rem 1rem 0;
+  background: var(--color-primary);
+}
+
+.dashboard-hero-note {
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--color-panel-strong) 88%, transparent);
+  padding: 1.3rem;
+  box-shadow: 0 16px 30px -26px var(--color-shadow);
+}
+
+.dashboard-hero-note-label {
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-step {
+  border: 1px solid var(--color-border);
+  border-radius: 1.3rem;
+  padding: 1.2rem;
+  background: color-mix(in srgb, var(--color-panel-strong) 94%, transparent);
+  box-shadow: 0 12px 30px -27px var(--color-shadow);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.dashboard-step:hover,
+.dashboard-step:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+  box-shadow: 0 17px 34px -26px var(--color-shadow);
+  transform: translateY(-1px);
+}
+
+.dashboard-step-index {
+  display: inline-grid;
+  flex: 0 0 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  border-radius: 0.65rem;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-panel-strong));
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-diagnostics summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-diagnostics-chevron {
+  transition: transform 160ms ease;
+}
+
+.dashboard-diagnostics[open] .dashboard-diagnostics-chevron {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 767px), (max-height: 700px) {
+  .dashboard-hero-note {
+    padding: 1rem;
+  }
+
+  .dashboard-step {
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-step,
+  .dashboard-diagnostics-chevron {
+    transition: none;
+  }
+
+  .dashboard-step:hover,
+  .dashboard-step:focus-visible {
+    transform: none;
+  }
+}
+
 .metric-card {
   border: 1px solid var(--color-border);
   border-radius: 1.5rem;
