@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -83,10 +83,17 @@ export function CareerProfile() {
   const [editingType, setEditingType] = useState<EvidenceSubjectType>("other");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
 
+  // A refresh (for example after a save elsewhere) produces a new profile object. Replace
+  // the form only when it has no unsaved edits relative to the last stored profile it
+  // showed, so a background refresh never discards what the person is typing (#278).
+  const shownProfile = useRef<CareerProfileValue | null>(null);
   useEffect(() => {
-    if (!loading) {
-      setDraft(profile);
-    }
+    if (loading) return;
+    const previous = shownProfile.current;
+    shownProfile.current = profile;
+    setDraft((current) =>
+      previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
+    );
   }, [loading, profile]);
 
   const targetText = useMemo(() => joinLines(draft.targetTitles), [draft.targetTitles]);
