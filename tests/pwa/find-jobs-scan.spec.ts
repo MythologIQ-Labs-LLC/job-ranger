@@ -51,7 +51,7 @@ async function seed(page: Page) {
   await page.reload();
   await waitForRuntime(page);
   await expect(page.getByRole("button", { name: "Medical Office Coordinator", exact: true })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Assessment target track" })).toHaveValue(/track-/);
+  await expect(page.getByRole("combobox", { name: /^Assessment (target track|direction)$/ })).toHaveValue(/track-/);
 }
 
 test("compact list retains source quality and assessment access without showing verbose details", async ({ page }) => {
