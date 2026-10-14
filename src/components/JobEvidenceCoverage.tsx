@@ -195,11 +195,11 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
         placement="right"
       >
           {loading && (
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <p role="status" className="text-sm text-[var(--color-text-secondary)]">
               Comparing this listing with {targetTrack.name} and your confirmed Career Evidence...
             </p>
           )}
-          {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
+          {error && <p role="alert" className="text-sm text-[var(--color-danger)]">Assessment unavailable: {error}</p>}
 
           {assessment && coverage && (
             <div className="space-y-5">
