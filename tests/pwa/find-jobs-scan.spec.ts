@@ -64,10 +64,11 @@ test("compact list retains source quality and assessment access without showing 
 
   const details = job.locator("details");
   await expect(details).not.toHaveAttribute("open", "");
+  await expect(job.getByText("Still active on source")).toBeHidden();
   await expect(job.getByRole("button", { name: /Opportunity assessment/ })).toBeVisible();
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
   await expect(job.getByText("Eligibility and blockers")).toBeVisible();
-  await expect(job.getByText("What Job Ranger still does not know")).toBeVisible();
+  await expect(job.getByText("Evidence coverage", { exact: true })).toBeVisible();
 
   await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
