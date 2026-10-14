@@ -116,7 +116,6 @@ export function Applications() {
               key={value}
               type="button"
               aria-pressed={statusFocus === value}
-              disabled={hasUnsavedChanges}
               onClick={() => setStatusFocus(value)}
               className={statusFocus === value ? "primary-button" : "secondary-button"}
             >
@@ -126,7 +125,7 @@ export function Applications() {
         </div>
         {hasUnsavedChanges && (
           <p role="status" className="mt-3 text-sm text-[var(--color-text-secondary)]">
-            Status filters are paused while an application has unsaved edits. Retry any failed save before changing views.
+            Applications with unsaved edits stay visible across status filters until their latest changes are saved.
           </p>
         )}
       </section>
@@ -188,6 +187,13 @@ export function Applications() {
                 </button>
               </div>
             </div>
+
+            {(dirtyFields[application.id + ":notes"] || dirtyFields[application.id + ":status"]) &&
+              !matchesStatusFocus(application.status, statusFocus) && (
+                <p role="status" className="mt-4 text-sm font-semibold text-[var(--color-warning)]">
+                  Kept visible because this application has unsaved changes, even though its saved status does not match this view.
+                </p>
+              )}
 
             <ApplicationNotesEditor
               application={application}
