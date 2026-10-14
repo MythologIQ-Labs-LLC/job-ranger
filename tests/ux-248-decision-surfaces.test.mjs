@@ -77,7 +77,8 @@ test("application stages show recorded next action only and hide removal", async
   await withPage(async (page) => {
     await page.locator('[data-page="apps"]').click();
     assert.match(await page.locator("#preview").innerText(), /Recorded follow-up/);
-    assert.match(await page.locator("#preview").innerText(), /Remove \(disabled\)/);
+    await page.locator("#preview details summary").first().click();
+    assert.equal(await page.getByRole("button", { name: "Remove (disabled)" }).isDisabled(), true);
     await page.locator('[data-status="offer"]').click();
     assert.equal(await page.locator("#preview").getByText("No applications in this state.").count(), 1);
     assert.equal(await page.locator('[data-status="offer"]').evaluate(el => el === document.activeElement), true);
