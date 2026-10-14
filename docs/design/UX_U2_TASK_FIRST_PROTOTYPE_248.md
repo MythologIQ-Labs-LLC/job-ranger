@@ -1,13 +1,13 @@
 # Job Ranger #248 | Gate U2: task-first Home and Career Direction prototype
 
 **Status:** Reviewable **standalone HTML mockup only**, not application implementation or accepted UX direction.
-**Baseline used:** 2026-10-13 main \`170b059\`, U0/U1 baseline from Claude: 84 captures/14 full pages plus 16 Agent Workspace captures, 6 journey walkthroughs. G3 Agent Workspace is separately accepted locally on integration commit \`ac6362c\`, not merged. The Markdown baseline references image files not supplied in this task; this implementation is grounded in the baseline measurements and first-party source, not claimed screenshot reinspection.
+**Baseline used:** 2026-10-13 main `170b059`, U0/U1 baseline from Claude: 84 captures/14 full pages plus 16 Agent Workspace captures, 6 journey walkthroughs. G3 Agent Workspace is separately accepted locally on integration commit `ac6362c`, not merged. The Markdown baseline references image files not supplied in this task; this implementation is grounded in the baseline measurements and first-party source, not claimed screenshot reinspection.
 **Review artifact:** [Open the HTML source](./prototypes/248-task-first/index.html) (download/open as standalone HTML locally; it does not load application data).
 **Cohort:** five distinct *fictional* fixture situations, not separate product personalities.
 
 ## What this prototype changes only visually
 
-- Home's first meaningful content is *actionable work* from stored career evidence, applications, new jobs, and G3 agent review; source/adapter telemetry is relegated to **Search health** disclosure. This differs from \`src/pages/Dashboard.tsx\`, which starts with scrape telemetry and has no applications/evidence-review input.
+- Home's first meaningful content is *actionable work* from stored career evidence, applications, new jobs, and G3 agent review; source/adapter telemetry is relegated to **Search health** disclosure. This differs from `src/pages/Dashboard.tsx`, which starts with scrape telemetry and has no applications/evidence-review input.
 - Career Direction separates a simple **About you** block (broad Career Profile intent) from **Target Tracks** (per-direction constraints/strength) and **Career Evidence** (historical facts/provenance). The current route structure remains unchanged.
 - A **Focused** layout and a **Dense** counter-first layout can be compared on both screens; dense is a deliberate alternative, not the default.
 - An isolated mock control switches five synthetic situations and individual target tracks. No save button calls a backend. "Simulate edit" only changes the displayed save-state message.
@@ -17,15 +17,15 @@
 
 | Surface/question | Real owner/API today | U2 proposal | Implementation gate |
 |---|---|---|---|
-| Broad career intent | \`CareerProfile\` v2, \`career.getProfile\` | Show intent and profile state compactly | Must not turn broad goals into confirmed work history |
-| Multiple career directions | \`CareerTargetTrack\`, \`career.listTargetTracks\` | Direction picker preserving separate track types and names | Distinct target tracks and no merger of incompatible constraints |
-| Per-direction restrictions | \`CareerSearchConstraints\` on Target Track | Render value **and strength** (required/preferred/target/unspecified) | Preserve preference semantics, unknowns, migrations and unedited records |
-| Profile's legacy restrictions | \`CareerProfile.radiusMiles/minimumPay/fullTimeOnly\` | Proposed future consolidation, **not implemented** | Explicit precedence and reversible migration ADR before changing owners |
-| Provisional imported evidence | \`useCareerEvidence().pending\` (\`verificationState === imported\`) | Home count and target action; review stays with evidence flow | Imported is never confirmed; link to real review area |
-| Application status | \`applications.list\` | Current status and next recorded event context | No made-up deadlines, ranking, auto-apply, or inferred probability |
-| Recorded milestones/reminders | \`useApplicationLifecycle\` (per application, expanded detail) | Home may display known due items in future | Read-only bounded summary contract required; never synthesize due dates |
+| Broad career intent | `CareerProfile` v2, `career.getProfile` | Show intent and profile state compactly | Must not turn broad goals into confirmed work history |
+| Multiple career directions | `CareerTargetTrack`, `career.listTargetTracks` | Direction picker preserving separate track types and names | Distinct target tracks and no merger of incompatible constraints |
+| Per-direction restrictions | `CareerSearchConstraints` on Target Track | Render value **and strength** (required/preferred/target/unspecified) | Preserve preference semantics, unknowns, migrations and unedited records |
+| Profile's legacy restrictions | `CareerProfile.radiusMiles/minimumPay/fullTimeOnly` | Proposed future consolidation, **not implemented** | Explicit precedence and reversible migration ADR before changing owners |
+| Provisional imported evidence | `useCareerEvidence().pending` (`verificationState === imported`) | Home count and target action; review stays with evidence flow | Imported is never confirmed; link to real review area |
+| Application status | `applications.list` | Current status and next recorded event context | No made-up deadlines, ranking, auto-apply, or inferred probability |
+| Recorded milestones/reminders | `useApplicationLifecycle` (per application, expanded detail) | Home may display known due items in future | Read-only bounded summary contract required; never synthesize due dates |
 | Agent work (G3) | G3 workspace read APIs; review/drafts/problems/history | Home shows review count, not acceptance | Import/sync never authorizes canonical writes; API only after G3 merged |
-| Search operations | \`useAppContext\` jobs/companies/scrapeRuns | Keep source health reachable but below user actions | Failures must remain available, not hidden |
+| Search operations | `useAppContext` jobs/companies/scrapeRuns | Keep source health reachable but below user actions | Failures must remain available, not hidden |
 | Dense browsing | Find Jobs and Applications existing routes | Optional dense mode for large volumes later | Must test high-volume synthetic fixtures before choosing |
  
 ## Decision queue logic *proposed*, not shipped
@@ -41,7 +41,7 @@ Missing data is never rendered as a due/late/failed state. Keep a clear empty or
 3. Compare A against B for goal-first, resume-first, evidence-first and multi-direction changes. B may win for heavy users, but the supplied baseline has only 1 job and 1 application.
 4. Validate with larger synthetic volumes (10/50+ applications, many pending evidence items); no real applicant information.
 5. Before code: settle whether broad Career Profile preferences are defaults or distinct from Target Track constraints; then define migration, save-state/error-state and rollback contract. No silent overwrite.
-6. Readability and focus in the actual app: continue accessibility branch \`fix/248-ux-a11y-baseline\` separately, validated by Claude on Windows.
+6. Readability and focus in the actual app: continue accessibility branch `fix/248-ux-a11y-baseline` separately, validated by Claude on Windows.
 
 ## Out of scope
 
