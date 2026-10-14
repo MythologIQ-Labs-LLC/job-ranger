@@ -103,14 +103,16 @@ test("in-flight note editing prevents a filtered card from unmounting after its 
   await expect(card).toBeVisible();
   await expect(card.getByRole("textbox", { name: "Notes" }))
     .toHaveValue("Retain this pending draft until safely stored");
-  await expect(controls.getByRole("button", { name: "Applied (2)" })).toBeDisabled();
-  await expect(page.getByText(/Status filters are paused while an application has unsaved edits/)).toBeVisible();
+  await expect(controls.getByRole("button", { name: "Applied (2)" })).toBeEnabled();
+  await controls.getByRole("button", { name: "Closed (1)" }).click();
+  await expect(card).toBeVisible();
+  await expect(card.getByText(/Kept visible because this application has unsaved changes/)).toBeVisible();
+  await expect(page.getByText(/Applications with unsaved edits stay visible across status filters/)).toBeVisible();
 
   await page.evaluate(() => (window as unknown as { releasePendingNotes: () => void }).releasePendingNotes());
   await expect.poll(async () => (await page.evaluate(() => window.electronAPI.applications.list()))
     .find(a => a.id === first.id)?.notes).toBe("Retain this pending draft until safely stored");
-  await expect(controls.getByRole("button", { name: "Applied (2)" })).toBeEnabled();
-  // Once persisted, the Interested group can safely drop the moved article.
+  // Once persisted, the Closed group can safely drop the moved article.
   await expect(card).toHaveCount(0);
   await controls.getByRole("button", { name: "Applied (2)" }).click();
   await expect(card.getByRole("textbox", { name: "Notes" }))
@@ -135,12 +137,14 @@ test("failed notes save keeps its article available and status filters blocked u
   });
   await card.getByRole("textbox", { name: "Notes" }).fill("Unsaved notes remain visible");
   await expect(card.getByRole("alert")).toContainText("Synthetic local notes write failure");
-  await expect(controls.getByRole("button", { name: "Closed (1)" })).toBeDisabled();
+  await expect(controls.getByRole("button", { name: "Closed (1)" })).toBeEnabled();
+  await controls.getByRole("button", { name: "Closed (1)" }).click();
+  await expect(card).toBeVisible();
+  await expect(card.getByText(/Kept visible because this application has unsaved changes/)).toBeVisible();
   await expect(card.getByRole("textbox", { name: "Notes" })).toHaveValue("Unsaved notes remain visible");
   await card.getByRole("button", { name: "Retry saving notes" }).click();
   await expect(card.getByRole("status", { name: "Application notes save status" })).toContainText("Saved");
-  await expect(controls.getByRole("button", { name: "Closed (1)" })).toBeEnabled();
-  await controls.getByRole("button", { name: "Closed (1)" }).click();
+  await expect(card).toHaveCount(0);
   await expect(page.locator("article")).toHaveCount(1);
   await expect(page.locator("article")).toContainText("Juniper Health");
 });
