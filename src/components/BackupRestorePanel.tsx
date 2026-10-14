@@ -46,7 +46,8 @@ export function BackupRestorePanel() {
     setError(null);
     try {
       const result = await getDesktopApi().backups.selectRestore();
-      if (result) setSelection(result);
+      // Canceling a new picker does not authorize restoring an older selection.
+      setSelection(result);
     } catch (cause) {
       setSelection(null);
       setError(cause instanceof Error ? cause.message : "Backup validation failed.");
@@ -130,6 +131,10 @@ export function BackupRestorePanel() {
             <p className="mt-2">
               {created.summary.artifactFileCount} managed artifact{created.summary.artifactFileCount === 1 ? "" : "s"} · {formatBytes(created.summary.totalBytes)}
             </p>
+            <p className="mt-2 text-xs" data-testid="backup-download-reminder">
+              Confirm the .jobranger file finished downloading and keep it somewhere private.
+              A verified archive in Job Ranger does not prove that your browser saved the download.
+            </p>
           </div>
         )}
 
@@ -190,7 +195,7 @@ export function BackupRestorePanel() {
         )}
 
         {error && (
-          <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
             {error}
           </div>
         )}
