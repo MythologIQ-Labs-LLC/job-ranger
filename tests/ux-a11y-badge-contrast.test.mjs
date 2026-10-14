@@ -19,3 +19,12 @@ test("badge text meets 4.5:1 WCAG AA in all supported themes",()=>{
    }
  }
 });
+
+test("Atelier secondary microcopy remains legible against all light panel surfaces", () => {
+  const token = /--color-text-muted:\s*(#[a-f0-9]{6});/i.exec(css)?.[1];
+  assert.ok(token, "Atelier muted token missing");
+  for (const surface of ["#ffffff", "#fffaf1", "#fff5e4", "#f6f1e8"]) {
+    assert.ok(contrast(token, surface) >= 4.5,
+      "Atelier muted text on " + surface + " ratio " + contrast(token, surface));
+  }
+});
