@@ -12,6 +12,9 @@ import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Layout } from "../components/Layout";
 import { useAppContext } from "../context/AppContext";
+import { useCareerEvidence } from "../career/evidence";
+import { useTargetTracks } from "../career/target-tracks";
+import { useApplications } from "../career/storage";
 import { canRunSourceType, getSourceProfile } from "../types";
 
 function formatSourceCoverageMessage(
@@ -31,6 +34,10 @@ function formatSourceCoverageMessage(
 
 export function Dashboard() {
   const { companies, jobs, scrapeRuns, systemStatus, loading, error } = useAppContext();
+  // This pilot only reads existing canonical data. Every domain retains its current owner.
+  const evidence = useCareerEvidence();
+  const targetTracks = useTargetTracks();
+  const applications = useApplications();
 
   const activeJobs = jobs.filter((job) => job.isActive).length;
   const newJobs = jobs.filter((job) => job.isNew).length;
@@ -42,6 +49,56 @@ export function Dashboard() {
     (company) => getSourceProfile(company.sourceType).supportLevel === "manual-review",
   ).length;
   const failedScrapes = companies.filter((company) => company.lastRunStatus === "failure").length;
+  const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
+  const pendingFacts = evidence.pending.length;
+  const trackedApplications = applications.applications.length;
+  type NextAction = { title: string; copy: string; href: string; action: string };
+  const nextActions: NextAction[] = [];
+
+  // An imported statement is a proposal, never a verified career fact.
+  if (!evidence.loading && !evidence.error && pendingFacts > 0) {
+    nextActions.push({
+      title: `${pendingFacts} imported career ${pendingFacts === 1 ? "statement" : "statements"} to review`,
+      copy: "Check each proposed fact against its source before confirming it.",
+      href: "/career-profile",
+      action: "Review proposed evidence",
+    });
+  }
+
+  if (!targetTracks.loading && !targetTracks.error && activeTracks.length === 0) {
+    nextActions.push({
+      title: "Choose a career direction",
+      copy: "You can start with a goal without completing a resume or career history.",
+      href: "/target-tracks",
+      action: "Create a target track",
+    });
+  }
+
+  if (!loading && newJobs > 0) {
+    nextActions.push({
+      title: `${newJobs} unseen ${newJobs === 1 ? "opportunity" : "opportunities"} to assess`,
+      copy: "Compare eligibility, evidence, career direction, preferences, and unknowns before deciding.",
+      href: "/jobs",
+      action: "Review opportunities",
+    });
+  }
+
+  if (!loading && companies.length === 0) {
+    nextActions.push({
+      title: "Add an opportunity source",
+      copy: "Choose a careers page to monitor when you are ready to discover opportunities.",
+      href: "/companies",
+      action: "Manage sources",
+    });
+  }
+
+  const careerLoading = evidence.loading || targetTracks.loading || applications.loading;
+  const careerErrors = [
+    evidence.error && `Career Evidence: ${evidence.error}`,
+    targetTracks.error && `Target Tracks: ${targetTracks.error}`,
+    applications.error && `Applications: ${applications.error}`,
+  ].filter((value): value is string => Boolean(value));
+
 
   const stories = [
     {
@@ -113,25 +170,16 @@ export function Dashboard() {
 
   return (
     <Layout>
-      <section className="panel panel-strong overflow-hidden px-6 py-7 sm:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <span className="alpha-pill">
-              <Sparkles className="h-3.5 w-3.5" />
-              Local workspace
-            </span>
-            <h1 className="page-title mt-4">Build a calmer review ritual around the jobs you actually want.</h1>
-            <p className="page-copy">
-              Job Ranger keeps the search grounded: detect the source family, run the best available extraction path, and surface when a portal still needs a dedicated or browser-backed adapter.
-            </p>
-          </div>
-          <div className="panel panel-muted max-w-md rounded-[1.4rem] px-5 py-4">
-            <p className="metric-label">Local backend</p>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              SQLite persisted at <span className="font-mono text-xs">{systemStatus?.databasePath ?? "Loading..."}</span>
-            </p>
-          </div>
-        </div>
+      <section className="panel panel-strong px-5 py-5 sm:px-7">
+        <span className="alpha-pill">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          Your local career workspace
+        </span>
+        <h1 className="page-title mt-3">Your next steps</h1>
+        <p className="page-copy mt-2">
+          Start with a decision that matters to you. Your career evidence, applications and search activity
+          remain separate records, and nothing here changes them automatically.
+        </p>
       </section>
 
       {error && (
@@ -140,6 +188,86 @@ export function Dashboard() {
         </div>
       )}
 
+      {careerErrors.length > 0 && (
+        <div role="alert" className="support-note mt-4 px-4 py-3 text-sm text-[var(--color-danger)]">
+          Some career records could not be loaded. Their next steps are not shown until available:
+          <ul className="mt-2 list-disc pl-5">
+            {careerErrors.map((message) => <li key={message}>{message}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(245px,0.75fr)]">
+        <section aria-labelledby="home-actions-title" className="panel panel-strong px-5 py-5 sm:px-7">
+          <h2 id="home-actions-title" className="text-xl font-semibold">Needs your attention</h2>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            Based on saved records, not predictions or activity quotas.
+          </p>
+          {loading || careerLoading ? (
+            <p role="status" className="mt-5 text-sm text-[var(--color-text-secondary)]">
+              Loading your next steps...
+            </p>
+          ) : nextActions.length === 0 && careerErrors.length === 0 && !error ? (
+            <p className="mt-5 text-sm text-[var(--color-text-secondary)]">
+              Nothing is waiting for review. You can explore other career directions or check your applications.
+            </p>
+          ) : nextActions.length === 0 ? (
+            <p className="mt-5 text-sm text-[var(--color-text-secondary)]">
+              Available next steps cannot be fully determined until your records load.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-[var(--color-border)]">
+              {nextActions.map((item) => (
+                <li key={item.href} className="py-4 first:pt-0">
+                  <h3 className="text-base font-semibold text-[var(--color-text-primary)]">{item.title}</h3>
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{item.copy}</p>
+                  <Link
+                    to={item.href}
+                    className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-primary)]"
+                  >
+                    {item.action}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section aria-labelledby="home-progress-title" className="panel panel-strong px-5 py-5 sm:px-7">
+          <h2 id="home-progress-title" className="text-xl font-semibold">Your career search</h2>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            Recorded activity is context, not a measure of your worth or effort.
+          </p>
+          <dl className="mt-4 space-y-4">
+            <div>
+              <dt className="metric-label">Active career directions</dt>
+              <dd className="mt-1 text-lg font-semibold">{targetTracks.loading || targetTracks.error ? "Unavailable" : activeTracks.length}</dd>
+              <dd><Link to="/target-tracks" className="text-sm font-semibold text-[var(--color-primary)] hover:underline">Manage target tracks</Link></dd>
+            </div>
+            <div>
+              <dt className="metric-label">Confirmed career facts</dt>
+              <dd className="mt-1 text-lg font-semibold">{evidence.loading || evidence.error ? "Unavailable" : evidence.confirmed.length}</dd>
+            </div>
+            <div>
+              <dt className="metric-label">Tracked applications</dt>
+              <dd className="mt-1 text-lg font-semibold">{applications.loading || applications.error ? "Unavailable" : trackedApplications}</dd>
+              <dd><Link to="/applications" className="text-sm font-semibold text-[var(--color-primary)] hover:underline">Open applications</Link></dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs text-[var(--color-text-muted)]">
+            A recorded application status alone never means a follow-up is due.
+          </p>
+        </section>
+      </div>
+
+      <details className="panel panel-strong mt-6 px-5 py-5 sm:px-7">
+        <summary className="cursor-pointer text-lg font-semibold text-[var(--color-text-primary)]">
+          Search activity and technical diagnostics
+        </summary>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Review source coverage, recent scans and local runtime details without making them your first task.
+        </p>
+        <div className="mt-5">
       <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <div key={item.name} className="metric-card animate-rise">
@@ -251,6 +379,8 @@ export function Dashboard() {
           </div>
         </section>
       </div>
+        </div>
+      </details>
     </Layout>
   );
 }
