@@ -60,7 +60,7 @@ export const THEMES: Record<ThemeName, ThemeDefinition> = {
       borderStrong: "rgba(120, 86, 48, 0.3)",
       textPrimary: "#24180c",
       textSecondary: "#61462a",
-      textMuted: "#8a7155",
+      textMuted: "#785d3d",
       textInverse: "#fffaf0",
       success: "#0f766e",
       warning: "#b45309",
