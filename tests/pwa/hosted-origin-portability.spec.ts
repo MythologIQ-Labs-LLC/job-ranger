@@ -77,18 +77,18 @@ test("moving between different web origins requires an explicit archive and neve
   });
   await expect(page.getByText("Validated backup")).toBeVisible();
   await expect(page.getByTestId("restore-producer")).toContainText("Job Ranger web app");
-  const selectedCreatedAt = await page.getByText("Validated backup").locator("..").textContent();
-
   // Make a safety copy of the *destination* before the destructive restore.
   // This must not reset its validated incoming archive selection.
   const safeDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Create backup" }).click();
   const destinationCopy = await safeDownload;
   expect(destinationCopy.suggestedFilename()).toMatch(/\.jobranger$/);
+  const safetyPath = path.join(tempRoot, "destination-safety.jobranger");
+  await destinationCopy.saveAs(safetyPath);
+  await expect(page.getByTestId("backup-download-reminder")).toContainText("does not prove");
   await expect(page.getByText("Validated backup")).toBeVisible();
-  await expect(page.getByText("Validated backup").locator("..")).toContainText("Restore and restart");
-  expect(await page.getByText("Validated backup").locator("..").textContent())
-    .toContain((selectedCreatedAt ?? "").match(/Job Ranger version[\s\S]*?Contents/)?.[0]?.slice(0, 20) ?? "Job Ranger version");
+  await expect(page.getByTestId("restore-producer")).toContainText("Job Ranger web app");
+  await expect(page.getByRole("button", { name: "Restore and restart" })).toBeEnabled();
   expect((await page.evaluate(() => window.electronAPI.career.getProfile()))?.fullName)
     .toBe("New Site Person");
 
@@ -102,6 +102,24 @@ test("moving between different web origins requires an explicit archive and neve
   const artifacts = await page.evaluate(() => window.electronAPI.career.listSourceArtifacts());
   expect(artifacts.some(a => a.id === imported.artifact.id && a.contentHash === imported.artifact.contentHash)).toBe(true);
   expect((await page.evaluate(() => window.electronAPI.career.listEvidence())).length).toBe(originalCount);
+
+  // The safety copy is an independent restore path, not an automatic merge.
+  // A user can deliberately return the destination to its former workspace.
+  const rollbackChooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Select backup to restore" }).click();
+  await (await rollbackChooser).setFiles({
+    name: "destination-safety.jobranger",
+    mimeType: "application/octet-stream",
+    buffer: await readFile(safetyPath),
+  });
+  await expect(page.getByText("Validated backup")).toBeVisible();
+  await Promise.all([
+    page.waitForEvent("load"),
+    page.getByRole("button", { name: "Restore and restart" }).click(),
+  ]);
+  await waitForRuntime(page);
+  expect((await page.evaluate(() => window.electronAPI.career.getProfile()))?.fullName)
+    .toBe("New Site Person");
 
   // Neither a restore nor a visit to the new origin can change the source origin.
   await page.goto(oldSite.url);
