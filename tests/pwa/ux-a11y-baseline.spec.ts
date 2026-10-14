@@ -102,7 +102,7 @@ test("rendered status badges meet small-text contrast in every theme", async ({ 
       const ratio = await badge.evaluate((element) => {
         const style = getComputedStyle(element);
         const rgb = (value: string) => {
-          const entries = value.match(/[\\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+          const entries = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
           if (entries.length !== 3) throw Error("Expected opaque RGB: " + value);
           return entries.map((num) => {
             const channel = num / 255;
