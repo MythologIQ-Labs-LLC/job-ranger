@@ -162,3 +162,21 @@ test("empty status group is truthful, and mobile layout avoids horizontal overfl
     expect(documentWidth, width + "px viewport").toBeLessThanOrEqual(width);
   }
 });
+
+test("status focus retains existing lifecycle and destructive-action confirmation", async ({ page }) => {
+  const apps = await seedThree(page);
+  const selected = apps.find(a => a.companyName === "Cedar Care")!;
+  const controls = page.getByRole("group", { name: "Application status view" });
+  await controls.getByRole("button", { name: "Applied (1)" }).click();
+  const card = page.locator("article").filter({ hasText: selected.companyName });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: /Application details/ }).click();
+  await expect(card.getByText("Events & reminders")).toBeVisible();
+  await card.getByRole("button", { name: "Remove " + selected.title + " from applications" }).click();
+  const dialog = page.getByRole("dialog", { name: "Remove tracked application?" });
+  await expect(dialog).toContainText(selected.companyName);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(card).toBeVisible();
+  expect((await page.evaluate(async () => window.electronAPI.applications.list()))
+    .some(a => a.id === selected.id)).toBe(true);
+});
