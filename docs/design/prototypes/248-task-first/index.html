@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Job Ranger U2 · task-first UX study (not the app)</title>
+<style>
+:root {font: 16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#252728;background:#f1f2f2}
+* {box-sizing:border-box} body {margin:0} button,select,input {font:inherit} button,select {cursor:pointer}
+:focus-visible {outline:3px solid #235b70;outline-offset:3px} .review-banner {background:#20262a;color:white;padding:10px 18px;font-size:.84rem}
+.review-banner strong {color:#ffdc80} .controls {display:flex;gap:12px;flex-wrap:wrap;align-items:end;padding:14px 18px;background:white;border-bottom:1px solid #c7ccce}
+.controls label {display:grid;gap:4px;font-size:.8rem;font-weight:650} select,.switch button {border:1px solid #aeb6b9;background:#fff;padding:7px 10px;border-radius:7px;min-height:38px}
+.switch {display:flex;gap:4px} .switch button[aria-pressed="true"] {background:#233a42;color:#fff;border-color:#233a42}
+.shell {min-height:calc(100vh - 118px);display:grid;grid-template-columns:208px minmax(0,1fr)}
+aside {background:#e4e7e8;border-right:1px solid #c9cfd1;padding:20px 14px}
+.logo {font-weight:800;letter-spacing:-.04em;font-size:1.15rem;padding:2px 10px 24px}
+aside nav {display:grid;gap:6px} aside nav button {border:0;background:transparent;text-align:left;border-radius:8px;padding:11px;color:#25343c}
+aside nav button[aria-current="page"] {background:#fff;box-shadow:0 0 0 1px #c9cfd1;font-weight:700}
+aside .faint {font-size:.75rem;color:#55636b;border-top:1px solid #c3cacc;padding:14px 8px;margin-top:22px}
+main {min-width:0;max-width:1160px;width:100%;padding:22px 30px 70px;margin:0 auto}
+.intro {margin-bottom:18px} h1 {font-size:clamp(1.5rem,2.4vw,2.2rem);line-height:1.18;letter-spacing:-.04em;margin:0 0 5px}
+h2 {font-size:1.16rem;margin:0} h3 {font-size:1rem;margin:0} p {margin:0}
+.subtitle {color:#4f5c62;max-width:680px;font-size:.91rem}
+.columns {display:grid;grid-template-columns:minmax(0,1.35fr) minmax(255px,.8fr);gap:16px;align-items:start}
+.panel {border:1px solid #c8cdcf;border-radius:12px;background:white;padding:19px;margin:0 0 16px;min-width:0}
+.panel-head {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap}
+.overline {font-size:.73rem;text-transform:uppercase;letter-spacing:.09em;font-weight:750;color:#56656d;margin-bottom:6px}
+.helper {font-size:.81rem;color:#526068}
+.task {border-top:1px solid #e0e3e4;display:flex;align-items:start;gap:12px;padding:14px 0}
+.task:first-of-type {border-top:0} .task-body {flex:1;min-width:0} .task-body strong {display:block;font-size:.95rem;line-height:1.3}
+.task-body small {color:#515f65;display:block;margin-top:4px;font-size:.78rem}
+.action {display:inline-block;font-size:.78rem;font-weight:750;color:#124657;border:1px solid #9cb5be;background:#f3f8f9;border-radius:7px;padding:5px 8px;white-space:normal}
+.empty {color:#4a5d63;font-size:.92rem;padding:9px 0 3px}
+.kpis {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.kpi {border:1px solid #d3d8da;border-radius:9px;padding:12px} .kpi strong {font-size:1.5rem;display:block;line-height:1.3}
+.kpi span {font-size:.77rem;color:#47565d}
+details {border-top:1px solid #dfe3e5;padding:11px 0} details:first-of-type {border-top:0}
+summary {font-size:.86rem;font-weight:650;cursor:pointer} .muted {font-size:.79rem;color:#5d696f}
+.provenance {padding:11px;background:#eff3f4;border-radius:9px;border:1px solid #d5dbdc;font-size:.8rem}
+.property {display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,1fr) auto;align-items:start;gap:12px;padding:12px 0;border-top:1px solid #e1e5e6}
+.property:first-of-type {border-top:0} .property strong {font-size:.86rem} .property small {display:block;color:#5b656a;font-size:.75rem}
+.pill {font-size:.73rem;border:1px solid #a3b0b5;border-radius:999px;padding:4px 8px;background:#edf1f2;white-space:nowrap}
+.track-list {display:grid;grid-template-columns:1fr;gap:8px}
+.track-list button {border:1px solid #bcc6c9;background:#f8f9fa;text-align:left;padding:10px 12px;border-radius:9px;min-height:46px}
+.track-list button[aria-pressed="true"] {border-color:#3a6775;background:#e9f3f5}
+.density {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+small.badge {color:#535d62} .note {padding:12px 15px;background:#e6edf0;border-left:4px solid #477181;font-size:.8rem;border-radius:6px;margin-top:12px}
+.review-state {display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.fakebutton {font:inherit;font-weight:650;font-size:.83rem;color:#233e47;background:#eef3f4;border:1px solid #97a9af;border-radius:7px;padding:7px 10px}
+.fakebutton:disabled {color:#7a8589;background:#f5f5f5;cursor:not-allowed}
+.route {font-family:ui-monospace,monospace;color:#626e72;font-size:.72rem}
+#toast {position:fixed;bottom:15px;right:15px;max-width:345px;border:1px solid #677f89;background:#203d49;color:white;padding:12px;border-radius:9px;font-size:.8rem;box-shadow:0 10px 30px #0003}
+[hidden] {display:none !important}
+@media(max-width:820px) {.shell {grid-template-columns:1fr} aside {padding:8px;border-right:0;border-bottom:1px solid #c9cfd1} .logo {padding:7px} aside nav {display:flex;overflow-x:auto} aside nav button {white-space:nowrap} aside .faint {display:none} main {padding:16px 14px 35px} .columns {grid-template-columns:1fr}}
+@media(max-width:390px) {.review-banner {padding:9px 12px} .controls {padding:10px 12px} .panel {padding:14px} .density {grid-template-columns:repeat(2,minmax(0,1fr))} .property {grid-template-columns:1fr auto} .property>div:nth-child(2) {grid-column:1 / -1;grid-row:2} .task {flex-wrap:wrap} .task .action {margin-left:0} }
+@media(prefers-reduced-motion:reduce) {*,*::before,*::after {scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="review-banner"><strong>UX PROTOTYPE · NOT JOB RANGER</strong> &nbsp; #248 U2 · fictional records · no data access, saves, uploads, or live routes.</div>
+<div class="controls">
+<label for="scenario">Synthetic career situation<select id="scenario">
+<option value="entry">First job · goal-first</option>
+<option value="licensed" selected>Licensed healthcare · resume-first</option>
+<option value="nontraditional">Nontraditional work · evidence-first</option>
+<option value="change">Career change · multiple tracks</option>
+<option value="contract">Independent contractor · multiple arrangements</option>
+</select></label>
+<div><div class="overline">Screen</div><div class="switch" role="group" aria-label="Prototype screen"><button id="home" aria-pressed="true">Home</button><button id="direction" aria-pressed="false">Career Direction</button></div></div>
+<div><div class="overline">Comparison</div><div class="switch" role="group" aria-label="Layout proposal"><button id="focused" aria-pressed="true">A · Focused</button><button id="dense" aria-pressed="false">B · Dense</button></div></div>
+</div>
+<div class="shell">
+<aside aria-label="Existing grouped navigation, simplified for prototype">
+<div class="logo">Job Ranger</div>
+<nav aria-label="Prototype navigation">
+<button data-screen="home" aria-current="page">Home</button>
+<button data-route="/jobs">Find Jobs</button>
+<button data-route="/applications">Applications</button>
+<button data-screen="direction">My Career: Direction</button>
+<button data-route="/career-evidence/new">Career Evidence</button>
+<button data-route="/companies">Search Tools</button>
+</nav>
+<div class="faint">The existing app route structure stays intact. Other pages are intentionally outside this prototype.</div>
+</aside>
+<main id="preview" tabindex="-1" aria-live="polite">
+</main>
+</div>
+<div id="toast" role="status" hidden></div>
+<script>
+/* Test data, not imports from the user's machine. Fixture labels avoid personal information. */
+const SCENARIOS = {
+  entry:{label:"First job",name:"Taylor",stage:"goal-first",profile:"Partial: preferred region recorded",tracks:[{name:"First opportunity",relation:"target",roles:["Retail associate","Customer support"],constraint:[["Work area","Nearby","Preferred"],["Schedule","Evenings","Preferred"],["Minimum pay","Not entered","Unknown"]]}],evidence:0,apps:[],agent:0,jobs:0,source:0},
+  licensed:{label:"Licensed healthcare",name:"Morgan",stage:"resume-first",profile:"Partial: location and interest recorded",tracks:[{name:"Practice operations",relation:"target",roles:["Practice operations coordinator"],constraint:[["Pay floor","$54,000 / year","Required"],["Work mode","Hybrid","Preferred"],["Arrangement","Full-time","Required"]]}],evidence:4,apps:[{role:"Practice Operations Coordinator",status:"applied",next:"Follow-up date recorded in application",route:"/applications"}],agent:0,jobs:1,source:1},
+  nontraditional:{label:"Nontraditional work",name:"Jordan",stage:"evidence-first",profile:"Partial: background can be added over time",tracks:[{name:"Operations support",relation:"adjacent",roles:["Operations coordinator"],constraint:[["Work area","Not entered","Unknown"],["Arrangement","Part-time, contract","Preferred"],["Pay floor","Not entered","Unknown"]]}],evidence:2,apps:[],agent:0,jobs:0,source:0},
+  change:{label:"Career changer",name:"Casey",stage:"goal-first",profile:"Saved broad career interests",tracks:[{name:"Service operations",relation:"adjacent",roles:["Service delivery lead"],constraint:[["Work mode","Remote","Preferred"],["Minimum pay","$70,000 / year","Required"],["Schedule","Day shift","Preferred"]]},{name:"Learning and development",relation:"stretch",roles:["Enablement specialist"],constraint:[["Work mode","Hybrid","Preferred"],["Minimum pay","$62,000 / year","Required"],["Schedule","Not entered","Unknown"]]}],evidence:3,apps:[{role:"Service Delivery Lead",status:"interested",next:"No follow-up recorded",route:"/applications"}],agent:2,jobs:2,source:1},
+  contract:{label:"Independent contractor",name:"Avery",stage:"evidence-first",profile:"Saved broad intent; not limited to full-time",tracks:[{name:"Contract program work",relation:"target",roles:["Contract program coordinator"],constraint:[["Arrangement","Contract, freelance","Required"],["Pay target","$65 / hour","Target"],["Work mode","Remote","Preferred"]]},{name:"Permanent operations",relation:"adjacent",roles:["Operations manager"],constraint:[["Arrangement","Full-time","Preferred"],["Pay floor","Not entered","Unknown"],["Work mode","Hybrid","Preferred"]]}],evidence:0,apps:[{role:"Contract Program Coordinator",status:"interview",next:"Interview note recorded",route:"/applications"}],agent:1,jobs:4,source:2}
+};
+let view="home",mode="focused",trackIndex=0,edit=false;
+const $=id=>document.getElementById(id);
+const esc=x=>String(x).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+const scenario=()=>SCENARIOS[$("scenario").value];
+const routeAction=(label,path)=>'<span class="action">'+esc(label)+'</span><span class="route"> → '+esc(path)+'</span>';
+function nextSteps(d){
+ let tasks=[];
+ if(d.evidence>0) tasks.push({title:d.evidence+" imported fact"+(d.evidence===1?"":"s")+" to review",why:"Proposed statements are not confirmed Career Evidence.",action:"Review facts",route:"/career-profile"});
+ if(d.agent>0) tasks.push({title:d.agent+" agent item"+(d.agent===1?"":"s")+" need"+(d.agent===1?"s":"")+" your decision",why:"Unverified agent work cannot update your canonical record.",action:"Open agent review",route:"/agent-workspace"});
+ if(d.apps.length>0) tasks.push({title:d.apps[0].role,why:"Status: "+d.apps[0].status+". "+d.apps[0].next+".",action:"Open application",route:"/applications"});
+ if(d.jobs>0) tasks.push({title:d.jobs+" new listing"+(d.jobs===1?"":"s")+" to assess",why:"Review eligibility, evidence, career alignment, preferences, and unknowns separately.",action:"Assess opportunities",route:"/jobs"});
+ if(d.tracks.length===0) tasks.push({title:"Choose a direction",why:"Partial profiles are valid. Start with an aim, not a resume.",action:"Set direction",route:"/target-tracks"});
+ if(d.source===0) tasks.push({title:"Choose an opportunity source",why:"No monitored source is recorded in this synthetic scenario.",action:"Manage sources",route:"/companies"});
+ return tasks;
+}
+const taskMarkup=t=>'<div class="task"><div class="task-body"><strong>'+esc(t.title)+'</strong><small>'+esc(t.why)+'</small></div><div>'+routeAction(t.action,t.route)+'</div></div>';
+function home(d) {
+ const tasks=nextSteps(d);
+ const overview='<section class="panel"><div class="panel-head"><h2>Career direction</h2><span class="pill">'+esc(d.tracks.length)+' track'+(d.tracks.length===1?'':'s')+'</span></div><p><strong>'+esc(d.tracks[0]?.name ?? 'Not yet chosen')+'</strong> · '+esc(d.tracks[0]?.relation ?? 'Unknown')+'</p><p class="helper" style="margin:9px 0 14px">'+esc(d.profile)+'</p><button class="fakebutton" data-screen="direction">View direction and constraints</button></section>';
+ const search='<section class="panel"><div class="panel-head"><h2>Search health</h2><span class="pill">Secondary</span></div><details><summary>Sources and scan diagnostics</summary><div class="kpis" style="margin-top:12px"><div class="kpi"><strong>'+d.source+'</strong><span>Monitored sources</span></div><div class="kpi"><strong>'+d.jobs+'</strong><span>New listings</span></div></div><p class="muted" style="margin-top:10px">Adapter support and scrape errors belong here or in Search Tools, not above the user's next step.</p></details></section>';
+ if(mode==='dense'){
+ return '<header class="intro"><div class="overline">Alternative B · dense overview</div><h1>Search overview</h1><p class="subtitle">The same synthetic records, with counters and a compressed decision table.</p></header><section class="panel"><div class="density">'+[['New jobs',d.jobs],['Applications',d.apps.length],['Facts to review',d.evidence],['Agent review',d.agent]].map(([k,v])=>'<div class="kpi"><strong>'+v+'</strong><span>'+esc(k)+'</span></div>').join('')+'</div></section><div class="columns"><section class="panel"><div class="panel-head"><h2>Decisions and activity</h2></div>'+tasks.map(taskMarkup).join('')+'</section><div>'+overview+search+'</div></div>';
+ }
+ return '<header class="intro"><div class="overline">Alternative A · recommended for evaluation</div><h1>Your next steps</h1><p class="subtitle">Move forward from where you are. Unfinished work and decisions appear before search-system activity.</p></header><div class="columns"><section class="panel"><div class="panel-head"><h2>Needs your attention</h2><span class="pill">'+tasks.length+' actions in fixture</span></div>'+(tasks.length?tasks.map(taskMarkup).join(''):'<p class="empty">Nothing needs your decision in this scenario.</p>')+'<p class="note">Priority is a proposed rule, not an inferred urgency score. No unknown deadline is promoted to “due”.</p></section><div>'+overview+search+'</div></div>';
+}
+function direction(d){
+ const t=d.tracks[Math.min(trackIndex,d.tracks.length-1)];
+ const properties=t.constraint.map(([label,value,strength])=>'<div class="property"><div><strong>'+esc(label)+'</strong><small>Stored only with this direction in the proposed experience</small></div><div><strong>'+esc(value)+'</strong></div><span class="pill">'+esc(strength)+'</span></div>').join('');
+ const sidebar='<section class="panel"><div class="panel-head"><h2>Target tracks</h2></div><div class="track-list">'+d.tracks.map((t,i)=>'<button data-track="'+i+'" aria-pressed="'+(i===trackIndex)+'"><strong>'+esc(t.name)+'</strong><br><small>'+esc(t.relation)+' · '+esc(t.roles.join(', '))+'</small></button>').join('')+'</div><p class="helper" style="margin-top:12px">US-4: different directions keep different constraints. Existing route: /target-tracks.</p></section>';
+ const about='<section class="panel"><div class="panel-head"><h2>About you</h2><span class="pill">Career Profile</span></div><p class="helper">'+esc(d.profile)+'</p><div class="provenance" style="margin-top:12px">Broad intent/preferences live in Career Profile. Historical pay and commute fields currently also live there; moving them is <strong>not approved</strong> until legacy migration and precedence are specified.</div></section>';
+ const right='<section class="panel"><div class="panel-head"><h2>'+esc(t.name)+' · constraints</h2><div class="review-state"><span class="pill">'+(edit?'Unsaved prototype edits':'Fixture saved-state preview')+'</span><button id="edit-toggle" class="fakebutton">'+(edit?'Discard simulated edit':'Simulate edit')+'</button></div></div><p class="helper" style="margin-bottom:14px">Requirements, preferences, and targets stay distinct. Unknown means not entered.</p>'+properties+'<div class="note">Changing these proposed fields here does not save anything. Real app authority belongs to Target Tracks; the preview never calls the backend.</div></section>';
+ const evidence='<section class="panel"><div class="panel-head"><h2>Career Evidence</h2><span class="pill">'+d.evidence+' proposed</span></div><p class="helper">Imported items are proposals until reviewed. Confirmed history and its provenance remain owned by Career Evidence, not this settings screen.</p><p class="route" style="margin-top:12px">Existing routes: /career-profile (import review), /career-evidence/new (entry)</p></section>';
+ if(mode==='dense') return '<header class="intro"><div class="overline">Alternative B · dense editing</div><h1>Career direction matrix</h1><p class="subtitle">Dense option shows each track at once, but its ownership rules remain the same.</p></header><section class="panel"><div class="panel-head"><h2>Directions and constraints</h2></div><div class="density">'+d.tracks.map(t=>'<div class="kpi"><strong style="font-size:1rem">'+esc(t.name)+'</strong><span>'+esc(t.constraint.map(x=>x[0]+': '+x[1]).join(' · '))+'</span></div>').join('')+'</div></section><div class="columns"><div>'+about+evidence+'</div><div>'+sidebar+right+'</div></div>';
+ return '<header class="intro"><div class="overline">Alternative A · task-first direction</div><h1>Where do you want to go?</h1><p class="subtitle">Choose a direction and inspect its conditions. You can refine your background and evidence separately.</p></header><div class="columns"><div>'+sidebar+right+'</div><div>'+about+evidence+'</div></div>';
+}
+let toastTimer;
+function showRoute(path){
+ const e=$("toast");e.hidden=false;
+ e.textContent="Prototype only. This action would navigate within the real application to "+path+".";
+ clearTimeout(toastTimer);
+ toastTimer=setTimeout(()=>e.hidden=true,4800);
+}
+function render(){
+ const d=scenario();
+ $("preview").innerHTML=view==="home"?home(d):direction(d);
+ for (const id of ["home","direction"]) {$(id).setAttribute("aria-pressed",String(id===view))}
+ for (const id of ["focused","dense"]) {$(id).setAttribute("aria-pressed",String(id===mode))}
+ document.querySelectorAll("[data-screen]").forEach(button=>{
+  button.setAttribute("aria-current",button.dataset.screen===view?"page":"false");
+ });
+ document.querySelectorAll("[data-track]").forEach(button=>button.addEventListener("click",()=>{trackIndex=Number(button.dataset.track);edit=false;render()}));
+ document.querySelectorAll("main [data-screen]").forEach(button=>button.addEventListener("click",()=>{view=button.dataset.screen;render();$("preview").focus()}));
+ const editButton=$("edit-toggle");
+ if(editButton) editButton.addEventListener("click",()=>{edit=!edit;render()});
+}
+$("scenario").addEventListener("change",()=>{trackIndex=0;edit=false;render()});
+["home","direction"].forEach(id=>$(id).addEventListener("click",()=>{view=id;edit=false;render();$("preview").focus()}));
+["focused","dense"].forEach(id=>$(id).addEventListener("click",()=>{mode=id;render()}));
+document.querySelectorAll("aside [data-screen]").forEach(button=>button.addEventListener("click",()=>{view=button.dataset.screen;edit=false;render();$("preview").focus()}));
+document.querySelectorAll("aside [data-route]").forEach(button=>button.addEventListener("click",()=>showRoute(button.dataset.route)));
+render();
+</script>
+</body>
+</html>
