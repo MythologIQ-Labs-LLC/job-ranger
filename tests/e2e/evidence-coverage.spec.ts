@@ -107,7 +107,7 @@ test("Find Jobs explains a selected-track opportunity assessment without a fit p
   await page.reload();
   await page.getByRole("link", { name: "Find Jobs", exact: true }).click();
   await expect(page.getByText("Administrative Coordinator", { exact: true })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Assessment target track", exact: true })).toHaveValue(/track-/);
+  await expect(page.getByRole("combobox", { name: "Assessment direction", exact: true })).toHaveValue(/track-/);
 
   const jobCard = page.locator("article").filter({ hasText: "Administrative Coordinator" });
   await expect(jobCard).not.toContainText(/\d+%/);
