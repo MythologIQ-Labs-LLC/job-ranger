@@ -271,6 +271,11 @@ export function Jobs() {
                     {job.isNew && (
                       <span className="soft-badge soft-badge-warning">New</span>
                     )}
+                    {!job.isActive && (
+                      <span className="soft-badge soft-badge-danger" title="The most recent source check marked this listing inactive.">
+                        Inactive on source
+                      </span>
+                    )}
                     <span
                       className={`soft-badge ${job.sourceCompleteness === "full" ? "soft-badge-success" : "soft-badge-warning"}`}
                       title={job.sourceCompleteness === "full"
