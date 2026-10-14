@@ -17,6 +17,7 @@ function formatBytes(bytes: number): string {
 
 export function BackupRestorePanel() {
   const [creating, setCreating] = useState(false);
+  const [selecting, setSelecting] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [created, setCreated] = useState<BackupCreateResult | null>(null);
   const [selection, setSelection] = useState<BackupRestoreSelection | null>(null);
@@ -28,8 +29,9 @@ export function BackupRestorePanel() {
     try {
       const result = await getDesktopApi().backups.create();
       if (result) {
+        // Exporting a safety copy must not discard an already validated restore
+        // selection. No active workspace data is changed by creating a backup.
         setCreated(result);
-        setSelection(null);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Backup creation failed.");
@@ -39,19 +41,22 @@ export function BackupRestorePanel() {
   };
 
   const selectRestore = async () => {
+    if (creating || restoring || selecting) return;
+    setSelecting(true);
     setError(null);
-    setCreated(null);
     try {
       const result = await getDesktopApi().backups.selectRestore();
-      setSelection(result);
+      if (result) setSelection(result);
     } catch (cause) {
       setSelection(null);
       setError(cause instanceof Error ? cause.message : "Backup validation failed.");
+    } finally {
+      setSelecting(false);
     }
   };
 
   const restore = async () => {
-    if (!selection) return;
+    if (!selection || creating || selecting || restoring) return;
     setRestoring(true);
     setError(null);
     try {
@@ -72,6 +77,25 @@ export function BackupRestorePanel() {
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
           Create a portable <code>.jobranger</code> backup of Job Ranger career data and managed artifacts. The same file restores into the Windows app or the web app. Restores are validated before the current data is replaced and require a restart (the web app reloads).
         </p>
+        <div className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-text-secondary)]" data-testid="origin-migration-guide">
+          <p className="font-semibold text-[var(--color-text-primary)]">Move your workspace to a website or another browser</p>
+          <p>
+            Browser workspaces belong to the exact web address where they were created. A future
+            hosted Job Ranger site, a localhost installation, and different browser profiles
+            cannot read each other&apos;s saved data automatically.
+          </p>
+          <p>
+            On the old installation, choose <strong>Create backup</strong> and keep the downloaded
+            file. Open the new installation and choose <strong>Select backup to restore</strong>.
+            Review its details before restoring. This <strong>replaces</strong> the destination
+            workspace; it does not merge two career histories.
+          </p>
+          <p>
+            <strong>Keep the file private:</strong> .jobranger archives contain an unencrypted
+            database and managed documents. An integrity hash detects changes, but does not
+            protect the contents from someone who obtains the file.
+          </p>
+        </div>
       </div>
 
       <div className="panel panel-strong p-6 space-y-5">
@@ -79,7 +103,7 @@ export function BackupRestorePanel() {
           <button
             type="button"
             onClick={() => void createBackup()}
-            disabled={creating || restoring}
+            disabled={creating || selecting || restoring}
             className="primary-button disabled:opacity-60"
           >
             <ShieldCheck className="h-4 w-4" />
@@ -88,11 +112,11 @@ export function BackupRestorePanel() {
           <button
             type="button"
             onClick={() => void selectRestore()}
-            disabled={creating || restoring}
+            disabled={creating || selecting || restoring}
             className="secondary-button disabled:opacity-60"
           >
             <FolderOpen className="h-4 w-4" />
-            Select backup to restore
+            {selecting ? "Validating backup..." : "Select backup to restore"}
           </button>
         </div>
 
@@ -146,12 +170,17 @@ export function BackupRestorePanel() {
             )}
 
             <div className="mt-5 rounded-xl bg-[var(--color-surface-muted)] p-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-              Restoring replaces the current local Job Ranger database and managed artifacts in this installation with this verified backup. Job Ranger will restart automatically after the restore is staged.
+              <strong>Restore replaces, never merges.</strong> The current local Job Ranger
+              database and managed artifacts in this installation will be replaced with
+              this verified backup. If this destination has information you want to keep,
+              create and privately store its own .jobranger backup first. You can do that
+              now without losing your selected restore file. Job Ranger will restart
+              automatically after the restore is staged.
             </div>
             <button
               type="button"
               onClick={() => void restore()}
-              disabled={restoring}
+              disabled={creating || selecting || restoring}
               className="danger-button mt-4 disabled:opacity-60"
             >
               <RotateCcw className="h-4 w-4" />
