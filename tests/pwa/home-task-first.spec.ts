@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { startPwaServer, type PwaServer } from "./support/server";
-import { distPwa, greenhouseFixture, waitForRuntime } from "./support/fixtures";
+import { distPwa, greenhouseFixture, healthcareResumeDocx, waitForRuntime } from "./support/fixtures";
 
 let server: PwaServer;
 test.beforeAll(async () => { server = await startPwaServer(distPwa); });
@@ -25,6 +25,31 @@ test("empty Home gives a goal-first next action without requiring a resume", asy
   await expect(page.getByRole("heading", { name: "Recent runs" })).toBeHidden();
   await summary.click();
   await expect(page.getByRole("heading", { name: "Recent runs" })).toBeVisible();
+});
+
+test("resume import creates a user-review action without confirming evidence", async ({ page }) => {
+  await openHome(page);
+  await page.goto(server.url + "#/career-profile");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import resume" }).click();
+  await (await chooser).setFiles({
+    name: "fictional-career-history.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: healthcareResumeDocx(),
+  });
+  await expect.poll(async () => {
+    const items = await page.evaluate(() => window.electronAPI.career.listEvidence());
+    return items.filter(({ evidence }) => evidence.verificationState === "imported").length;
+  }, { timeout: 30_000 }).toBeGreaterThan(0);
+  await page.goto(server.url);
+  await expect(page.getByRole("heading", { name: /imported career statements? to review/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review proposed evidence" })).toHaveAttribute("href", "#/career-profile");
+  // The Home summary is a navigation affordance. Reading it never elevates proposed evidence.
+  expect(await page.evaluate(async () =>
+    (await window.electronAPI.career.listEvidence()).every(({ evidence }) =>
+      evidence.verificationState !== "user-confirmed",
+    ),
+  )).toBe(true);
 });
 
 test("confirmed evidence and tracked applications are read-only Home progress", async ({ page }) => {
