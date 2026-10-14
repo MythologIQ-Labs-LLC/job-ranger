@@ -10,7 +10,7 @@
 * {box-sizing:border-box} body {margin:0} button,select,input {font:inherit} button,select {cursor:pointer}
 :focus-visible {outline:3px solid #235b70;outline-offset:3px} .review-banner {background:#20262a;color:white;padding:10px 18px;font-size:.84rem}
 .review-banner strong {color:#ffdc80} .controls {display:flex;gap:12px;flex-wrap:wrap;align-items:end;padding:14px 18px;background:white;border-bottom:1px solid #c7ccce}
-.controls label {display:grid;gap:4px;font-size:.8rem;font-weight:650} select,.switch button {border:1px solid #aeb6b9;background:#fff;padding:7px 10px;border-radius:7px;min-height:38px}
+.controls label {display:grid;gap:4px;font-size:.8rem;font-weight:650;min-width:0;max-width:100%} .controls select {width:260px;max-width:100%;min-width:0} select,.switch button {border:1px solid #aeb6b9;background:#fff;padding:7px 10px;border-radius:7px;min-height:38px}
 .switch {display:flex;gap:4px} .switch button[aria-pressed="true"] {background:#233a42;color:#fff;border-color:#233a42}
 .shell {min-height:calc(100vh - 118px);display:grid;grid-template-columns:208px minmax(0,1fr)}
 aside {background:#e4e7e8;border-right:1px solid #c9cfd1;padding:20px 14px}
@@ -83,7 +83,7 @@ small.badge {color:#535d62} .note {padding:12px 15px;background:#e6edf0;border-l
 </nav>
 <div class="faint">The existing app route structure stays intact. Other pages are intentionally outside this prototype.</div>
 </aside>
-<main id="preview" tabindex="-1" aria-live="polite">
+<main id="preview" tabindex="-1">
 </main>
 </div>
 <div id="toast" role="status" hidden></div>
