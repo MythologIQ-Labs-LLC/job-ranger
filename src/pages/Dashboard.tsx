@@ -158,13 +158,14 @@ export function Dashboard() {
 
   return (
     <Layout>
-      <section className="panel panel-strong px-5 py-5 sm:px-7">
+      {/* Same intro shell as every other page, so the #248 compaction rules apply on constrained viewports. */}
+      <section className="panel panel-strong px-6 py-7 sm:px-8">
         <span className="alpha-pill">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           Your local career workspace
         </span>
-        <h1 className="page-title mt-3">Your next steps</h1>
-        <p className="page-copy mt-2">
+        <h1 className="page-title mt-4">Your next steps</h1>
+        <p className="page-copy">
           Start with a decision that matters to you. Your career evidence, applications and search activity
           remain separate records, and nothing here changes them automatically.
         </p>
