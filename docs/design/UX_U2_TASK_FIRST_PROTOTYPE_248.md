@@ -43,6 +43,46 @@ Missing data is never rendered as a due/late/failed state. Keep a clear empty or
 5. Before code: settle whether broad Career Profile preferences are defaults or distinct from Target Track constraints; then define migration, save-state/error-state and rollback contract. No silent overwrite.
 6. Readability and focus in the actual app: continue accessibility branch `fix/248-ux-a11y-baseline` separately, validated by Claude on Windows.
 
+## Decision-surface extension: Find Jobs, Applications, Agent Workspace
+
+**Reviewable mock:** [Find Jobs / Applications / G3 Agent Workspace](./prototypes/248-task-first/decision-surfaces.html). This is a standalone, offline HTML prototype. Unlike the first Home and Career Direction mock, it compares the primary downstream decision surfaces at **1, 12, and 50 synthetic records** and five career scenarios. These are not UI changes in the running product.
+
+### Find Jobs
+
+- A focused list and a dense table share the **four separate** assessment dimensions: eligibility, Career Evidence coverage, career alignment, and constraints/preferences. Unknown information remains **unknown**, not a score penalty.
+- The "Why?" control moves focus to a persistent explanation panel, replacing the proposed ~1,900px inline expansion. A production panel must retain requirement-level evidence, job/source completeness, citations and all caveats available in the current `JobEvidenceCoveragePanel`, not the simplified fictional summary in this mock.
+- Target Track selection remains a read of `career.listTargetTracks()`. The current `Jobs.tsx` track and prepare-resume actions remain separate; **nothing in the mock tracks, prepares, or submits an application**.
+
+### Applications
+
+- Compare focused status grouping with a dense status table using the existing contract `TrackedApplication.status` (`interested`, `applied`, `interview`, `offer`, `rejected`, `withdrawn`).
+- Display a next action only when an actual application event/reminder exists; no guess that an "applied" record is due for follow-up. Fictional recorded date text is labeled fictional.
+- "Remove" appears in a secondary disclosure with its destructive action disabled in the prototype. Any real implementation must retain `Applications.tsx`'s **unsaved status/notes navigation blocker**, save status announcements, current ConfirmDialog, and locally retained lifecycle, submitted documents, and interview preparation.
+- The prototype is **read-only and deliberately cannot simulate canonical status changes**.
+
+### G3 Agent Workspace
+
+- Show the decision inbox **before** the folder sync/export controls, and distinguish review, drafts, problems and history. Actual G3 review-state membership in `AgentWorkspace.tsx` includes proposal, contested, needs_rebase, staged and pending; this mock uses one fictional instance of several states, not a replacement state machine.
+- Side-by-side comparison of conflicting note versions is a **presentation-only proposal**: show two distinct retained versions, provenance and contradictory content in one view. The actual implementation may need bounded read support and diff semantics beyond current `AgentItemReview.tsx`'s "View this version" switching.
+- Agent status claims must be rechecked against the canonical application and explicitly confirmed by the user in the existing application workflow. Agent evidence changes **cannot** be accepted into canonical Career Evidence by this screen. Unreviewed material drafts have no Truth Gate or Parseability Gate result.
+- Problems must never invent the affected resume/record from a held batch that lacks that metadata. Display the known quarantine reason plus conditional recovery, and mark unknown affected work as unknown.
+- No remote agent credentials, OAuth, background sync, canonical mutation, unprompted lifecycle status changes, or automatic uploads are introduced.
+
+### U2 regression and acceptance gate
+
+Added [six isolated browser smoke tests](../../tests/ux-248-decision-surfaces.test.mjs): five personas, both layouts, volume changes, keyboard focus on explanation/review, protected destructive affordances, side-by-side conflicts, empty history, and 320/390/1280×580/1440 viewport reflow.
+
+Run locally, after dependencies and Playwright Chromium are available:
+
+```bash
+node --test tests/ux-248-task-first-prototype.test.mjs tests/ux-248-decision-surfaces.test.mjs
+```
+
+**Not executed yet on this exact branch.** Embedded JavaScript syntax and GitHub source-readback checks pass. Browser evidence, screen reader observation, timings and screenshots are still needed before choosing U2 or moving to U3 production components.
+
+**Gate decision to review:** A focused layout appears better aligned with the measured U0/U1 first-screen failures, but dense comparison must remain possible and needs actual 50+ item visual review. Do not let UI simplification hide provenance, user authority, unknowns, unsaved changes, or real error states.
+
+
 ## Out of scope
 
 - No route changes, automatic evidence acceptance, agent promotion, inference requirement, synced backend, deployment, new demo, or billing.
