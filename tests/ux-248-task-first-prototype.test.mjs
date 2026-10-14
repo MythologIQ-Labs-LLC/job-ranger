@@ -41,7 +41,7 @@ test("five universal-user situations switch between focused Home and distinct Ta
       assert.match(await page.locator("#preview h1").innerText(), /Where do you want to go/);
       const available = await page.locator("#preview [data-track]").count();
       assert.ok(available >= 1, "Every fixture should supply one explicit direction");
-      await page.getByRole("button", { name: "Home", exact: true }).click();
+      await page.locator("#home").click();
     }
     await page.close();
   });
