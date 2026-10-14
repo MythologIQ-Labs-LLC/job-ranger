@@ -46,6 +46,9 @@ async function seed(page: Page) {
     });
   });
   await page.goto(server.url + "#/jobs");
+  // The listing and source data were written through IPC after the app loaded; a hash
+  // change alone does not refetch them, so reload to read the persisted state.
+  await page.reload();
   await waitForRuntime(page);
   await expect(page.getByRole("button", { name: "Medical Office Coordinator", exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Assessment target track" })).toHaveValue(/track-/);
