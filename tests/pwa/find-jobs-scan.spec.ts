@@ -102,6 +102,7 @@ test("keyword matching still uses hidden description, which remains inspectable"
   await seed(page);
   await page.getByPlaceholder("Search title or description").fill("insurance verification");
   await expect(page.getByText("Showing 1 of 1 captured listings")).toBeVisible();
+  await expect(page.getByText("Search terms may appear inside a collapsed listing description.")).toBeVisible();
   const details = page.locator("article details").first();
   await details.locator("summary").click();
   await expect(page.getByText(/insurance verification/i).first()).toBeVisible();
