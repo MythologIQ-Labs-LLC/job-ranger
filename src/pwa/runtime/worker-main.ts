@@ -39,6 +39,7 @@ import {
   type WorkerToPageMessage,
 } from "./protocol";
 import { setActiveWasmSqliteEngine, WasmSqliteEngine } from "./wasm-sqlite-engine";
+import { fileBytesForTransfer } from "./transfer-file-bytes";
 
 declare const __JOB_RANGER_VERSION__: string;
 declare const __JOB_RANGER_BUILD_ID__: string;
@@ -135,10 +136,12 @@ async function collectDownloads(paths: string[]): Promise<DownloadPayload[]> {
   for (const target of paths) {
     try {
       const bytes = (await fs.readFile(target)) as Uint8Array;
-      const copy = new Uint8Array(bytes.byteLength);
-      copy.set(bytes);
       const fileName = basename(target);
-      downloads.push({ fileName, mediaType: mediaTypeForFileName(fileName), bytes: copy.buffer });
+      downloads.push({
+        fileName,
+        mediaType: mediaTypeForFileName(fileName),
+        bytes: fileBytesForTransfer(bytes),
+      });
     } catch {
       // The handler did not produce this file (e.g. it failed before writing).
     }
