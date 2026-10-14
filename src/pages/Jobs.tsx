@@ -216,9 +216,16 @@ export function Jobs() {
       </section>
 
       <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p role="status" className="text-sm text-[var(--color-text-secondary)]">
-          Showing {filteredJobs.length} of {jobs.length} captured listings
-        </p>
+        <div>
+          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+            Showing {filteredJobs.length} of {jobs.length} captured listings
+          </p>
+          {searchTerm.trim() && listingView === "compact" && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Search terms may appear inside a collapsed listing description.
+            </p>
+          )}
+        </div>
         <div role="group" aria-label="Listing layout" className="flex flex-wrap items-center gap-2">
           <button
             type="button"
