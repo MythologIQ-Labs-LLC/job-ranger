@@ -143,7 +143,11 @@ test("failed notes save keeps its article available and status filters blocked u
   await expect(card.getByText(/Kept visible because this application has unsaved changes/)).toBeVisible();
   await expect(card.getByRole("textbox", { name: "Notes" })).toHaveValue("Unsaved notes remain visible");
   await card.getByRole("button", { name: "Retry saving notes" }).click();
-  await expect(card.getByRole("status", { name: "Application notes save status" })).toContainText("Saved");
+  // Once the retry persists, the record has no unsaved intent left, so the Closed view
+  // may drop it immediately; prove persistence through the API rather than racing the
+  // "Saved" announcement against the unmount.
+  await expect.poll(async () => (await page.evaluate(() => window.electronAPI.applications.list()))
+    .find((a) => a.companyName === "Harbor Health")?.notes).toBe("Unsaved notes remain visible");
   await expect(card).toHaveCount(0);
   await expect(page.locator("article")).toHaveCount(1);
   await expect(page.locator("article")).toContainText("Juniper Health");
