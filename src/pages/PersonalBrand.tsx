@@ -633,7 +633,7 @@ export function PersonalBrand() {
                   <li>Choose a reporting period, such as <strong>Past 365 days</strong>, from the date-range menu.</li>
                   <li>Select <strong>Export</strong> in the upper-right corner and save the <strong>.XLSX</strong> file.</li>
                 </ol>
-                <p>For audience and follower trends, open <strong>Total followers</strong> in Analytics, select the date range, and export separately.</p>
+                <p>You can also export <strong>Total followers</strong> separately for your own records. That separate audience workbook is <strong>not</strong> accepted by the Job Ranger importer below.</p>
                 <p>
                   <a className="underline underline-offset-2" href="https://www.linkedin.com/help/linkedin/answer/a703268"
                     target="_blank" rel="noopener noreferrer">
@@ -641,11 +641,19 @@ export function PersonalBrand() {
                   </a>
                 </p>
                 <p>LinkedIn can change its labels or navigation. Follow the linked official help article if the steps differ.</p>
-                <p><strong>Import preview available below:</strong> You can inspect an XLSX export locally. Previewed data is not yet saved to the Job Ranger database. Keep the original file unchanged. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
+                <p><strong>Choose the right export:</strong> Job Ranger currently accepts the combined <strong>Post impressions</strong> Excel workbook with six worksheets: Discovery, Engagement, Top Posts, Followers, Audience Demographics and Content Demographics. This is <strong>not</strong> the same as the separate Total followers analytics export or the account-data archive in Settings &amp; Privacy. Do not rename or rearrange workbook sheets.</p>
+                <p><strong>Import preview available below:</strong> Preview the downloaded XLSX locally, verify the reported period and warnings, then explicitly save it. Previewing does not persist anything. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
               </div>
             </details>
             <div className="rounded-xl border border-[var(--color-border)] p-4 space-y-3" data-testid="linkedin-xlsx-preview">
               <h3 className="font-semibold">Review a LinkedIn analytics export</h3>
+              <p className="text-sm text-[var(--color-text-secondary)]" data-testid="linkedin-accepted-export-format">
+                Select the <strong>Post impressions</strong> analytics export (.xlsx, under 4 MB), not a LinkedIn account archive or separate follower-only export.
+                <a href="https://www.linkedin.com/help/linkedin/answer/a703268" target="_blank" rel="noopener noreferrer"
+                  className="ml-1 inline-block font-semibold underline underline-offset-2">
+                  Official LinkedIn export steps
+                </a>
+              </p>
               <label className="block text-sm font-medium">Choose exported LinkedIn XLSX (local preview only)
                 <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   className="input-shell mt-2 w-full" disabled={linkedinImportBusy}
@@ -659,7 +667,12 @@ export function PersonalBrand() {
                 Read locally without LinkedIn account access, network calls or automatic saving. The complete workbook is not uploaded. Imported figures are observational analytics, not evidence of career outcomes.
               </p>
               {linkedinImportBusy && <p role="status">Reading workbook locally...</p>}
-              {linkedinImportError && <p role="alert" className="text-sm text-[var(--color-danger)]">{linkedinImportError}</p>}
+              {linkedinImportError && (
+                <div role="alert" className="text-sm text-[var(--color-danger)]" data-testid="linkedin-import-error">
+                  <p>{linkedinImportError}</p>
+                  <p className="mt-1">Check that you downloaded the combined Post impressions XLSX directly from LinkedIn, with its original worksheets intact. Other LinkedIn export types are not supported here.</p>
+                </div>
+              )}
               {linkedinImportMessage && <p role="status" className="text-sm">{linkedinImportMessage}</p>}
               {linkedinPreview && (
                 <div className="space-y-3 text-sm" data-testid="linkedin-preview-results" role="region" aria-label="LinkedIn analytics workbook preview">
