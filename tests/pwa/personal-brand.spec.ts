@@ -23,6 +23,8 @@ test("Personal Brand manual workflow persists exact copy, receipt and analytics 
   await expect(exportGuide.getByRole("link", { name: /LinkedIn Help/i })).toHaveAttribute("href", "https://www.linkedin.com/help/linkedin/answer/a703268");
   await expect(exportGuide.getByText(/Import preview available below/i)).toBeVisible();
   await expect(exportGuide.getByText(/Past 365 days/)).toBeVisible();
+  await expect(exportGuide.getByText(/six worksheets/i)).toBeVisible();
+  await expect(exportGuide.getByText(/not.*same as the separate Total followers analytics export/i)).toBeVisible();
 
 
   const text = "A rejection taught me that hiring signals can be incomplete. Here is what I learned.";
@@ -640,4 +642,31 @@ test("reviewed topics show qualified same-context samples and clear to withheld"
   const medianCells=area.getByRole("cell",{name:"Withheld",exact:true});
   await expect(medianCells.first()).toBeVisible();
   expect(await page.evaluate(()=>window.electronAPI.personalBrand.listPublications())).toHaveLength(6);
+});
+
+test("LinkedIn import guide distinguishes unsupported export types and retains local-only failure", async ({ page, context }) => {
+  const outbound: string[] = [];
+  context.on("request", request => {
+    if (new URL(request.url()).origin !== new URL(server.url).origin) outbound.push(request.url());
+  });
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  await page.goto(server.url + "#/personal-brand");
+
+  const area = page.getByTestId("linkedin-xlsx-preview");
+  await expect(area.getByTestId("linkedin-accepted-export-format")).toContainText("Post impressions");
+  await expect(area.getByTestId("linkedin-accepted-export-format")).toContainText("not a LinkedIn account archive");
+  await expect(area.getByRole("link", { name: "Official LinkedIn export steps" }))
+    .toHaveAttribute("href", "https://www.linkedin.com/help/linkedin/answer/a703268");
+
+  await area.getByLabel("Choose exported LinkedIn XLSX (local preview only)").setInputFiles({
+    name: "wrong-type.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.alloc(120, 0),
+  });
+  await expect(area.getByTestId("linkedin-import-error")).toContainText("Other LinkedIn export types are not supported here");
+  await expect(area.getByTestId("linkedin-preview-results")).toHaveCount(0);
+  await expect(area.getByRole("button", { name: "Review and save LinkedIn export" })).toHaveCount(0);
+  expect(await page.evaluate(() => window.electronAPI.personalBrand.listLinkedInImports())).toHaveLength(0);
+  expect(outbound).toEqual([]);
 });
