@@ -6,7 +6,8 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  placement?: "center" | "right";
 }
 
 // Only visible, enabled controls may participate in the keyboard cycle.
@@ -32,6 +33,7 @@ export function Modal({
   title,
   children,
   size = "md",
+  placement = "center",
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -99,10 +101,11 @@ export function Modal({
     sm: "max-w-md",
     md: "max-w-lg",
     lg: "max-w-2xl",
+    xl: "max-w-5xl",
   } as const;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={`fixed inset-0 z-50 flex ${placement === "right" ? "items-stretch justify-end p-0 sm:p-4" : "items-center justify-center p-4"}`}>
       <div
         aria-hidden="true"
         className="fixed inset-0 bg-black/45 backdrop-blur-md transition-opacity"
@@ -114,7 +117,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`panel panel-strong relative flex max-h-[calc(100dvh-2rem)] w-full ${sizeClasses[size]} flex-col rounded-[1.75rem] shadow-2xl transition-all`}
+        className={`panel panel-strong relative flex w-full ${sizeClasses[size]} flex-col shadow-2xl transition-all ${placement === "right" ? "max-h-[100dvh] rounded-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.75rem]" : "max-h-[calc(100dvh-2rem)] rounded-[1.75rem]"}`}
       >
         <div className="border-divider flex shrink-0 items-center justify-between border-b px-6 py-4">
           <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
