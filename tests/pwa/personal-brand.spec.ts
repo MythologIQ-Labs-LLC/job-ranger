@@ -659,11 +659,30 @@ test("LinkedIn import guide distinguishes unsupported export types and retains l
   await expect(area.getByRole("link", { name: "Official LinkedIn export steps" }))
     .toHaveAttribute("href", "https://www.linkedin.com/help/linkedin/answer/a703268");
 
+  // This is a structurally readable XLSX, but only has an audience sheet.
+  // It must fail the strict six-worksheet analytics contract before any save.
+  const otherBook = '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheets><sheet name="AUDIENCE" sheetId="1" r:id="rId1"/></sheets></workbook>';
+  const otherRels = '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" ' +
+    'Target="worksheets/sheet1.xml"/></Relationships>';
+  const otherSheet = '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Audience</t></is></c></row></sheetData></worksheet>';
+  const wrongExport = Buffer.from(zipSync({
+    "xl/workbook.xml": strToU8(otherBook),
+    "xl/_rels/workbook.xml.rels": strToU8(otherRels),
+    "xl/worksheets/sheet1.xml": strToU8(otherSheet),
+  }));
   await area.getByLabel("Choose exported LinkedIn XLSX (local preview only)").setInputFiles({
-    name: "wrong-type.xlsx",
+    name: "follower-only-example.xlsx",
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    buffer: Buffer.alloc(120, 0),
+    buffer: wrongExport,
   });
+  await expect(area.getByTestId("linkedin-import-error")).toContainText("LinkedIn export is missing DISCOVERY worksheet");
   await expect(area.getByTestId("linkedin-import-error")).toContainText("Other LinkedIn export types are not supported here");
   await expect(area.getByTestId("linkedin-preview-results")).toHaveCount(0);
   await expect(area.getByRole("button", { name: "Review and save LinkedIn export" })).toHaveCount(0);
