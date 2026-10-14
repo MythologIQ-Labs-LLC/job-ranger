@@ -102,18 +102,6 @@ export function Dashboard() {
 
   const stories = [
     {
-      kicker: "Morning review",
-      title: newJobs > 0 ? `${newJobs} fresh jobs are ready for review` : "No unseen jobs right now",
-      copy:
-        newJobs > 0
-          ? "Start in Find Jobs, acknowledge anything relevant, and use filters to tighten the next pass."
-          : companies.length === 0
-            ? "Your queue is clear. Add a source you care about so Job Ranger has somewhere useful to look."
-            : "Your queue is clear. This is a good moment to review the sources you are tracking or add another one.",
-      action: newJobs > 0 ? "Review new jobs" : companies.length === 0 ? "Add a job source" : "Review job sources",
-      href: newJobs > 0 ? "/jobs" : "/companies",
-    },
-    {
       kicker: "Source coverage",
       title:
         companies.length === 0
