@@ -202,3 +202,32 @@ test("right-side detail drawer contains scrolling on short desktop and mobile wi
     await expect(trigger).toBeFocused();
   }
 });
+
+
+test("assessment read failure is announced and retry stays unverified until data returns", async ({ page }) => {
+  await seed(page);
+  await page.evaluate(() => {
+    const api = window.electronAPI.jobs;
+    const original = api.getEvidenceCoverage.bind(api);
+    let failOnce = true;
+    api.getEvidenceCoverage = async (id) => {
+      if (failOnce) {
+        failOnce = false;
+        throw new Error("Synthetic local evidence-read interruption");
+      }
+      return original(id);
+    };
+  });
+  const trigger = page.getByRole("button", { name: /Opportunity assessment/ }).first();
+  await trigger.click();
+  let dialog = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(dialog.getByRole("alert"))
+    .toContainText("Assessment unavailable: Synthetic local evidence-read interruption");
+  await expect(dialog.getByText("Eligibility and blockers")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  dialog = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(dialog.getByText("Eligibility and blockers")).toBeVisible();
+  await expect(dialog.getByText("Evidence coverage", { exact: true })).toBeVisible();
+});
