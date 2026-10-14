@@ -15,6 +15,7 @@ import {
   type EvidenceCoverageStatus,
 } from "../shared/opportunity-assessment";
 import { getDesktopApi } from "../services/api";
+import { Modal } from "./Modal";
 
 interface Props {
   job: Job;
@@ -161,6 +162,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         onClick={() => void toggle()}
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
           <Target className="h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
@@ -184,8 +186,13 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
         <ChevronDown className={`h-4 w-4 flex-shrink-0 transition ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && (
-        <div className="border-divider border-t px-4 py-4">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={`Opportunity assessment: ${job.title}`}
+        size="xl"
+        placement="right"
+      >
           {loading && (
             <p className="text-sm text-[var(--color-text-secondary)]">
               Comparing this listing with {targetTrack.name} and your confirmed Career Evidence...
@@ -352,8 +359,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
               </div>
             </div>
           )}
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
