@@ -97,7 +97,7 @@ function listFiles(directory: string, base = directory): string[] {
 function headersFile(): string {
   const headers = buildSecurityHeaders();
   const lines = ["/*", ...Object.entries(headers).map(([key, value]) => `  ${key}: ${value}`)];
-  lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "");
+  lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "", "/build-info.json", "  Cache-Control: no-cache", "", "/manifest.webmanifest", "  Cache-Control: no-cache", "  Content-Type: application/manifest+json", "");
   lines.push("/assets/*", "  Cache-Control: public, max-age=31536000, immutable", "");
   lines.push(`/${PDF_FONTS_DIRECTORY}/*.ttf`, "  Cache-Control: public, max-age=31536000, immutable", "");
   return `${lines.join("\n")}\n`;
