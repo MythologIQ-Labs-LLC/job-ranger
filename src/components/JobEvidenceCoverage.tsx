@@ -186,8 +186,9 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
         <ChevronDown className={`h-4 w-4 flex-shrink-0 transition ${open ? "rotate-180" : ""}`} />
       </button>
 
+      {open && (
       <Modal
-        open={open}
+        open={true}
         onClose={() => setOpen(false)}
         title={`Opportunity assessment: ${job.title}`}
         size="xl"
@@ -360,6 +361,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
             </div>
           )}
       </Modal>
+      )}
     </div>
   );
 }
