@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Ranger U2 · decision flows (isolated UX prototype)</title>
+<style>
+:root{font:15px/1.5 system-ui,sans-serif;color:#20323b;background:#eef2f3}
+*{box-sizing:border-box}body{margin:0}button,select{font:inherit;cursor:pointer}:focus-visible{outline:3px solid #227187;outline-offset:3px}
+header{background:#26363e;color:white;padding:11px 17px;font-size:.81rem}header strong{color:#ffe2a0}
+.controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;background:white;padding:12px 17px;border-bottom:1px solid #c9d3d6}
+.controls label{display:grid;font-weight:600;font-size:.79rem;gap:4px}
+.controls select{background:white;border:1px solid #9aacb2;padding:8px;border-radius:7px;min-height:40px;max-width:100%}
+.group{display:flex;gap:5px;flex-wrap:wrap}
+.group button{padding:8px 10px;border:1px solid #acbbbf;border-radius:7px;background:#fff;color:#27434e;min-height:40px}
+.group button[aria-pressed=true]{background:#255669;color:white;border-color:#255669}
+.shell{display:grid;grid-template-columns:184px minmax(0,1fr);min-height:calc(100dvh - 115px)}
+aside{background:#dfe8eb;border-right:1px solid #c2cfd3;padding:20px}
+aside .brand{font-weight:800;font-size:1.2rem;letter-spacing:-.04em;margin-bottom:20px}
+aside p{color:#49636d;font-size:.79rem}
+main{min-width:0;padding:24px 28px 60px;max-width:1320px;width:100%;margin:auto}
+.intro{margin-bottom:18px}h1{font-size:clamp(1.6rem,2.3vw,2.1rem);letter-spacing:-.035em;margin:0}h2{font-size:1.13rem;margin:0}h3{font-size:1rem;margin:0}
+p{margin:0}.sub{color:#52676f;font-size:.86rem;max-width:740px}
+.columns{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(270px,1fr);gap:16px;align-items:start}
+.card{background:white;border:1px solid #cbd5d9;border-radius:11px;padding:17px;min-width:0;margin-bottom:14px}
+.cardhead{display:flex;justify-content:space-between;align-items:start;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.overline{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:#4c626d;font-weight:750}
+.chip{font-size:.73rem;color:#2c5361;background:#edf5f7;border:1px solid #adc5cd;padding:3px 8px;border-radius:999px;display:inline-block}
+.small{font-size:.8rem;color:#51646d}.micro{font-size:.74rem;color:#5a6d74}
+.item{display:flex;gap:12px;align-items:start;min-width:0;border-top:1px solid #dde5e8;padding:12px 0}
+.item:first-of-type{border:0}.item>.body{flex:1;min-width:0}
+.item strong{display:block;font-size:.92rem}.item .micro{margin-top:5px}
+.btn{border-radius:7px;border:1px solid #9eb3bb;background:#f2f8fa;color:#205063;padding:6px 10px;font-weight:650;font-size:.81rem;min-height:36px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:13px 0}
+.status div{border:1px solid #cfdbdf;border-radius:8px;padding:8px;min-width:0}
+.status strong{display:block;font-size:.8rem}.status span{font-size:.75rem}
+.notice{border-left:4px solid #347488;background:#edf6f8;border-radius:5px;padding:11px;font-size:.79rem;margin-top:10px}
+.warning{border-left-color:#a76d17;background:#fff6e0}
+.tablebox{overflow-x:auto;max-width:100%}table{border-collapse:collapse;width:100%;font-size:.8rem}
+th,td{padding:9px;vertical-align:top;text-align:left;border-bottom:1px solid #dce5e8;overflow-wrap:anywhere}th{background:#f2f6f7}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 14px}
+.tab{border:1px solid #a6b9bf;border-radius:8px;background:#fff;padding:7px 10px;min-height:37px;color:#235068}
+.tab[aria-pressed=true]{background:#265667;color:#fff}
+.versions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0}
+.version{background:#f6f9f9;border:1px solid #c3d1d5;padding:12px;border-radius:8px;min-width:0}
+.version p{margin-top:8px;font-size:.84rem;overflow-wrap:anywhere}
+.actionrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+details{border-top:1px solid #dce6e8;padding:12px 0}summary{cursor:pointer;font-size:.83rem;font-weight:650}
+.empty{padding:12px;border:1px dashed #b3c3c9;border-radius:7px;color:#5b6b71}
+[hidden]{display:none!important}
+@media(max-width:940px){.columns{grid-template-columns:1fr}.status{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:16px 12px 50px}}
+@media(max-width:390px){.card{padding:12px}.item{flex-wrap:wrap}.versions{grid-template-columns:1fr}.controls{padding:11px}.status{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body>
+<header><strong>UX REVIEW PROTOTYPE, NOT JOB RANGER</strong> | Gate U2 #248 | Fictional data. No storage, uploads, submissions or decisions.</header>
+<div class="controls">
+<label>Career scenario<select id="scenario"><option value="licensed">Licensed healthcare</option><option value="entry">First job / goal-first</option><option value="nontraditional">Nontraditional work</option><option value="change">Career transition</option><option value="contract">Contract work</option></select></label>
+<label>Records to compare<select id="volume"><option value="1">1 record</option><option value="12">12 records</option><option value="50">50 records</option></select></label>
+<div><div class="overline">Surface</div><div class="group" role="group" aria-label="Surface">
+<button data-page="jobs" aria-pressed="true">Find Jobs</button><button data-page="apps" aria-pressed="false">Applications</button><button data-page="agent" aria-pressed="false">Agent Workspace (G3)</button>
+</div></div>
+<div><div class="overline">Layout</div><div class="group" role="group" aria-label="Layout">
+<button data-mode="focused" aria-pressed="true">A · Focused</button><button data-mode="dense" aria-pressed="false">B · Dense</button>
+</div></div>
+</div>
+<div class="shell"><aside><div class="brand">Job Ranger</div><p>Existing sidebar grouping and routes retained. This prototype has no connection to personal data or the application's runtime.</p></aside><main id="preview" tabindex="-1"></main></div>
+<script>
+const COHORTS={
+licensed:{track:"Practice operations",role:"Practice Operations Coordinator",company:"Harbor Health",status:"applied",next:"Recorded follow-up: Nov 8 (fictional)",quality:"Full source description",eligible:"Unclear",evidence:"Partial",career:"Aligned",preference:"Mixed"},
+entry:{track:"Service support",role:"Customer Support Associate",company:"Maple Service",status:"interested",next:null,quality:"Incomplete source",eligible:"Unknown",evidence:"Unknown",career:"Aligned",preference:"Unknown"},
+nontraditional:{track:"Operations support",role:"Project Assistant",company:"Juniper Civic",status:"interview",next:"Recorded interview event (fictional)",quality:"Listing-only source",eligible:"Unclear",evidence:"Partial",career:"Mixed",preference:"Unclear"},
+change:{track:"Service operations",role:"Service Delivery Lead",company:"Meridian Services",status:"applied",next:null,quality:"Full source description",eligible:"Unclear",evidence:"Partial",career:"Aligned",preference:"Mixed"},
+contract:{track:"Contract programs",role:"Contract Project Coordinator",company:"Orchard Partners",status:"interview",next:"Recorded follow-up (fictional)",quality:"Incomplete source",eligible:"Unclear",evidence:"Partial",career:"Aligned",preference:"Preferred"}};
+const AGENTS=[
+{id:"conflict",state:"Contested",kind:"Workspace note",title:"Conflicting research note",why:"Two agent-reported versions disagree.",author:"Assistant A (claimed, unverified)",v1:"The listing offers hybrid work.",v2:"The listing does not state the work mode."},
+{id:"status",state:"Proposal",kind:"Application status claim",title:"Agent-reported application change",why:"Agent claims do not update applications.",author:"Assistant B (claimed, unverified)",v1:"Claimed Applied. Local record shows Interested."},
+{id:"evidence",state:"Proposal",kind:"Evidence change proposal",title:"Unverified experience suggestion",why:"Must supply and confirm independent evidence.",author:"Assistant C (claimed, unverified)",v1:"Suggested: Managed patient scheduling."},
+{id:"draft",state:"Draft",kind:"Material draft version",title:"Suggested resume wording",why:"Truth Gate and Parseability Gate are not checked.",author:"Assistant B (claimed, unverified)",v1:"Improved scheduling consistency."},
+{id:"problem",state:"Blocked",kind:"Rejected batch",title:"Batch could not be imported",why:"Invalid structured input; affected document unknown.",author:"Unverified folder",v1:"workspace/agents/batch-02.json"}];
+let screen="jobs",layout="focused",job=0,agent="conflict",status="all",tab="review";
+const elem=id=>document.getElementById(id),cohort=()=>COHORTS[elem("scenario").value],N=()=>Number(elem("volume").value);
+const e=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+function button(label,attribute){return '<button class="btn" type="button" '+(attribute||"")+'>'+e(label)+'</button>'}
+function headline(title,explain){return '<div class="intro"><div class="overline">A/B interaction proposal · '+e(cohort().track)+'</div><h1>'+e(title)+'</h1><p class="sub">'+e(explain)+'</p></div>'}
+function jobs(){return Array.from({length:N()},(_,i)=>({i,role:cohort().role+(i?' · '+(i+1):''),company:cohort().company,quality:cohort().quality,eligible:cohort().eligible,evidence:cohort().evidence,career:cohort().career,preference:cohort().preference}))}
+function assessments(j){return '<div class="status" aria-label="Four independent assessment dimensions">'+[["Eligibility",j.eligible],["Evidence",j.evidence],["Career",j.career],["Preferences",j.preference]].map(pair=>'<div><strong>'+e(pair[0])+'</strong><span>'+e(pair[1])+'</span></div>').join('')+'</div>'}
+function jobsView(){const js=jobs(),sel=js.find(x=>x.i===job)||js[0];
+const detail='<section class="card" aria-label="Assessment explanation"><div class="cardhead"><h2>'+e(sel.role)+'</h2><span class="chip">Inspect why</span></div>'+assessments(sel)+'<p class="small">'+e(sel.quality)+'. Unseen requirements are unknown, never penalized automatically.</p><p class="notice">Proposed detail panel avoids expanding a listing to ~1,900 px. Source provenance and requirement-level evidence must remain inspectable.</p></section>';
+const rows=layout==="dense"?'<div class="tablebox"><table><thead><tr><th>Role</th><th>Eligibility</th><th>Evidence</th><th>Career</th><th>Preferences</th><th>Inspect</th></tr></thead><tbody>'+js.map(x=>'<tr><td>'+e(x.role)+'</td><td>'+e(x.eligible)+'</td><td>'+e(x.evidence)+'</td><td>'+e(x.career)+'</td><td>'+e(x.preference)+'</td><td>'+button("Why",'data-job="'+x.i+'"')+'</td></tr>').join('')+'</tbody></table></div>':
+js.map(x=>'<div class="item"><div class="body"><strong>'+e(x.role)+'</strong><p class="small">'+e(x.company)+' · '+e(x.quality)+'</p><p class="micro">Eligibility '+e(x.eligible)+' · Evidence '+e(x.evidence)+' · Career '+e(x.career)+' · Preferences '+e(x.preference)+'</p></div>'+button("Why?",'data-job="'+x.i+'"')+'</div>').join('');
+return headline("Find Jobs","Compare evidence and requirements without an invented fit percentage. This prototype cannot track or apply.")+
+'<section class="card"><div class="cardhead"><h2>Target direction</h2><span class="chip">'+e(cohort().track)+'</span></div><p class="small">Existing keyword, location, employer and Target Track filters remain canonical in the actual app. This is a display comparison only.</p></section>'+
+'<div class="columns"><section class="card"><div class="cardhead"><h2>'+e(N())+' opportunities</h2><span class="chip">'+e(layout)+' layout</span></div>'+rows+'</section>'+detail+'</div>'}
+function apps(){return Array.from({length:N()},(_,i)=>({i,title:cohort().role+(i?' · '+(i+1):''),status:i===0?cohort().status:["interested","applied","interview","offer","withdrawn","rejected"][i%6],next:i===0?cohort().next:null}))}
+function appView(){const data=apps(),filtered=data.filter(x=>status==="all"||x.status===status);
+const tabs='<div class="tabs" role="group" aria-label="Application status filter">'+["all","interested","applied","interview","offer","rejected","withdrawn"].map(k=>'<button class="tab" data-status="'+k+'" aria-pressed="'+(status===k)+'">'+e(k)+'</button>').join('')+'</div>';
+const rows=layout==="dense"?'<div class="tablebox"><table><thead><tr><th>Role</th><th>Status</th><th>Recorded next step</th></tr></thead><tbody>'+filtered.map(x=>'<tr><td>'+e(x.title)+'</td><td>'+e(x.status)+'</td><td>'+e(x.next||"None recorded")+'</td></tr>').join('')+'</tbody></table></div>':
+filtered.map(x=>'<div class="item"><div class="body"><strong>'+e(x.title)+'</strong><p class="small">'+e(x.status)+'</p><p class="micro">'+e(x.next||"No next date recorded; not due")+'</p></div><details><summary>More</summary><p class="micro">Destructive action stays behind confirmation.</p>'+button("Remove (disabled)","disabled")+'</details></div>').join('');
+return headline("Applications","A recorded status is not a deadline. Existing notes, exact submitted materials and unsaved-change guards must survive reorganization.")+
+'<section class="card"><h2>Recorded application stages</h2>'+tabs+'</section><div class="columns"><section class="card"><h2>'+e(filtered.length)+' application'+(filtered.length===1?'':'s')+'</h2>'+(rows||'<p class="empty">No applications in this state.</p>')+'</section>'+
+'<section class="card"><h2>Application detail is a separate deliberate action</h2><p class="small" style="margin-top:10px">The actual application keeps the user-confirmed status editor, auto-save feedback, contacts, milestones, submitted materials, and interview preparation. Proposed progressive disclosure may not break unsaved navigation protection.</p><div class="notice warning">No status write, deletion, application submission or reminder is performed in this mock.</div></section></div>'}
+function agentRows(items){return layout==="dense"?'<div class="tablebox"><table><thead><tr><th>Type</th><th>State</th><th>Claimed by</th><th>Review</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+e(x.kind)+'</td><td>'+e(x.state)+'</td><td>'+e(x.author)+'</td><td>'+button("Review",'data-agent="'+x.id+'"')+'</td></tr>').join('')+'</tbody></table></div>':
+items.map(x=>'<div class="item"><div class="body"><div class="overline">'+e(x.kind)+' · '+e(x.state)+'</div><strong>'+e(x.title)+'</strong><p class="micro">'+e(x.author)+'</p><p class="small">'+e(x.why)+'</p></div>'+button("Review",'data-agent="'+x.id+'"')+'</div>').join('')}
+function agentDetail(x){return '<section class="card" aria-label="Agent review detail"><div class="cardhead"><h2>'+e(x.title)+'</h2><span class="chip">'+e(x.state)+'</span></div>'+
+'<p class="small">'+e(x.why)+'</p><div class="notice warning">Received by transport, classified by reconciliation, <strong>not accepted by you</strong>. The claimed author remains unverified.</div>'+
+(x.v2?'<div class="versions"><div class="version"><h3>Version A</h3><p>'+e(x.v1)+'</p><p class="micro">Fictional variant A; provenance still needed</p></div><div class="version"><h3>Version B</h3><p>'+e(x.v2)+'</p><p class="micro">Fictional variant B; provenance still needed</p></div></div><label class="item"><input type="checkbox"><span class="small">I compared both versions (preview only; not recorded).</span></label>'+button("Keep as draft (disabled)","disabled"):
+'<div class="version" style="margin:13px 0"><p>'+e(x.v1)+'</p></div>')+
+(x.id==="status"?'<p class="notice warning">A status change requires verification and explicit user confirmation in Applications.</p>':'')+
+(x.id==="evidence"?'<p class="notice warning">Agent-suggested evidence cannot become a fact here. User-created evidence must have its own source.</p>':'')+
+(x.id==="draft"?'<p class="notice">This material has not passed Truth Gate or Parseability Gate.</p>':'')+
+(x.id==="problem"?'<p class="notice warning">Do not invent an affected resume. Proposed recovery: repair the malformed source batch and re-sync manually.</p>':'')+
+'<div class="actionrow" style="margin-top:14px">'+button("Reject (disabled)","disabled")+button("Dismiss (disabled)","disabled")+'</div><p class="micro">No authority changes occur here.</p></section>'}
+function agentView(){const tabs='<div class="tabs" role="group" aria-label="Agent inbox">'+["review","drafts","problems","history"].map(x=>'<button class="tab" data-agenttab="'+x+'" aria-pressed="'+(tab===x)+'">'+e(x)+'</button>').join('')+'</div>';
+const items=AGENTS.filter(x=>tab==="review"?["conflict","status","evidence"].includes(x.id):tab==="drafts"?x.id==="draft":tab==="problems"?x.id==="problem":false);
+const selected=AGENTS.find(x=>x.id===agent)||AGENTS[0];
+return headline("Agent Workspace (G3)","User decisions come before file sync and export. Transport, reconciliation and authority stay separate.")+
+'<section class="card"><div class="cardhead"><h2>Needs your decision</h2><span class="chip">'+e(items.length)+' fictional item'+(items.length===1?'':'s')+'</span></div>'+tabs+'</section>'+
+'<div class="columns"><div><section class="card">'+(items.length?agentRows(items):'<p class="empty">No items in this fictional category.</p>')+'</section><section class="card"><h2>Sync and export</h2><details style="margin-top:10px"><summary>Transport tools (secondary)</summary><p class="small">In G3, folder sync and export are user-selected. They cannot accept an item.</p>'+button("Choose folder (disabled)","disabled")+button("Create export (disabled)","disabled")+'</details></section></div>'+agentDetail(selected)+'</div>'}
+function render(){
+elem("preview").innerHTML=screen==="jobs"?jobsView():screen==="apps"?appView():agentView();
+document.querySelectorAll("[data-page]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.page===screen)));
+document.querySelectorAll("[data-mode]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.mode===layout)));
+document.querySelectorAll("[data-job]").forEach(x=>x.addEventListener("click",()=>{job=Number(x.dataset.job);render()}));
+document.querySelectorAll("[data-status]").forEach(x=>x.addEventListener("click",()=>{status=x.dataset.status;render()}));
+document.querySelectorAll("[data-agent]").forEach(x=>x.addEventListener("click",()=>{agent=x.dataset.agent;render()}));
+document.querySelectorAll("[data-agenttab]").forEach(x=>x.addEventListener("click",()=>{tab=x.dataset.agenttab;const a=AGENTS.find(x=>tab==="review"?["conflict","status","evidence"].includes(x.id):tab==="drafts"?x.id==="draft":x.id==="problem");if(a)agent=a.id;render()}));
+}
+elem("scenario").addEventListener("change",()=>{job=0;status="all";render()});
+elem("volume").addEventListener("change",()=>{job=0;render()});
+document.querySelectorAll("[data-page]").forEach(x=>x.addEventListener("click",()=>{screen=x.dataset.page;render();elem("preview").focus()}));
+document.querySelectorAll("[data-mode]").forEach(x=>x.addEventListener("click",()=>{layout=x.dataset.mode;render()}));
+render();
+</script></body></html>
