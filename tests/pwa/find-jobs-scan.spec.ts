@@ -67,8 +67,12 @@ test("compact list retains source quality and assessment access without showing 
   await expect(job.getByText("Still active on source")).toBeHidden();
   await expect(job.getByRole("button", { name: /Opportunity assessment/ })).toBeVisible();
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await expect(job.getByText("Eligibility and blockers")).toBeVisible();
-  await expect(job.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  const assessment = job.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(assessment).toBeVisible();
+  await expect(assessment.getByText("Eligibility and blockers")).toBeVisible();
+  await expect(assessment.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  await assessment.getByRole("button", { name: /Close Opportunity assessment:/ }).click();
+  await expect(assessment).toBeHidden();
 
   await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
@@ -121,5 +125,80 @@ test("narrow view keeps mode controls and actions in the viewport", async ({ pag
     const track = await card.getByRole("button", { name: "Track this job" }).boundingBox();
     expect(track).not.toBeNull();
     expect(track!.x + track!.width).toBeLessThanOrEqual(320);
+  }
+});
+
+
+test("detail drawer confines the long assessment, retains four axes and returns focus on Escape", async ({ page }) => {
+  await seed(page);
+  const job = page.locator("article").filter({
+    has: page.getByRole("button", { name: "Medical Office Coordinator", exact: true }),
+  });
+  const trigger = job.getByRole("button", { name: /Opportunity assessment/ });
+  const before = await page.evaluate(async () => {
+    const [job] = await window.electronAPI.jobs.list();
+    return { id: job.id, isNew: job.isNew, isActive: job.isActive };
+  });
+
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const drawer = job.getByRole("dialog", { name: "Opportunity assessment: Medical Office Coordinator" });
+  await expect(drawer).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const close = drawer.getByRole("button", { name: "Close Opportunity assessment: Medical Office Coordinator" });
+  await expect(close).toBeFocused();
+  for (const axis of ["Eligibility", "Evidence", "Career", "Preferences"]) {
+    await expect(drawer.getByText(new RegExp("^" + axis + " · "))).toBeVisible();
+  }
+  await expect(drawer.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  await expect(drawer.getByText(/not a hiring prediction/)).toBeVisible();
+  expect(await page.locator("article").count()).toBe(1);
+  expect(await page.getByText(/\d+% fit/).count()).toBe(0);
+
+  await page.keyboard.press("Shift+Tab");
+  await expect(drawer.getByRole("button", { name: "Prepare resume" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+  const after = await page.evaluate(async () => {
+    const [job] = await window.electronAPI.jobs.list();
+    return { id: job.id, isNew: job.isNew, isActive: job.isActive };
+  });
+  expect(after).toEqual(before);
+});
+
+test("right-side detail drawer contains scrolling on short desktop and mobile widths", async ({ page }) => {
+  await seed(page);
+  for (const [width, height] of [[320, 700], [390, 780], [1280, 580], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    const trigger = page.getByRole("button", { name: /Opportunity assessment/ }).first();
+    await trigger.click();
+    const drawer = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+    await expect(drawer).toBeVisible();
+    const measurement = await drawer.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      const scroll = el.lastElementChild as HTMLElement;
+      return {
+        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        scrollable: getComputedStyle(scroll).overflowY === "auto",
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(measurement.left).toBeGreaterThanOrEqual(-1);
+    expect(measurement.right).toBeLessThanOrEqual(width + 1);
+    expect(measurement.top).toBeGreaterThanOrEqual(-1);
+    expect(measurement.bottom).toBeLessThanOrEqual(height + 1);
+    expect(measurement.scrollable).toBe(true);
+    expect(measurement.scrollWidth).toBeLessThanOrEqual(measurement.viewportWidth);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await expect(trigger).toBeFocused();
   }
 });
