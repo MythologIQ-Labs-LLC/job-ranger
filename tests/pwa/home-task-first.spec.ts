@@ -102,8 +102,8 @@ test("failing career reads never masquerade as an empty queue", async ({ page })
       throw new Error("Synthetic offline target-track read");
     };
   });
-  await page.goto(server.url + "#/jobs");
-  await page.goto(server.url + "#/");
+  await page.getByRole("link", { name: "Find Jobs" }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Synthetic offline target-track read");
   await expect(page.getByText("Unavailable", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose a career direction" })).toHaveCount(0);
