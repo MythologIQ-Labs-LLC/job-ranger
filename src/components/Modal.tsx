@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -104,7 +105,10 @@ export function Modal({
     xl: "max-w-5xl",
   } as const;
 
-  return (
+  // Rendered at the document root: a panel ancestor with backdrop-filter (or transform)
+  // would otherwise become the containing block, pinning the "fixed" layer inside that
+  // card instead of the viewport and leaving the rest of the page clickable.
+  return createPortal(
     <div className={`fixed inset-0 z-50 flex ${placement === "right" ? "items-stretch justify-end p-0 sm:p-4" : "items-center justify-center p-4"}`}>
       <div
         aria-hidden="true"
@@ -132,6 +136,7 @@ export function Modal({
         </div>
         <div className="min-h-0 overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

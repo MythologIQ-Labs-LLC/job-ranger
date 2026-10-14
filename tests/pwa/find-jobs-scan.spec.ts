@@ -70,7 +70,7 @@ test("compact list retains source quality and assessment access without showing 
   await expect(job.getByText("Still active on source")).toBeHidden();
   await expect(job.getByRole("button", { name: /Opportunity assessment/ })).toBeVisible();
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
-  const assessment = job.getByRole("dialog", { name: /Opportunity assessment:/ });
+  const assessment = page.getByRole("dialog", { name: /Opportunity assessment:/ });
   await expect(assessment).toBeVisible();
   await expect(assessment.getByText("Eligibility and blockers")).toBeVisible();
   await expect(assessment.getByText("Evidence coverage", { exact: true })).toBeVisible();
@@ -145,7 +145,7 @@ test("detail drawer confines the long assessment, retains four axes and returns 
 
   await trigger.focus();
   await page.keyboard.press("Enter");
-  const drawer = job.getByRole("dialog", { name: "Opportunity assessment: Medical Office Coordinator" });
+  const drawer = page.getByRole("dialog", { name: "Opportunity assessment: Medical Office Coordinator" });
   await expect(drawer).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   const close = drawer.getByRole("button", { name: "Close Opportunity assessment: Medical Office Coordinator" });
@@ -204,6 +204,64 @@ test("right-side detail drawer contains scrolling on short desktop and mobile wi
     await expect(drawer).toBeHidden();
     await expect(trigger).toBeFocused();
   }
+});
+
+test("the drawer is anchored to the viewport, not to its listing card, and blocks the page behind it", async ({ page }) => {
+  // Listing cards use backdrop-filter, which makes a card the containing block for any
+  // position:fixed descendant. The drawer must therefore live outside the card, or it is
+  // pinned inside the card's box and the sidebar stays clickable while it is "modal".
+  await seed(page);
+  await page.evaluate(async () => {
+    const api = window.electronAPI;
+    const source = await api.companies.create({
+      name: "Cedar Care",
+      url: "https://boards.greenhouse.io/cedar-care",
+      frequencyMinutes: 1440,
+      isActive: false,
+    });
+    if ((await api.companies.runScrape(source.id)).status !== "success") throw Error("Second fixture source failed");
+  });
+  await page.reload();
+  await waitForRuntime(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("article")).toHaveCount(2);
+  const trigger = page.getByRole("button", { name: /Opportunity assessment/ }).nth(1);
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const drawer = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(drawer.getByText("Eligibility and blockers")).toBeVisible();
+  const geometry = await drawer.evaluate((dialog) => {
+    const rect = dialog.getBoundingClientRect();
+    const overlay = (dialog.parentElement as HTMLElement).getBoundingClientRect();
+    const navLink = document.querySelector("nav a") as HTMLElement;
+    const box = navLink.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return {
+      dialog: [rect.left, rect.top, rect.right, rect.bottom],
+      overlay: [overlay.left, overlay.top, overlay.right, overlay.bottom],
+      viewport: [window.innerWidth, window.innerHeight],
+      navLinkReachable: hit === navLink || navLink.contains(hit),
+      insideArticle: Boolean(dialog.closest("article")),
+    };
+  });
+  expect(geometry.overlay, "backdrop covers the whole viewport").toEqual([0, 0, geometry.viewport[0], geometry.viewport[1]]);
+  expect(geometry.dialog[1]).toBeGreaterThanOrEqual(0);
+  expect(geometry.dialog[3]).toBeLessThanOrEqual(geometry.viewport[1]);
+  expect(geometry.dialog[2]).toBeLessThanOrEqual(geometry.viewport[0]);
+  expect(geometry.navLinkReachable, "sidebar link is covered while the drawer is open").toBe(false);
+  expect(geometry.insideArticle, "drawer is rendered outside the listing card").toBe(false);
+
+  // Wheel over the backdrop must not scroll the listing behind the drawer.
+  const scrollBefore = await page.evaluate(() => (document.getElementById("main-content") as HTMLElement).scrollTop);
+  await page.mouse.move(20, 450);
+  await page.mouse.wheel(0, 400);
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(() => (document.getElementById("main-content") as HTMLElement).scrollTop)).toBe(scrollBefore);
+
+  // Clicking the backdrop closes it and returns focus to the trigger that opened it.
+  await page.mouse.click(20, 450);
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
 });
 
 
