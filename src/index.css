@@ -1,25 +1,26 @@
 @import "tailwindcss" source("..");
 
 :root {
-  --color-primary: #b45309;
-  --color-secondary: #92400e;
-  --color-accent: #f59e0b;
-  --color-canvas: #f6f1e8;
-  --color-canvas-glow: rgba(245, 158, 11, 0.18);
-  --color-sidebar: #201913;
-  --color-panel: rgba(255, 250, 241, 0.92);
-  --color-panel-muted: rgba(255, 245, 228, 0.8);
-  --color-panel-strong: rgba(255, 255, 255, 0.98);
-  --color-border: rgba(120, 86, 48, 0.18);
-  --color-border-strong: rgba(120, 86, 48, 0.3);
-  --color-text-primary: #24180c;
-  --color-text-secondary: #61462a;
-  --color-text-muted: #785d3d;
-  --color-text-inverse: #fffaf0;
-  --color-success: #0f766e;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
-  --color-info: #0f766e;
+  /* Atelier 60/30/10: ivory base, slate-blue structure, teal actions. */
+  --color-primary: #086b70;
+  --color-secondary: #243b53;
+  --color-accent: #22a79d;
+  --color-canvas: #f6f3eb;
+  --color-canvas-glow: rgba(34, 167, 157, 0.12);
+  --color-sidebar: #1f3144;
+  --color-panel: rgba(252, 251, 246, 0.94);
+  --color-panel-muted: rgba(241, 246, 242, 0.88);
+  --color-panel-strong: rgba(255, 255, 253, 0.99);
+  --color-border: rgba(46, 75, 88, 0.16);
+  --color-border-strong: rgba(46, 75, 88, 0.30);
+  --color-text-primary: #1e3041;
+  --color-text-secondary: #405867;
+  --color-text-muted: #526c78;
+  --color-text-inverse: #f9faf7;
+  --color-success: #126d61;
+  --color-warning: #a35a0a;
+  --color-danger: #b42335;
+  --color-info: #086b70;
   --badge-success-bg: #e0f3eb;
   --badge-success-fg: #0b574b;
   --badge-warning-bg: #fff0d2;
@@ -28,7 +29,7 @@
   --badge-danger-fg: #951b1b;
   --badge-info-bg: #d9f5f3;
   --badge-info-fg: #0b574b;
-  --color-shadow: rgba(80, 46, 10, 0.12);
+  --color-shadow: rgba(25, 48, 67, 0.12);
   --font-display: "Fraunces", "Georgia", serif;
   --font-body: "Manrope", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Consolas", monospace;
