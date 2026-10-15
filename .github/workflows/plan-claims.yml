@@ -1,0 +1,46 @@
+name: Plan claims self-test
+
+# Informational and unprivileged: runs the PR head's own gate regression suites
+# and checker. It is NOT the required check. A PR can change these files, which
+# is why the required check is plan-claims-gate (plan-claims-gate.yml): that one
+# runs the base-revision checker and treats the PR head as data only.
+on:
+  pull_request:
+    paths:
+      - 'docs/plan-qor-phase*.md'
+      - 'scripts/plan_claims_*.py'
+      - 'tests/test_plan_claims_*.py'
+      - 'tests/plan_claims_fixture.py'
+      - '.github/workflows/plan-claims*.yml'
+      - '.github/CODEOWNERS'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/plan-qor-phase*.md'
+      - 'scripts/plan_claims_*.py'
+      - 'tests/test_plan_claims_*.py'
+      - 'tests/plan_claims_fixture.py'
+      - '.github/workflows/plan-claims*.yml'
+      - '.github/CODEOWNERS'
+
+permissions:
+  contents: read
+
+jobs:
+  plan-claims-selftest:
+    name: plan-claims-selftest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository with full history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Gate regression suites (R1-R4, V1-V4)
+        run: python3 -m unittest discover -s tests -p "test_plan_claims_*.py"
+
+      - name: Verify every gated plan's claims against immutable git objects
+        run: python3 scripts/plan_claims_check.py --repo .

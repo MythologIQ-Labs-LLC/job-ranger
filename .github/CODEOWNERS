@@ -1,0 +1,8 @@
+# Governance-gate ownership. Effective only when the main ruleset requires
+# code-owner review (dependency D1); this file alone does not block merges.
+/docs/plan-qor-phase*.md @Knapp-Kevin
+/scripts/plan_claims_*.py @Knapp-Kevin
+/tests/test_plan_claims_*.py @Knapp-Kevin
+/tests/plan_claims_fixture.py @Knapp-Kevin
+/.github/workflows/ @Knapp-Kevin
+/.github/CODEOWNERS @Knapp-Kevin

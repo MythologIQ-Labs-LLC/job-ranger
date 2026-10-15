@@ -1,0 +1,147 @@
+{
+  "pattern": "gate-loop",
+  "proposal_kind": "gate",
+  "proposal_text": "AMENDMENT 3 (after independent VETO #106: V1-A, V1-B, V1-C, V2, Razor; Amendment 2 followed VETO #104, Amendment 1 followed VETO #102) of the Phase 17 gate-loop remediation. Pattern: gate-loop on qor-plan, recurring across Phases 15, 16 and 17 (Phase 16 overrides 1f15661a/f0b67f91; Phase 17 VETOs #96, #98, #100 in session 2026-10-10T0443-9d3df3, which itself has no process-shadow events; the session-total detector is blocked by Qor-logic-plus #173 and nothing was manufactured). Root cause: plans asserted empirical facts that were never executed against named commits; N3, N4 and F3 were design gaps the auditor still owns. Process change (gate): every docs/plan-qor-phase17+ plan carries a closed v2 qor-plan-claims manifest; scripts/plan_claims_check.py reads only immutable git objects (fixed git cat-file/ls-tree), requires full commit SHAs declared and recorded in prose, requires every known empirical assertion form in canonical sections to reference a claim or an auditor-challenged judgment exception, rejects missing/orphan/duplicate ids, and never executes plan-supplied commands. Red-first/regression-lock classifications fail closed until a separately controlled trusted harness exists. Mechanical detection is lexical and does not make arbitrary prose machine-verifiable; /qor-audit Step 3 keeps responsibility for undeclared assertions. Binding status: repository CI job 'Plan claims gate' runs fail-closed but blocks merges only after D1. Skill binding requires D2. Event closure (the addressed flip) is NOT legal until an independent reviews-remediate PASS AND D1 AND D2 are satisfied; until then this remediation is HOLD.",
+  "addressed_event_ids": [
+    "1f15661a2633a8d7de36cc22edc5ac48f218bb4abf446a4ee49af7df71da98e7",
+    "f0b67f9178bff4e90b45f0fca7922f4ed79e18975b0d364a816df483ee9c01ce"
+  ],
+  "phase": "remediate",
+  "session_id": "2026-10-10T0443-9d3df3",
+  "closure_enforcer": "tests/test_plan_claims_manifest.py",
+  "events_addressed": [
+    "1f15661a2633a8d7de36cc22edc5ac48f218bb4abf446a4ee49af7df71da98e7",
+    "f0b67f9178bff4e90b45f0fca7922f4ed79e18975b0d364a816df483ee9c01ce"
+  ],
+  "evidence": {
+    "ledger_vetoes": [
+      96,
+      98,
+      100
+    ],
+    "plan": "docs/plan-qor-phase17-provider-tranche.md",
+    "plan_head_at_decision": "dc5b6c6999e2aad1645f4667c493486986f30574",
+    "operator_decision": "https://github.com/MythologIQ-Labs-LLC/job-ranger/pull/232 (2026-10-10T05:57:12Z)"
+  },
+  "proposed_changes": [
+    {
+      "target": "scripts/plan_claims_check.py, scripts/plan_claims_schema.py, scripts/plan_claims_source.py",
+      "change": "Pure read-only checker: closed v2 schema, R1 completeness (canonical-section assertion detection, missing/orphan/duplicate ids, judgment rationale), R3 no execution and safe paths, R4 full-SHA commit objects with no checkout.",
+      "rationale": "Closes R1, R3, R4."
+    },
+    {
+      "target": "tests/test_plan_claims_manifest.py",
+      "change": "25-test regression suite; red at a68d68e (legacy manifest executed author-controlled Python), green at f82368f.",
+      "rationale": "Executable closure enforcer."
+    },
+    {
+      "target": ".github/workflows/plan-claims.yml",
+      "change": "Fail-closed job (contents: read, fetch-depth 0, no bypass) running the suite and the checker on gated plans.",
+      "rationale": "R2 repository integration; merge-binding after D1."
+    },
+    {
+      "target": "GOVERNANCE.md 'Plan claims gate'",
+      "change": "Documents the gate, the pre-audit commands, and its limits (lexical detection, auditor responsibility, D1-D3).",
+      "rationale": "R2 doctrine integration within this repository."
+    },
+    {
+      "target": "Qor-logic-plus /qor-plan submission and /qor-audit Step 0.3 (D2)",
+      "change": "Not changed here; requires its own governed phase.",
+      "rationale": "Shared skills are outside this workspace's authority."
+    },
+    {
+      "target": "Phase 17 next authorized plan iteration (inputs only)",
+      "change": "Express F1-F5 as manifest claims or judgment exceptions; red-first classification only with D3 evidence.",
+      "rationale": "Iteration-4 findings."
+    },
+    {
+      "target": "scripts/plan_claims_prose.py, scripts/plan_claims_schema.py",
+      "change": "V1: typed subject/revision/property binding, one reference per id, scoped judgments with distinct rationales, non-empty manifest, fenced and unclosed-fence scanning, manifest outside canonical sections.",
+      "rationale": "Closes the four reported bypasses."
+    },
+    {
+      "target": "scripts/plan_claims_tokens.py, scripts/plan_claims_source.py",
+      "change": "V2: fail-closed JS/TS tokenizer for function spans and import edges.",
+      "rationale": "The /}/ counterexample measures 104 lines."
+    },
+    {
+      "target": ".github/workflows/plan-claims-gate.yml, scripts/plan_claims_gate.py, .github/CODEOWNERS",
+      "change": "V3: always-reporting base-revision pull_request_target gate; PR head read as data only; CODEOWNERS; D1 payload prepared.",
+      "rationale": "Required-check architecture and tamper resistance."
+    },
+    {
+      "target": "tests/plan_claims_fixture.py, tests/test_plan_claims_*.py",
+      "change": "V4: split suites within razor limits plus an automated razor test; 66 regressions.",
+      "rationale": "Razor compliance without losing coverage."
+    },
+    {
+      "target": "scripts/plan_claims_markdown.py",
+      "change": "V1-A: restricted Markdown subset that renderer and checker read the same way; fails closed on HTML, ambiguous fences and headings, and non-LF/CRLF separators.",
+      "rationale": "Reviewer probes p03, p04, p05, p14, p15, p18, p19."
+    },
+    {
+      "target": "scripts/plan_claims_prose.py",
+      "change": "V1-B/V1-C: subjects taken from the assertion; exact sizes bind to equals; one item per judgment; exact Unit Tests heading with code-span vectors only; #L and sole-caller forms; flattened binding.",
+      "rationale": "Reviewer probes s2, s3, p02, p07, p07b, p09, p11, p17; Razor nesting."
+    },
+    {
+      "target": "scripts/plan_claims_tokens.py, scripts/plan_claims_source.py",
+      "change": "V2: generic lists with (, { or => fail closed; template-literal specifiers counted; non-literal specifiers fail closed.",
+      "rationale": "Reviewer V2 counterexamples."
+    },
+    {
+      "target": "scripts/plan_claims_gate.py, .github/CODEOWNERS",
+      "change": "Pre-D1: fail PRs whose workflows would publish a spoofed plan-claims-gate check; CODEOWNERS covers all workflows.",
+      "rationale": "Reviewer pre-D1 items."
+    }
+  ],
+  "ts": "2026-10-12T14:45:01Z",
+  "amendment": {
+    "number": 3,
+    "after_veto_entry": 106,
+    "supersedes_content_hash": "fa0e69249c1d63a0bba4f8a442cef5ac148ea424b07ccb2a8d92b0e366391183",
+    "red_commit": "fb3cbb04300b0ae944f4a9c5395e06185175634e",
+    "green_commit": "6a86c90c7ab3a7a84b81b0df4531887ba5065e97",
+    "disclosure": "The green commit also corrects the red commit's nesting-depth measure to treat elif chains as one level (razor convention) and makes test fixtures write LF so plan bytes match on Windows and Linux.",
+    "previous": {
+      "number": 2,
+      "after_veto_entry": 104,
+      "supersedes_content_hash": "55782866e1c43f79aeb1d4903f4d1cbaeab12d60630dadf4d213a0e855076a01",
+      "red_commit": "1ce8b29b0931188fc08c3ac6a369258fe0385e3a",
+      "green_commit": "8a933332c82aab9d367832918fccaa5331197228",
+      "previous": {
+        "number": 1,
+        "after_veto_entry": 102,
+        "supersedes_content_hash": "44c2f13501d8b7ffe909e8f17c14f6cea4feb503cdb902483a67b87a58526d8f",
+        "red_commit": "a68d68ee94032f1a6dcc72b52271d01b47f4f46b",
+        "green_commit": "f82368f77e9a08e2169881300e6b42cb572fbf0a"
+      }
+    }
+  },
+  "closure_conditions": [
+    "independent /qor-audit reviews-remediate PASS on this exact artifact",
+    "D1 satisfied: plan-claims-gate observed on main completing success on an unrelated PR and failure on an invalid governed PR, then required in ruleset Default Main with require_code_owner_review",
+    "D2 satisfied: separately governed Qor-logic-plus phase wiring /qor-plan submission and /qor-audit Step 0.3"
+  ],
+  "binding_dependencies": [
+    {
+      "id": "D1",
+      "owner": "operator (repository settings)",
+      "requirement": "Prepared, not applied (payload in GOVERNANCE.md 'Plan claims gate'): add required status check 'plan-claims-gate' (integration 15368) and require_code_owner_review in ruleset Default Main, only after the base-revision workflow is on main and observed end to end. Residual risk: code-owner review is meaningful only if the automation author is not the sole code owner.",
+      "blocks": "event closure; merge-binding enforcement"
+    },
+    {
+      "id": "D2",
+      "owner": "MythologIQ-Labs-LLC/Qor-logic-plus, separate governed phase (plan, independent audit, implement, seal)",
+      "requirement": "Wire a repository-provided plan-claims preflight into the /qor-plan submission path and the binding /qor-audit Step 0.3 ABORT (Step 0.6 stays WARN-only), and add the doctrine reference. Independent of #173/#179, which must be governed separately and are not evidence here.",
+      "blocks": "event closure; skill-level enforcement; Phase 17 iteration-5 authorization"
+    },
+    {
+      "id": "D3",
+      "owner": "separately controlled harness (Qor-logic-plus or ruleset-protected workflow), governed separately",
+      "requirement": "Trusted test-outcome evidence (exact SHA, suite id, named assertion, immutable result) for red-first/regression-lock claims; until then the gate rejects such claims.",
+      "blocks": "test-classification claims only"
+    }
+  ],
+  "status": "HOLD pending independent PASS, D1 and D2"
+}

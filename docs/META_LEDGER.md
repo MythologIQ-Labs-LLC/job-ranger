@@ -2616,6 +2616,382 @@ Content hash is the Merkle digest (sorted path:SHA256) of the files touched:
 
 ---
 
+### Entry #95: PLAN (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T04:44:15Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Content Hash**: `060dd40c431c6d0465092cb0031b73a0f00e6456e7b8609995cc9c4f7d1895e9`
+
+**Previous Hash**: `7dad088975401fe8bece329424688cd1b690f4147e37dabaaa45b432ad647d8c`
+
+**Chain Hash**: `5ca9e263ea3c8bd5c08751312fd7b86794071b8e28e0373c5dee3215bc99a240`
+
+**Decision**: Phase 17 plan iteration 2 recorded for #136. It supersedes the unrecorded iteration 1 (`docs/plans/136-provider-expansion.md`, commit 9965119), which cited a nonexistent `qortara` CLI and lacked canonical sections. Phase 1 (Himalayas) carries three defects confirmed against live data: seconds-epoch dates rendered as 1970, numeric time zones dropped, and long country lists dropped. Phase 2 (We Work Remotely) is HELD on a publisher-terms conflict and authorizes no code. The exploratory branches e22d49b and 0c77dfc predate this plan and are not authorized by it. audit_risk_score requires Option B independent review. Awaiting GATE tribunal.
+
+---
+
+### Entry #96: GATE TRIBUNAL (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T04:54:11Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Verdict**: VETO
+
+**Content Hash**: `919a2804fcce9277b0249ee805500f8adf39f06c35a9b6aceab970235983f63b`
+
+**Previous Hash**: `5ca9e263ea3c8bd5c08751312fd7b86794071b8e28e0373c5dee3215bc99a240`
+
+**Chain Hash**: `6c74292d6930f8dce3e5c91137b9edba87ba541f00685cbef5f770fc84e71452`
+
+**Decision**: VETO for plan iteration 2, from an Option B fresh-context subagent review (not a human or separately authenticated approval). Locked Decision greps LD1-LD6 reproduce. The live checks confirm the seconds-epoch pubDate, numeric time zones and absence of CORS for Himalayas. They also confirm the WWR terms conflict and that the WWR feed returns `Access-Control-Allow-Origin: *`. The Phase 2 HOLD is coherent. Findings: (1) the new time-zone rule breaks candidate assertions the plan says must pass unchanged, including the E2E exact-text assertion; (2) the FX016 E2E row claims a link-target assertion the test does not make; (3) PR #233 targets the plan branch, is forked before main b78d06c, and conflicts with main in package.json; (4) Affected Files omit most of the candidate diff that Phase 1 would ship; (5) discoverPublicJobFeeds (92 lines) and source-discovery.cts (482 lines) exceed the Razor limits; (6) the LD4 figure of 164 countries does not reproduce (the live value is 149); (7) the fail-closed branches are untested; (8) the Himalayas response body has no byte cap (A04); (9) the CI order runs the node test without desktop:compile; (10) the test literal is garbled. Governor must amend and resubmit.
+
+---
+
+### Entry #97: PLAN (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T05:00:24Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Content Hash**: `1ad2126a35ab3e831785e3c05305224a7649ba258f1113cad7760ff4b3fb4f2f`
+
+**Previous Hash**: `6c74292d6930f8dce3e5c91137b9edba87ba541f00685cbef5f770fc84e71452`
+
+**Chain Hash**: `b085813c0c772475b3d5bf789ea7252fa527e9c4f465527e85970d535c5c4381`
+
+**Decision**: Plan iteration 3 amends iteration 2 after the independent VETO at Entry #96, and addresses V1-V10. It defines the time-zone format so the candidate assertions stay valid. It lists the full candidate diff and the delivery path: merge main into PR #233, retarget it to main, and keep #238 out. It adds a Phase 0 Razor refactor and reject-branch tests, and requires JSON byte caps for all three feeds. It corrects the location count to 149, puts the compile step first, and makes the literals ASCII. Phase 2 (WWR) remains HELD. Awaiting a fresh independent GATE tribunal.
+
+---
+
+### Entry #98: GATE TRIBUNAL (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T05:09:35Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Verdict**: VETO
+
+**Content Hash**: `8cddd19e5017b2f1b831bf21d26df1b3521b517b92cd61cf972da2fa933c709e`
+
+**Previous Hash**: `b085813c0c772475b3d5bf789ea7252fa527e9c4f465527e85970d535c5c4381`
+
+**Chain Hash**: `cb2d743854f6dc4e529093caa12482069a2bd7de38f33a6dffb785d2efc1e11e`
+
+**Decision**: VETO for plan iteration 3 (content hash 1ad2126a), from an Option B fresh-context subagent review (not a human or separately authenticated approval). Prior findings V1-V8 and V10 are closed on verification. LD1-LD7 greps reproduce. A merge simulation confirms that package.json is the only conflict with main and that its resolution is well-defined. The fetchDiscoveryJson callers are fully enumerated (3, all in source-discovery.cts). The Razor split is plausible against e22d49b sizes. The live Remote OK size of 559,053 B reproduces. V9 is partial. New findings: (N1) the red-first contract and D4 are unsatisfiable, because at least seven planned assertions already pass on the candidate behaviour and the unit test fails with MODULE_NOT_FOUND, not a named assertion, on main; (N2) the CI line claims test:pwa:e2e covers the Himalayas skip warning, but no PWA spec does; (N3) LD3 sets no time-zone list-length rule and no test covers lists of more than 12 entries, which occur in 10 of 310 captured listings (max 37); (N4) the Phase 0 behaviour lock does not exercise the dedupe stage and compares no full outputs. Phase 2 WWR remains HELD. Governor must amend the plan text and resubmit to an independent /qor-audit.
+
+---
+
+### Entry #99: PLAN (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T05:15:35Z
+**Phase**: PLAN
+**Author**: Governor
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Content Hash**: `08b95334c9467df3449b6a2bce781a513070972164e126846ba5fe0f638d4677`
+
+**Previous Hash**: `cb2d743854f6dc4e529093caa12482069a2bd7de38f33a6dffb785d2efc1e11e`
+
+**Chain Hash**: `37d4231b3fd517fc76cb8d56cdd54f67966b9d0ff0b9eb3a40c897bf4fc2e3ab`
+
+**Decision**: Plan iteration 4 amends iteration 3 after the second independent VETO at Entry #98, and closes N1-N4:
+- Phase 1 tests are split into red-first and regression-lock groups, measured against the compiled candidate. The record states that on main the candidate test fails at module load and shows no named assertions.
+- The PWA Himalayas coverage claim is replaced by the named unit test.
+- A 0-50 time-zone list length rule is added, with a 37-entry live-maximum test.
+- A Phase 0 exact-output golden test is added, with a duplicate fixture and limit 4. Remote OK and Arbeitnow move to public-feed-adapters.cts.
+Phase 2 WWR remains HELD. Awaiting a fresh independent GATE tribunal.
+
+---
+
+### Entry #100: GATE TRIBUNAL (Phase 17 Public Discovery Provider Tranche)
+
+**Timestamp**: 2026-10-10T05:24:27Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Plan**: docs/plan-qor-phase17-provider-tranche.md
+
+**Verdict**: VETO
+
+**Content Hash**: `4a8e6f1c2f9ded4f910e7cdf87984107f03390719eefbce20303f0ba4d9bfd10`
+
+**Previous Hash**: `37d4231b3fd517fc76cb8d56cdd54f67966b9d0ff0b9eb3a40c897bf4fc2e3ab`
+
+**Chain Hash**: `30526d44958a02c8964e60d7ab99422c032bf8444e6f5b1ca628ba5853e4fa05`
+
+**Decision**: VETO for plan iteration 4 (content hash 08b95334), from an Option B fresh-context subagent review (not a human or separately authenticated approval).
+
+Verified:
+- N2 and N3 are closed. The 37-entry time-zone input is null on the compiled candidate, and the expected rendering is consistent with LD3 and LD4.
+- The main-baseline statement is true: the test hits MODULE_NOT_FOUND at line 2 and exits 1.
+- LD1-LD7 greps reproduce. A live Himalayas request reconfirms seconds pubDate, numeric time zones, a 149-entry list and no CORS header.
+- The delivery path still has a single package.json conflict against live main f81586f.
+
+N1 and N4 are partial. Findings:
+- (F1) the red-first assertion "51 entries -> null" is already null on the candidate, so D4's named red output is unsatisfiable;
+- (F2) the golden fixture detects dropped dedupe, cap-before-dedupe or stage reordering only if the duplicate pair are the first two Remote OK rows, and the plan does not specify that;
+- (F3) moving himalayasQuery while source-discovery.cts keeps the endpoints contradicts itself or creates an import cycle;
+- (F4) the authorized diff modifies the 167-line registerCoreIpcHandlers, contradicting D2's under-40-line promise;
+- (F5) the golden test uses runtimeKind "desktop", which is not a RuntimeKind.
+
+Phase 2 WWR remains HELD. Governor must amend the plan text (with /qor-refactor for F4) and resubmit to an independent /qor-audit.
+
+---
+
+### Entry #101: REMEDIATE (Phase 17 Gate-Loop Process Remediation)
+
+**Timestamp**: 2026-10-10T06:07:42Z
+**Phase**: REMEDIATE
+**Author**: Governor
+**Risk Grade**: L2
+**Gate**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json
+
+**Content Hash**: `44c2f13501d8b7ffe909e8f17c14f6cea4feb503cdb902483a67b87a58526d8f`
+
+**Previous Hash**: `30526d44958a02c8964e60d7ab99422c032bf8444e6f5b1ca628ba5853e4fa05`
+
+**Chain Hash**: `fdd338301e8f36d8f8bd5e432637a3003b412de47b405d0a05a7d3ecc6f2665f`
+
+**Decision**: The operator ran /qor-remediate after three consecutive Phase 17 VETOs (#96, #98, #100); no iteration-5 override was approved. The runtime classified a gate-loop on qor-plan for session 2026-10-07T2054-978a4e (events 1f15661a..., f0b67f91...). Both events are now marked addressed_pending, and no IDs were missing. Phase 17 session 2026-10-10T0443-9d3df3 has no process-shadow events of its own: the escalator found no same-signature streak, and the session-total mode is blocked by Qor-logic-plus #173. None were manufactured. The proposal is a gate: every phase>=17 plan carries an executable qor-plan-claims manifest, which is enforced by tests/test_plan_claims_manifest.py at plan time and at /qor-audit Step 0.6. F1-F5 are inputs to the next authorized plan iteration. The addressed flip awaits an independent /qor-audit reviews-remediate PASS.
+
+---
+
+### Entry #102: GATE TRIBUNAL (Phase 17 Gate-Loop Remediation Review)
+
+**Timestamp**: 2026-10-10T06:12:25Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json (reviews-remediate; target content hash 44c2f135)
+
+**Verdict**: VETO
+
+**Content Hash**: `987689e656f71814bd7270e1bdf02fc4d0240254f55a0ab50ab3ef52ebb373e7`
+
+**Previous Hash**: `fdd338301e8f36d8f8bd5e432637a3003b412de47b405d0a05a7d3ecc6f2665f`
+
+**Chain Hash**: `993058404f54f7d89ee7f8ddd41020c03d4522d5822582ca0189ee0483190e3f`
+
+**Decision**: VETO for the Phase 17 gate-loop remediation proposal, from a fresh-context subagent review (not a human or separately authenticated approval). The addressed flip was not performed.
+
+Verified:
+- Protocol fidelity holds. The runtime pipeline reproduces, the two addressed events (1f15661a, f0b67f91) are real and only addressed_pending, no Phase 17 events were manufactured, prior VETOs are unchanged, the artifact is schema-valid, and the closure enforcer passes form 1.
+- No application source changed. PRs #233 and #238 are untouched.
+- The enforcer fails iteration 4 (no manifest) and reproduces the 167-line registerCoreIpcHandlers overage.
+
+Findings:
+- (R1) The enforcer checks only declared claims: a phase-17 plan with one trivial claim passes while its prose carries false claims, so unexecuted prose claims (the root cause) are not mechanically guarded;
+- (R2) the proposed hard short-circuit at /qor-audit Step 0.6 contradicts that step's WARN-only contract, and the plan/audit step amendments are written into no skill, doctrine or CI path (the Phase 16 nominal-enforcer failure again);
+- (R3) author-controlled argv/setup run on the auditor's host before any adversarial pass, with no executable allowlist and inside a worktree sharing the audited .git (OWASP A03/A04);
+- (R4) the "exact ref" claim is not enforced: non-SHA refs are accepted, and override checkouts are not checked for a clean tree.
+
+Events stay addressed_pending. Phase 17 plan iteration 5 is not authorized and WWR remains HELD. Governor must amend the remediation via /qor-remediate and resubmit to an independent /qor-audit reviews-remediate.
+
+---
+
+### Entry #103: REMEDIATE (Phase 17 Gate-Loop Remediation, Amendment 1)
+
+**Timestamp**: 2026-10-10T06:36:31Z
+**Phase**: REMEDIATE
+**Author**: Governor
+**Risk Grade**: L2
+**Gate**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json
+
+**Content Hash**: `55782866e1c43f79aeb1d4903f4d1cbaeab12d60630dadf4d213a0e855076a01`
+
+**Previous Hash**: `993058404f54f7d89ee7f8ddd41020c03d4522d5822582ca0189ee0483190e3f`
+
+**Chain Hash**: `3390013a0dff1dc9dbacad6077351d1c0caad26e81a0a6cc58a8cf5be25aa595`
+
+**Decision**: Amends the Entry #101 remediation after the independent VETO at Entry #102 (R1-R4). The remediation gate was re-emitted through the runtime at the same canonical path; this entry supersedes content hash 44c2f135, and Entries #101 and #102 are unchanged.
+
+What changed:
+- Tests were written first, at a68d68e. They were red: 24 failed and 1 errored, and the legacy manifest executed author-controlled Python.
+- A read-only checker landed at f82368f; the suite is 25/25 green twice.
+- R3: the checker executes no plan-supplied commands.
+- R4: references must be full SHAs that resolve to commit objects, with no checkout.
+- R1: claim completeness is lexical, so the auditor remains responsible for prose.
+- R2: a fail-closed CI job is added and GOVERNANCE.md documents the gate.
+
+Events 1f15661a and f0b67f91 remain addressed_pending; no IDs are missing.
+
+Status: HOLD. Event closure requires an independent reviews-remediate PASS plus D1 (operator: required status check in the main ruleset) and D2 (a separately governed Qor-logic-plus phase wiring /qor-plan and /qor-audit Step 0.3). D3 (a trusted test harness) gates red-first claims only.
+
+---
+
+### Entry #104: GATE TRIBUNAL (Phase 17 Gate-Loop Remediation Amendment 1 Review)
+
+**Timestamp**: 2026-10-10T06:43:41Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json (reviews-remediate; target content hash 55782866)
+
+**Verdict**: VETO
+
+**Content Hash**: `7cba0ffc44cd2d634e715633b160f59c9dac3347e62e1c22d89a7e7c53fa04ce`
+
+**Previous Hash**: `3390013a0dff1dc9dbacad6077351d1c0caad26e81a0a6cc58a8cf5be25aa595`
+
+**Chain Hash**: `eaeade0565a85478160c2cee9df49049a44f193f42a4f4402582769f6ae6a1a9`
+
+**Decision**: VETO for Amendment 1 of the Phase 17 gate-loop remediation, from a fresh-context subagent review (not a human or separately authenticated approval). The addressed flip was not performed.
+
+Verified:
+- R3 and R4 are closed. No manifest-controlled program executes. The only subprocesses are fixed list-argv git cat-file/ls-tree calls. Non-SHA refs are rejected before git is called. There is no checkout or env override.
+- Protocol fidelity holds. Events 1f15661a and f0b67f91 are real and addressed_pending only, with no IDs missing. The session has no events, and none were fabricated. Entries #96-#102 are unchanged. The artifact is schema-valid and the closure enforcer passes.
+- The CI job ran on 9e1d51e (run 38031540249): self-tests passed and the checker failed iteration 4 (no manifest), as expected. No application source changed. PRs #233 and #238 are untouched.
+
+Findings:
+- (V1) The R1 vacuous-satisfaction case is not closed. Four variants pass with exit 0: one trivial claim ID, or one blanket judgment, reused on every false line (kind and path are not checked); an empty manifest; fenced or unclosed-fence prose in canonical sections; and undetected phrasings.
+- (V2) The function-lines scanner ignores regex literals. A 104-line function measured as 2 lines, so a false Razor claim verifies.
+- (V3) D1 is unworkable with the paths-filtered workflow: a required check would leave non-plan PRs pending. The gated PR can also replace its own checker. Both are fixable in this repository.
+- (V4) Razor: the test file is 308 lines, and plan_claims_source.py:72 contains a nested ternary.
+
+Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. A PASS would not have been sufficient either. Events stay addressed_pending. Phase 17 plan iteration 5 is not authorized, and WWR remains HELD. The Governor must amend via /qor-remediate (Amendment 2) and then resubmit to an independent /qor-audit reviews-remediate.
+
+---
+
+### Entry #105: REMEDIATE (Phase 17 Gate-Loop Remediation, Amendment 2)
+
+**Timestamp**: 2026-10-10T07:14:35Z
+**Phase**: REMEDIATE
+**Author**: Governor
+**Risk Grade**: L2
+**Gate**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json
+
+**Content Hash**: `fa0e69249c1d63a0bba4f8a442cef5ac148ea424b07ccb2a8d92b0e366391183`
+
+**Previous Hash**: `eaeade0565a85478160c2cee9df49049a44f193f42a4f4402582769f6ae6a1a9`
+
+**Chain Hash**: `9f7ed3c675ef38b9fa9be30abf460d183b7775afba920e353ab5a343d29aa66c`
+
+**Decision**: Operator-authorized Amendment 2, scoped to the findings of independent VETO #104 (V1-V4).
+The runtime re-emitted the remediation at the canonical gate path, superseding 55782866; Entries #101-#104 are unchanged.
+Evidence: test-first red at 1ce8b29 (57 run, 30 failed, 7 errors, gate suite unimportable); green at 8a93333 (66/66, twice).
+- V1: typed claims bound by subject, revision and property; one reference per id; scoped judgments; fenced text scanned.
+- V2: a fail-closed JS/TS tokenizer; the regex-brace counterexample now measures 104 lines.
+- V3: an always-reporting pull_request_target gate that runs base-revision code and treats the PR head as data only, plus CODEOWNERS and a prepared D1 payload.
+- V4: Razor limits enforced by a test.
+R3/R4 are preserved. Events 1f15661a and f0b67f91 remain addressed_pending, with no missing IDs.
+Status: HOLD. Closure needs an independent PASS plus D1 and D2. D1 must not be enabled until the gate has been observed end to end on main.
+Correction: commit 421ef20 (the remediate.json re-emit) names this entry in its message, but the entry was written afterwards, in the follow-up commit.
+
+---
+
+### Entry #106: GATE TRIBUNAL (Phase 17 Gate-Loop Remediation Amendment 2 Review)
+
+**Timestamp**: 2026-10-10T07:25:42Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json (reviews-remediate; target content hash fa0e6924)
+
+**Verdict**: VETO
+
+**Content Hash**: `ae2357e106b0f1a5c0e175f20f57e57b2fa166cc8ade344508bbab6a11f66cab`
+
+**Previous Hash**: `9f7ed3c675ef38b9fa9be30abf460d183b7775afba920e353ab5a343d29aa66c`
+
+**Chain Hash**: `18c0463e900f24928432421f9e3da6e85b9aa7c3221aa75220da5db38672f165`
+
+**Decision**: VETO for Amendment 2 of the Phase 17 gate-loop remediation, from a fresh-context subagent review (not a human or separately authenticated approval). The addressed flip was not performed.
+
+Verified:
+- All four bypasses reported by VETO #104 now fail independently, and the /}/ counterexample measures 104 lines. The suites split within the file and function limits (66/66 OK on both Pythons).
+- The base-revision pull_request_target gate is safe as configured. The PR head is data only, the token is contents: read, there are no secrets, SHAs are passed through env only, and the not-applicable success is truthful in local simulation.
+- R3/R4 are preserved. The protocol is clean: events 1f15661a and f0b67f91 are addressed_pending only, with none missing, and the session has no events. Entries #96-#104 are unchanged, and the artifact is schema-valid.
+- The 421ef20/f48c5f8 ordering disclosure is adequate.
+
+Findings:
+- (V1-A) The heading and fence model diverges from rendered Markdown. An HTML comment or <pre> containing a heading, a mismatched or four-backtick fence, or an indented H2 leaves visible canonical-section facts unscanned. The checker and the gate itself PASS such a plan.
+- (V1-B) Subject and property binding is line-wide. A claim about another file or function binds, and "exactly 500 lines" verifies against max 500 on a 97-line file.
+- (V1-C) Any H3 heading containing "test" exempts prose counts.
+- (V2) A generic-constraint arrow function of 103 lines measures 1 line, and require/import with a template literal is not counted as an edge. Both are false PASS results end to end.
+- (Razor) _bind_claims nests 4 levels deep.
+- plan-claims-gate has never run, because pull_request_target uses main's workflows. D1 is not enabled. Check-name collision and single-owner risks must be addressed before D1.
+
+Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events stay addressed_pending. Phase 17 plan iteration 5 is not authorized, and WWR remains HELD. The Governor must amend via /qor-remediate (Amendment 3) and then resubmit to an independent /qor-audit reviews-remediate.
+
+---
+
+### Entry #107: REMEDIATE (Phase 17 Gate-Loop Remediation, Amendment 3)
+
+**Timestamp**: 2026-10-12T14:45:18Z
+**Phase**: REMEDIATE
+**Author**: Governor
+**Risk Grade**: L2
+**Gate**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json
+
+**Content Hash**: `7bbc1e245dacbaab4d831a24de04a98cbab9e8722e3f5f456784f1b2edc3e970`
+
+**Previous Hash**: `18c0463e900f24928432421f9e3da6e85b9aa7c3221aa75220da5db38672f165`
+
+**Chain Hash**: `0d4b0b548703c6e63c8de896828827b095bd84a78ba7f19fc16febd3c5781b47`
+
+**Decision**: Amendment 3, addressing the findings of independent VETO #106 (V1-A, V1-B, V1-C, V2, Razor), resumed on operator instruction to continue the remediation.
+Re-emitted through the runtime at the canonical gate path, superseding fa0e6924. Entries #101-#106 are unchanged.
+Tests came first at fb3cbb0 (97 run: 32 failed, 5 errors). The fixes landed at 6a86c90 (97/97, twice).
+- V1-A: restricted Markdown subset that fails closed (HTML, fence and heading forms, non-LF/CRLF separators).
+- V1-B: subjects taken from the assertion itself; exact sizes bind only to equals; one item per judgment.
+- V1-C: exact Unit Tests heading, with only code-span vectors exempt.
+- V2: generic lists with (, { or => fail closed; template and non-literal specifiers handled.
+- Razor: nesting depth is now tested.
+- Pre-D1: check-name spoofing is rejected and CODEOWNERS covers all workflows.
+Disclosure: the green commit also corrects the test's nesting measure to count elif chains as one level, and makes fixtures write LF.
+Events 1f15661a and f0b67f91 remain addressed_pending; no IDs are missing.
+Status: HOLD. Closure requires an independent PASS plus D1 and D2.
+
+---
+
+### Entry #108: GATE TRIBUNAL (Phase 17 Gate-Loop Remediation Amendment 3 Review)
+
+**Timestamp**: 2026-10-12T14:57:06Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Target**: .qor/gates/2026-10-10T0443-9d3df3/remediate.json (reviews-remediate; target content hash 7bbc1e24)
+
+**Verdict**: VETO
+
+**Content Hash**: `d3c5c73c10fe095bd133c9a02bf020c364841e74ffe7260293ae89a02ee47350`
+
+**Previous Hash**: `0d4b0b548703c6e63c8de896828827b095bd84a78ba7f19fc16febd3c5781b47`
+
+**Chain Hash**: `289cb7ab9812a83d58a2001c19779c6648dff8b2112d021ce5026962b5a531bb`
+
+**Decision**: VETO for Amendment 3 of the Phase 17 gate-loop remediation, from a fresh-context subagent review (not a human or separately authenticated approval). The addressed flip was not performed.
+
+Verified:
+- Every VETO #106 probe now fails independently with a coded reason. The regenerated equals:97 control is legitimate.
+- V1-C is closed. Razor is within limits (file 232, function 25, nesting 3, no nested ternaries).
+- Red-first evidence is genuine (fb3cbb0 is tests only: 32 failures and 5 errors). The disclosed elif and LF test changes do not weaken any test.
+- R3/R4 are preserved. The protocol is clean: events 1f15661a and f0b67f91 are addressed_pending only, none are missing, and the session has no events. Entries #96-#106 are unchanged, and the artifact is schema-valid.
+- The suite is OK twice.
+
+Findings:
+- (V1-A, structural) Canonical headings still render where the scanner does not read them. The constructs are an escaped backtick before raw <h2>, a backtick fence whose info string contains a backtick, headings inside blockquotes or list items, NBSP/double-space/ZWSP/Cyrillic heading names, a leading BOM (cmark), and a code span split across lines under Unit Tests.
+- (V1-B) "more than", "over" and "not N lines" bind to equals N, which verifies a false sentence. A coordinated second subject or text operand passes unverified.
+- (V2) A for-await regex and a property named "in" before "/" shrink a 103-line function to 2 lines. declare function and satisfies-wrapped arrows over-measure. require("x" + y) verifies a false edge. The base-revision gate PASSES these end to end.
+- (V3, documentation) Spoof detection is lexical and misses comments, expressions, matrix, flow style and the status API. GOVERNANCE.md overstates it.
+- CI: only plan-claims-selftest ran on 2baefac (97 OK; the checker failed on iteration 4 as expected). plan-claims-gate has never run, and D1 is not enabled.
+
+Closure is not legal: this verdict is a VETO, and D1 and D2 are unmet. Events stay addressed_pending. Phase 17 plan iteration 5 is not authorized, and WWR remains HELD. The Governor must amend via /qor-remediate (Amendment 4) and then resubmit to an independent /qor-audit reviews-remediate.
+
+---
+
 *Chain integrity: VALID*
 *Phase 1 Browser Automation: COMPLIANT*
 *Phase 2 API Adapters: SEALED*
@@ -2634,4 +3010,5 @@ Content hash is the Merkle digest (sorted path:SHA256) of the files touched:
 *Phase 14 Inference Slice A: SEALED (Entry #78); PR #165 merged*
 *Phase 15 Mapper Negation (G12): SEALED (Entry #86); PR #169 merged*
 *Phase 16 Mapper Claim Action (G13): SEALED (Entry #94)*
-*Next required action: merge the G13 PR (#168)*
+*Phase 17 Public Discovery Providers (#136): PLAN #95/#97/#99; VETO #96/#98/#100; REMEDIATE #101/#103/#105/#107; VETO #102/#104/#106/#108; HOLD on review, D1, D2; Phase 2 WWR HELD*
+*Next required action: Governor amends the remediation per Entry #108 findings (V1-A, V1-B, V2, V3 documentation) via /qor-remediate (Amendment 4), then a fresh independent /qor-audit reviews-remediate; event closure also requires D1 and D2*

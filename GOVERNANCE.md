@@ -132,6 +132,93 @@ Do not imply a GitHub Actions gate ran when it did not.
 
 Likewise, a green hosted workflow demonstrates only that its configured assertions passed. It does not prove product fitness, source compatibility, platform packaging, or user success.
 
+## Plan claims gate
+
+Governed plans from `docs/plan-qor-phase17-*` onward carry exactly one fenced `json qor-plan-claims` manifest (version 2). The manifest sits outside the canonical sections. It is a structured inventory of read-only claims against full 40-character commit SHAs. Supported claim kinds:
+
+- exact line;
+- text present or absent;
+- file and function size;
+- string-union enum values;
+- import edge.
+
+Binding rules, enforced by `scripts/plan_claims_check.py`:
+
+- **Restricted Markdown.** Governed plans use a small Markdown subset that a renderer and the checker read the same way. Anything else fails closed:
+  - ATX headings start at column 0. Canonical section names may appear only as level-2 headings, and there is at most one leading level-1 title.
+  - A fence is exactly three backticks at column 0 and is closed by exactly three backticks. Tilde, longer and indented fences are rejected.
+  - Setext underlines are rejected.
+  - Raw HTML outside code spans is rejected. Autolinks are allowed.
+  - Line endings must be LF or CRLF. Form feeds and Unicode line separators are rejected.
+- **Scope.** Canonical sections are Locked Decisions, each Phase, Definition of Done and CI Commands. They are scanned in full, fenced blocks included. An unclosed fence fails.
+- **Detected forms.** These assertions are detected:
+  - file:line and `#L` citations;
+  - `git show` grep evidence;
+  - line references and `L93-L120` ranges;
+  - sizes;
+  - enum literals;
+  - imports;
+  - text presence;
+  - test classifications;
+  - exhaustiveness wording ("only", "sole", "nothing else");
+  - every other number outside code-span test vectors under an exact `### Unit Tests` heading.
+- **Typed claims.** Each detected assertion must reference exactly one unused, type-compatible claim on its own line. Matching works like this:
+  - **Subject.** It comes from the assertion itself:
+    - citations and grep evidence carry their own path;
+    - a line reference needs exactly one file named on the line;
+    - a size, enum, import or text assertion needs a backticked subject directly before it, with no other identifier in between.
+  - **Revision.** A SHA prefix of the claim's commit must appear on the line.
+  - **Property.**
+    - An exact size ("is N lines") binds only to `equals`.
+    - "at most N" and "under N" bind to `max`.
+    - Lines, text, enum values and import polarity must all match.
+- **One use per ID.** A claim or judgment ID may be referenced exactly once.
+- **Scoped judgments.** A judgment exception (`[judgment:id]`) covers exactly one non-mechanical number or exhaustiveness phrase. Its statement must be quoted verbatim from its own line, and its rationale must be specific. The independent auditor challenges every judgment.
+- **Test classifications.** Red-first and regression-lock classifications need trusted harness evidence (dependency D3). Until that exists, the gate rejects them.
+- **No execution.** Nothing in a manifest is executed. The checker reads git objects only, through fixed `git cat-file` and `git ls-tree` calls in a scrubbed environment. It rejects HEAD, branch, tag, short and expression references.
+- **Function sizes.** Sizes come from a JS/TS tokenizer that fails closed on ambiguous syntax. That includes generic parameter lists containing `(`, `{` or `=>`, and non-literal module specifiers.
+
+Detection is lexical. Numbers written as words, for example, are not detected, so the auditor remains responsible for undeclared assertions.
+
+### Local commands
+
+Run at the plan commit before recording or auditing a plan:
+
+```bash
+python -m unittest discover -s tests -p "test_plan_claims_*.py"
+python scripts/plan_claims_check.py --repo .
+```
+
+### Required check architecture
+
+**`plan-claims-gate`** (`.github/workflows/plan-claims-gate.yml`, `pull_request_target`) is the required-check candidate:
+
+- It runs on every pull request, with no path filter, and always completes. When no governed file changed it succeeds with an explicit "not applicable".
+- It runs the gate script from the protected base revision and fetches the PR head as git objects only. It never checks out or executes PR content, so a PR that weakens the checker cannot certify itself.
+- The token is read-only, no secrets are used, credentials are not persisted, and SHAs reach the shell only through environment variables.
+
+**`plan-claims-selftest`** (`.github/workflows/plan-claims.yml`) runs the PR head's own suites. It is informational only and must not be required.
+
+`plan-claims-gate` also fails any PR that adds or changes another workflow publishing a check named `plan-claims-gate`, to prevent check-name spoofing. `.github/CODEOWNERS` assigns every governed path, including all workflows. That protection only takes effect once the ruleset requires code-owner review.
+
+### Dependencies (not yet satisfied)
+
+**D1 (operator; prepared, not applied).** Apply it only after `plan-claims-gate` has been observed on `main` reporting a completed success on an unrelated PR and a failure on an invalid governed PR. Then update ruleset `Default Main` with:
+
+```json
+{"rules": [{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": false,
+  "required_status_checks": [{"context": "plan-claims-gate", "integration_id": 15368}]}},
+ {"type": "pull_request", "parameters": {"require_code_owner_review": true}}]}
+```
+
+Merge these with the existing rules; do not replace them.
+
+Code-owner review protects anything only if the automation that authors governed changes is not the code owner it would need approval from. With a single owner identity this is a documented residual risk.
+
+**D2 (separately governed Qor-logic-plus phase).** Wire this preflight into the `/qor-plan` submission path and the binding `/qor-audit` Step 0.3 ABORT. Step 0.6 stays WARN-only.
+
+**D3.** A separately controlled trusted test harness, before any plan may assert red-first or regression-lock status.
+
 ## Merge standard
 
 Material changes should not merge unless:

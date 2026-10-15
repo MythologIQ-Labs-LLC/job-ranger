@@ -423,4 +423,216 @@ Correct the attestation commands and the build-config fallback; resubmit.
 
 ---
 
+## Failure Entry #14
+
+**Date**: 2026-10-10T04:54:11Z
+**Verdict ID**: Entry #96 (GATE TRIBUNAL Phase 17 Public Discovery Provider Tranche, Iteration 2)
+**Failure Mode**: SPECIFICATION_DRIFT
+
+### What Failed
+
+Iteration-2 plan for the Himalayas provider (Phase 1), built on an exploratory candidate branch (e22d49b) that was written before any plan existed.
+
+### Why It Failed
+
+The plan described only its own deltas on top of the candidate. As a result:
+- A new parsing rule silently broke candidate assertions that the plan said "must pass unchanged", including an E2E exact-text check.
+- The plan claimed an E2E assertion that the test does not make.
+- Affected Files omitted the candidate files that Phase 1 would actually ship.
+- The declared `pr_target` (main) did not match the real PR base. The candidate was forked before main and conflicts with it.
+
+The candidate also carried a Razor overage, and an unbounded response read, into the authorized scope. One live-data figure (164 countries) did not reproduce; the observed value was 149.
+
+### Pattern to Avoid
+
+When a plan adopts pre-existing candidate code, enumerate the full diff against `pr_target` as Affected Files. Re-read every candidate assertion against each new rule. Confirm the real PR base and merge cleanliness against the declared baseline. Re-measure every live figure from a saved capture before writing it into a Locked Decision.
+
+### Remediation Required
+
+Amend the plan per AUDIT_REPORT V1-V10 (with /qor-refactor for the Razor ground and /qor-debug for the A04 byte cap), then resubmit to an independent /qor-audit.
+
+---
+
+## Failure Entry #15
+
+**Date**: 2026-10-10T05:09:35Z
+**Verdict ID**: Entry #98 (GATE TRIBUNAL Phase 17 Public Discovery Provider Tranche, Iteration 3)
+**Failure Mode**: SPECIFICATION_DRIFT
+
+### What Failed
+
+Iteration-3 plan for the Himalayas provider. It closed the iteration-2 findings V1-V8 and V10, but its new test and evidence contracts did not hold up against the candidate code.
+
+### Why It Failed
+
+- The plan required every new Phase 1 assertion to fail red before the source change, and D4 required the red output to name each one. Seven planned assertions already pass on the candidate, because the candidate is already stricter on those inputs. The "named assertion" red evidence against main is also impossible: the unit test fails with MODULE_NOT_FOUND.
+- A CI command was described as covering the web Himalayas skip warning. No PWA test does.
+- The time-zone rule cited a live maximum of 37 entries but set no list-length rule, and every planned test used 3 or fewer entries. The candidate's 12-entry cap could therefore survive with all tests green.
+- The Phase 0 behaviour-preserving refactor relied on suites that never exercise the dedupe stage it restructures.
+
+### Pattern to Avoid
+
+Before you declare a red-first test, run it in your head against the code as it stands. A fail-closed assertion on code that already fails closed is a regression lock, not red evidence; label it that way. Every "this command covers X" statement needs a grep hit in the test tree. When a Locked Decision records a live maximum, turn it into a rule and a test at that maximum. A refactor's test lock has to exercise each pipeline stage the refactor touches.
+
+### Remediation Required
+
+Amend the plan per AUDIT_REPORT N1-N4: classify the red-first and regression-lock assertions and amend D4; add or retract the PWA skip-warning coverage; add the time-zone length rule and a test longer than 12 entries; add a dedupe and exact-output lock fixture for Phase 0. Then resubmit to an independent /qor-audit.
+
+---
+
+## Failure Entry #16
+
+**Date**: 2026-10-10T05:24:27Z
+**Verdict ID**: Entry #100 (GATE TRIBUNAL Phase 17 Public Discovery Provider Tranche, Iteration 4)
+**Failure Mode**: SPECIFICATION_DRIFT (with COMPLEXITY_VIOLATION)
+
+### What Failed
+
+The iteration-4 plan for the Himalayas provider. It closed N2 and N3 and stated the main baseline truthfully, but its new red-first classification and Phase 0 golden lock were not fully verified against the candidate.
+
+### Why It Failed
+
+- The plan called its red/green split "measured", yet it placed "51 time-zone entries -> null" in the red-first group. The candidate already returns null for that input.
+- The golden test's ability to catch dedupe and cap regressions depends on the duplicate pair being the first two Remote OK rows. The plan never says so; two of the three orders it permits detect nothing at limit 4.
+- Moving `himalayasQuery` while keeping the endpoints in `source-discovery.cts` either contradicts the plan or creates an import cycle.
+- D2 promises that every function is under 40 lines, while the authorized diff edits the 167-line `registerCoreIpcHandlers`.
+- The golden test names a runtime kind ("desktop") that the `RuntimeKind` type does not contain.
+
+### Pattern to Avoid
+
+Run every red-first input, including each length-rule input, through the current code, and write the observed output beside it. Any item without an observed red value is a regression lock. When a golden test claims to detect a pipeline-stage mutation, state the fixture precondition that puts the affected item inside the cap window, and check it by mutating the stage once. When a refactor moves a function, move its constants with it, or say where they live. A Razor promise covers every function the diff touches, including pre-existing ones; exempt them explicitly or split them.
+
+### Remediation Required
+
+Amend the plan per AUDIT_REPORT F1-F5: reclassify the 51-entry item; pin the golden duplicate rows to positions 0 and 1; resolve the endpoint and `himalayasQuery` placement; refactor or explicitly exempt `registerCoreIpcHandlers` (/qor-refactor); use `runtimeKind: "electron"`. Then resubmit to an independent /qor-audit.
+
+---
+
+## Failure Entry #17
+
+**Date**: 2026-10-10T06:12:25Z
+**Verdict ID**: Entry #102 (GATE TRIBUNAL Phase 17 Gate-Loop Remediation Review)
+**Failure Mode**: SPECIFICATION_DRIFT (nominal closure enforcer; with an OWASP A03/A04 subprocess design gap)
+
+### What Failed
+
+The Phase 17 /qor-remediate proposal (.qor/gates/2026-10-10T0443-9d3df3/remediate.json) and its closure enforcer, tests/test_plan_claims_manifest.py.
+
+### Why It Failed
+
+- The enforcer executes only the claims a plan author chooses to declare. A gated plan with one trivial claim passes while its prose carries false empirical claims. The root cause it was meant to close (empirical claims nobody executed) therefore stays unguarded, and the remaining guard is a Judge-side prose rule that restates existing audit behaviour.
+- The plan-time and audit-time rules that would bind the enforcer exist only in the gate JSON and the ledger. One of them places a hard short-circuit at /qor-audit Step 0.6, which the skill defines as WARN-only. No CI job, doctrine file or skill reference invokes the enforcer.
+- Author-controlled command claims execute on the auditor's machine before any adversarial pass, with no executable allowlist, inside a worktree that shares the audited repository's .git.
+- "Exact ref" is promised but not enforced.
+
+### Pattern to Avoid
+
+A closure enforcer must fail on the pattern it closes, not only on the instances the author opts in to. If an executable check can be satisfied vacuously, add the completeness check (here, every prose citation must reference a claim id) or the closure is prose in disguise. Do not declare a gate step a hard stop when the skill defines it as WARN; write the binding rule where the skill or CI actually reads it. Any mechanism that runs plan-supplied commands on the auditor's host needs an executable allowlist and isolation from the audited repository.
+
+### Remediation Attempted
+
+None in this cycle. The events 1f15661a and f0b67f91 remain addressed_pending, and no addressed flip was performed. The Governor amends the remediation per AUDIT_REPORT R1-R4 via /qor-remediate, then resubmits to an independent /qor-audit reviews-remediate.
+
+---
+
+## Failure Entry #18
+
+**Date**: 2026-10-10T06:43:41Z
+**Verdict ID**: Entry #104 (GATE TRIBUNAL Phase 17 Gate-Loop Remediation Amendment 1 Review)
+**Failure Mode**: COMPLEXITY_VIOLATION / coverage-gap (completeness gate satisfiable by reference reuse; false verification in a claim evaluator; binding dependency unworkable as specified)
+
+### What Failed
+
+Amendment 1 of the Phase 17 /qor-remediate proposal (.qor/gates/2026-10-10T0443-9d3df3/remediate.json, content hash 55782866) and its read-only checker (scripts/plan_claims_check.py, plan_claims_schema.py, plan_claims_source.py), plus .github/workflows/plan-claims.yml.
+
+### Why It Failed
+
+- The completeness rule tests only whether a detected assertion has *some* declared reference on the same line. One trivial claim ID, or one generic judgment, reused on every false line passes. So does an empty manifest whose prose uses undetected phrasings, and so does prose inside a fenced (or unclosed) block in a canonical section.
+- The function-lines brace scanner does not understand regex literals, so it under-counts. A 104-line function measured 2 lines and a max-40 claim verified true.
+- The CI job is path-filtered. Under GitHub semantics a path-skipped required check stays pending, so the declared closure dependency D1 cannot be applied as written. The gated PR can also edit the checker that gates it.
+- The test file is 308 lines, and the evaluator contains a nested ternary.
+
+### Pattern to Avoid
+
+Requiring that an assertion carry a reference is not the same as linking that assertion to a claim. A completeness gate must check that the referenced claim is about the asserted thing (compatible kind, same path) and must reject empty inventories when assertions are detected. Never exempt fenced content inside the sections being scanned. A verifier that can return a false PASS is worse than none, so fail closed on any token the parser does not model. A path-filtered workflow cannot be made a required check without blocking unrelated PRs. And a gate that runs from the PR head can be weakened by the PR it gates: load it from the base revision or protect it with CODEOWNERS.
+
+### Remediation Attempted
+
+None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and no addressed flip was performed. The Governor amends via /qor-remediate (Amendment 2) per AUDIT_REPORT V1-V4, then resubmits to an independent /qor-audit reviews-remediate. Closure additionally requires D1 and D2.
+
+---
+
+## Failure Entry #19
+
+**Date**: 2026-10-10T07:25:42Z
+**Verdict ID**: Entry #106 (GATE TRIBUNAL Phase 17 Gate-Loop Remediation Amendment 2 Review)
+**Failure Mode**: COMPLEXITY_VIOLATION / coverage-gap (parser divergence between gate and rendered document; line-wide subject binding; false verification in the function-span and import evaluators)
+
+### What Failed
+
+Amendment 2 of the Phase 17 /qor-remediate proposal (.qor/gates/2026-10-10T0443-9d3df3/remediate.json, content hash fa0e6924) and its checker (scripts/plan_claims_prose.py, plan_claims_source.py, plan_claims_tokens.py, plan_claims_gate.py).
+
+### Why It Failed
+
+- The scanner decides sections and fences with its own line rules. These diverge from Markdown rendering in several ways:
+  - a heading inside an HTML comment or a <pre> block;
+  - a ~~~ line or a shorter fence inside a backtick fence;
+  - a 1-3-space-indented heading.
+
+  Facts that render inside Locked Decisions therefore went unscanned, and both the checker and the gate passed the plan.
+- Subject binding accepts any claim whose path or function name appears anywhere on the line. A claim about file B therefore discharges an assertion about file A. Exact-size prose also binds to an upper-bound claim.
+- Any H3 heading containing the substring "test" disables numeric-assertion detection.
+- The JS/TS span evaluator returns a 1-line measurement for a 103-line arrow function whose generic constraint contains `=> { ... }`. Template-literal require/import arguments are invisible to the import-edge evaluator. Both produce false PASS results instead of failing closed.
+- _bind_claims nests 4 levels deep.
+
+### Pattern to Avoid
+
+A lexical gate over a rendered document must use the renderer's block structure, or it must fail closed on every construct whose structure it does not model (raw HTML, non-matching fences, indented headings). Otherwise a reader sees content that the gate never scanned. Bind each assertion to the subject named inside its own span, not to any token on the line. Bind exact quantities to exact claims. Exemptions must match exact headings and delimited data, never substrings or prose. A parser-based verifier must fail closed whenever its own heuristics skip a region (type parameters, non-literal specifiers); any shortcut that can shrink a measurement or hide an edge is a false-PASS generator. Measure nesting depth in the automated razor test as well as line counts.
+
+### Remediation Attempted
+
+None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and no addressed flip was performed. The Governor amends via /qor-remediate (Amendment 3) per AUDIT_REPORT V1-A, V1-B, V1-C, V2 and Razor, then resubmits to an independent /qor-audit reviews-remediate. Closure additionally requires D1 and D2.
+
+---
+
+## Failure Entry #20
+
+**Date**: 2026-10-12T14:57:06Z
+**Verdict ID**: Entry #108 (GATE TRIBUNAL Phase 17 Gate-Loop Remediation Amendment 3 Review)
+**Failure Mode**: coverage-gap / specification-drift. The restricted-Markdown subset still diverges from CommonMark. Unrecognised size qualifiers default to an exact binding. Tokenizer context heuristics shrink function spans.
+
+### What Failed
+
+Amendment 3 of the Phase 17 /qor-remediate proposal (.qor/gates/2026-10-10T0443-9d3df3/remediate.json, content hash 7bbc1e24). It covers scripts/plan_claims_markdown.py, plan_claims_prose.py, plan_claims_tokens.py, plan_claims_source.py and plan_claims_gate.py.
+
+### Why It Failed
+
+- The subset rejected the constructs reviewers had already named, but not their siblings:
+  - backslash-escaped backticks, which hide raw HTML from the code-span blanker;
+  - backtick fences whose info string contains a backtick (not a fence in CommonMark);
+  - headings inside blockquotes or list items;
+  - canonical heading names written with NBSP, doubled spaces, zero-width or confusable characters;
+  - a leading BOM;
+  - code spans that cross lines.
+- Size prose with an unrecognised qualifier ("more than", "over", "not") falls through to the exact equals binding, so a false sentence verifies. Only the last backticked subject before an assertion is checked, so a coordinated second subject or operand rides along unverified.
+- The tokenizer decides regex versus division from the previous token. It does not handle `for await (` or property names that collide with keywords (`o.in`), so a 103-line function measured 2 lines. `_body_open` scans past the end of the declaring statement. A literal followed by `+` was accepted as a module specifier.
+
+### Pattern to Avoid
+
+Fixing the enumerated counterexamples is not closing a class. When a gate claims parity with a renderer, enumerate the renderer's grammar for each structure:
+- escapes;
+- info strings;
+- container blocks;
+- Unicode in identifiers;
+- the BOM;
+- multi-line inlines.
+
+Fail closed on everything outside a small, explicitly modelled subset, for example ASCII-only headings at column 0, no backslash before a backtick, and single-line code spans. For bindings, any unrecognised modifier must fail closed, never fall through to the strongest binding. For lexer heuristics, an unproven context must raise, never guess. A heuristic that can shrink a measurement is a false-PASS generator.
+
+### Remediation Attempted
+
+None in this cycle. Events 1f15661a and f0b67f91 remain addressed_pending, and no addressed flip was performed. The Governor amends via /qor-remediate (Amendment 4) per AUDIT_REPORT V1-A, V1-B, V2 and the V3 documentation item, then resubmits to an independent /qor-audit reviews-remediate. Closure additionally requires D1 and D2.
+
+---
+
 *Shadow Genome updated. Pattern documented for future avoidance.*
