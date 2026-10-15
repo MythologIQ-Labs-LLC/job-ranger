@@ -151,9 +151,16 @@ export function Sidebar() {
     <aside className="app-sidebar flex h-screen flex-col">
       <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center gap-3">
-          <div className="brand-mark flex h-10 w-10 items-center justify-center rounded-2xl">
-            <Briefcase className="h-5 w-5" aria-hidden="true" />
-          </div>
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/5 p-0.5">
+            <img
+              src={`${import.meta.env.BASE_URL}ICON.png`}
+              alt=""
+              aria-hidden="true"
+              width={44}
+              height={44}
+              className="h-full w-full object-contain"
+            />
+          </span>
           <h1 className="text-xl font-bold !text-white">Job Ranger</h1>
           <button
             type="button"
