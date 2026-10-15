@@ -112,11 +112,19 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId) {
   const sw = (await read("sw.js")).toString("utf8");
   if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) fail("service-worker build identity mismatch");
 
-  const headers = (await read("_headers")).toString("utf8").toLowerCase();
-  for (const fragment of ["content-security-policy: default-src 'none'",
-                          "frame-ancestors 'none'", "x-frame-options: deny",
-                          "strict-transport-security:", "cross-origin-resource-policy: same-origin"]) {
-    if (!headers.includes(fragment)) fail("missing required static security header: " + fragment);
+  const headers = (await read("_headers")).toString("utf8");
+  const policy = requiredString(buildInfo.contentSecurityPolicy, "build-info content security policy");
+  const declaredPolicies = [...headers.matchAll(/^\s+Content-Security-Policy:\s*(.+)$/gmi)];
+  if (declaredPolicies.length !== 1 || declaredPolicies[0][1].trim() !== policy) {
+    fail("static CSP differs from build-info security policy");
+  }
+  for (const fragment of ["default-src 'none'", "frame-ancestors 'none'", "require-trusted-types-for 'script'"]) {
+    if (!policy.includes(fragment)) fail("required security policy missing: " + fragment);
+  }
+  const lowerHeaders = headers.toLowerCase();
+  for (const fragment of ["x-frame-options: deny", "strict-transport-security:",
+                          "cross-origin-resource-policy: same-origin"]) {
+    if (!lowerHeaders.includes(fragment)) fail("missing required static security header: " + fragment);
   }
 
   if (!Array.isArray(buildInfo.assets) || !buildInfo.assets.length) fail("missing checksum asset list");
@@ -143,25 +151,31 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId) {
  * Inspect the real HTTPS origin AFTER deployment. This does not authorize the
  * Studio button or prove browser storage/functional acceptance.
  */
-export async function inspectLiveStudioPwa(origin, expectedBuildId, fetchImpl = fetch) {
+export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuildInfoSha256, fetchImpl = fetch) {
   const url = new URL(origin);
   if (url.protocol !== "https:" || url.username || url.password ||
       url.pathname !== "/" || url.search || url.hash) {
     fail("live origin must be an HTTPS origin with no path, credentials, query or fragment");
   }
   const expected = requiredString(expectedBuildId, "expected build ID");
+  if (!HASH.test(expectedBuildInfoSha256)) fail("approved build-info SHA-256 is required");
   const get = async (pathname) => {
     const response = await fetchImpl(new URL(pathname, url), { redirect: "manual", cache: "no-store" });
     if (!response.ok || response.redirected || response.status >= 300) fail("live response failed: " + pathname);
     return response;
   };
   const root = await get("/");
-  const csp = root.headers.get("content-security-policy") ?? "";
-  if (!csp.includes("default-src 'none'") || !csp.includes("frame-ancestors 'none'") ||
-      root.headers.get("x-frame-options")?.toUpperCase() !== "DENY" ||
-      !root.headers.get("strict-transport-security")) fail("live security headers missing");
-  const info = await (await get("/build-info.json")).json();
+  const infoBytes = new Uint8Array(await (await get("/build-info.json")).arrayBuffer());
+  if (sha256(infoBytes) !== expectedBuildInfoSha256) fail("live build-info checksum differs from approved release");
+  const info = JSON.parse(new TextDecoder().decode(infoBytes));
   if (info.product !== PRODUCT || info.buildId !== expected) fail("live build identity mismatch");
+  const csp = root.headers.get("content-security-policy") ?? "";
+  if (!info.contentSecurityPolicy || csp !== info.contentSecurityPolicy ||
+      root.headers.get("x-frame-options")?.toUpperCase() !== "DENY" ||
+      !root.headers.get("strict-transport-security") ||
+      root.headers.get("cross-origin-resource-policy") !== "same-origin") {
+    fail("live security headers differ from approved build policy");
+  }
   const handoff = await (await get("/" + STUDIO_HANDOFF_FILE)).json();
   assertStudioHandoff(handoff, info);
   return { status: "live-artifact-verified-owner-approval-still-required", origin: url.origin, buildId: expected };
