@@ -76,6 +76,7 @@ try {
         "cross-origin-resource-policy": "same-origin",
       } });
     }
+    if (name === "/sw.js") return new Response("const BUILD_ID = " + JSON.stringify(buildId) + ";", { status: 200 });
     if (name === "/build-info.json") return new Response(JSON.stringify(info), { status: 200 });
     if (name === "/studio-handoff.json") return new Response(JSON.stringify(handoff), { status: 200 });
     return new Response("", { status: 404 });
@@ -97,6 +98,11 @@ try {
     return fakeFetch(url, options);
   };
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedHeaders), /live security headers differ/);
+  const compromisedWorker = async (url, options) => {
+    if (new URL(url).pathname === "/sw.js") return new Response('const BUILD_ID = "fake-build";', { status: 200 });
+    return fakeFetch(url, options);
+  };
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedWorker), /live service worker build identity mismatch/);
   console.log("Studio PWA handoff contract: local and simulated live checks passed");
 } finally {
   await rm(dir, { recursive: true, force: true });
