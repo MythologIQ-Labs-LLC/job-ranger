@@ -165,6 +165,14 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
     return response;
   };
   const root = await get("/");
+  const html = await root.text();
+  if (!html.includes('name="job-ranger-build" content="' + expected + '"')) {
+    fail("live HTML build identity mismatch");
+  }
+  const sw = await (await get("/sw.js")).text();
+  if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) {
+    fail("live service worker build identity mismatch");
+  }
   const infoBytes = new Uint8Array(await (await get("/build-info.json")).arrayBuffer());
   if (sha256(infoBytes) !== expectedBuildInfoSha256) fail("live build-info checksum differs from approved release");
   const info = JSON.parse(new TextDecoder().decode(infoBytes));
