@@ -192,6 +192,7 @@ test("right-side detail drawer contains scrolling on short desktop and mobile wi
       return {
         left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
         scrollable: getComputedStyle(scroll).overflowY === "auto",
+        radius: getComputedStyle(el).borderTopLeftRadius,
         scrollWidth: document.documentElement.scrollWidth,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
@@ -202,6 +203,8 @@ test("right-side detail drawer contains scrolling on short desktop and mobile wi
     expect(measurement.top).toBeGreaterThanOrEqual(-1);
     expect(measurement.bottom).toBeLessThanOrEqual(height + 1);
     expect(measurement.scrollable).toBe(true);
+    // Full-screen on phones (square corners); a rounded floating panel from the sm breakpoint.
+    expect(measurement.radius).toBe(width < 640 ? "0px" : "28px");
     expect(measurement.scrollWidth).toBeLessThanOrEqual(measurement.viewportWidth);
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();

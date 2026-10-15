@@ -121,7 +121,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`panel panel-strong relative flex w-full ${sizeClasses[size]} flex-col shadow-2xl transition-all ${placement === "right" ? "max-h-[100dvh] rounded-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.75rem]" : "max-h-[calc(100dvh-2rem)] rounded-[1.75rem]"}`}
+        className={`panel panel-strong relative flex w-full ${sizeClasses[size]} flex-col shadow-2xl transition-all ${placement === "right" ? "max-h-[100dvh] !rounded-none sm:max-h-[calc(100dvh-2rem)] sm:!rounded-[1.75rem]" : "max-h-[calc(100dvh-2rem)] rounded-[1.75rem]"}`}
       >
         <div className="border-divider flex shrink-0 items-center justify-between border-b px-6 py-4">
           <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>

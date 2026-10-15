@@ -111,8 +111,15 @@ async function openAssessment(page: Page) {
   await expect(job).toBeVisible();
   await expect(job).toContainText(sourceName);
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await expect(job.getByText("Evidence coverage", { exact: true })).toBeVisible();
-  return job;
+  // The assessment opens in a dialog rendered outside the listing card.
+  const assessment = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(assessment.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  return assessment;
+}
+
+async function closeAssessment(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: /Opportunity assessment:/ })).toBeHidden();
 }
 
 /**
@@ -168,19 +175,21 @@ test("a goal-first user keeps the goal while later evidence changes only the evi
   await addAndRunSource(page);
 
   // Without evidence, the assessment does not pretend eligibility is known.
-  let job = await openAssessment(page);
-  await expect(job.getByText("Eligibility · Unclear", { exact: true })).toBeVisible();
-  await expect(job.getByText("Evidence · Limited", { exact: true })).toBeVisible();
-  await expect(job.getByText("0 direct", { exact: true })).toBeVisible();
-  await expect(job.getByText("0 transferable", { exact: true })).toBeVisible();
-  await expect(job.getByText(/^Evidence: /)).toHaveCount(0);
-  await expect(job.getByText("Potential blockers")).toBeVisible();
-  await expect(job.getByText(/\(no confirmed support\)\.$/).first()).toBeVisible();
+  let assessment = await openAssessment(page);
+  await expect(assessment.getByText("Eligibility · Unclear", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Evidence · Limited", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("0 direct", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("0 transferable", { exact: true })).toBeVisible();
+  await expect(assessment.getByText(/^Evidence: /)).toHaveCount(0);
+  await expect(assessment.getByText("Potential blockers")).toBeVisible();
+  await expect(assessment.getByText(/\(no confirmed support\)\.$/).first()).toBeVisible();
   // Required home area matches; the preferred work-mode miss is a miss, never a blocker.
-  await expect(job.getByText(`Location matches ${homeArea}.`)).toBeVisible();
-  await expect(job.getByText("Work mode is listed as on-site; your track allows remote.")).toBeVisible();
-  await expect(job.getByText("Known blockers")).toHaveCount(0);
-  await expect(job.getByText("Preferences · Mixed", { exact: true })).toBeVisible();
+  await expect(assessment.getByText(`Location matches ${homeArea}.`)).toBeVisible();
+  await expect(assessment.getByText("Work mode is listed as on-site; your track allows remote.")).toBeVisible();
+  await expect(assessment.getByText("Known blockers")).toHaveCount(0);
+  await expect(assessment.getByText("Preferences · Mixed", { exact: true })).toBeVisible();
+
+  await closeAssessment(page);
 
   // Later: add Career Evidence through its real form.
   await navigateSidebar(page, "Career Evidence");
@@ -204,14 +213,14 @@ test("a goal-first user keeps the goal while later evidence changes only the evi
   const evidenceId = authored[0].evidence.id;
 
   // The assessment changes because of that evidence, and only that evidence.
-  job = await openAssessment(page);
-  await expect(job.getByText(`Evidence: ${hlEvidence.statement}`).first()).toBeVisible();
-  await expect(job.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
-  await expect(job.getByText("Potential blockers")).toHaveCount(0);
-  await expect(job.getByText("Known blockers")).toHaveCount(0);
+  assessment = await openAssessment(page);
+  await expect(assessment.getByText(`Evidence: ${hlEvidence.statement}`).first()).toBeVisible();
+  await expect(assessment.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Potential blockers")).toHaveCount(0);
+  await expect(assessment.getByText("Known blockers")).toHaveCount(0);
   // Preference results are untouched by evidence.
-  await expect(job.getByText("Preferences · Mixed", { exact: true })).toBeVisible();
-  await expect(job.getByText("Work mode is listed as on-site; your track allows remote.")).toBeVisible();
+  await expect(assessment.getByText("Preferences · Mixed", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Work mode is listed as on-site; your track allows remote.")).toBeVisible();
 
   const after = await page.evaluate(async (title) => {
     const api = window.electronAPI;
@@ -264,8 +273,8 @@ test("an hourly listing is compared with an hourly pay floor", async ({ page, co
   await page.getByRole("button", { name: "Save goals and continue" }).click();
   await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
   await addAndRunSource(page);
-  const job = await openAssessment(page);
-  await expect.soft(job.getByText("Listed starting pay is approximately $24/hr versus your $26/hr floor.").first()).toBeVisible();
-  await expect.soft(job.getByText("Known blockers")).toBeVisible();
-  await expect.soft(job.getByText("Eligibility · Unlikely", { exact: true })).toBeVisible();
+  const assessment = await openAssessment(page);
+  await expect.soft(assessment.getByText("Listed starting pay is approximately $24/hr versus your $26/hr floor.").first()).toBeVisible();
+  await expect.soft(assessment.getByText("Known blockers")).toBeVisible();
+  await expect.soft(assessment.getByText("Eligibility · Unlikely", { exact: true })).toBeVisible();
 });
