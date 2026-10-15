@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { LineListTextarea } from "../components/LineListTextarea";
 import { useCareerEvidence } from "../career/evidence";
 import {
   emptyCareerProfile,
@@ -22,17 +23,6 @@ import {
   useCareerProfile,
 } from "../career/storage";
 import type { EvidenceSubjectType, SourceArtifact } from "../shared/contracts";
-
-function splitLines(value: string): string[] {
-  return value
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function joinLines(values: string[]): string {
-  return values.join("\n");
-}
 
 function artifactStateLabel(state: SourceArtifact["extractionState"]): string {
   switch (state) {
@@ -97,11 +87,6 @@ export function CareerProfile() {
       previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
     );
   }, [loading, profile]);
-
-  const targetText = useMemo(() => joinLines(draft.targetTitles), [draft.targetTitles]);
-  const skillText = useMemo(() => joinLines(draft.skills), [draft.skills]);
-  const certificationText = useMemo(() => joinLines(draft.certifications), [draft.certifications]);
-  const sectorText = useMemo(() => joinLines(draft.sectors), [draft.sectors]);
 
   const update = <K extends keyof CareerProfileValue,>(key: K, value: CareerProfileValue[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -302,10 +287,10 @@ export function CareerProfile() {
           <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <label>
               <span className="metric-label">Roles you would consider</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-36 resize-y py-3"
-                value={targetText}
-                onChange={(event) => update("targetTitles", splitLines(event.target.value))}
+                values={draft.targetTitles}
+                onValuesChange={(values) => update("targetTitles", values)}
                 placeholder={"Current or preferred role\nAdjacent role\nStretch role"}
                 disabled={loading}
               />
@@ -316,10 +301,10 @@ export function CareerProfile() {
 
             <label>
               <span className="metric-label">Skills you already use</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-36 resize-y py-3"
-                value={skillText}
-                onChange={(event) => update("skills", splitLines(event.target.value))}
+                values={draft.skills}
+                onValuesChange={(values) => update("skills", values)}
                 placeholder={"customer service\ntroubleshooting\nproject coordination"}
                 disabled={loading}
               />
@@ -328,10 +313,10 @@ export function CareerProfile() {
 
             <label>
               <span className="metric-label">Certifications and licenses</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-32 resize-y py-3"
-                value={certificationText}
-                onChange={(event) => update("certifications", splitLines(event.target.value))}
+                values={draft.certifications}
+                onValuesChange={(values) => update("certifications", values)}
                 placeholder={"Professional license\nIndustry certification\nSafety training"}
                 disabled={loading}
               />
@@ -340,10 +325,10 @@ export function CareerProfile() {
 
             <label>
               <span className="metric-label">Industries or work settings you prefer</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-32 resize-y py-3"
-                value={sectorText}
-                onChange={(event) => update("sectors", splitLines(event.target.value))}
+                values={draft.sectors}
+                onValuesChange={(values) => update("sectors", values)}
                 placeholder={"Industry\nWork environment\nSpecialty area"}
                 disabled={loading}
               />
