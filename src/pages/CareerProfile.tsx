@@ -308,7 +308,7 @@ export function CareerProfile() {
                 placeholder={"customer service\ntroubleshooting\nproject coordination"}
                 disabled={loading}
               />
-              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">Only list work you can defend in an interview.</span>
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One skill per line. Only list work you can defend in an interview.</span>
             </label>
 
             <label>
@@ -320,7 +320,7 @@ export function CareerProfile() {
                 placeholder={"Professional license\nIndustry certification\nSafety training"}
                 disabled={loading}
               />
-              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">Optional. Leave this blank if credentials are not important in your field.</span>
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One per line. Optional: leave this blank if credentials are not important in your field.</span>
             </label>
 
             <label>
@@ -332,6 +332,7 @@ export function CareerProfile() {
                 placeholder={"Industry\nWork environment\nSpecialty area"}
                 disabled={loading}
               />
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One per line.</span>
             </label>
           </div>
 

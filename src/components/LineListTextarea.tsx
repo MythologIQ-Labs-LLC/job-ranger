@@ -1,4 +1,4 @@
-import { useEffect, useState, type TextareaHTMLAttributes } from "react";
+import { useLayoutEffect, useState, type TextareaHTMLAttributes } from "react";
 
 /** One entry per line, trimmed, without blanks or repeats. Commas stay inside an entry ("Annapolis, MD"). */
 export function parseLineList(text: string): string[] {
@@ -23,8 +23,13 @@ type LineListTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "
 export function LineListTextarea({ values, onValuesChange, ...props }: LineListTextareaProps) {
   const [text, setText] = useState(() => values.join("\n"));
 
-  useEffect(() => {
-    setText((current) => (sameList(parseLineList(current), values) ? current : values.join("\n")));
+  // A layout effect, so a switched or cleared form never shows the previous text for a frame.
+  useLayoutEffect(() => {
+    setText((current) => {
+      if (!sameList(parseLineList(current), values)) return values.join("\n");
+      // An emptied list (new or cleared form) also clears leftover blank lines or spaces.
+      return values.length === 0 ? "" : current;
+    });
   }, [values]);
 
   return (

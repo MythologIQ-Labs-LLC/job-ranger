@@ -43,6 +43,7 @@ const schedules: Array<{ value: WorkSchedule; label: string }> = [
   { value: "rotating", label: "Rotating shifts" },
 ];
 
+const ONE_PER_LINE = "One per line.";
 
 function cloneEmpty(): CareerTargetTrackInput {
   return structuredClone(emptyTargetTrackInput);
@@ -271,6 +272,7 @@ export function TargetTracks() {
           <label className="mt-5 block">
             <span className="metric-label">Roles in this track</span>
             <LineListTextarea className="input-shell mt-2 min-h-28 resize-y py-3" values={draft.roleTitles} onValuesChange={(roleTitles) => markChanged({ ...draft, roleTitles })} />
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{ONE_PER_LINE}</span>
           </label>
 
           <section className="border-divider mt-7 border-t pt-6">
@@ -279,7 +281,10 @@ export function TargetTracks() {
               <StrengthSelect label="Geography importance" value={draft.constraints.geography.strength} onChange={(strength) => updateConstraints("geography", { ...draft.constraints.geography, strength })} />
             </div>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[1fr_180px]">
-              <LineListTextarea aria-label="Track locations" className="input-shell min-h-24 resize-y py-3" values={draft.constraints.geography.locations} onValuesChange={(locations) => updateConstraints("geography", { ...draft.constraints.geography, locations })} />
+              <div>
+                <LineListTextarea aria-label="Track locations" className="input-shell min-h-24 w-full resize-y py-3" values={draft.constraints.geography.locations} onValuesChange={(locations) => updateConstraints("geography", { ...draft.constraints.geography, locations })} />
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">One place per line, for example "Annapolis, MD".</span>
+              </div>
               <label><span className="metric-label">Commute radius</span><input className="input-shell mt-2" aria-label="Track commute radius" type="number" min="0" value={draft.constraints.geography.radiusMiles ?? ""} onChange={(event) => updateConstraints("geography", { ...draft.constraints.geography, radiusMiles: event.target.value ? Number(event.target.value) : null })} /></label>
             </div>
           </section>
@@ -332,6 +337,7 @@ export function TargetTracks() {
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><span className="metric-label">Industries or settings</span><StrengthSelect label="Industry importance" value={draft.constraints.industries.strength} onChange={(strength) => updateConstraints("industries", { ...draft.constraints.industries, strength })} /></div>
             <LineListTextarea className="input-shell mt-2 min-h-24 resize-y py-3" aria-label="Track industries" values={draft.constraints.industries.values} onValuesChange={(values) => updateConstraints("industries", { ...draft.constraints.industries, values })} />
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{ONE_PER_LINE}</span>
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
               <label><span className="metric-label">After-hours or on-call</span><select className="select-shell mt-2" aria-label="Track on-call preference" value={draft.constraints.onCall.value} onChange={(event) => updateConstraints("onCall", { ...draft.constraints.onCall, value: event.target.value as CareerTargetTrackInput["constraints"]["onCall"]["value"] })}><option value="either">No preference</option><option value="yes">Okay with it</option><option value="no">Avoid it</option></select></label>
               <StrengthSelect label="On-call importance" value={draft.constraints.onCall.strength} onChange={(strength) => updateConstraints("onCall", { ...draft.constraints.onCall, strength })} />
