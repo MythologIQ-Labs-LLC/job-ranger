@@ -3,7 +3,7 @@ name: Electron E2E
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     branches:
       - main
     paths:
@@ -27,7 +27,7 @@ on:
       - '.github/workflows/r4-electron-validation.yml'
 
 concurrency:
-  group: electron-e2e-${{ github.workflow }}-${{ github.ref }}
+  group: electron-e2e-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
