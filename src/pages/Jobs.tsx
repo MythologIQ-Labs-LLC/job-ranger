@@ -29,6 +29,8 @@ export function Jobs() {
   const [targetTracksLoading, setTargetTracksLoading] = useState(true);
   const [targetTrackError, setTargetTrackError] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
+  // Presentation-only choice: neither filter/matching rules nor stored data changes.
+  const [listingView, setListingView] = useState<"compact" | "detailed">("compact");
 
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +226,38 @@ export function Jobs() {
         </div>
       </section>
 
-      <div className="mt-8 space-y-4">
+      <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+            Showing {filteredJobs.length} of {jobs.length} captured listings
+          </p>
+          {searchTerm.trim() && listingView === "compact" && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Search terms may appear inside a collapsed listing description.
+            </p>
+          )}
+        </div>
+        <div role="group" aria-label="Listing layout" className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={listingView === "compact"}
+            onClick={() => setListingView("compact")}
+            className={listingView === "compact" ? "primary-button" : "secondary-button"}
+          >
+            Compact
+          </button>
+          <button
+            type="button"
+            aria-pressed={listingView === "detailed"}
+            onClick={() => setListingView("detailed")}
+            className={listingView === "detailed" ? "primary-button" : "secondary-button"}
+          >
+            Detailed
+          </button>
+        </div>
+      </section>
+
+      <div className="mt-4 space-y-3">
         {filteredJobs.length === 0 && (
           <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
             {loading
@@ -242,7 +275,7 @@ export function Jobs() {
           return (
             <article
               key={job.id}
-              className="panel panel-strong p-6 transition hover:-translate-y-0.5"
+              className="panel panel-strong px-4 py-4 sm:px-6 sm:py-5"
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -255,6 +288,11 @@ export function Jobs() {
                     )}
                     {job.isNew && (
                       <span className="soft-badge soft-badge-warning">New</span>
+                    )}
+                    {!job.isActive && (
+                      <span className="soft-badge soft-badge-danger" title="The most recent source check marked this listing inactive.">
+                        Inactive on source
+                      </span>
                     )}
                     <span
                       className={`soft-badge ${job.sourceCompleteness === "full" ? "soft-badge-success" : "soft-badge-warning"}`}
@@ -318,10 +356,6 @@ export function Jobs() {
                 </div>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-[var(--color-text-secondary)]">
-                {job.descriptionSnippet}
-              </p>
-
               {selectedTargetTrack && (
                 <JobEvidenceCoveragePanel
                   job={job}
@@ -330,31 +364,43 @@ export function Jobs() {
                 />
               )}
 
-              <div className="border-divider mt-4 flex flex-wrap items-center gap-4 border-t pt-4 text-xs text-[var(--color-text-muted)]">
-                <span>
-                  First seen{" "}
-                  {formatDistanceToNow(new Date(job.createdAt), {
-                    addSuffix: true,
-                  })}
-                </span>
-                <span>
-                  Last seen{" "}
-                  {formatDistanceToNow(new Date(job.lastSeenAt), {
-                    addSuffix: true,
-                  })}
-                </span>
-                <span>
-                  {job.isActive
-                    ? "Still active on source"
-                    : "Marked inactive on source"}
-                </span>
-                {selectedTargetTrack && (
+              <details
+                key={`${job.id}:${listingView}`}
+                open={listingView === "detailed"}
+                className="border-divider mt-4 border-t pt-3"
+              >
+                <summary className="cursor-pointer rounded-md py-2 text-sm font-semibold text-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+                  Listing description and source history
+                </summary>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+                  {job.descriptionSnippet}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)]">
                   <span>
-                    Assessment uses {selectedTargetTrack.name} + confirmed Career Evidence
-                    {job.currentSourceSnapshotId ? " + preserved source snapshot" : ""}
+                    First seen{" "}
+                    {formatDistanceToNow(new Date(job.createdAt), {
+                      addSuffix: true,
+                    })}
                   </span>
-                )}
-              </div>
+                  <span>
+                    Last seen{" "}
+                    {formatDistanceToNow(new Date(job.lastSeenAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                  <span>
+                    {job.isActive
+                      ? "Still active on source"
+                      : "Marked inactive on source"}
+                  </span>
+                  {selectedTargetTrack && (
+                    <span>
+                      Assessment uses {selectedTargetTrack.name} + confirmed Career Evidence
+                      {job.currentSourceSnapshotId ? " + preserved source snapshot" : ""}
+                    </span>
+                  )}
+                </div>
+              </details>
             </article>
           );
         })}
