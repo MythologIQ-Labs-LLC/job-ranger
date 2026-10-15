@@ -19,6 +19,7 @@ const info = {
   schemaVersion: 1,
   product: "job-ranger-web",
   version: "1.3.0",
+  contentSecurityPolicy: policy,
   buildId,
   commit: "123456789abc123456789abc123456789abc1234",
   assets: [{ path: "index.html", sha256: hash(index) }],
@@ -54,6 +55,8 @@ try {
   await writeFile(path.join(dir, "index.html"), index);
   await writeFile(path.join(dir, "_headers"), headersFile.replace("X-Frame-Options: DENY", ""));
   await assert.rejects(inspectStudioPwaBuild(dir), /missing required static security header/);
+  await writeFile(path.join(dir, "_headers"), headersFile.replace(policy, policy + "; script-src * 'unsafe-inline'"));
+  await assert.rejects(inspectStudioPwaBuild(dir), /static CSP differs/);
   await writeFile(path.join(dir, "_headers"), headersFile);
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify({ ...handoff, studio: { autoEnableCta: true } }));
   await assert.rejects(inspectStudioPwaBuild(dir), /does not match/);
@@ -66,16 +69,20 @@ try {
         "content-security-policy": policy,
         "x-frame-options": "DENY",
         "strict-transport-security": "max-age=63072000",
+        "cross-origin-resource-policy": "same-origin",
       } });
     }
     if (name === "/build-info.json") return new Response(JSON.stringify(info), { status: 200 });
     if (name === "/studio-handoff.json") return new Response(JSON.stringify(handoff), { status: 200 });
     return new Response("", { status: 404 });
   };
-  assert.equal((await inspectLiveStudioPwa("https://jobs.example.org", buildId, fakeFetch)).buildId, buildId);
-  await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, fakeFetch), /HTTPS origin/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, fakeFetch), /HTTPS origin/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", fakeFetch), /live build identity mismatch/);
+  const pinnedDigest = hash(JSON.stringify(info));
+  assert.equal((await inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, fakeFetch)).buildId, buildId);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "0".repeat(64), fakeFetch), /checksum differs/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "not-a-sha", fakeFetch), /approved build-info SHA-256/);
+  await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, fakeFetch), /live build identity mismatch/);
   console.log("Studio PWA handoff contract: local and simulated live checks passed");
 } finally {
   await rm(dir, { recursive: true, force: true });
