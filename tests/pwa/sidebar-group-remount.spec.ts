@@ -17,13 +17,22 @@ test("a navigation group opened while a page is loading stays open when the page
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
   // Hold the next Career Profile read so Home stays on its loading placeholder.
+  // Releasing the gate also restores the real read, so later pages (and the
+  // second Home visit below) are not left waiting on a read nobody releases.
   await page.evaluate(() => {
     const career = window.electronAPI.career;
-    const real = career.getProfile.bind(career);
-    const gate = { release: () => {} };
+    const original = career.getProfile;
+    const real = original.bind(career);
+    const held: Array<() => void> = [];
+    const gate = {
+      release: () => {
+        career.getProfile = original;
+        held.splice(0).forEach((resume) => resume());
+      },
+    };
     (window as unknown as { profileGate: typeof gate }).profileGate = gate;
     career.getProfile = () => new Promise((resolve, reject) => {
-      gate.release = () => { real().then(resolve, reject); };
+      held.push(() => { real().then(resolve, reject); });
     });
   });
   await page.evaluate(() => { window.location.hash = "/"; });
