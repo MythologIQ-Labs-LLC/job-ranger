@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   BarChart3,
   BookOpenText,
-  Briefcase,
+  ClipboardList,
   Building2,
   ChevronRight,
   CircleHelp,
@@ -13,6 +13,7 @@ import {
   Library,
   Megaphone,
   Menu,
+  Search,
   Settings,
   SlidersHorizontal,
   UserRound,
@@ -27,8 +28,8 @@ type NavGroup = { id: string; label: string; icon: LucideIcon; links: NavItem[] 
 // Keep established routes intact. Only their presentation and grouping change.
 const primaryLinks: NavItem[] = [
   { name: "Home", href: "/", icon: LayoutDashboard },
-  { name: "Find Jobs", href: "/jobs", icon: Briefcase },
-  { name: "Applications", href: "/applications", icon: FileText },
+  { name: "Find Jobs", href: "/jobs", icon: Search },
+  { name: "Applications", href: "/applications", icon: ClipboardList },
   { name: "Personal Brand", href: "/personal-brand", icon: Megaphone },
 ];
 
@@ -82,17 +83,15 @@ function SidebarNavLink({
       to={item.href}
       onClick={() => onNavigate(item.href)}
       aria-current={active ? "page" : undefined}
-      className={`sidebar-link group flex min-h-11 items-center rounded-xl py-2.5 text-sm
+      className={`sidebar-link sidebar-nav-entry group flex min-h-11 min-w-0 items-center rounded-xl py-2 text-sm
         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
-        ${nested ? "pl-9 pr-3 font-medium" : "px-3 font-semibold"}
+        ${nested ? "pl-7 pr-3 font-medium" : "px-2.5 font-semibold"}
         ${active ? "sidebar-link-active !text-white" : "!text-white/80 hover:!text-white"}`}
     >
-      <item.icon
-        className={`mr-3 shrink-0 ${nested ? "h-4 w-4" : "h-5 w-5"}
-          ${active ? "!text-white" : "!text-white/60 group-hover:!text-white"}`}
-        aria-hidden="true"
-      />
-      {item.name}
+      <span className="sidebar-nav-glyph" aria-hidden="true">
+        <item.icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.9} />
+      </span>
+      <span className="min-w-0 flex-1 truncate">{item.name}</span>
     </Link>
   );
 }
@@ -149,12 +148,23 @@ export function Sidebar() {
 
   return (
     <aside className="app-sidebar flex h-screen flex-col">
-      <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex items-center gap-3">
-          <div className="brand-mark flex h-10 w-10 items-center justify-center rounded-2xl">
-            <Briefcase className="h-5 w-5" aria-hidden="true" />
+      <div className="sidebar-brand-header border-b border-white/10 px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="brand-logo-frame inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl p-0.5">
+            <img
+              src={`${import.meta.env.BASE_URL}ICON.png`}
+              alt=""
+              aria-hidden="true"
+              width={44}
+              height={44}
+              className="h-full w-full object-contain"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="sidebar-brand-eyebrow">MYTHOLOGIQ LABS</p>
+            <h1 className="truncate text-lg font-bold leading-tight !text-white">Job Ranger</h1>
+            <p className="sidebar-brand-subtitle">Your career workspace</p>
           </div>
-          <h1 className="text-xl font-bold !text-white">Job Ranger</h1>
           <button
             type="button"
             ref={toggleRef}
@@ -177,6 +187,7 @@ export function Sidebar() {
           ${mobileOpen ? "block" : "hidden"} md:block`}
         aria-label="Primary navigation"
       >
+        <p className="sidebar-section-label px-3 pb-2">WORKSPACE</p>
         {primaryLinks.map(item => (
           <SidebarNavLink
             key={item.href}
@@ -195,7 +206,7 @@ export function Sidebar() {
               <div key={group.id} className="mb-1">
                 <button
                   type="button"
-                  className={`sidebar-link group flex min-h-11 w-full items-center rounded-xl px-3 py-2.5
+                  className={`sidebar-link sidebar-nav-entry group flex min-h-11 w-full items-center rounded-xl px-2.5 py-2
                     text-left text-sm font-semibold !text-white/80 hover:!text-white
                     focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
                     ${containsCurrentPage ? "bg-white/10 !text-white" : ""}`}
@@ -203,7 +214,9 @@ export function Sidebar() {
                   aria-controls={groupPanelId}
                   onClick={() => setOpenGroup(current => current === group.id ? null : group.id)}
                 >
-                  <group.icon className="mr-3 h-5 w-5 shrink-0 !text-white/60 group-hover:!text-white" aria-hidden="true" />
+                  <span className="sidebar-nav-glyph" aria-hidden="true">
+                    <group.icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.9} />
+                  </span>
                   <span className="flex-1">
                     {group.label}
                     {containsCurrentPage && !expanded && <span className="sr-only"> (contains current page)</span>}
@@ -231,6 +244,7 @@ export function Sidebar() {
       </nav>
 
       <nav id="job-ranger-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
+        <p className="sidebar-section-label px-3 pb-1.5">PREFERENCES</p>
         {utilityLinks.map(item => (
           <SidebarNavLink
             key={item.href}
