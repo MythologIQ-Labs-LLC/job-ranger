@@ -102,18 +102,11 @@ export function Jobs() {
     }
   };
 
+  // Errors propagate to the assessment drawer, which is the only visible layer while open.
   const handlePrepareResume = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
-    try {
-      await trackJob(job);
-      navigate(`/resume?job=${encodeURIComponent(job.id)}`);
-    } catch (error) {
-      setTrackError(
-        error instanceof Error
-          ? error.message
-          : "Unable to start resume preparation",
-      );
-    }
+    await trackJob(job);
+    navigate(`/resume?job=${encodeURIComponent(job.id)}`);
   };
 
   return (
@@ -360,7 +353,7 @@ export function Jobs() {
                 <JobEvidenceCoveragePanel
                   job={job}
                   targetTrack={selectedTargetTrack}
-                  onPrepareResume={() => void handlePrepareResume(job)}
+                  onPrepareResume={() => handlePrepareResume(job)}
                 />
               )}
 

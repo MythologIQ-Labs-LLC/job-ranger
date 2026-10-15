@@ -20,7 +20,9 @@ import { Modal } from "./Modal";
 interface Props {
   job: Job;
   targetTrack: CareerTargetTrack;
-  onPrepareResume: () => void;
+  // Rejects when the job cannot be tracked; the drawer shows that failure itself because
+  // page-level messages sit behind the modal layer.
+  onPrepareResume: () => Promise<void>;
 }
 
 function classificationLabel(
@@ -129,6 +131,8 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
 
   const assessment = useMemo(
     () => (coverage ? buildOpportunityAssessment(job, targetTrack, coverage) : null),
@@ -155,12 +159,32 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
     }
   };
 
+  const prepareResume = async () => {
+    if (preparing) return;
+    setPreparing(true);
+    setPrepareError(null);
+    try {
+      await onPrepareResume();
+    } catch (failure) {
+      setPrepareError(
+        failure instanceof Error ? failure.message : "Unable to start resume preparation",
+      );
+    } finally {
+      setPreparing(false);
+    }
+  };
+
+  const close = () => {
+    setOpen(false);
+    setPrepareError(null);
+  };
+
   return (
     <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/60">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-        onClick={() => void toggle()}
+        onClick={() => (open ? close() : void toggle())}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -189,7 +213,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
       {open && (
       <Modal
         open={true}
-        onClose={() => setOpen(false)}
+        onClose={close}
         title={`Opportunity assessment: ${job.title}`}
         size="xl"
         placement="right"
@@ -354,10 +378,21 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
                 <p className="text-xs text-[var(--color-text-muted)]">
                   This is deterministic guidance from the selected target track, collected listing data, and Career Evidence. It is not a hiring prediction.
                 </p>
-                <button type="button" className="secondary-button" onClick={onPrepareResume}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void prepareResume()}
+                  // aria-disabled keeps focus on the control while the job is being tracked.
+                  aria-disabled={preparing}
+                >
                   Prepare resume
                 </button>
               </div>
+              {prepareError && (
+                <p role="alert" className="text-sm text-[var(--color-danger)]">
+                  Resume preparation could not start: {prepareError}
+                </p>
+              )}
             </div>
           )}
       </Modal>
