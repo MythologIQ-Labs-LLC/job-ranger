@@ -52,7 +52,23 @@ function runWithStdin(binary: string, args: string[], input: string): Promise<st
 
 type ElectronProcess = NodeJS.Process & { resourcesPath?: string };
 
+// Whether a sqlite3 binary's -json output keeps control characters (3.48+; #321). Asked once per
+// binary with a constant command line.
+const exactJsonByBinary = new Map<string, Promise<boolean>>();
+
+function jsonReadbackIsExact(binary: string): Promise<boolean> {
+  let known = exactJsonByBinary.get(binary);
+  if (!known) {
+    known = execFileAsync(binary, ["-version"])
+      .then(({ stdout }) => jsonEscapesControlCharacters(stdout))
+      .catch(() => true);
+    exactJsonByBinary.set(binary, known);
+  }
+  return known;
+}
+
 import type { SqliteEngineClient } from "./sql-literal.cjs";
+import { jsonEscapesControlCharacters, parseQuoteOutput } from "./sqlite-quote-output.cjs";
 
 export { sql, toSqlLiteral } from "./sql-literal.cjs";
 export type { SqliteEngineClient } from "./sql-literal.cjs";
@@ -196,13 +212,26 @@ ${statement}
 
   async queryAll<T>(statement: string): Promise<T[]> {
     await this.ensureDatabaseDirectory();
+    // Older sqlite3 CLIs alter control characters in -json output; read through quote mode there.
+    const exactJson = await jsonReadbackIsExact(this.sqliteBinaryPath);
     const stdout = await runWithStdin(
       this.sqliteBinaryPath,
-      [...this.connectionArgs(), "-bail", "-json", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, this.databasePath],
+      [
+        ...this.connectionArgs(),
+        "-bail",
+        ...(exactJson ? ["-json"] : ["-header", "-quote"]),
+        "-cmd",
+        `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
+        this.databasePath,
+      ],
       `PRAGMA foreign_keys = ON;
 ${statement}
 `,
     );
+
+    if (!exactJson) {
+      return parseQuoteOutput(stdout) as T[];
+    }
 
     const trimmed = stdout.trim();
     if (!trimmed) {

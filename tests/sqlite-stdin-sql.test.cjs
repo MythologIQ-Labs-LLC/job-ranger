@@ -46,13 +46,15 @@ async function run() {
     assert.deepEqual(rows, [{ id: marker, note: 'exec' }, { id: `${marker}-tx`, note: 'transaction' }]);
     assert.deepEqual(await db.queryOne(sql`SELECT note FROM t WHERE id = ${marker};`), { note: 'exec' });
 
-    assert.ok(launches.length >= 5, 'every call should launch sqlite3');
-    for (const launch of launches) {
+    // The one-time `-version` probe (#321) carries no SQL and is not a statement launch.
+    const statementLaunches = launches.filter((launch) => launch.args.join(' ') !== '-version');
+    assert.ok(statementLaunches.length >= 5, 'every call should launch sqlite3');
+    for (const launch of statementLaunches) {
       const commandLine = launch.args.join(' ');
       assert.doesNotMatch(commandLine, /CREATE TABLE|INSERT|SELECT|marker-/, `SQL leaked onto the command line: ${commandLine}`);
       assert.notEqual(launch.stdin, null, 'sqlite3 must receive its SQL on stdin');
     }
-    assert.equal(new Set(launches.map((launch) => launch.args.join(' '))).size <= 2, true,
+    assert.equal(new Set(statementLaunches.map((launch) => launch.args.join(' '))).size <= 2, true,
       'the command line should be the same for every statement (plain and -json)');
 
     // Failures still reject with SQLite's own message.
