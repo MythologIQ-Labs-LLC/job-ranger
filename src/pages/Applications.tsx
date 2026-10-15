@@ -12,14 +12,45 @@ import { Layout } from "../components/Layout";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useApplications } from "../career/storage";
 import { getDesktopApi } from "../services/api";
+import type { ApplicationStatus } from "../shared/contracts";
+
+type StatusFocus = "all" | "interested" | "applied" | "interview" | "offer" | "closed";
+const STATUS_FOCUS: { value: StatusFocus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "interested", label: "Interested" },
+  { value: "applied", label: "Applied" },
+  { value: "interview", label: "Interview" },
+  { value: "offer", label: "Offers" },
+  { value: "closed", label: "Closed" },
+];
+
+function matchesStatusFocus(status: ApplicationStatus, focus: StatusFocus): boolean {
+  if (focus === "all") return true;
+  if (focus === "closed") return status === "rejected" || status === "withdrawn";
+  return status === focus;
+}
+
 
 export function Applications() {
   const { applications, update, remove, loading, error } = useApplications();
   const [deleteApplicationId, setDeleteApplicationId] = useState<string | null>(null);
+  const [statusFocus, setStatusFocus] = useState<StatusFocus>("all");
   const deleteApplication = applications.find((item) => item.id === deleteApplicationId) ?? null;
   const [dirtyFields, setDirtyFields] = useState<Record<string, true>>({});
   const hasUnsavedChanges = Object.keys(dirtyFields).length > 0;
   const leavingRef = useRef(false);
+
+  // Never unmount an editor while its latest local intent has not been acknowledged.
+  // A saved status change can move a record out of the selected category: it stays
+  // visible until its status AND notes are completely persisted or resolved.
+  const visibleApplications = applications.filter((application) =>
+    matchesStatusFocus(application.status, statusFocus) ||
+    Boolean(dirtyFields[application.id + ":status"]) ||
+    Boolean(dirtyFields[application.id + ":notes"]),
+  );
+  const statusCounts = Object.fromEntries(
+    STATUS_FOCUS.map(({ value }) => [value, applications.filter((application) => matchesStatusFocus(application.status, value)).length]),
+  ) as Record<StatusFocus, number>;
 
   const markDirty = useCallback((id: string, field: "status" | "notes", dirty: boolean) => {
     const key = id + ":" + field;
@@ -67,7 +98,39 @@ export function Applications() {
         </section>
       )}
 
-      <div className="mt-8 space-y-4">
+      <section aria-label="Application status filters" className="panel panel-muted mt-6 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Focus your applications</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Filter by recorded status, not by inferred urgency or assumed deadlines.
+            </p>
+          </div>
+          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+            Showing {visibleApplications.length} of {applications.length} tracked applications
+          </p>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Application status view">
+          {STATUS_FOCUS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={statusFocus === value}
+              onClick={() => setStatusFocus(value)}
+              className={statusFocus === value ? "primary-button" : "secondary-button"}
+            >
+              {label} ({statusCounts[value]})
+            </button>
+          ))}
+        </div>
+        {hasUnsavedChanges && (
+          <p role="status" className="mt-3 text-sm text-[var(--color-text-secondary)]">
+            Applications with unsaved edits stay visible across status filters until their latest changes are saved.
+          </p>
+        )}
+      </section>
+
+      <div className="mt-5 space-y-4">
         {loading && (
           <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
             Loading your applications...
@@ -83,7 +146,13 @@ export function Applications() {
           </div>
         )}
 
-        {applications.map((application) => (
+        {!loading && applications.length > 0 && visibleApplications.length === 0 && (
+          <div className="panel panel-strong px-6 py-9 text-sm text-[var(--color-text-secondary)]">
+            No tracked applications have this recorded status. Choose another status or All.
+          </div>
+        )}
+
+        {visibleApplications.map((application) => (
           <article key={application.id} className="panel panel-strong p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -118,6 +187,13 @@ export function Applications() {
                 </button>
               </div>
             </div>
+
+            {(dirtyFields[application.id + ":notes"] || dirtyFields[application.id + ":status"]) &&
+              !matchesStatusFocus(application.status, statusFocus) && (
+                <p role="status" className="mt-4 text-sm font-semibold text-[var(--color-warning)]">
+                  Kept visible because this application has unsaved changes, even though its saved status does not match this view.
+                </p>
+              )}
 
             <ApplicationNotesEditor
               application={application}

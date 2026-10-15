@@ -95,7 +95,8 @@ test("a failed autosave preserves the entered draft, displays error, and permits
   expect((await page.evaluate(() => window.electronAPI.applications.list()))
     .find((row) => row.id === id)?.notes).toBe("");
   await page.getByRole("button", { name: "Retry saving notes" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved");
+  // The page now also announces the status-filter summary, so address the editor's own region.
+  await expect(page.getByRole("status", { name: "Application notes save status" })).toContainText("Saved");
   expect((await page.evaluate(() => window.electronAPI.applications.list()))
     .find((row) => row.id === id)?.notes).toBe("My unsaved interview notes");
 });
