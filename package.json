@@ -37,7 +37,7 @@
     "demo:record": "npm run build:pwa && npm run test:demo && playwright test --config scripts/demo/playwright.demo.config.ts scripts/demo/story.spec.ts",
     "demo:screenshots": "npm run build:pwa && playwright test --config scripts/demo/playwright.demo.config.ts scripts/demo/screenshots.spec.ts",
     "demo:frames": "node scripts/demo/frames.mjs build/demo/video.webm build/demo/frames 1",
-    "test:pwa:e2e": "npm run build:pwa && node tests/pwa-worker-bundle.test.mjs && node tests/pwa-css-utilities.test.mjs && npm run desktop:compile && playwright test --config playwright.pwa.config.ts",
+    "test:pwa:e2e": "npm run build:pwa && npm run test:studio-handoff && node scripts/verify-studio-handoff.mjs --site dist-pwa && node tests/pwa-worker-bundle.test.mjs && node tests/pwa-css-utilities.test.mjs && npm run desktop:compile && playwright test --config playwright.pwa.config.ts",
     "electron:build:store": "npm run repo:health && electron-builder --win --publish never --config electron-builder.store.cjs",
     "package:pwa": "node scripts/package-pwa.mjs",
     "selfhost:pwa": "npm run build:pwa && npm run preview:pwa",
@@ -45,7 +45,8 @@
     "test:mcp:readonly": "npm run desktop:compile && node tests/mcp-readonly-adapter.test.mjs && node tests/mcp-readonly-stdio.test.mjs",
     "mcp:tunnel:check": "node mcp/tunnel-operator.mjs --mode=check",
     "mcp:tunnel:run": "node mcp/tunnel-operator.mjs --mode=run",
-    "test:mcp:tunnel": "node tests/mcp-tunnel-operator.test.mjs"
+    "test:mcp:tunnel": "node tests/mcp-tunnel-operator.test.mjs",
+    "test:studio-handoff": "node tests/studio-handoff.test.mjs"
   },
   "dependencies": {
     "@firecrawl/anydoc": "0.2.4",
