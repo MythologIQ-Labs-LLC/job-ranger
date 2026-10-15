@@ -14,16 +14,46 @@
   --color-border-strong: rgba(120, 86, 48, 0.3);
   --color-text-primary: #24180c;
   --color-text-secondary: #61462a;
-  --color-text-muted: #8a7155;
+  --color-text-muted: #785d3d;
   --color-text-inverse: #fffaf0;
   --color-success: #0f766e;
   --color-warning: #b45309;
   --color-danger: #b91c1c;
   --color-info: #0f766e;
+  --badge-success-bg: #e0f3eb;
+  --badge-success-fg: #0b574b;
+  --badge-warning-bg: #fff0d2;
+  --badge-warning-fg: #7c3908;
+  --badge-danger-bg: #fde8e8;
+  --badge-danger-fg: #951b1b;
+  --badge-info-bg: #d9f5f3;
+  --badge-info-fg: #0b574b;
   --color-shadow: rgba(80, 46, 10, 0.12);
   --font-display: "Fraunces", "Georgia", serif;
   --font-body: "Manrope", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Consolas", monospace;
+}
+
+[data-theme="midnight"] {
+  --badge-success-bg: #123c37;
+  --badge-success-fg: #77f5df;
+  --badge-warning-bg: #492808;
+  --badge-warning-fg: #ffcc91;
+  --badge-danger-bg: #4e1e2c;
+  --badge-danger-fg: #ffc4ce;
+  --badge-info-bg: #0a344b;
+  --badge-info-fg: #b0eaff;
+}
+
+[data-theme="canopy"] {
+  --badge-success-bg: #e2f2e6;
+  --badge-success-fg: #0e5a2b;
+  --badge-warning-bg: #fff0c2;
+  --badge-warning-fg: #704008;
+  --badge-danger-bg: #ffe8e6;
+  --badge-danger-fg: #9b1c1c;
+  --badge-info-bg: #dff5f0;
+  --badge-info-fg: #075e55;
 }
 
 * {
@@ -409,23 +439,23 @@ textarea {
 }
 
 .soft-badge-success {
-  background: color-mix(in srgb, var(--color-success) 14%, white);
-  color: var(--color-success);
+  background: var(--badge-success-bg);
+  color: var(--badge-success-fg);
 }
 
 .soft-badge-warning {
-  background: color-mix(in srgb, var(--color-warning) 16%, white);
-  color: var(--color-warning);
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-fg);
 }
 
 .soft-badge-danger {
-  background: color-mix(in srgb, var(--color-danger) 14%, white);
-  color: var(--color-danger);
+  background: var(--badge-danger-bg);
+  color: var(--badge-danger-fg);
 }
 
 .soft-badge-info {
-  background: color-mix(in srgb, var(--color-info) 14%, white);
-  color: var(--color-info);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-fg);
 }
 
 .theme-card {
@@ -596,4 +626,15 @@ textarea {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Respect the user preference instead of running decorative page transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-rise { animation: none; }
 }
