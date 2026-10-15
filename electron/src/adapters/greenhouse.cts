@@ -53,7 +53,7 @@ export const greenhouseAdapter: ScraperAdapter = {
         salaryMin: salary?.min ?? null,
         salaryMax: salary?.max ?? null,
         salaryCurrency: salary?.currency ?? null,
-        salaryText: salary?.raw ?? null,
+        salaryText: salary?.text ?? null,
         postDate: job.updated_at ?? null,
       };
     });

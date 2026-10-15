@@ -92,7 +92,7 @@ function extractJsonLdJobs(baseUrl: string, html: string, sourceType: CompanySou
           salaryMin: salary?.min ?? null,
           salaryMax: salary?.max ?? null,
           salaryCurrency: salary?.currency ?? null,
-          salaryText: salary?.raw ?? null,
+          salaryText: salary?.text ?? null,
           postDate: typeof posting.datePosted === "string" ? posting.datePosted : null,
         });
         seenUrls.add(jobUrl);
