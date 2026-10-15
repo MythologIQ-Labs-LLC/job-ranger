@@ -36,13 +36,13 @@ function contrast(hexA, hexB) {
 
 test("Atelier implements the approved 60/30/10 ivory/slate/teal hierarchy", () => {
   assert.equal(cssValue("canvas"), "#f6f3eb");
-  assert.equal(cssValue("sidebar"), "#1f3144");
-  assert.equal(cssValue("primary"), "#086b70");
-  assert.equal(cssValue("secondary"), "#243b53");
-  assert.equal(cssValue("accent"), "#22a79d");
+  assert.equal(cssValue("sidebar"), "#00182e");
+  assert.equal(cssValue("primary"), "#00765f");
+  assert.equal(cssValue("secondary"), "#17384d");
+  assert.equal(cssValue("accent"), "#01896a");
   // Approximate *surface distribution*, not fabricated pixel measurements:
   // 60% light canvas/panels, 30% structural slate, 10% teal action highlights.
-  assert.match(atelier, /60\/30\/10: warm ivory surfaces, slate-blue structure, teal actions/);
+  assert.match(atelier, /60\/30\/10: warm ivory surfaces, logo navy structure, accessible trail-green actions/);
   assert.ok(!atelier.includes("#b45309"), "legacy orange must not be the primary color");
   assert.ok(!atelier.includes("#201913"), "legacy brown must not be the sidebar color");
 });
