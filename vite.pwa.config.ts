@@ -17,6 +17,7 @@ import { defineConfig, type Plugin } from "vite";
 import { buildContentSecurityPolicy, buildSecurityHeaders } from "./src/pwa/security/policy.ts";
 import { NODE_BUILTIN_ADAPTERS, SHARED_CORE_ADAPTERS } from "./src/pwa/adapter-map.ts";
 import { buildPdfFonts } from "./scripts/pdf-fonts.mjs";
+import { createStudioHandoff } from "./scripts/studio-handoff.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -117,7 +118,7 @@ function shellManifestPlugin(): Plugin {
         (file) =>
           !file.endsWith(".map") &&
           !file.startsWith(`${PDF_FONTS_DIRECTORY}/`) &&
-          !["sw.js", "_headers", "build-info.json"].includes(file),
+          !["sw.js", "_headers", "build-info.json", "studio-handoff.json"].includes(file),
       );
       const fontFiles = listFiles(path.join(outDir, PDF_FONTS_DIRECTORY))
         .filter((file) => file.endsWith(".ttf"))
@@ -161,6 +162,13 @@ function shellManifestPlugin(): Plugin {
           null,
           2,
         )}\n`,
+      );
+      // A build-derived, non-authorizing contract for the Studio external link.
+      // Excluded from the service-worker shell manifest to avoid a digest cycle.
+      const buildInfo = JSON.parse(readFileSync(path.join(outDir, "build-info.json"), "utf8"));
+      writeFileSync(
+        path.join(outDir, "studio-handoff.json"),
+        `${JSON.stringify(createStudioHandoff(buildInfo), null, 2)}\n`,
       );
     },
   };
