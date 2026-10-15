@@ -5,18 +5,19 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { registerHooks } from "node:module";
+import { register } from "node:module";
 import { test } from "node:test";
 
-// The adapter imports siblings without an extension, as Vite resolves them.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (/^\.\.?\//.test(specifier) && !/\.[a-z]+$/i.test(specifier) && context.parentURL?.endsWith(".ts")) {
-      return nextResolve(`${specifier}.ts`, context);
-    }
-    return nextResolve(specifier, context);
-  },
-});
+// The adapter imports siblings without an extension, as Vite resolves them. module.register
+// (async hooks) is used because CI runs Node 22.12, which has no module.registerHooks.
+const extensionlessTs = `
+export async function resolve(specifier, context, nextResolve) {
+  if (/^\\.\\.?\\//.test(specifier) && !/\\.[a-z]+$/i.test(specifier) && context.parentURL?.endsWith(".ts")) {
+    return nextResolve(specifier + ".ts", context);
+  }
+  return nextResolve(specifier, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(extensionlessTs)}`);
 
 function notFound() {
   return Object.assign(new Error("not found"), { name: "NotFoundError" });
