@@ -39,7 +39,9 @@ async function seedTargetJob() {
       '${now}', '${now}', 1, 1, 0
     );
   `;
-  await execFileAsync(status.sqliteBinaryPath, [status.databasePath, sql]);
+  // The app may be writing at the same moment (opening a job rebuilds its
+  // coverage), so wait for its lock the way the app's own client does.
+  await execFileAsync(status.sqliteBinaryPath, ["-cmd", ".timeout 5000", status.databasePath, sql]);
 }
 
 test.beforeAll(async () => {
