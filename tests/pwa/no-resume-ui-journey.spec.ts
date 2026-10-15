@@ -38,7 +38,11 @@ const rt = universal.fixtures.find((fixture) => fixture.code === "RT")!;
 const rtEvidence = rt.evidence[0];
 const sourceName = "Severn Community Services";
 
-/** The RT fixture listing, served exactly as the public Greenhouse board API would. */
+/**
+ * The RT fixture listing, served exactly as the public Greenhouse board API would. RT's own
+ * fixture source is SmartRecruiters; Greenhouse carries no employment type, so the listing's
+ * arrangement is unknown here by design.
+ */
 function rtGreenhouseBoard() {
   const html = `<p>${rt.job.descriptionSnippet}</p><p>Pay: ${rt.job.salaryText}.</p>`;
   return {
@@ -171,9 +175,9 @@ test("a person without a resume can author evidence, assess a fixture job and tr
   await page.getByRole("textbox", { name: "Track name" }).fill(track.name);
   await page.getByRole("combobox", { name: "Relationship to my career" }).selectOption("target");
   await page.getByRole("textbox", { name: "Roles in this track" }).fill(track.roleTitles.join("\n"));
-  // Geography is deliberately left empty here: a "City, ST" location cannot
-  // currently be authored on this form (reproduced by the test.fail() cases
-  // below). The home area is already recorded in Career Profile.
+  // Geography is left empty here; the home area is already recorded in Career
+  // Profile, and "City, ST" track locations are covered by the regression
+  // test below.
   await page.getByRole("checkbox", { name: "Hybrid" }).check();
   for (const arrangement of ["Full-time", "Part-time"]) {
     await page.getByRole("checkbox", { name: arrangement, exact: true }).check();
@@ -245,9 +249,9 @@ test("a person without a resume can author evidence, assess a fixture job and tr
     return api.jobs.getEvidenceCoverage(listing.id);
   }, rt.job.title);
   expect(assessment.supportedCount).toBeGreaterThan(0);
-  for (const item of assessment.items) {
-    if (item.evidence) expect(item.evidence.id).toBe(evidenceId);
-  }
+  const cited = assessment.items.flatMap((item) => (item.evidence ? [item.evidence.id] : []));
+  expect(cited.length).toBeGreaterThan(0);
+  expect(new Set(cited)).toEqual(new Set([evidenceId]));
 
   // Track the job from the listing, then reload the whole app.
   await job.getByRole("button", { name: "Track this job" }).click();
@@ -291,17 +295,13 @@ test("a person without a resume can author evidence, assess a fixture job and tr
 });
 
 /*
- * Defect reproductions found while qualifying Story A (#216). Both stem from
- * the list textareas being re-derived from a parsed array on every change:
- * src/pages/TargetTracks.tsx splitList() (line 45) splits on "\n" AND ",",
- * trims and drops empty items, and the textarea value is the array joined
- * with "\n" (Roles line 275, Track locations line 284, Track industries line
- * 336). src/pages/CareerProfile.tsx splitLines() (line 26) does the same for
- * Roles/Skills/Certifications/Industries (lines 308, 322, 334, 346).
- * These tests are expected to fail until the forms keep the raw text.
+ * Regressions for defects found while qualifying Story A (#216): the list
+ * textareas on Target Tracks and Career Profile were re-derived from a parsed
+ * array on every keystroke (dropping typed spaces and line breaks) and split
+ * entries on commas. They now keep the typed text and read one entry per line
+ * (src/components/LineListTextarea.tsx).
  */
 test("a target-track location written as \"City, ST\" stays one location", async ({ page }) => {
-  test.fail(true, "TargetTracks.tsx:284 splits \"Annapolis, MD\" into two locations: \"Annapolis\" and \"MD\"");
   await page.goto(server.url + "#/target-tracks");
   await waitForRuntime(page);
   await page.getByRole("textbox", { name: "Track name" }).fill(rt.targetTrack.name);
@@ -314,7 +314,6 @@ test("a target-track location written as \"City, ST\" stays one location", async
 });
 
 test("typing into list fields keeps spaces and line breaks", async ({ page }) => {
-  test.fail(true, "Per-keystroke list normalization drops typed spaces/newlines/commas (TargetTracks.tsx:275, CareerProfile.tsx:308)");
   await page.goto(server.url + "#/target-tracks");
   await waitForRuntime(page);
   const roles = page.getByRole("textbox", { name: "Roles in this track" });
@@ -322,7 +321,6 @@ test("typing into list fields keeps spaces and line breaks", async ({ page }) =>
   await roles.pressSequentially("Operations Coordinator");
   await roles.press("Enter");
   await roles.pressSequentially("Office Manager");
-  // Actual: "OperationsCoordinatorOfficeManager".
   expect.soft(await roles.inputValue()).toBe("Operations Coordinator\nOffice Manager");
 
   await navigateSidebar(page, "Career Profile");
@@ -330,6 +328,5 @@ test("typing into list fields keeps spaces and line breaks", async ({ page }) =>
   await expect(profileRoles).toBeEnabled();
   await profileRoles.click();
   await profileRoles.pressSequentially("Operations Coordinator");
-  // Actual: "OperationsCoordinator".
   expect.soft(await profileRoles.inputValue()).toBe("Operations Coordinator");
 });
