@@ -18,7 +18,9 @@ async function navigateTo(destination: "Career Profile" | "Resume") {
 
 async function runSql(sql: string) {
   const status = await fixture.page.evaluate(() => window.electronAPI.system.getStatus());
-  await execFileAsync(status.sqliteBinaryPath, [status.databasePath, sql]);
+  // The app may be writing at the same moment (opening a job rebuilds its
+  // coverage), so wait for its lock the way the app's own client does.
+  await execFileAsync(status.sqliteBinaryPath, ["-cmd", ".timeout 5000", status.databasePath, sql]);
 }
 
 test.beforeAll(async () => {
