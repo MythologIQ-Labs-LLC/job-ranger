@@ -6,17 +6,29 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const SQLITE_BUSY_TIMEOUT_MS = 5000;
 
-function runWithStdin(binary: string, args: string[], input: string): Promise<void> {
+/**
+ * Run the sqlite3 CLI with the SQL script on stdin and return its stdout.
+ *
+ * SQL never goes on the command line. Windows inspects every process launch
+ * with a command line it has not seen before (Defender / Smart App Control),
+ * which cost 0.5-2 s per statement because each statement carries unique ids
+ * and timestamps; an unchanged command line with the script on stdin costs
+ * about 10 ms. -bail stops at the first failing statement, so a multi-statement
+ * script never keeps running after an error.
+ */
+function runWithStdin(binary: string, args: string[], input: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(binary, args, { stdio: ["pipe", "ignore", "pipe"], windowsHide: true });
+    const child = spawn(binary, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const stdout: Buffer[] = [];
     let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       if (stderr.length < 64 * 1024) stderr += chunk;
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) resolve();
+      if (code === 0) resolve(Buffer.concat(stdout).toString("utf8"));
       else reject(new Error(`sqlite3 exited with code ${code}: ${stderr.trim()}`));
     });
     child.stdin.on("error", reject);
@@ -125,13 +137,13 @@ export class SqliteClient implements SqliteEngineClient {
 
   async exec(statement: string): Promise<void> {
     await this.ensureDatabaseDirectory();
-    await execFileAsync(this.sqliteBinaryPath, [
-      ...this.connectionArgs(),
-      "-cmd",
-      `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
-      this.databasePath,
-      `PRAGMA foreign_keys = ON; ${statement}`,
-    ]);
+    await runWithStdin(
+      this.sqliteBinaryPath,
+      [...this.connectionArgs(), "-bail", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, this.databasePath],
+      `PRAGMA foreign_keys = ON;
+${statement}
+`,
+    );
   }
 
   /**
@@ -170,14 +182,13 @@ export class SqliteClient implements SqliteEngineClient {
 
   async queryAll<T>(statement: string): Promise<T[]> {
     await this.ensureDatabaseDirectory();
-    const { stdout } = await execFileAsync(this.sqliteBinaryPath, [
-      ...this.connectionArgs(),
-      "-json",
-      "-cmd",
-      `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
-      this.databasePath,
-      `PRAGMA foreign_keys = ON; ${statement}`,
-    ]);
+    const stdout = await runWithStdin(
+      this.sqliteBinaryPath,
+      [...this.connectionArgs(), "-bail", "-json", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, this.databasePath],
+      `PRAGMA foreign_keys = ON;
+${statement}
+`,
+    );
 
     const trimmed = stdout.trim();
     if (!trimmed) {
