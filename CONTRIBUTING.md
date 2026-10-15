@@ -4,6 +4,8 @@ Thanks for helping improve Job Ranger. The project is intentionally consumer-fac
 
 ## Before you start
 
+The day-to-day [repository workflow](./docs/REPOSITORY_WORKFLOW.md) explains work-in-progress limits, status/area triage, review/merge standards, and closeout responsibilities. It applies to maintainers, contributors, and local coding agents. Run `npm run repo:hygiene` with the authenticated GitHub CLI before opening additional PRs.
+
 Use an issue before beginning work that changes product behavior, architecture, persistence, security boundaries, packaging, or major dependencies.
 
 Small documentation corrections and narrowly scoped bug fixes may use a lighter maintainer path when the intent and risk are obvious.
@@ -96,9 +98,29 @@ npm run test:e2e
 
 Do not claim a hosted gate passed when it was intentionally not run.
 
+## Optional local evidence verifier (development only)
+
+The standalone [local evidence checker](./scripts/local_evidence_cli.py) verifies **declared, literal source facts** from exact committed Git objects without network access or third-party Python packages. It is optional and does not enforce pull requests or satisfy Qor governance gates.
+
+Run the [four-claim sample inventory](./docs/examples/local-evidence-sample.evidence.json) from a checkout containing this tool (Git 2.44+ recommended, Python 3.10+):
+
+```sh
+SHA=$(git rev-parse HEAD)
+python scripts/local_evidence_cli.py --repo . --head "$SHA" --inventory docs/examples/local-evidence-sample.evidence.json
+```
+
+On Windows PowerShell:
+
+```powershell
+$sha = git rev-parse HEAD
+py -3 scripts/local_evidence_cli.py --repo . --head $sha --inventory docs/examples/local-evidence-sample.evidence.json
+```
+
+The sample pins source claims to a known ancestor commit and should report four verified claims. The inventory itself is read from the **explicit** `--head` commit. A failure, missing object, or incomplete clone must be investigated, not interpreted as a PASS. The [research/validation record](./docs/research/LOCAL_EVIDENCE_CLI_267.md) explains the exact schema, operating assumptions, tests and limits. **Human judgments, omitted claims and plan prose are not checked.**
+
 ## Pull requests
 
-Use pull requests when they improve review, collaboration, risk management, or release evidence.
+Use pull requests when they improve review, collaboration, risk management, or release evidence. The [PR template](./.github/pull_request_template.md) requires a parent issue, exact tested commit, evidence, limitations and a post-merge closeout plan. Keep a maximum of three actively developed feature PRs, with security/critical-data-loss exceptions requiring explicit owner approval. Do not open redundant CI-only PRs or automatically merge green, outdated prototypes.
 
 A documentation-only maintainer remediation may be merged directly when opening a pull request would consume unnecessary hosted Actions budget. The same truth/review standard still applies.
 

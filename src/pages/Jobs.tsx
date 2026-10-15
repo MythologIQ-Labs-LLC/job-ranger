@@ -157,26 +157,34 @@ export function Jobs() {
 
       <section className="panel panel-muted mt-6 p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search title or description"
-              className="input-shell pl-11"
-            />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">Keywords</span>
+            <span className="relative block">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search title or description"
+                className="input-shell pl-11"
+              />
+            </span>
           </label>
-          <label className="relative">
-            <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              value={locationTerm}
-              onChange={(event) => setLocationTerm(event.target.value)}
-              placeholder="Filter by location"
-              className="input-shell pl-11"
-            />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">Location</span>
+            <span className="relative block">
+              <MapPin aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input
+                value={locationTerm}
+                onChange={(event) => setLocationTerm(event.target.value)}
+                placeholder="Filter by location"
+                className="input-shell pl-11"
+              />
+            </span>
           </label>
-          <label className="relative">
-            <Building2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">Company</span>
+            <span className="relative block">
+              <Building2 aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <select
               value={companyFilter}
               onChange={(event) => setCompanyFilter(event.target.value)}
@@ -189,11 +197,13 @@ export function Jobs() {
                 </option>
               ))}
             </select>
+            </span>
           </label>
-          <label className="relative">
-            <Target className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">Assessment direction</span>
+            <span className="relative block">
+              <Target aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <select
-              aria-label="Assessment target track"
               value={selectedTargetTrackId}
               onChange={(event) => setSelectedTargetTrackId(event.target.value)}
               className="select-shell pl-11"
@@ -209,6 +219,7 @@ export function Jobs() {
                 </option>
               ))}
             </select>
+            </span>
           </label>
         </div>
       </section>

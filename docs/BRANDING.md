@@ -44,6 +44,25 @@ Job Ranger's visual language is built around navigation, exploration, trails, mo
 
 The current visual palette uses dark navy, teal/green, warm orange, cream, and natural landscape tones. New assets should remain compatible with that family rather than introducing unrelated AI-neon or enterprise-dashboard aesthetics.
 
+## Canonical standalone emblem and default-theme colors
+
+The **approved source of truth is the emblem inside `docs/assets/branding/job-ranger-logo.png`**, specifically the circular mountain, forest and trail illustration to the left of the lettering. The owner supplied both an annotated preview (red circle indicating the selection) and a clean logo. The red circle is **not artwork**, and the wordmark/tagline must not appear in the square icon.
+
+Use `scripts/extract-job-ranger-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
+
+The committed `public/ICON.png` and `public/favicon.png` are the owner-supplied 550×550 transparent extraction of this emblem, used byte-for-byte (SHA-256 `3c557f2dbe8273d97ce05e9aacf49ec51df68bdbd66d466feb1a11d664a28e4c`, October 2026). The repository lockup is 2172×724, not the 2048×682 reference the script checks, so the script stops by design rather than guess a crop. Re-extract only after reconciling that geometry. The PWA and AppX sizes were regenerated from `public/ICON.png` with the same sizes, padding and `#FDF1DD` backgrounds as `scripts/generate-distribution-icons.sh`, using a high-quality stepwise resampler, and were inspected at 16, 32, 44, 192 and 512px.
+
+**Logo-derived reference colors** sampled from the approved clean 2048×682 lockup:
+- Emblem navy (dark outline/mountains): approximately `#00182E`.
+- Emblem trail-green (trees): approximately `#01896A`.
+- Emblem cream (sky/rim): approximately `#FDF1DD`.
+- Sunset orange (illustration only): approximately `#FD8101`.
+
+Atelier remains a 60/30/10 **distribution guideline**, not measured per-pixel coverage: 60% parchment ivory canvas `#F6F3EB`; 30% emblem navy `#00182E` in navigation and structural hierarchy; and 10% teal in controls and restrained ornament. Main actionable teal `#00765F` is intentionally darker than the source-tree teal to give white text and ivory links WCAG AA contrast. The sampled `#01896A` is a decorative accent only, because white text on it does not meet a 4.5:1 contrast ratio. Orange belongs to the emblem/small branding details or semantic warnings, not a dominant button color.
+
+The preexisting MythologIQ Studio Side Projects thumbnail is **not** the master for the emblem; reconcile that thumbnail to this approved extracted illustration instead of overriding the owner's choice. Maintain small-size readability and aspect ratio at 16, 32, 44, 192 and 512px. Validate actual PWA/Store packaging and theme/browser checks before any merge. Midnight and Canopy are intentionally independent alternate themes.
+
+
 ## Naming
 
 Use lowercase kebab-case for documentation assets:
@@ -69,8 +88,8 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 The brand asset hierarchy is:
 
-1. `public/ICON.png` for the application icon.
-2. `docs/assets/branding/job-ranger-logo.png` for the public lockup.
+1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-job-ranger-icon.sh`.
+2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
 3. `docs/assets/branding/job-ranger-banner.png` for repository presentation.
 4. `docs/assets/branding/job-ranger-social-preview.png` for social/link previews.
 

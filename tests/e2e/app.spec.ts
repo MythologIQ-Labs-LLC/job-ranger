@@ -23,6 +23,13 @@ async function navigateTo(
     | "Filters"
     | "Settings",
 ) {
+  const career = ["Career Profile", "Resume"];
+  const search = ["Companies", "Filters"];
+  const group = career.includes(destination) ? "My Career" : search.includes(destination) ? "Search Tools" : null;
+  if (group) {
+    const toggle = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: group });
+    if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  }
   await page.getByRole("link", { name: destination, exact: true }).click();
 }
 
@@ -33,7 +40,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await expect(page.getByRole("heading", { name: "Job Ranger", exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -43,7 +50,8 @@ test.describe("Job Ranger E2E Tests", () => {
     const { page } = fixture;
 
     await navigateTo(page, "Home");
-    const sourceAction = page.getByRole("link", { name: "Add a job source", exact: true }).first();
+    // With no sources yet, the primary next action leads to Companies.
+    const sourceAction = page.getByRole("link", { name: "Manage sources", exact: true }).first();
     await expect(sourceAction).toBeVisible();
     await sourceAction.click();
     await expect(
@@ -54,7 +62,10 @@ test.describe("Job Ranger E2E Tests", () => {
     ).toBeVisible();
 
     await navigateTo(page, "Home");
+    // Search telemetry is secondary but must stay reachable: expand it, then follow its prompt.
     const filterAction = page.getByRole("link", { name: "Set up filters", exact: true });
+    await expect(filterAction).toBeHidden();
+    await page.getByText("Search activity and technical diagnostics", { exact: true }).click();
     await expect(filterAction).toBeVisible();
     await filterAction.click();
     await expect(
@@ -200,7 +211,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Home");
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();

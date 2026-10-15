@@ -32,7 +32,18 @@ const hold = (page: Page, ms: number) => page.waitForTimeout(ms);
 
 /** Sidebar navigation filmed as a cross-fade from the last ready frame to the next ready page. */
 async function nav(page: Page, label: string, ready: DemoReadyExpectations): Promise<void> {
-  const link = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: label, exact: true });
+  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const groupName = ["Career Profile", "Career Evidence", "Career Stories", "Target Tracks", "Resume"].includes(label)
+    ? "My Career"
+    : ["Companies", "Filters", "Search Insights"].includes(label) ? "Search Tools" : null;
+  if (groupName) {
+    const toggle = navigation.getByRole("button", { name: groupName });
+    if (await toggle.getAttribute("aria-expanded") !== "true") {
+      await toggle.click();
+      await waitForLayoutStable(page);
+    }
+  }
+  const link = navigation.getByRole("link", { name: label, exact: true });
   await glideTo(page, link);
   await freezeFrame(page);
   await page.mouse.down();

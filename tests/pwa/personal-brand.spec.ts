@@ -489,8 +489,11 @@ test("LinkedIn dashboard compares only complete seven-day windows and withholds 
   await page.evaluate(payload=>window.electronAPI.personalBrand.saveLinkedInImport(payload,true),content(22));
   await page.reload();
   await waitForRuntime(page);
-  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
+  // Before the saved exports load, both windows read "Unavailable"; wait for the settled
+  // conflict state before using the exact-text locator (#298).
   await expect(impressions.getByText("Conflicting observations")).toBeVisible();
+  await expect(impressions.getByText("Unavailable",{exact:true})).toHaveCount(1);
+  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
   await expect(impressions.getByText("Change unavailable")).toBeVisible();
   await expect(dashboard.getByTestId("linkedin-weekly-engagements").getByText("14",{exact:true})).toBeVisible();
 });
