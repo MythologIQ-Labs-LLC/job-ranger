@@ -29,6 +29,7 @@ import {
   ResumeParserError,
 } from "./resume-parser.cjs";
 import { SqliteClient } from "./sqlite.cjs";
+import { replaceNul, unreadableCharactersWarning } from "./nul-text.cjs";
 
 interface CareerBackendOptions {
   dataDirectory: string;
@@ -436,7 +437,10 @@ export class CareerBackend {
 
     try {
       if (input.detectedFormat === "txt") {
-        rawText = bytes.toString("utf8");
+        // A UTF-16 file decoded as UTF-8 is full of NUL; show each as U+FFFD with a warning (#297).
+        const decoded = replaceNul(bytes.toString("utf8"));
+        rawText = decoded.text;
+        if (decoded.replaced > 0) warnings.push(unreadableCharactersWarning(decoded.replaced));
         parserId = NATIVE_TEXT_PARSER_ID;
         parserVersion = NATIVE_TEXT_PARSER_VERSION;
         if (!rawText.trim()) {

@@ -20,6 +20,7 @@ import {
   sourceProfiles,
 } from "../../src/shared/contracts.js";
 import { migrations } from "./migrations.cjs";
+import { describeRepairFailures, repairStoredNulTextOnce } from "./nul-text.cjs";
 import { FEATURE_MIGRATION_VERSIONS } from "./feature-migrations.cjs";
 import { JobScoutRepository } from "./repository.cjs";
 import {
@@ -152,6 +153,11 @@ export class JobScoutBackend {
     this.repository = new JobScoutRepository(this.sqlite);
 
     await this.runMigrations();
+    // Text stored with NUL before #297 would read back cut off on the desktop engine.
+    const unrepaired = await repairStoredNulTextOnce(this.sqlite);
+    if (unrepaired.length > 0) {
+      console.error(`Some stored text with NUL characters could not be repaired: ${describeRepairFailures(unrepaired)}`);
+    }
     await this.repository.updateSettings(defaultSettings, {});
 
     if (this.schedulerEnabled) {
