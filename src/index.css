@@ -935,11 +935,18 @@ textarea {
 }
 
 /* Short desktop windows: the brand subtitle and section labels pushed the last
-   sidebar entries under the pinned Preferences footer at 1280x600. Drop the
-   decorative text so every entry fits; the navigation landmarks keep their names. */
+   sidebar entries under the pinned Preferences footer at 1280x600 and 1280x580.
+   Drop the decorative text and tighten the brand header so every entry fits; the
+   logo and "Job Ranger" name stay and the navigation landmarks keep their names. */
 @media (min-width: 768px) and (max-height: 700px) {
   .sidebar-brand-subtitle,
   .sidebar-section-label {
     display: none;
   }
+
+  .sidebar-brand-header {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
 }
+

@@ -117,14 +117,17 @@ test("theme picker previews each 60/30/10 palette and reflects the active select
 });
 
 test("a short desktop window shows every collapsed sidebar entry without scrolling", async ({ page }) => {
-  // The brand subtitle and section labels once pushed the last entry under the
-  // pinned Preferences footer at 1280x600 with no visible scroll cue.
-  await page.setViewportSize({ width: 1280, height: 600 });
-  for (const theme of ["atelier", "midnight", "canopy"]) {
-    await openHome(page, theme);
-    const nav = page.getByRole("navigation", { name: "Primary navigation" });
-    const fit = await nav.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
-    expect(fit.scroll, `${theme} sidebar overflows at 1280x600`).toBeLessThanOrEqual(fit.client + 1);
-    await expect(page.locator(".sidebar-section-label").first()).toBeHidden();
+  // The brand text and section labels once pushed the last entry under the
+  // pinned Preferences footer at 1280x600 and 1280x580 with no visible scroll cue.
+  for (const height of [600, 580]) {
+    await page.setViewportSize({ width: 1280, height });
+    for (const theme of ["atelier", "midnight", "canopy"]) {
+      await openHome(page, theme);
+      const nav = page.getByRole("navigation", { name: "Primary navigation" });
+      const fit = await nav.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
+      expect(fit.scroll, `${theme} sidebar overflows at 1280x${height}`).toBeLessThanOrEqual(fit.client + 1);
+      await expect(page.locator(".sidebar-section-label").first()).toBeHidden();
+      await expect(page.getByRole("heading", { name: "Job Ranger", level: 1 })).toBeVisible();
+    }
   }
 });
