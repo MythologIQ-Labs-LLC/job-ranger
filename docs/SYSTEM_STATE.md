@@ -2,7 +2,7 @@
 
 **Snapshot date:** 2026-10-15 (reconciled against `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; the previous 2026-10-10 reconciliation used `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
-After that snapshot, `main` gained only #319 (test-only: a busy timeout for two Electron e2e helpers) and #312 (development dependencies: Electron 44.7.0, Playwright 1.64.0, Vite 8.3.4, CJK font packages 5.3.1). Neither changes user-facing behavior; the final-main validation at `dd0cf63` is recorded on #194.
+After that snapshot, `main` gained only #319 (test-only: a busy timeout for two Electron e2e helpers) and #312 (development dependencies: Electron 44.7.0, Playwright 1.64.0, Vite 8.3.4, CJK font packages 5.3.1). Neither is intended to change user-facing behavior; #312 updates the packaged Electron runtime and CJK font packages and is covered only by the final-main validation at `dd0cf63`, recorded on #194.
 
 **Published release:** v1.2.0
 **Current development line:** post-v1.2.0; v1.3.0 release candidate in preparation ([`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md))
@@ -102,12 +102,12 @@ These pull requests are merged on `main` at the snapshot commit. None is in the 
 
 **Navigation, Help and layout**
 
-- Offline Help page (#186): `src/pages/Help.tsx` at the `/help` route bundles a short getting-started guide to the Career Ops workflow with in-app links and makes no network requests (`tests/pwa/help.spec.ts`).
+- Offline Help page (#186): `src/pages/Help.tsx` at the `/help` route bundles a short getting-started guide to the Career Ops workflow with in-app links and makes no third-party requests and remains usable offline once loaded (`tests/pwa/help.spec.ts`).
 - Grouped sidebar (#273, design [`design/GROUPED_NAVIGATION_271.md`](./design/GROUPED_NAVIGATION_271.md)): `src/components/Sidebar.tsx` groups career and search destinations into expandable sections, with Settings and Help pinned. Routes are unchanged.
 - Keyboard and focus (#279): a "Skip to main content" link (`src/components/Layout.tsx`), Escape closes the mobile menu and returns focus, choosing a page from the mobile menu moves focus to the page's main content, and a collapsed group says when it contains the current page (`tests/pwa/nav-keyboard-a11y.spec.ts`).
 - Compact page introductions (#280): at widths up to 767 px or heights up to 700 px the shared page title and its panel are smaller; all text stays visible (`tests/pwa/compact-page-intros.spec.ts`).
 - Accessibility baseline (#305): themed status chips with at least 4.5:1 text contrast, visible Job search labels, a wrapping application action row and a reduced-motion preference (`tests/ux-a11y-badge-contrast.test.mjs`, `tests/pwa/ux-a11y-baseline.spec.ts`).
-- Branded shell (#317): the Job Ranger mountain emblem as app, favicon, web-app and Store icon; a branded sidebar header with task icons; an Atelier 60/30/10 ivory, slate and teal palette with an automated contrast test (`tests/atelier-palette-contract.test.mjs`) and a palette preview in the theme picker. Desktop windows 700 px tall or less drop decorative sidebar labels so every entry stays visible.
+- Branded shell (#317): the Job Ranger mountain emblem as app, favicon, web-app and Store icon; a branded sidebar header with task icons; an Atelier 60/30/10 ivory, navy and trail-green teal palette with an automated contrast test (`tests/atelier-palette-contract.test.mjs`) and a palette preview in the theme picker. Desktop windows 700 px tall or less drop decorative sidebar labels so every entry stays visible.
 
 **Pages**
 

@@ -75,7 +75,7 @@ Newer repository-hygiene text from #313 (`CONTRIBUTING.md`, `docs/README.md`, `d
 
 - `docs/META_LEDGER.md` on main still ends at #94 (Phase 16 seal).
 - Draft PRs #229, #230, #232, #233 and #238 are still open drafts. Issues #136, #181 and #228 are open. The exclusions above still apply.
-- #319 (e2e busy timeout, test-only) was open and not merged at the time of this refresh, so nothing here depends on it.
+- #319 (e2e busy timeout, test-only) was open and not merged at the time of this refresh, so nothing here depends on it. (It merged afterwards as `1bb77c7`, followed by #312 at `dd0cf63`; see System State.)
 
 ### Checks run for this refresh
 
