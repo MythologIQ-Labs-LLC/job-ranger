@@ -95,24 +95,33 @@ async function findJobs(page: Page, mark: Mark): Promise<void> {
   await hold(page, 2000);
 }
 
+/** The opportunity assessment opens as a modal drawer over Find Jobs. */
+function assessmentDrawer(page: Page) {
+  return page.getByRole("dialog", { name: `Opportunity assessment: ${DEMO_JOB_TITLE}` });
+}
+
 async function assessment(page: Page, mark: Mark): Promise<void> {
   const toggle = page.getByRole("button", { name: /Opportunity assessment/ }).first();
   await glideClick(page, toggle);
-  await expect(page.getByText("Eligibility and blockers", { exact: true })).toBeVisible();
-  await expect(page.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  const drawer = assessmentDrawer(page);
+  await expect(drawer.getByText("Eligibility and blockers", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("Evidence coverage", { exact: true })).toBeVisible();
   for (const badge of ["Eligibility · Unclear", "Evidence · Partial", "Career · Aligned", "Preferences · Mixed"]) {
-    await expect(page.getByText(badge, { exact: true })).toBeVisible();
+    await expect(drawer.getByText(badge, { exact: true })).toBeVisible();
   }
-  await expect(page.getByText(/Epic EHR/).filter({ visible: true }).first()).toBeVisible();
+  await expect(drawer.getByText(/Epic EHR/).filter({ visible: true }).first()).toBeVisible();
   await waitForLayoutStable(page);
   mark("assessment");
-  await scrollToElement(page, toggle, 24);
   await caption(page, "Separate evidence, alignment, blockers, preferences, and unknowns.");
   await shot(page, "02-opportunity-assessment.png");
   await hold(page, 7000);
   mark("evidence-coverage");
-  await scrollToElement(page, page.getByText("Evidence coverage", { exact: true }), 24);
+  await scrollToElement(page, drawer.getByText("Evidence coverage", { exact: true }), 24);
   await hold(page, 5000);
+  // The drawer is modal: close it before the sidebar can be used again.
+  await glideClick(page, drawer.getByRole("button", { name: `Close Opportunity assessment: ${DEMO_JOB_TITLE}` }));
+  await expect(drawer).toBeHidden();
+  await waitForLayoutStable(page);
 }
 
 async function careerEvidence(page: Page, mark: Mark): Promise<void> {
@@ -129,10 +138,11 @@ async function prepareResume(page: Page, mark: Mark): Promise<void> {
   mark("prepare-resume");
   await nav(page, "Find Jobs", { route: "#/jobs", heading: FIND_JOBS, content: [DEMO_JOB_TITLE] });
   await glideClick(page, page.getByRole("button", { name: /Opportunity assessment/ }).first());
-  const button = page.getByRole("button", { name: "Prepare resume" });
-  await expect(button).toBeVisible();
+  const button = assessmentDrawer(page).getByRole("button", { name: "Prepare resume" });
+  await expect(button).toBeAttached();
   await waitForLayoutStable(page);
   await scrollToElement(page, button, 360);
+  await expect(button).toBeInViewport();
   await caption(page, "Prepare and track the opportunities you deliberately choose.");
   await hold(page, 600);
   await glideTo(page, button);
