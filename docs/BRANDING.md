@@ -44,6 +44,16 @@ Job Ranger's visual language is built around navigation, exploration, trails, mo
 
 The current visual palette uses dark navy, teal/green, warm orange, cream, and natural landscape tones. New assets should remain compatible with that family rather than introducing unrelated AI-neon or enterprise-dashboard aesthetics.
 
+## Default-theme relationship to the approved logo
+
+**The brand mark is authoritative; the Atelier theme is its supporting visual system.** The Studio Side Projects page currently references the approved artwork in `Knapp-Kevin/MythologIQ/public/assets/side-projects/job-ranger.png`. Copy that first-party image to `public/ICON.png` and propagate it to the favicon and generated PWA/Store icons through the separate, validated branding task. The live runtime must not fetch Studio assets over the network.
+
+Atelier is the default and currently applies a **60/30/10 visual hierarchy**: approximately 60% warm ivory (`#F6F3EB`) in the canvas and panels, 30% slate-blue (`#1F3144`) for the navigation/structural frame, and 10% deep teal (`#086B70`) for primary interactions. Brighter teal (`#22A79D`) is for sparing accent details. This is a design *proportion*, not an assertion that those exact percentages of rendered pixels have been measured.
+
+**Acceptance still pending:** Compare the approved Studio PNG itself against this palette visually and, where practical, sample its prominent colors from the unmodified original image. Confirm the slate and teal correspond to the mark's actual hues and contrast in the app at icon sizes (16, 32, 44 and 192 pixels). The current colors were selected to *harmonize* with the stated navy/teal/cream brand family, **not yet verified as exact pixels extracted from the image**. If the inspected original differs, refine Atelier's token values in both `src/theme/ThemeProvider.tsx` and the `:root` fallback in `src/index.css`, then rerun palette/contrast and browser checks. Never repaint, stretch, or regenerate the established logo to make it fit a temporary theme.
+
+Midnight and Canopy remain independent optional themes. Semantic success/warning/danger/info colors must retain their meaning and pass contrast checks even when they depart from the 60/30/10 accents.
+
 ## Naming
 
 Use lowercase kebab-case for documentation assets:
