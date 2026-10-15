@@ -87,7 +87,7 @@ try {
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "not-a-sha", fakeFetch), /approved build-info SHA-256/);
   await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, fakeFetch), /live build identity mismatch/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, fakeFetch), /live HTML build identity mismatch/);
   const compromisedHeaders = async (url, options) => {
     if (new URL(url).pathname === "/") return new Response(index, { status: 200, headers: {
       "content-security-policy": policy + "; script-src * 'unsafe-inline'",
