@@ -67,6 +67,16 @@ function groupForPath(pathname: string): string | null {
   return navGroups.find(group => group.links.some(link => link.href === pathname))?.id ?? null;
 }
 
+// Each page renders its own Layout, so the sidebar also remounts without any
+// navigation, for example when Home swaps its loading placeholder for the
+// dashboard. Remember a group the person opened or closed on the current page
+// so that remount does not undo it; navigating elsewhere forgets the choice.
+let chosenGroup: { pathname: string; group: string | null } | null = null;
+
+function initialGroup(pathname: string): string | null {
+  return chosenGroup?.pathname === pathname ? chosenGroup.group : groupForPath(pathname);
+}
+
 function SidebarNavLink({
   item,
   active,
@@ -99,14 +109,21 @@ function SidebarNavLink({
 export function Sidebar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>(() => groupForPath(location.pathname));
+  const [openGroup, setOpenGroup] = useState<string | null>(() => initialGroup(location.pathname));
   const activeGroup = groupForPath(location.pathname);
 
   // Deep links and browser back/forward open the group containing the active page.
   // Top-level destinations restore a compact sidebar; users can reopen a group.
   useEffect(() => {
-    setOpenGroup(groupForPath(location.pathname));
+    if (chosenGroup?.pathname !== location.pathname) chosenGroup = null;
+    setOpenGroup(initialGroup(location.pathname));
   }, [location.pathname]);
+
+  const toggleGroup = (groupId: string) => {
+    const next = openGroup === groupId ? null : groupId;
+    chosenGroup = { pathname: location.pathname, group: next };
+    setOpenGroup(next);
+  };
 
   // On short screens an auto-expanded group can leave the current page below the
   // sidebar's own scroll area. Reveal it once per route without moving page content.
@@ -212,7 +229,7 @@ export function Sidebar() {
                     ${containsCurrentPage ? "bg-white/10 !text-white" : ""}`}
                   aria-expanded={expanded}
                   aria-controls={groupPanelId}
-                  onClick={() => setOpenGroup(current => current === group.id ? null : group.id)}
+                  onClick={() => toggleGroup(group.id)}
                 >
                   <span className="sidebar-nav-glyph" aria-hidden="true">
                     <group.icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.9} />

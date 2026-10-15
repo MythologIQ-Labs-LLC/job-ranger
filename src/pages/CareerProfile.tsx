@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -86,8 +86,10 @@ export function CareerProfile() {
   // A refresh (for example after a save elsewhere) produces a new profile object. Replace
   // the form only when it has no unsaved edits relative to the last stored profile it
   // showed, so a background refresh never discards what the person is typing (#278).
+  // A layout effect seeds the form in the same commit that enables its controls, so no
+  // choice can land between enabling and seeding and then be overwritten by the seed.
   const shownProfile = useRef<CareerProfileValue | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (loading) return;
     const previous = shownProfile.current;
     shownProfile.current = profile;
