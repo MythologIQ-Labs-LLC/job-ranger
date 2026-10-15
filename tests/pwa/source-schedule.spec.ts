@@ -58,6 +58,11 @@ test("a monitored source can be rescheduled and the new cadence persists", async
 
   await cadence.selectOption("60");
   await expect.poll(async () => (await stored(page, id))?.frequencyMinutes).toBe(60);
+  // The read above sees the in-memory database while the save may still be writing to browser
+  // storage. Reload only once the row shows the saved cadence and its controls are enabled again,
+  // as a person would; reloading mid-write lost the change in 3 of 30 runs.
+  await expect(cadence).toHaveValue("60");
+  await expect(cadence).toBeEnabled();
   await page.reload();
   await waitForRuntime(page);
   await expect(row.getByLabel("Run frequency for Harbor Health")).toHaveValue("60");
