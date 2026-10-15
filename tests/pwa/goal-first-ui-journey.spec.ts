@@ -248,18 +248,12 @@ test("a goal-first user keeps the goal while later evidence changes only the evi
 });
 
 /*
- * Defect reproduction found while qualifying Story B (#216): an hourly pay
- * floor can never be compared with an hourly Greenhouse (or Lever) listing.
- * parseSalary (electron/src/salary-parser.cts:74, and :59 for ranges) returns
- * `raw` as only the matched amount ("$24"), and the adapter stores that as
- * salaryText (electron/src/adapters/greenhouse.cts:56, lever.cts:43),
- * discarding the detected "hour" period. detectPayBasis
- * (src/shared/opportunity-assessment.ts:95-103) then finds no basis in "$24"
- * and, because 24 <= 1000, returns null, so the comparison is "unknown".
- * Expected to fail until the period survives into the job record.
+ * Regression for a defect found while qualifying Story B (#216): Greenhouse
+ * and Lever listings stored only the matched amount ("$24") as salary text,
+ * dropping "per hour", so an hourly pay floor was never compared. The salary
+ * text now keeps the pay period written next to the amount.
  */
 test("an hourly listing is compared with an hourly pay floor", async ({ page, context }) => {
-  test.fail(true, "Greenhouse \"$24 per hour\" is stored as salaryText \"$24\"; the assessment reports pay as unknown");
   await routePublicBoard(context, hlGreenhouseBoard());
   await page.goto(server.url + "#/onboarding");
   await waitForRuntime(page);
@@ -271,8 +265,6 @@ test("an hourly listing is compared with an hourly pay floor", async ({ page, co
   await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
   await addAndRunSource(page);
   const job = await openAssessment(page);
-  // Actual: "The listing does not provide enough pay detail to verify your $26/hr floor."
-  // listed as a potential blocker, with eligibility "Unclear".
   await expect.soft(job.getByText("Listed starting pay is approximately $24/hr versus your $26/hr floor.").first()).toBeVisible();
   await expect.soft(job.getByText("Known blockers")).toBeVisible();
   await expect.soft(job.getByText("Eligibility · Unlikely", { exact: true })).toBeVisible();

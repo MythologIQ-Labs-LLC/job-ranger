@@ -122,6 +122,17 @@ function coverage(items) {
     assert.ok(result.preferenceAlignment.unknowns.some((item) => item.includes('does not provide enough pay detail')));
   }
 
+  // The pay basis is read from salary text in its usual short forms (#216).
+  for (const salaryText of ['$40 per hour', '$40/hr', '$40 per hr']) {
+    const result = buildOpportunityAssessment(
+      job({ title: 'Registered Nurse', salaryMin: 40, salaryMax: 40, salaryText, descriptionSnippet: 'Active RN license required.' }),
+      track({ roleTitles: ['Registered Nurse'], compensation: { floor: 45, target: null, basis: 'hourly', floorStrength: 'required' } }),
+      coverage([requirement('r3', 'credential', 'Active RN license required.', 'direct', { id: 'e3' })]),
+      now,
+    );
+    assert.equal(result.eligibility.status, 'unlikely', `${salaryText} is compared with the hourly floor`);
+  }
+
   {
     const result = buildOpportunityAssessment(
       job({ title: 'Registered Nurse', descriptionSnippet: 'Active RN license required.' }),
