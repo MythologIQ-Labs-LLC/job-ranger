@@ -7,6 +7,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { zipSync } from "fflate";
+import { inspectStudioPwaBuild } from "./studio-handoff.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist-pwa");
@@ -24,9 +25,12 @@ async function list(directory, base = directory) {
 }
 
 const files = (await list(dist)).filter((file) => !file.endsWith(".map"));
-for (const required of ["index.html", "sw.js", "_headers", "manifest.webmanifest", "build-info.json"]) {
+for (const required of ["index.html", "sw.js", "_headers", "manifest.webmanifest", "build-info.json", "studio-handoff.json"]) {
   if (!files.includes(required)) throw new Error(`dist-pwa is missing ${required}; run npm run build:pwa`);
 }
+// Refuse to package a partial, tampered or mismatched Studio-facing PWA.
+const handoffValidation = await inspectStudioPwaBuild(dist, buildInfo.buildId);
+console.log(`Studio handoff contract verified for ${handoffValidation.buildId}`);
 const fixedTime = new Date("2000-01-01T00:00:00Z");
 const entries = {};
 for (const file of files) {
