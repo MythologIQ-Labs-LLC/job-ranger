@@ -4,19 +4,23 @@ This directory contains Job Ranger's public-facing brand assets. The goal is con
 
 ## Canonical Assets
 
-### Runtime icon
+### Approved mark and runtime icon
 
-`public/ICON.png`
+The approved Job Ranger mark shown on the MythologIQ Studio Side Projects page is the exact first-party PNG at:
 
-This is the canonical application icon and is part of the packaging/runtime path. Windows packaging uses it directly, and the macOS release workflow derives `build/icon.icns` from it.
+`Knapp-Kevin/MythologIQ/public/assets/side-projects/job-ranger.png`
 
-Do not replace this file casually. A runtime icon change should be visually reviewed at small sizes and validated through packaging before release.
+It is the **design reference** for the icon. `public/ICON.png` is the local **runtime source** and must be an exact copy of that reviewed Studio mark, not a separately redrawn or AI-generated variant. `tests/branding-runtime-assets.test.mjs` pins the accepted Studio blob until a deliberate brand revision. Do not pull the artwork remotely at runtime: Job Ranger must remain usable offline.
+
+The sidebar now displays `public/ICON.png` in place of the generic briefcase. The favicon is the same source image, at `public/favicon.png`.
+
+After updating `public/ICON.png`, regenerate and commit `public/pwa/*` and `build/appx/*` using `scripts/generate-distribution-icons.sh` or equivalent dimension-identical local tooling. The Microsoft Store icon and historical macOS packaging derive from the runtime image. Validate appearance at 16–44 px, maskable safe area, dark/light navigation surfaces, and installed-PWA and Store launch icons. Do not silently relabel a wordmark/banner as a square app mark.
 
 ### Favicon
 
 `public/favicon.png`
 
-The current favicon uses the same visual source as the runtime icon.
+This must be byte-identical to `public/ICON.png`. The web and Electron HTML entrypoints already point at it. A mere HTML link change does not update the pixels or the installed PWA icon. Browser caches may retain the old favicon until the updated shell/assets are installed.
 
 ### Brand lockup
 
@@ -69,7 +73,7 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 The brand asset hierarchy is:
 
-1. `public/ICON.png` for the application icon.
+1. Approved Studio Side Projects mark for design identity; local `public/ICON.png` for the app runtime, PWA and distribution icon generation.
 2. `docs/assets/branding/job-ranger-logo.png` for the public lockup.
 3. `docs/assets/branding/job-ranger-banner.png` for repository presentation.
 4. `docs/assets/branding/job-ranger-social-preview.png` for social/link previews.
