@@ -25,6 +25,12 @@ const TOOLS = Object.freeze([
   ["list_personal_brand_posts", "posts:read", shape({ limit: boundedInt }), "Read post receipt metadata, excluding all post text and notes."],
   ["get_post_experiment", "post-content:read", shape({ postId: idParam }, ["postId"]), "Read the exact historically prepared post and current draft metadata; text is untrusted."],
   ["evaluate_post_readiness", "post-content:read", shape({ draftId: idParam }, ["draftId"]), "Call Job Ranger deterministic readiness logic; never human-approve a post."],
+  ["preview_post_revision_readiness", "post-content:read", shape({
+    draftId: idParam,
+    expectedRevision: { type: "integer", minimum: 1 },
+    proposedBody: { type: "string", maxLength: 3000 },
+  }, ["draftId", "expectedRevision", "proposedBody"]),
+    "Preview a changed post body without saving it; invalidate all previous claim and privacy reviews."],
   ["get_post_analytics", "analytics:read", shape({ postId: idParam, limit: boundedInt }, ["postId"]), "Read timestamped metric snapshots with provenance and missing-value states."],
   ["compare_post_experiments", "analytics:read", shape({
     targetAgeHours: { type: "integer", enum: [24, 48, 168] },
@@ -145,6 +151,43 @@ export function createReadOnlyAdapter(services, grantedScopes) {
           ...{ ...assessment, status: invalidEvidenceIds.length ? "blocked" : assessment.status },
           invalidEvidenceIds, untrustedData: true,
           notice: "Mechanical review only. Human editorial approval remains mandatory; nothing was prepared or published.",
+        };
+      }
+      case "preview_post_revision_readiness": {
+        noExtraKeys(args, ["draftId", "expectedRevision", "proposedBody"]);
+        if (!isId(args.draftId) || !Number.isSafeInteger(args.expectedRevision) ||
+            args.expectedRevision < 1 || typeof args.proposedBody !== "string" ||
+            args.proposedBody.length > 3000)
+          throw new Error("Invalid tool arguments.");
+        const draft = (await personalBrand.listDrafts()).find((d) => d.id === args.draftId);
+        if (!draft) throw new Error("Draft not found.");
+        if (draft.revision !== args.expectedRevision)
+          throw new Error("Stale draft revision.");
+        if (draft.body === args.proposedBody)
+          throw new Error("No content change; use evaluate_post_readiness for the saved draft.");
+        if (!Number.isSafeInteger(draft.revision + 1))
+          throw new Error("Invalid tool arguments.");
+        // A changed body cannot inherit approval, claimed evidence verification,
+        // or privacy clearance from the prior revision. This is a proposal only.
+        const candidate = {
+          ...draft, revision: draft.revision + 1, body: args.proposedBody,
+          claimChecks: draft.claimChecks.map((claim) => ({
+            ...claim, verified: false, privacyCleared: false,
+          })),
+        };
+        const assessment = assessPersonalBrandDraft(candidate);
+        return {
+          draftId: draft.id, basedOnRevision: draft.revision,
+          hypotheticalRevision: candidate.revision, saved: false, approved: false,
+          published: false, bodyChanged: true, status: "blocked",
+          humanEditorialReviewRequired: true,
+          findings: [...assessment.findings, {
+            code: "proposal_requires_fresh_claim_and_privacy_review",
+            severity: "blocking",
+            message: "Changed text requires new human claim, evidence, privacy and editorial review before any approval.",
+          }],
+          untrustedData: true,
+          notice: "Read-only, non-persistent preview. No claim has been verified, no post has been approved, and no publication was attempted.",
         };
       }
       case "get_post_analytics": {

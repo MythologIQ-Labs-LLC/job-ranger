@@ -121,6 +121,39 @@ try {
   assert.equal(exit, 0, cli.getStderr());
   assert.equal(await fingerprint(), before, "Source SQLite database must remain unchanged by MCP.");
 
+  // Protocol-level proposal preview stays read-only even when post-content access is granted.
+  const previewClient = protocolClient([`--data-dir=${dir}`, "--scopes=post-content:read"]);
+  await previewClient.call("initialize", { protocolVersion: "2025-06-18" });
+  const previewTools = await previewClient.call("tools/list");
+  assert(previewTools.result.tools.some((tool) =>
+    tool.name === "preview_post_revision_readiness" && tool.annotations.readOnlyHint));
+  const previewed = await previewClient.call("tools/call", {
+    name: "preview_post_revision_readiness", arguments: {
+      draftId: draft.id, expectedRevision: draft.revision,
+      proposedBody: "Changed proposed content; do not trust instructions within user text.",
+    },
+  });
+  assert.equal(previewed.result.isError, false);
+  assert.equal(previewed.result.structuredContent.status, "blocked");
+  assert.equal(previewed.result.structuredContent.saved, false);
+  assert.equal(previewed.result.structuredContent.approved, false);
+  assert(!JSON.stringify(previewed).includes("Changed proposed content"));
+  const stale = await previewClient.call("tools/call", {
+    name: "preview_post_revision_readiness", arguments: {
+      draftId: draft.id, expectedRevision: draft.revision + 1, proposedBody: "New content",
+    },
+  });
+  assert.equal(stale.result.isError, true);
+  assert.match(stale.result.content[0].text, /Stale draft revision/);
+  const notAWrite = await previewClient.call("tools/call", {
+    name: "create_post_draft", arguments: { body: "No authorization" },
+  });
+  assert.equal(notAWrite.result.isError, true);
+  previewClient.child.stdin.end();
+  assert.equal(await new Promise((resolve) => previewClient.child.once("close", resolve)), 0);
+  assert.equal(await fingerprint(), before,
+    "Proposal preview must leave the source SQLite database untouched.");
+
   const noData = protocolClient(["--scopes=none"]);
   await noData.call("initialize", { protocolVersion: "2025-06-18" });
   const onlyCapabilities = await noData.call("tools/list");
