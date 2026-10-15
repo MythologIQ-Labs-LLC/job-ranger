@@ -1,6 +1,9 @@
 # System State
 
 **Snapshot date:** 2026-10-15 (reconciled against `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; the previous 2026-10-10 reconciliation used `4721e7fa782099c69019494d6f823c2cc372b98d`)
+
+After that snapshot, `main` gained only #319 (test-only: a busy timeout for two Electron e2e helpers) and #312 (development dependencies: Electron 44.7.0, Playwright 1.64.0, Vite 8.3.4, CJK font packages 5.3.1). Neither changes user-facing behavior; the final-main validation at `dd0cf63` is recorded on #194.
+
 **Published release:** v1.2.0
 **Current development line:** post-v1.2.0; v1.3.0 release candidate in preparation ([`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md))
 **Shipped release lineage:** v1.2.0 promoted from v1.2.0-rc.5
