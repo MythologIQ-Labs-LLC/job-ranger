@@ -16,6 +16,7 @@
 import { basename, join } from "./node-path";
 import { promises as fs } from "./node-fs";
 import { IO_DIRECTORY, mediaTypeForFileName, type DownloadPayload } from "../runtime/protocol";
+import { fileBytesForTransfer } from "../runtime/transfer-file-bytes";
 
 type Handler = (event: { sender: null }, ...args: unknown[]) => unknown;
 
@@ -126,11 +127,9 @@ export const shell = {
     void (async () => {
       const bytes = (await fs.readFile(targetPath)) as Uint8Array;
       const fileName = basename(targetPath);
-      const copy = new Uint8Array(bytes.byteLength);
-      copy.set(bytes);
       hostEventSink({
         event: "download",
-        download: { fileName, mediaType: mediaTypeForFileName(fileName), bytes: copy.buffer },
+        download: { fileName, mediaType: mediaTypeForFileName(fileName), bytes: fileBytesForTransfer(bytes) },
       });
     })().catch((error) => console.error("Could not provide the managed file", error));
   },
