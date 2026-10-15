@@ -45,22 +45,22 @@ export const THEMES: Record<ThemeName, ThemeDefinition> = {
   atelier: {
     id: "atelier",
     label: "Atelier",
-    story: "Warm ivory workspace, slate-blue structure, and restrained teal accents for clear decisions.",
+    story: "Warm ivory, Job Ranger navy, and trail-green teal drawn from the official mountain emblem.",
     colors: {
-      // 60/30/10: warm ivory surfaces, slate-blue structure, teal actions.
+      // 60/30/10: warm ivory surfaces, logo navy structure, accessible trail-green actions.
       // Semantic warnings/dangers retain their independent meaning.
-      primary: "#086b70",
-      secondary: "#243b53",
-      accent: "#22a79d",
+      primary: "#00765f",
+      secondary: "#17384d",
+      accent: "#01896a",
       canvas: "#f6f3eb",
-      canvasGlow: "rgba(34, 167, 157, 0.12)",
-      sidebar: "#1f3144",
+      canvasGlow: "rgba(1, 137, 106, 0.12)",
+      sidebar: "#00182e",
       panel: "rgba(252, 251, 246, 0.94)",
       panelMuted: "rgba(241, 246, 242, 0.88)",
       panelStrong: "rgba(255, 255, 253, 0.99)",
       border: "rgba(46, 75, 88, 0.16)",
       borderStrong: "rgba(46, 75, 88, 0.30)",
-      textPrimary: "#1e3041",
+      textPrimary: "#00182e",
       textSecondary: "#405867",
       textMuted: "#526c78",
       textInverse: "#f9faf7",
