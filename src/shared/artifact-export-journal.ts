@@ -29,7 +29,7 @@ export interface ExportJournalRecord {
 }
 
 /** Implemented by platform storage with atomic/transactional writes.
- * resolve must return committed state after application restart.
+ * Reads must return committed state after application restart.
  * The implementation MUST reject conflicting operation/approval IDs.
  */
 export interface DurableExportJournalStore {
@@ -64,6 +64,9 @@ export function validateJournalRecord(record: ExportJournalRecord): void {
       (record.remoteId !== null && !boundedId(record.remoteId)) ||
       (record.verifiedSha256 !== null && !digest(record.verifiedSha256))) {
     throw new Error("Invalid durable export journal record.");
+  }
+  if (record.status !== "verified" && record.verifiedSha256 !== null) {
+    throw new Error("Only a verified export may retain a verified readback digest.");
   }
   if (record.status === "verified" &&
       (!record.remoteId || record.verifiedSha256 !== record.bytesSha256)) {
@@ -119,7 +122,7 @@ export async function advanceDurableExport(
   if (current.operationId !== receipt.operationId ||
       current.bytesSha256 !== receipt.bytesSha256 ||
       current.status === receipt.status ||
-      current.remoteId && receipt.remoteId !== current.remoteId) {
+      (current.remoteId !== null && receipt.remoteId !== current.remoteId)) {
     throw new Error("Export journal identity or expected state mismatch.");
   }
   const checked = advanceExportReceipt(
