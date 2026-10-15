@@ -152,6 +152,11 @@ function shellManifestPlugin(): Plugin {
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
             contentSecurityPolicy: buildContentSecurityPolicy(),
+            // Exact deployed service-worker bytes are pinned independently of the
+            // immutable precache list; the worker itself is intentionally not precached.
+            serviceWorkerSha256: createHash("sha256")
+              .update(readFileSync(path.join(outDir, "sw.js")))
+              .digest("hex"),
             assets,
             onDemandAssets: {
               purpose: "resume PDF fonts for text outside Windows-1252, loaded only when a resume needs them",
