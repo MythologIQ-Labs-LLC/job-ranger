@@ -44,15 +44,22 @@ Job Ranger's visual language is built around navigation, exploration, trails, mo
 
 The current visual palette uses dark navy, teal/green, warm orange, cream, and natural landscape tones. New assets should remain compatible with that family rather than introducing unrelated AI-neon or enterprise-dashboard aesthetics.
 
-## Default-theme relationship to the approved logo
+## Canonical standalone emblem and default-theme colors
 
-**The brand mark is authoritative; the Atelier theme is its supporting visual system.** The Studio Side Projects page currently references the approved artwork in `Knapp-Kevin/MythologIQ/public/assets/side-projects/job-ranger.png`. Copy that first-party image to `public/ICON.png` and propagate it to the favicon and generated PWA/Store icons through the separate, validated branding task. The live runtime must not fetch Studio assets over the network.
+The **approved source of truth is the emblem inside `docs/assets/branding/job-ranger-logo.png`**, specifically the circular mountain, forest and trail illustration to the left of the lettering. The owner supplied both an annotated preview (red circle indicating the selection) and a clean logo. The red circle is **not artwork**, and the wordmark/tagline must not appear in the square icon.
 
-Atelier is the default and currently applies a **60/30/10 visual hierarchy**: approximately 60% warm ivory (`#F6F3EB`) in the canvas and panels, 30% slate-blue (`#1F3144`) for the navigation/structural frame, and 10% deep teal (`#086B70`) for primary interactions. Brighter teal (`#22A79D`) is for sparing accent details. This is a design *proportion*, not an assertion that those exact percentages of rendered pixels have been measured.
+Use `scripts/extract-job-ranger-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
 
-**Acceptance still pending:** Compare the approved Studio PNG itself against this palette visually and, where practical, sample its prominent colors from the unmodified original image. Confirm the slate and teal correspond to the mark's actual hues and contrast in the app at icon sizes (16, 32, 44 and 192 pixels). The current colors were selected to *harmonize* with the stated navy/teal/cream brand family, **not yet verified as exact pixels extracted from the image**. If the inspected original differs, refine Atelier's token values in both `src/theme/ThemeProvider.tsx` and the `:root` fallback in `src/index.css`, then rerun palette/contrast and browser checks. Never repaint, stretch, or regenerate the established logo to make it fit a temporary theme.
+**Logo-derived reference colors** sampled from the approved clean 2048×682 lockup:
+- Emblem navy (dark outline/mountains): approximately `#00182E`.
+- Emblem trail-green (trees): approximately `#01896A`.
+- Emblem cream (sky/rim): approximately `#FDF1DD`.
+- Sunset orange (illustration only): approximately `#FD8101`.
 
-Midnight and Canopy remain independent optional themes. Semantic success/warning/danger/info colors must retain their meaning and pass contrast checks even when they depart from the 60/30/10 accents.
+Atelier remains a 60/30/10 **distribution guideline**, not measured per-pixel coverage: 60% parchment ivory canvas `#F6F3EB`; 30% emblem navy `#00182E` in navigation and structural hierarchy; and 10% teal in controls and restrained ornament. Main actionable teal `#00765F` is intentionally darker than the source-tree teal to give white text and ivory links WCAG AA contrast. The sampled `#01896A` is a decorative accent only, because white text on it does not meet a 4.5:1 contrast ratio. Orange belongs to the emblem/small branding details or semantic warnings, not a dominant button color.
+
+The preexisting MythologIQ Studio Side Projects thumbnail is **not** the master for the emblem; reconcile that thumbnail to this approved extracted illustration instead of overriding the owner's choice. Maintain small-size readability and aspect ratio at 16, 32, 44, 192 and 512px. Validate actual PWA/Store packaging and theme/browser checks before any merge. Midnight and Canopy are intentionally independent alternate themes.
+
 
 ## Naming
 
