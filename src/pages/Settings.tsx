@@ -106,11 +106,17 @@ export function Settings() {
                 key={option.id}
                 type="button"
                 onClick={() => setTheme(option.id)}
+                aria-pressed={theme === option.id}
                 className={`theme-card text-left ${theme === option.id ? "theme-card-active" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{option.label}</h3>
                   {theme === option.id && <span className="soft-badge soft-badge-success">Active</span>}
+                </div>
+                <div className="theme-palette-preview mt-3 flex h-4 overflow-hidden rounded-md" aria-hidden="true">
+                  <span style={{ flex: 6, backgroundColor: option.colors.canvas }} />
+                  <span style={{ flex: 3, backgroundColor: option.colors.sidebar }} />
+                  <span style={{ flex: 1, backgroundColor: option.colors.primary }} />
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">{option.story}</p>
               </button>
