@@ -85,3 +85,26 @@ test("reduced motion suppresses decorative transitions", async ({ page }) => {
   const icon = page.locator(".sidebar-nav-glyph").first();
   await expect(icon).toHaveCSS("transition-duration", "0s");
 });
+
+test("theme picker previews each 60/30/10 palette and reflects the active selection", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page, "atelier");
+  await page.goto(server.url + "#/settings");
+  await waitForRuntime(page);
+  const atelier = page.getByRole("button", { name: /Atelier/ });
+  const midnight = page.getByRole("button", { name: /Midnight/ });
+  const canopy = page.getByRole("button", { name: /Canopy/ });
+  for (const option of [atelier, midnight, canopy]) {
+    await expect(option).toBeVisible();
+    await expect(option.locator(".theme-palette-preview span")).toHaveCount(3);
+  }
+  await expect(atelier).toHaveAttribute("aria-pressed", "true");
+  await midnight.click();
+  await expect(midnight).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+  await atelier.click();
+  await expect(atelier).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "atelier");
+  await expect(atelier.locator(".theme-palette-preview span").first())
+    .toHaveCSS("background-color", "rgb(246, 243, 235)");
+});
