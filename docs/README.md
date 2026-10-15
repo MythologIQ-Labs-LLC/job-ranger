@@ -22,6 +22,12 @@ When documents disagree, use this order:
 
 A stale plan does not outrank merged code merely because it contains more checkboxes.
 
+## Latest documentation reconciliation
+
+The [October 10, 2026 source-backed reconciliation](./validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) compares the actual development-line code and tests to the current roadmap, System State, feature inventory, and governance index at a pinned `main` commit. Its 2026-10-15 refresh moves the baseline to `main` at `5c749dc` and records what merged in between. It distinguishes **implemented on main**, **published**, **unqualified drafts**, and **legal/terms holds**. It is a dated documentation review, not a runtime verification report or an authorization to merge active plans.
+
+**Branch authority:** Draft pull requests, proposed governance plans, independently VETOed remediations, and test-only branches do not change this index's main-branch product truth. Follow the relevant PR and its exact gate/ledger evidence for their current status; only update main-line governance entries when those artifacts legitimately enter main.
+
 ## Current sources of truth
 
 | Document | Purpose |
@@ -101,7 +107,7 @@ Key current research:
 - [`research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md)
 - [`research/RESUME_PARSER_ADOPTION_2026-09-25.md`](./research/RESUME_PARSER_ADOPTION_2026-09-25.md)
 - [`research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md`](./research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md)
-- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **unmerged developer-tool candidate**, local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
+- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **optional development-only tool, on main since #269** (`scripts/local_evidence_cli.py`), local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
 
 Research can recommend or reject a capability. It does not make that capability product truth until accepted and implemented.
 

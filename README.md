@@ -193,7 +193,7 @@ This is the current product line, not a comparison against obsolete releases.
 | **Applications** | Status, notes, contacts, milestones, reminders, follow-ups, submitted files, interview state, offers, and negotiation state. |
 | **Interview preparation** | Grounded in the tracked job, confirmed Career Evidence, requirement mappings, and the exact submitted resume. |
 | **Career Stories & Search Insights** | Evidence-linked stories plus recurring-gap and observed-outcome analysis without treating correlation as destiny. |
-| **Personal Brand (development main)** | A manual-first LinkedIn text workflow now has deterministic draft-readiness guidance, a human-reviewed exact-copy package, locally persisted user-confirmed publication receipts, timestamped manual analytics snapshots, and observed rates. This is development functionality, not an announced public release; no LinkedIn connection, AI generation, direct posting, or automatic collection is implied. [Implementation contract](./docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md). |
+| **Personal Brand (development main)** | Manual-first drafts, deterministic readiness, explicit exact-copy approval and publication receipts, local LinkedIn XLSX analytics preview plus confirmed saved/reconciled exports, attested historical post text and topic labels, observed-performance dashboards, and cautious cohorts. Neither a LinkedIn account connection, automatic posting/collection, causal career conclusions, nor a published release is implied. [Implementation contract](./docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md). |
 | **Backup & portability** | Verified backup/staged restore, JSON Resume interoperability, and a portable .jobranger archive for moving between supported desktop/PWA runtimes. |
 | **Local-first PWA** | Shared application core in a browser runtime using SQLite WASM + OPFS, browser document parsing, deterministic PDF output, service-worker integrity checks, and explicit update handling. |
 | **Windows Store package** | AppX packaging, isolated Store data root, historical desktop-data import, manifest validation, install, and packaged smoke are implemented; Store certification/listing remains external. |
@@ -364,7 +364,7 @@ See [RELEASE_READINESS.md](./docs/RELEASE_READINESS.md), [DISTRIBUTION_TRUST.md]
 
 ## Documentation hierarchy
 
-Start with [`docs/README.md`](./docs/README.md).
+Start with [`docs/README.md`](./docs/README.md). The [October 10 documentation reconciliation](./docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) checks the main-line product, roadmap, feature and governance claims against a pinned commit, refreshed on 2026-10-15. Active draft provider and remediation PRs are **not** released or merged functionality.
 
 ## Governance, security, and attribution
 

@@ -1,6 +1,6 @@
 # Job Ranger Roadmap
 
-**Current as of:** 2026-10-07
+**Current as of:** 2026-10-10 (source checkpoint `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 This is the active roadmap. Historical phase/remediation plans remain implementation provenance only.
 
@@ -129,12 +129,13 @@ The PWA is not a reduced "Lite" edition; remaining differences are browser-platf
 
 ### Post-v1.2 provider tranche / #136
 
-Implement or evidence-reject the first bounded post-v1.2 provider tranche:
+**Status: planning/remediation blocked, not authorized on main.** The candidate implementations are confined to draft PRs #233 (Himalayas) and #238 (We Work Remotely); the governance plan and repeated-VETO remediation are on draft PR #232. A plan branch's ledger entries are not main-line seals.
 
-- Himalayas;
-- We Work Remotely.
+- **Himalayas:** source evidence suggests worthwhile additional remote/technical role coverage, but the candidate has real date, time-zone, country-list and response-size defects. Correcting them requires a valid independently audited plan and intent lock.
+- **We Work Remotely:** **HOLD** on unresolved publisher terms restricting job-search uses of WWR data, even though its RSS page permits attributed reuse. Do not ship or enable until written publisher clarification or authorized legal clearance and a separate qualified plan.
+- **Coverage:** live single-day measurements are exploratory, concentrated in remote/technology careers; no validated general-market or local/trades improvement claim follows from them.
 
-Requirements include first-party terms/attribution verification, deterministic normalization, provenance, explicit coverage limitations, duplicate-rate measurement, and material unique coverage rather than listing-count inflation.
+Requirements remain first-party terms/attribution verification, deterministic normalization, provenance, explicit eligibility limitations, unique useful coverage rather than listing-count inflation, and governed acceptance or rejection.
 
 ReliefWeb remains a later niche candidate subject to registration and terms/IP review.
 
@@ -206,24 +207,32 @@ Remote provider adoption is **not** implied by this work. It remains deferred un
 
 ### Personal Brand / Professional Presence / #171
 
-**Status:** architecture accepted; implementation not started. ADR: [ADR-0001](../adr/0001-personal-brand-publishing-and-analytics.md). Design: [Personal Brand Publishing and Analytics](../design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md).
+**Status: manual-first implementation exists on `main`, not published in v1.2.0.** The previous roadmap incorrectly said implementation had not started. Source authority: `src/pages/PersonalBrand.tsx`, `electron/src/personal-brand-backend.cts`, and the linked tests. ADR: [ADR-0001](../adr/0001-personal-brand-publishing-and-analytics.md). Design: [Personal Brand Publishing and Analytics](../design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md).
 
-The capability extends Career Ops into professional presence without turning Job Ranger into a general marketing platform.
+Implemented development slices, not a claim of full ADR completion:
 
-Baseline requirements:
+- [x] user-authored LinkedIn-focused drafts and deterministic readiness findings with content/hook/objective metadata;
+- [x] human-reviewed exact-copy package, user-confirmed manual publication receipts and local metrics snapshots;
+- [x] local LinkedIn XLSX export preview and explicit confirmed persistence; saved-import deduplication, reconciliation, historical post text attestation and observed dashboard;
+- [x] user-attested post topic classification and conservative approved-content cohort comparisons, without causal claims;
+- [x] deterministic learning and comparison rules with explicit missing/conflicted/partial data states.
 
-- [ ] implement Presence Brief, user-authored drafts, hook/theme/tone metadata, and experiment hypotheses;
-- [ ] link factual professional claims to current Career Evidence where applicable;
-- [ ] implement deterministic composition findings and separate readiness facets;
-- [ ] require exact-content approval before connected publication;
-- [ ] support a complete manual PWA path: copy/export, manual publication receipt, manual analytics snapshots, demographic observations, and career outcomes;
-- [ ] implement deterministic derived metrics, objective-aware interpretation, comparable-post cohorts, and conservative evidence tiers;
-- [ ] add provider-neutral capability contracts without assuming publishing implies analytics access;
-- [ ] prove LinkedIn exact-text publishing separately from LinkedIn analytics entitlement;
-- [ ] keep recommendations advisory and refuse "best time" or content conclusions when comparable evidence is insufficient;
-- [ ] preserve the Viable boundary: Job Ranger optimizes the professional presence of a person, not the market presence of a product.
+Outstanding or separately qualified:
 
-**Recommended first slice:** Slice A from the design contract. It produces a useful composition/guidance workflow without waiting on OAuth, provider review, background execution, or inference.
+- [ ] a distinct canonical Presence Brief and end-to-end claim/evidence linking, to the extent specified by the accepted design, must be validated independently rather than inferred from draft metadata;
+- [ ] connected LinkedIn posting or data access requires its own provider permissions, terms, exact-content approval, and security qualification;
+- [ ] prove cross-runtime user journeys and representative UX acceptance at the exact implementation head before release admission;
+- [ ] ensure the v1.3.0 release boundary explicitly admits or defers each new Personal Brand slice; work on `main` is not automatically packaged/released.
+
+Job Ranger supports a person's professional presence, not a generic marketing platform, and does not borrow Viable's product-marketing responsibilities.
+
+### Economic transition pathways / #217 and #221
+
+**Status: bounded local scenario comparison on `main`; wider source-backed review is still open.** The Target Tracks page mounts `EconomicPathwayExplorer`, which evaluates user-entered options with deterministic arithmetic (`src/shared/economic-pathways.ts`, `tests/economic-pathways.test.mjs`). This is not a sourced labor-market forecast, a verified income outcome, or an automatic career recommendation. Issue #221 retains the separate requirement for human market-source review and competing-scenario UX before live ingestion.
+
+### Read-only local MCP prototype / #173 and #181
+
+**Status: optional development adapter on `main`, not a shipped ChatGPT plugin.** The local stdio service and documented Secure MCP Tunnel trial remain read-only, permission-limited and human-authorized. A documented tunnel pathway does not establish a verified live ChatGPT connection; issue #181 remains open for that integration gate. See [local MCP prototype](../integrations/JOB_RANGER_MCP_READONLY.md).
 
 ## Deferred
 
