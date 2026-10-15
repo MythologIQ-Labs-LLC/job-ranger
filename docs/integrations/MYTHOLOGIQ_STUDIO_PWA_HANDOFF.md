@@ -57,10 +57,10 @@ The offline verifier checks manifest identity, hashed assets, service worker ide
 After a separate owner-authorized staged deployment, verify the real HTTPS origin:
 
 ```sh
-node scripts/verify-studio-handoff.mjs --origin https://APP-ORIGIN-APPROVED-BY-OWNER.example --build-id 'PINNED_VERSION+COMMIT'
+node scripts/verify-studio-handoff.mjs --origin https://APP-ORIGIN-APPROVED-BY-OWNER.example --build-id 'PINNED_VERSION+COMMIT' --build-info-sha256 'SHA256_FROM_VERIFIED_LOCAL_ARTIFACT'
 ```
 
-This checks the root HTTPS security headers and the exact live `build-info.json` + `studio-handoff.json`. It reports **artifact verified, owner approval still required**, not "public launch approved". A staged deployment must additionally pass real-browser testing, persistence/quota and backup/restore, first-load/offline/update, runtime CSP and provider CORS testing, responsiveness/accessibility, and honest feature-status review. The PWA must never be served as an arbitrary source checkout or unreviewed CI branch.
+This checks the root HTTPS security headers against the approved CSP, requires the pinned release build-info SHA-256, and verifies the live `studio-handoff.json`. It reports **artifact verified, owner approval still required**, not "public launch approved". A staged deployment must additionally pass real-browser testing, persistence/quota and backup/restore, first-load/offline/update, runtime CSP and provider CORS testing, responsiveness/accessibility, and honest feature-status review. The PWA must never be served as an arbitrary source checkout or unreviewed CI branch.
 
 ## Website hookup, only after launch acceptance
 
