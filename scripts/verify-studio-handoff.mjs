@@ -5,6 +5,8 @@
  * node scripts/verify-studio-handoff.mjs --origin https://jobs.example.org --build-id VERSION+SHA
  */
 import { inspectStudioPwaBuild, inspectLiveStudioPwa } from "./studio-handoff.mjs";
+import { pathToFileURL } from "node:url";
+import path from "node:path";
 
 export async function run(args = process.argv.slice(2)) {
   let site = null;
@@ -29,7 +31,7 @@ export async function run(args = process.argv.slice(2)) {
   return result;
 }
 
-if (process.argv[1] && import.meta.url === new URL("file://" + process.argv[1].replaceAll("\\", "/")).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   run()
     .then((value) => console.log(JSON.stringify(value, null, 2)))
     .catch((error) => {
