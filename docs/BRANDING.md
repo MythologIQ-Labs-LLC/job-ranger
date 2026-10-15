@@ -50,6 +50,8 @@ The **approved source of truth is the emblem inside `docs/assets/branding/job-ra
 
 Use `scripts/extract-job-ranger-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
 
+The committed `public/ICON.png` and `public/favicon.png` are the owner-supplied 550×550 transparent extraction of this emblem, used byte-for-byte (SHA-256 `3c557f2dbe8273d97ce05e9aacf49ec51df68bdbd66d466feb1a11d664a28e4c`, October 2026). The repository lockup is 2172×724, not the 2048×682 reference the script checks, so the script stops by design rather than guess a crop. Re-extract only after reconciling that geometry. The PWA and AppX sizes were regenerated from `public/ICON.png` with the same sizes, padding and `#FDF1DD` backgrounds as `scripts/generate-distribution-icons.sh`, using a high-quality stepwise resampler, and were inspected at 16, 32, 44, 192 and 512px.
+
 **Logo-derived reference colors** sampled from the approved clean 2048×682 lockup:
 - Emblem navy (dark outline/mountains): approximately `#00182E`.
 - Emblem trail-green (trees): approximately `#01896A`.
