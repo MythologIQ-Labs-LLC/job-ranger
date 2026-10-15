@@ -160,8 +160,12 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
   // US-14/15/18: opening the user-facing assessment shows independent
   // eligibility, coverage, preferences and uncertainty, not one fake score.
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await expect(job.getByText("Evidence coverage", { exact: true })).toBeVisible();
-  await expect(job.getByText("Eligibility and blockers")).toBeVisible();
+  const assessment = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(assessment.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Eligibility and blockers")).toBeVisible();
+  // The assessment is a modal drawer; close it before acting on the listing behind it.
+  await page.keyboard.press("Escape");
+  await expect(assessment).toBeHidden();
 
   // US-23: tracking is initiated from the discovered listing, not through IPC.
   await job.getByRole("button", { name: "Track this job" }).click();
@@ -181,7 +185,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
     name: "Medical Office Coordinator", exact: true,
   }) });
   await jobAgain.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await jobAgain.getByRole("button", { name: "Prepare resume" }).click();
+  await page.getByRole("dialog", { name: /Opportunity assessment:/ }).getByRole("button", { name: "Prepare resume" }).click();
   await expect(page).toHaveURL(/#\/resume\?job=/);
   await expect(page.getByText("Targeting tracked job", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Create truthful draft" })).toBeEnabled();
