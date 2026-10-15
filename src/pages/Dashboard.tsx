@@ -10,6 +10,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -55,7 +56,7 @@ export function Dashboard() {
   const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
   const pendingFacts = evidence.pending.length;
   const trackedApplications = applications.applications.length;
-  type NextAction = { title: string; copy: string; href: string; action: string; icon: typeof Compass };
+  type NextAction = { title: string; copy: string; href: string; action: string; icon: LucideIcon };
   const nextActions: NextAction[] = [];
 
   // An imported statement is a proposal, never a verified career fact.
