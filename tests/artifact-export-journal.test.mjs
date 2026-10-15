@@ -41,6 +41,8 @@ describe("durable artifact export journal contract", () => {
   it("rejects forged completed states and malformed identifiers", () => {
     assert.doesNotThrow(() => validateJournalRecord(record));
     assert.throws(() => validateJournalRecord({ ...record, status: "verified" }), /matching remote readback/);
+    assert.throws(() => validateJournalRecord({ ...record, verifiedSha256: sha }), /Only a verified/);
+    assert.throws(() => validateJournalRecord({ ...record, status: "accepted_unverified", remoteId: "file:1", verifiedSha256: sha }), /Only a verified/);
     assert.throws(() => validateJournalRecord({ ...record, remoteId: "folder/escape" }), /Invalid durable/);
     assert.throws(() => validateJournalRecord({ ...record, updatedAt: "yesterday" }), /Invalid durable/);
   });
