@@ -109,8 +109,12 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId) {
 
   const html = (await read("index.html")).toString("utf8");
   if (!html.includes('name="job-ranger-build" content="' + expected + '"')) fail("HTML build identity mismatch");
-  const sw = (await read("sw.js")).toString("utf8");
+  const swBytes = await read("sw.js");
+  const sw = swBytes.toString("utf8");
   if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) fail("service-worker build identity mismatch");
+  if (!HASH.test(buildInfo.serviceWorkerSha256) || sha256(swBytes) !== buildInfo.serviceWorkerSha256) {
+    fail("service-worker checksum mismatch");
+  }
 
   const headers = (await read("_headers")).toString("utf8");
   const policy = requiredString(buildInfo.contentSecurityPolicy, "build-info content security policy");
@@ -165,11 +169,13 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
     return response;
   };
   const root = await get("/");
-  const html = await root.text();
+  const rootBytes = new Uint8Array(await root.arrayBuffer());
+  const html = new TextDecoder().decode(rootBytes);
   if (!html.includes('name="job-ranger-build" content="' + expected + '"')) {
     fail("live HTML build identity mismatch");
   }
-  const sw = await (await get("/sw.js")).text();
+  const swBytes = new Uint8Array(await (await get("/sw.js")).arrayBuffer());
+  const sw = new TextDecoder().decode(swBytes);
   if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) {
     fail("live service worker build identity mismatch");
   }
@@ -177,6 +183,9 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
   if (sha256(infoBytes) !== expectedBuildInfoSha256) fail("live build-info checksum differs from approved release");
   const info = JSON.parse(new TextDecoder().decode(infoBytes));
   if (info.product !== PRODUCT || info.buildId !== expected) fail("live build identity mismatch");
+  if (!HASH.test(info.serviceWorkerSha256) || sha256(swBytes) !== info.serviceWorkerSha256) {
+    fail("live service-worker checksum mismatch");
+  }
   const csp = root.headers.get("content-security-policy") ?? "";
   if (!info.contentSecurityPolicy || csp !== info.contentSecurityPolicy ||
       root.headers.get("x-frame-options")?.toUpperCase() !== "DENY" ||
@@ -184,7 +193,69 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
       root.headers.get("cross-origin-resource-policy") !== "same-origin") {
     fail("live security headers differ from approved build policy");
   }
+  // A pinned build-info digest is meaningful only when the host actually serves
+  // the approved shell bytes, not just a matching metadata document. Verify the
+  // complete immutable shell inventory, bounded in-flight and per-asset memory.
+  if (!Array.isArray(info.assets) || !info.assets.length || info.assets.length > 2048) {
+    fail("invalid live shell inventory");
+  }
+  const assets = new Map();
+  for (const asset of info.assets) {
+    const name = safeAssetPath(asset?.path);
+    if (assets.has(name) || !HASH.test(asset.sha256)) fail("invalid or duplicate live shell asset: " + name);
+    assets.set(name, asset.sha256);
+  }
+  if (!assets.has("index.html")) fail("live HTML is not covered by shell integrity manifest");
+  if (sha256(rootBytes) !== assets.get("index.html")) fail("live HTML asset checksum mismatch");
+
+  let verifiedBytes = rootBytes.byteLength;
+  const MAX_ASSET_BYTES = 64 * 1024 * 1024;
+  const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+  const verifyAsset = async (name, expectedDigest) => {
+    const response = await get("/" + name);
+    if (response.headers.has("content-length") &&
+        Number(response.headers.get("content-length")) > MAX_ASSET_BYTES) {
+      fail("live asset exceeds verification size limit: " + name);
+    }
+    const digest = createHash("sha256");
+    let size = 0;
+    // Read and hash bounded chunks rather than buffering complete JS bundles.
+    if (response.body) {
+      const reader = response.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          verifiedBytes += value.byteLength;
+          if (size > MAX_ASSET_BYTES || verifiedBytes > MAX_TOTAL_BYTES) {
+            fail("live asset exceeds verification size limit: " + name);
+          }
+          digest.update(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } else {
+      fail("live asset has no response body: " + name);
+    }
+    if (digest.digest("hex") !== expectedDigest) fail("live asset checksum mismatch: " + name);
+  };
+
+  const pending = [...assets.entries()].filter(([name]) => name !== "index.html");
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
+    while (next < pending.length) {
+      const [name, digest] = pending[next++];
+      await verifyAsset(name, digest);
+    }
+  }));
   const handoff = await (await get("/" + STUDIO_HANDOFF_FILE)).json();
   assertStudioHandoff(handoff, info);
-  return { status: "live-artifact-verified-owner-approval-still-required", origin: url.origin, buildId: expected };
+  return {
+    status: "live-artifact-verified-owner-approval-still-required",
+    origin: url.origin,
+    buildId: expected,
+    verifiedAssets: assets.size,
+  };
 }
