@@ -1,19 +1,19 @@
 @import "tailwindcss" source("..");
 
 :root {
-  /* Atelier 60/30/10: ivory base, slate-blue structure, teal actions. */
-  --color-primary: #086b70;
-  --color-secondary: #243b53;
-  --color-accent: #22a79d;
+  /* Atelier 60/30/10: ivory base, emblem-navy structure, trail-green actions. */
+  --color-primary: #00765f;
+  --color-secondary: #17384d;
+  --color-accent: #01896a;
   --color-canvas: #f6f3eb;
-  --color-canvas-glow: rgba(34, 167, 157, 0.12);
-  --color-sidebar: #1f3144;
+  --color-canvas-glow: rgba(1, 137, 106, 0.12);
+  --color-sidebar: #00182e;
   --color-panel: rgba(252, 251, 246, 0.94);
   --color-panel-muted: rgba(241, 246, 242, 0.88);
   --color-panel-strong: rgba(255, 255, 253, 0.99);
   --color-border: rgba(46, 75, 88, 0.16);
   --color-border-strong: rgba(46, 75, 88, 0.30);
-  --color-text-primary: #1e3041;
+  --color-text-primary: #00182e;
   --color-text-secondary: #405867;
   --color-text-muted: #526c78;
   --color-text-inverse: #f9faf7;
