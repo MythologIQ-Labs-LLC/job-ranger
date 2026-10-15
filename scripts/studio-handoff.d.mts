@@ -16,5 +16,6 @@ export declare function inspectStudioPwaBuild(
 export declare function inspectLiveStudioPwa(
   origin: string,
   expectedBuildId: string,
+  expectedBuildInfoSha256: string,
   fetchImpl?: typeof fetch
 ): Promise<{ status: string; origin: string; buildId: string }>;
