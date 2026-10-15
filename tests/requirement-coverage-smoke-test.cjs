@@ -170,8 +170,9 @@ async function run() {
     assert.deepEqual(await storedCoverage(), expectedCoverage, 'a failed replacement must leave the previous coverage intact');
 
     // Requirement text taken from listings can carry control characters; they must
-    // round-trip exactly through the transaction on every engine.
-    const tricky = 'Line one\r\nline\u001atwo\u0000three\tfour\u007f';
+    // round-trip exactly through the transaction on every engine (NUL itself is stored
+    // as U+FFFD, #297).
+    const tricky = 'Line one\r\nline\u001atwo\ufffdthree\tfour\u007f';
     const [first, ...rest] = coverage.items;
     await repository.replaceCoverage({
       ...coverage,
