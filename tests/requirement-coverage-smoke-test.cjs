@@ -6,6 +6,7 @@ const path = require('node:path');
 const { JobScoutBackend } = require('../electron/backend.cjs');
 const { CareerBackend } = require('../electron/career-backend.cjs');
 const { RequirementBackend } = require('../electron-runtime/electron/src/requirement-backend.cjs');
+const { RequirementRepository } = require('../electron-runtime/electron/src/requirement-repository.cjs');
 const { SqliteClient } = require('../electron/sqlite.cjs');
 
 function createMockFetch() {
@@ -116,6 +117,40 @@ async function run() {
     assert.equal(storedRequirements.length, coverage.totalCount);
     assert.equal(storedMappings.length, coverage.totalCount);
     assert.ok(storedRequirements.every((row) => row.source_text));
+
+    // The Resume page loads coverage while a tailoring preview recomputes it for
+    // the same job. Each recompute rewrites rows with deterministic ids, so the
+    // rewrite must be one transaction: a separate delete followed by per-row
+    // inserts let overlapping callers fail with UNIQUE or FOREIGN KEY errors.
+    const recorded = [];
+    const recordingRepository = new RequirementRepository({
+      exec: async (statement) => { recorded.push({ kind: 'exec', statement }); },
+      transaction: async (statements) => { recorded.push({ kind: 'transaction', statements }); },
+      queryAll: async () => [],
+      queryOne: async () => null,
+    });
+    await recordingRepository.replaceCoverage(coverage, null);
+    assert.deepEqual(recorded.map((call) => call.kind), ['transaction']);
+    assert.equal(recorded[0].statements.length, 2 + coverage.totalCount * 2);
+    assert.match(recorded[0].statements[0], /DELETE FROM requirement_evidence_maps/);
+    assert.match(recorded[0].statements[1], /DELETE FROM job_requirements/);
+
+    const overlapping = await Promise.allSettled(
+      Array.from({ length: 4 }, () => requirements.getJobEvidenceCoverage(job.id)),
+    );
+    assert.deepEqual(
+      overlapping.filter((result) => result.status === 'rejected').map((result) => result.reason.message),
+      [],
+      'overlapping coverage recomputes for one job must all succeed',
+    );
+    const [{ count: requirementCount }] = await sqlite.queryAll(
+      `SELECT COUNT(*) AS count FROM job_requirements WHERE job_id = '${job.id}';`,
+    );
+    const [{ count: mappingCount }] = await sqlite.queryAll(
+      `SELECT COUNT(*) AS count FROM requirement_evidence_maps WHERE job_requirement_id IN (SELECT id FROM job_requirements WHERE job_id = '${job.id}');`,
+    );
+    assert.equal(requirementCount, coverage.totalCount);
+    assert.equal(mappingCount, coverage.totalCount);
 
     const restarted = new RequirementBackend({
       databasePath: status.databasePath,

@@ -35,10 +35,14 @@ export function ResumeTailoringPanel({
   const [plan, setPlan] = useState<ResumeTailoringPlan | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Kept here rather than in the page banner: the page clears its banner when
+  // it reloads in the background, which would silently drop a failed preview.
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     setPlan(null);
     setSelectedIds([]);
+    setPreviewError(null);
   }, [source.projection.id, jobId]);
 
   const alreadyTailored =
@@ -46,6 +50,7 @@ export function ResumeTailoringPanel({
 
   const preview = async () => {
     setBusy(true);
+    setPreviewError(null);
     try {
       const next = await getDesktopApi().resume.previewTailoring({
         sourceProjectionId: source.projection.id,
@@ -56,10 +61,10 @@ export function ResumeTailoringPanel({
       onMessage(
         `Tailoring preview found ${next.directCount} direct and ${next.transferableCount} transferable requirement match${next.directCount + next.transferableCount === 1 ? "" : "es"}.`,
       );
-    } catch (previewError) {
-      onError(
-        previewError instanceof Error
-          ? previewError.message
+    } catch (failure) {
+      setPreviewError(
+        failure instanceof Error
+          ? failure.message
           : "Unable to prepare tailoring preview",
       );
     } finally {
@@ -133,6 +138,16 @@ export function ResumeTailoringPanel({
           </button>
         )}
       </div>
+
+      {previewError && (
+        <div
+          role="alert"
+          className="support-note mt-4 px-4 py-3 text-sm text-[var(--color-danger)]"
+        >
+          <p className="font-semibold">Tailoring preview failed. Nothing was changed.</p>
+          <p className="mt-1">{previewError}</p>
+        </div>
+      )}
 
       {plan && (
         <div className="mt-5 space-y-5">
