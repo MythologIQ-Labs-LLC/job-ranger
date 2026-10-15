@@ -86,13 +86,16 @@ export function CareerProfile() {
   // A refresh (for example after a save elsewhere) produces a new profile object. Replace
   // the form only when it has no unsaved edits relative to the last stored profile it
   // showed, so a background refresh never discards what the person is typing (#278).
+  // Before the first load that baseline is the empty form: the controls are enabled in the
+  // render that ends loading, and this effect runs after paint, so a choice made in between
+  // must not be replaced by the initial seed.
   const shownProfile = useRef<CareerProfileValue | null>(null);
   useEffect(() => {
     if (loading) return;
-    const previous = shownProfile.current;
+    const previous = shownProfile.current ?? emptyCareerProfile;
     shownProfile.current = profile;
     setDraft((current) =>
-      previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
+      JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
     );
   }, [loading, profile]);
 
