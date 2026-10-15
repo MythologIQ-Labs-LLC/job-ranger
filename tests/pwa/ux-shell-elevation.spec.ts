@@ -115,3 +115,16 @@ test("theme picker previews each 60/30/10 palette and reflects the active select
   await expect(atelier.locator(".theme-palette-preview span").first())
     .toHaveCSS("background-color", "rgb(246, 243, 235)");
 });
+
+test("a short desktop window shows every collapsed sidebar entry without scrolling", async ({ page }) => {
+  // The brand subtitle and section labels once pushed the last entry under the
+  // pinned Preferences footer at 1280x600 with no visible scroll cue.
+  await page.setViewportSize({ width: 1280, height: 600 });
+  for (const theme of ["atelier", "midnight", "canopy"]) {
+    await openHome(page, theme);
+    const nav = page.getByRole("navigation", { name: "Primary navigation" });
+    const fit = await nav.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
+    expect(fit.scroll, `${theme} sidebar overflows at 1280x600`).toBeLessThanOrEqual(fit.client + 1);
+    await expect(page.locator(".sidebar-section-label").first()).toBeHidden();
+  }
+});
