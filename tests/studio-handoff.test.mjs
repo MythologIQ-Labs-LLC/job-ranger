@@ -61,6 +61,10 @@ try {
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify({ ...handoff, studio: { autoEnableCta: true } }));
   await assert.rejects(inspectStudioPwaBuild(dir), /does not match/);
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(handoff));
+  const unsafeInfo = { ...info, assets: [...info.assets, { path: "../outside.txt", sha256: hash("outside") }] };
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify(unsafeInfo));
+  await assert.rejects(inspectStudioPwaBuild(dir), /invalid asset path/);
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify(info));
 
   const fakeFetch = async (url) => {
     const name = new URL(url).pathname;
@@ -83,6 +87,16 @@ try {
   await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, fakeFetch), /live build identity mismatch/);
+  const compromisedHeaders = async (url, options) => {
+    if (new URL(url).pathname === "/") return new Response(index, { status: 200, headers: {
+      "content-security-policy": policy + "; script-src * 'unsafe-inline'",
+      "x-frame-options": "DENY",
+      "strict-transport-security": "max-age=63072000",
+      "cross-origin-resource-policy": "same-origin",
+    } });
+    return fakeFetch(url, options);
+  };
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedHeaders), /live security headers differ/);
   console.log("Studio PWA handoff contract: local and simulated live checks passed");
 } finally {
   await rm(dir, { recursive: true, force: true });
