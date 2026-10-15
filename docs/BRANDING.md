@@ -86,8 +86,8 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 The brand asset hierarchy is:
 
-1. `public/ICON.png` for the application icon.
-2. `docs/assets/branding/job-ranger-logo.png` for the public lockup.
+1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-job-ranger-icon.sh`.
+2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
 3. `docs/assets/branding/job-ranger-banner.png` for repository presentation.
 4. `docs/assets/branding/job-ranger-social-preview.png` for social/link previews.
 
