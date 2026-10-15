@@ -6,7 +6,7 @@
  * copying the application into the Studio website.
  */
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 export const STUDIO_HANDOFF_FILE = "studio-handoff.json";
@@ -82,10 +82,16 @@ export function assertStudioHandoff(handoff, buildInfo) {
 /** Validate the deployable directory without requiring a network or npm install. */
 export async function inspectStudioPwaBuild(directory, expectedBuildId) {
   const dist = path.resolve(directory);
+  const root = await realpath(dist);
   const read = async (filename) => {
     const pathname = path.join(dist, safeAssetPath(filename));
-    const details = await stat(pathname);
+    const details = await lstat(pathname);
     if (!details.isFile() || details.isSymbolicLink()) fail("not a regular build file: " + filename);
+    const resolved = await realpath(pathname);
+    const relative = path.relative(root, resolved);
+    if (relative.startsWith(".." + path.sep) || relative === ".." || path.isAbsolute(relative)) {
+      fail("asset escapes PWA build root");
+    }
     return readFile(pathname);
   };
 
