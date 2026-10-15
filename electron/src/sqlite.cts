@@ -13,12 +13,21 @@ const SQLITE_BUSY_TIMEOUT_MS = 5000;
  * with a command line it has not seen before (Defender / Smart App Control),
  * which cost 0.5-2 s per statement because each statement carries unique ids
  * and timestamps; an unchanged command line with the script on stdin costs
- * about 10 ms. -bail stops at the first failing statement, so a multi-statement
- * script never keeps running after an error.
+ * about 10 ms. -bail stops at the first failing input line, so no later line
+ * runs after an error; statements that share a line with the failing one still
+ * behave as SQLite's own multi-statement execution does.
+ *
+ * The shell reads stdin in text mode, where Windows treats 0x1A as end of input
+ * and NUL ends a line, so raw NUL or 0x1A would silently drop the rest of the
+ * script. toSqlLiteral never emits them; reject any SQL that contains them.
  */
 function runWithStdin(binary: string, args: string[], input: string): Promise<string> {
+  if (/[\x00\x1a]/.test(input)) {
+    return Promise.reject(new Error("SQL text must not contain raw NUL or 0x1A characters; use toSqlLiteral"));
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    let stdinError: Error | null = null;
     const stdout: Buffer[] = [];
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
@@ -28,10 +37,15 @@ function runWithStdin(binary: string, args: string[], input: string): Promise<st
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) resolve(Buffer.concat(stdout).toString("utf8"));
-      else reject(new Error(`sqlite3 exited with code ${code}: ${stderr.trim()}`));
+      if (code !== 0) reject(new Error(`sqlite3 exited with code ${code}: ${stderr.trim()}`));
+      else if (stdinError) reject(stdinError);
+      else resolve(Buffer.concat(stdout).toString("utf8"));
     });
-    child.stdin.on("error", reject);
+    // When sqlite3 bails before reading all of a large script, the write fails
+    // (EPIPE / EOF). Wait for the exit so the rejection carries SQLite's error.
+    child.stdin.on("error", (error: Error) => {
+      stdinError = error;
+    });
     child.stdin.end(input, "utf8");
   });
 }

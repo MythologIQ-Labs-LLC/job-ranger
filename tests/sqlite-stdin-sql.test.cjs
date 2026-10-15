@@ -58,6 +58,20 @@ async function run() {
     // Failures still reject with SQLite's own message.
     await assert.rejects(db.exec(sql`INSERT INTO t VALUES (${marker}, 'dup');`), /UNIQUE constraint failed/);
     await assert.rejects(db.queryAll('SELECT * FROM missing_table;'), /no such table/);
+    // A large script that fails early still reports SQLite's error, not the
+    // broken stdin pipe left behind when sqlite3 bails before reading it all.
+    const bulky = sql`INSERT INTO t VALUES (${`${marker}-bulk`}, ${'x'.repeat(2 * 1024 * 1024)});`;
+    await assert.rejects(db.exec(`INSERT INTO missing_table VALUES (1);\n${bulky}`), /no such table/);
+    await assert.rejects(db.transaction(['INSERT INTO missing_table VALUES (1);', bulky]), /no such table/);
+    assert.deepEqual(await db.queryAll(sql`SELECT id FROM t WHERE id = ${`${marker}-bulk`};`), []);
+
+    // Windows text-mode stdin ends input at 0x1A and lines at NUL, which would
+    // silently drop the rest of a script, so raw control bytes are refused.
+    await assert.rejects(db.exec(`INSERT INTO t VALUES ('a', 'b'); -- \x1a\nINSERT INTO t VALUES ('c', 'd');`), /raw NUL or 0x1A/);
+    await assert.rejects(db.queryAll('SELECT 1 AS \x00x;'), /raw NUL or 0x1A/);
+    assert.deepEqual(await db.queryAll(sql`SELECT count(*) AS n FROM t WHERE id IN ('a', 'c');`), [{ n: 0 }]);
+    // Literals encode those bytes, so they still reach SQLite intact.
+    assert.deepEqual(await db.queryAll(sql`SELECT length(${'a\x1ab'}) AS n;`), [{ n: 3 }]);
 
     console.log('SQLite stdin SQL test passed');
   } finally {
