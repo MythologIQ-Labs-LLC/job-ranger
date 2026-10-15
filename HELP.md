@@ -221,6 +221,20 @@ Imported JSON Resume facts still require user authority before becoming factual 
 
 These features are implemented in the source development line but are **not claims about the downloadable v1.2.0 installers** or a promoted v1.3.0 release. Their exact menus and availability must be rechecked against the eventual packaged candidate.
 
+### Changes to existing pages (development line, October 2026)
+
+The v1.2.0 installers do not have these. Where earlier sections of this guide mention them (**Copy text**, **Pause**/**Resume**, filter **Edit**/**Disable**), they describe the development line.
+
+- **Navigation:** the sidebar groups career and search pages into sections you can expand, with Settings and Help pinned. **Skip to main content** is the first Tab stop, and Escape closes the mobile menu.
+- **Help page:** **Help** in the sidebar opens a short getting-started guide to the Career Ops workflow, with links to each step. It is bundled with the app and works offline.
+- **Home:** starts with decision cards for imported evidence, Target Tracks, unseen opportunities and applications. Scan and system details are in a collapsed section.
+- **Applications:** focus the list by recorded status (All, Interested, Applied, Interview, Offers, Closed). An application with unsaved changes stays visible until they are saved.
+- **Cover letters:** **Copy text** copies a current version (see *Application materials*).
+- **Companies:** **Pause**, **Resume** and a run-frequency menu on each source.
+- **Filters:** each card lists all of its rules; **Edit** changes them and **Disable** pauses the filter.
+- **Settings:** notifications have their own **Save notification settings** button and say whether changes are saved.
+- **Career Profile:** unsaved edits are no longer replaced when the profile refreshes in the background.
+
 ### Personal Brand and LinkedIn (manual-first)
 
 The Personal Brand page lets you author post drafts and inspect deterministic readiness findings. After reviewing the exact copy, you can prepare a manual posting package, publish it yourself, then record a user-confirmed publication receipt. Job Ranger does **not** log into LinkedIn or post on your behalf.

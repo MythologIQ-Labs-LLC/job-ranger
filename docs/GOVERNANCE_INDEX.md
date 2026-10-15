@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed**: 2026-10-10 (review of `main` at `4721e7fa782099c69019494d6f823c2cc372b98d`)
+**Last Reviewed**: 2026-10-15 (review of `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; previous review 2026-10-10 at `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 A single authoritative map of every governance artifact in this project, organized
 into six freshness tiers with explicit drift contracts. A stale entry here is
@@ -14,7 +14,7 @@ MUST be current at every cycle close. Drift signal: wrong version / wrong state 
 | Artifact | Path | Freshness marker |
 |----------|------|------------------|
 | Meta Ledger | `docs/META_LEDGER.md` | latest entry on main #94, Phase 16 seal; later Phase 17 VETOs/remediations exist on draft PR #232 only |
-| System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-10; main and published release distinguished |
+| System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-15; main and published release distinguished |
 | Concept | `docs/CONCEPT.md` | stable |
 | Architecture Plan | `docs/ARCHITECTURE_PLAN.md` | stable |
 | Backlog | `docs/BACKLOG.md` | open items current |
@@ -34,6 +34,7 @@ Stable; changes are explicit doctrine events. Drift signal: rules contradict eac
 | Project governance | `GOVERNANCE.md` |
 | Security policy | `SECURITY.md` |
 | Contributing | `CONTRIBUTING.md` |
+| Repository workflow (intake, WIP limits, hygiene audit, closeout) | `docs/REPOSITORY_WORKFLOW.md` |
 | Code of conduct | `CODE_OF_CONDUCT.md` |
 | Third-party notices | `THIRD_PARTY_NOTICES.md` |
 | Branding | `docs/BRANDING.md` |
@@ -48,8 +49,8 @@ Live until close; ages out at substantiate. Drift signal: shipped feature still 
 | Artifact | Path | Opened |
 |----------|------|--------|
 | v1.3.0 release candidate | `docs/validation/RELEASE_CANDIDATE_V1.3.0.md` | 2026-10-06 baseline; no later slice automatically admitted |
-| Current main documentation reconciliation | `docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md` | 2026-10-10 |
-| Roadmap | `docs/planning/PLAN.md` | current as of 2026-10-05 |
+| Current main documentation reconciliation | `docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md` | 2026-10-10; refreshed 2026-10-15 |
+| Roadmap | `docs/planning/PLAN.md` | current as of 2026-10-10 |
 | Release readiness | `docs/RELEASE_READINESS.md` | ongoing |
 | Product gap review | `docs/PRODUCT_GAP_REVIEW.md` | ongoing |
 | Universal user story matrix | `docs/validation/UNIVERSAL_USER_STORY_MATRIX.md` | ongoing |

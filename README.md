@@ -364,7 +364,7 @@ See [RELEASE_READINESS.md](./docs/RELEASE_READINESS.md), [DISTRIBUTION_TRUST.md]
 
 ## Documentation hierarchy
 
-Start with [`docs/README.md`](./docs/README.md). The [October 10 documentation reconciliation](./docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) checks the main-line product, roadmap, feature and governance claims against a pinned commit. Active draft provider and remediation PRs are **not** released or merged functionality.
+Start with [`docs/README.md`](./docs/README.md). The [October 10 documentation reconciliation](./docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) checks the main-line product, roadmap, feature and governance claims against a pinned commit, refreshed on 2026-10-15. Active draft provider and remediation PRs are **not** released or merged functionality.
 
 ## Governance, security, and attribution
 

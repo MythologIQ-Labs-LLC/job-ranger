@@ -1,6 +1,6 @@
 # System State
 
-**Snapshot date:** 2026-10-10 (reconciled against `main` at `4721e7fa782099c69019494d6f823c2cc372b98d`)
+**Snapshot date:** 2026-10-15 (reconciled against `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; the previous 2026-10-10 reconciliation used `4721e7fa782099c69019494d6f823c2cc372b98d`)
 **Published release:** v1.2.0
 **Current development line:** post-v1.2.0; v1.3.0 release candidate in preparation ([`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md))
 **Shipped release lineage:** v1.2.0 promoted from v1.2.0-rc.5
@@ -67,7 +67,8 @@ The accepted distribution architecture ([`design/DISTRIBUTION_ARCHITECTURE.md`](
 - Microsoft Store identity, submission, and certification are external and pending.
 - The web runtime cannot monitor career sites that need a full browser (Workday, iCIMS, etc.) or run scheduled checks while closed. These are documented platform limitations; the Windows app covers them.
 - The web PDF writer embeds Noto fonts for Latin extended, Vietnamese, Greek, Cyrillic, Thai, Chinese, Japanese, and Korean (downloaded on first use, then cached). It fails explicitly for right-to-left and Indic scripts, which still need the Windows app.
-- Pre-existing (both runtimes): notification settings exist, but job notifications are not wired to scrape completion.
+- Pre-existing (both runtimes): notification preferences now save from their own Settings section (#276), but job notifications are still not wired to scrape completion (`showJobNotification` in `electron/src/tray-notifications.cts` has no caller).
+- Desktop (Electron `sqlite3` CLI path): text containing a NUL character can be truncated when read back ([#297](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/297), open). #296 and #316 make writes atomic and refuse raw NUL/0x1A in SQL text; they do not fix readback.
 
 ## Additional development capabilities confirmed on main (not shipped)
 
@@ -78,7 +79,8 @@ This section reconciles source files and checked-in tests on `main` at the snaps
 - `src/pages/PersonalBrand.tsx`, `electron/src/personal-brand-backend.cts`, and `src/shared/personal-brand.ts` implement user-authored post drafts, deterministic readiness feedback, explicitly human-reviewed exact-copy packages, user-confirmed publication receipts, and manually observed metrics.
 - `src/browser/linkedin-xlsx.ts` and the Personal Brand page support a **local preview** of LinkedIn XLSX analytics exports. A separate user-confirmed action saves normalized export evidence; `src/shared/linkedin-import-ledger.ts` deduplicates it, and `src/shared/linkedin-reconciliation.ts` reconciles observed values rather than inventing missing metrics.
 - `src/components/HistoricalLinkedInArchive.tsx` supports user-attested historical post content, explicitly distinct from verified or preapproved published copy. `LinkedInTopicAttestations.tsx` records human topic classifications; `LinkedInObservedDashboard.tsx` and `LinkedInApprovedContentCohorts.tsx` render observational analytics and conservative comparisons.
-- Contract and test entry points include `docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md`, `tests/personal-brand.test.mjs`, `tests/personal-brand-persistence.test.cjs`, `tests/linkedin-analytics.test.mjs`, `tests/linkedin-reconciliation.test.mjs`, `tests/linkedin-topics.test.mjs`, and `tests/pwa/personal-brand.spec.ts`.
+- `src/components/LinkedInTopicCohortSummary.tsx` and `src/shared/linkedin-topic-cohorts.ts` (#246) group eligible approved posts by user-attested single-topic label within one recorded context. Medians and observed ranges are withheld unless that context has at least two topics with three eligible posts each; topics are listed alphabetically, never ranked, and no causal or winning-topic claim is made.
+- Contract and test entry points include `docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md`, `tests/personal-brand.test.mjs`, `tests/personal-brand-persistence.test.cjs`, `tests/linkedin-analytics.test.mjs`, `tests/linkedin-reconciliation.test.mjs`, `tests/linkedin-topics.test.mjs`, `tests/linkedin-topic-cohorts.test.mjs`, and `tests/pwa/personal-brand.spec.ts`.
 - **Not claimed:** connected LinkedIn authentication, automatic retrieval of LinkedIn post text or comments, automatic publishing, causal conclusions about hiring, or release in v1.2.0. Product-state documentation should not imply that the entire ADR's future connected-provider scope is implemented.
 
 ### User-authored economic pathways
@@ -90,6 +92,42 @@ This section reconciles source files and checked-in tests on `main` at the snaps
 
 - `mcp/local-readonly-server.mjs`, `mcp/read-only-adapter.mjs`, and `mcp/tunnel-operator.mjs` provide a permission-filtered, **development-only**, opt-in read-only local-agent surface. See `docs/integrations/JOB_RANGER_MCP_READONLY.md` and `docs/adr/0002-local-readonly-mcp-boundary.md`.
 - A documented outbound-only Secure MCP Tunnel pathway is **not evidence of a live verified ChatGPT plugin connection**. This is not a feature of the published v1.2.0 installer, and no remote-write authority is implied.
+
+### Merged to main from 2026-10-10 to 2026-10-15 (not released)
+
+These pull requests are merged on `main` at the snapshot commit. None is in the published v1.2.0 installers, and none is automatically part of the v1.3.0 candidate scope. Each item lists its own red-first spec or test; this snapshot did not re-run them.
+
+**Navigation, Help and layout**
+
+- Offline Help page (#186): `src/pages/Help.tsx` at the `/help` route bundles a short getting-started guide to the Career Ops workflow with in-app links and makes no network requests (`tests/pwa/help.spec.ts`).
+- Grouped sidebar (#273, design [`design/GROUPED_NAVIGATION_271.md`](./design/GROUPED_NAVIGATION_271.md)): `src/components/Sidebar.tsx` groups career and search destinations into expandable sections, with Settings and Help pinned. Routes are unchanged.
+- Keyboard and focus (#279): a "Skip to main content" link (`src/components/Layout.tsx`), Escape closes the mobile menu and returns focus, choosing a page from the mobile menu moves focus to the page's main content, and a collapsed group says when it contains the current page (`tests/pwa/nav-keyboard-a11y.spec.ts`).
+- Compact page introductions (#280): at widths up to 767 px or heights up to 700 px the shared page title and its panel are smaller; all text stays visible (`tests/pwa/compact-page-intros.spec.ts`).
+- Accessibility baseline (#305): themed status chips with at least 4.5:1 text contrast, visible Job search labels, a wrapping application action row and a reduced-motion preference (`tests/ux-a11y-badge-contrast.test.mjs`, `tests/pwa/ux-a11y-baseline.spec.ts`).
+- Branded shell (#317): the Job Ranger mountain emblem as app, favicon, web-app and Store icon; a branded sidebar header with task icons; an Atelier 60/30/10 ivory, slate and teal palette with an automated contrast test (`tests/atelier-palette-contract.test.mjs`) and a palette preview in the theme picker. Desktop windows 700 px tall or less drop decorative sidebar labels so every entry stays visible.
+
+**Pages**
+
+- Task-first Home (#306, #317): `src/pages/Dashboard.tsx` leads with read-only decision cards for imported evidence, Target Tracks, unseen opportunities and applications; scan and system telemetry move into a collapsed diagnostics section (`tests/pwa/home-task-first.spec.ts`).
+- Applications status focus (#310): `src/pages/Applications.tsx` filters by recorded status (All, Interested, Applied, Interview, Offers, Closed). An application with unsaved status or notes stays visible until it is saved or resolved (`tests/pwa/applications-status-focus.spec.ts`).
+- Cover-letter copy (#270, BACKLOG G3): **Copy text** on each current cover-letter version; stale versions cannot be copied and evidence is re-checked at copy time (`tests/pwa/cover-letter-copy.spec.ts`).
+- Filters (#272, BACKLOG G2): each filter card lists all of its rules; filters can be edited and enabled or disabled, and the form gains keyword and location exclusions (`tests/pwa/filter-editing.spec.ts`).
+- Sources (#275, BACKLOG G1): each monitored source can be paused, resumed and given a new run frequency. Changing a source URL is deliberately not offered (`tests/pwa/source-schedule.spec.ts`).
+- Settings (#276, BACKLOG G5 and the Settings part of B3): notifications have their own **Save notification settings** button and saved/unsaved status, and runtime inputs have associated labels (`tests/pwa/settings-save-feedback.spec.ts`).
+- Career Profile (#282, #318): a background profile refresh no longer replaces unsaved edits, and the form is filled from the stored profile before it accepts input (`tests/pwa/career-profile-draft.spec.ts`).
+
+**Data and reliability**
+
+- Requirement mapper (#184, BACKLOG G11 bounded): a terminal sentence period no longer stays on the last requirement token (`tests/requirement-mapper.test.cjs`).
+- Electron SQLite CLI (#296): multi-statement transactions are atomic, and values containing control characters are written as Windows-safe SQL literals (`tests/sqlite-transaction-atomicity.test.cjs`, `tests/sql-literal-roundtrip.test.cjs`).
+- Electron SQLite CLI latency (#316): every statement goes to `sqlite3` on stdin with an unchanged command line, avoiding a per-launch security scan on Windows (`tests/sqlite-stdin-sql.test.cjs`).
+- Reliability fixes (#318): the sidebar keeps a group the person opened while Home swaps its layout (`tests/pwa/sidebar-group-remount.spec.ts`); requirement coverage is rewritten in one transaction and late or failed tailoring previews are handled (`tests/pwa/resume-tailoring-stale-preview.spec.ts`, `tests/e2e/resume-tailoring-preview-failure.spec.ts`).
+
+**Repository and test tooling (no product change)**
+
+- Repository workflow (#313): issue forms, a PR evidence template, [`REPOSITORY_WORKFLOW.md`](./REPOSITORY_WORKFLOW.md), `AGENTS.md`/`CLAUDE.md` contributor instructions and a read-only `npm run repo:hygiene` audit (`scripts/repo-hygiene-audit.mjs`).
+- Optional local evidence checker (#269): `scripts/local_evidence_cli.py`, development-only and non-governing; see [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
+- PWA test harness (#304): browser specs wait for the rendered application before checking runtime readiness (`tests/pwa/runtime-readiness.spec.ts`).
 
 ### Active drafts explicitly excluded from main
 

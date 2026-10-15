@@ -4,6 +4,7 @@ Per `qor/references/doctrine-feature-inventory.md` (ships with the installed Qor
 to the supporting test evidence. V1 (2026-10-06) enumerated user journeys reachable from the
 renderer routes in `src/App.tsx` plus runtime-specific (Electron / web) surfaces.
 The 2026-10-10 reconciliation adds FX051-FX059 against `main` at `4721e7fa782099c69019494d6f823c2cc372b98d`; these new entries do not inherit the earlier UI-verification results.
+The 2026-10-15 refresh adds FX060-FX069 against `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c` (PRs merged 2026-10-10 to 2026-10-15) and moves the FX051 and FX053 line anchors to their current lines. FX020 is re-pointed because #272 shortened `src/components/FilterForm.tsx` below its old line. Other FX001-FX050 line anchors date from the October 6 inventory and may have drifted. The cited specs were added red-first in their PRs, but no run is recorded against this inventory checkpoint, so these rows are also `unverified`.
 
 Status is assigned honestly:
 
@@ -34,7 +35,7 @@ Surface is the route (or runtime surface) where the feature ships.
 | FX017 | Add a job source manually | src/components/CompanyForm.tsx:93 | HELP.md | tests/e2e/app.spec.ts | verified | /companies |
 | FX018 | Run a source scrape | src/pages/Companies.tsx:488 | HELP.md |  | unverified | /companies |
 | FX019 | Remove a job source | src/pages/Companies.tsx:497 | HELP.md | tests/e2e/app.spec.ts | verified | /companies |
-| FX020 | Create a filter | src/components/FilterForm.tsx:165 | HELP.md |  | unverified | /filters |
+| FX020 | Create a filter | src/components/FilterForm.tsx:65 | HELP.md |  | unverified | /filters |
 | FX021 | Delete a filter | src/pages/Filters.tsx:84 | HELP.md |  | unverified | /filters |
 | FX022 | Browse and search jobs | src/pages/Jobs.tsx:162 | HELP.md |  | unverified | /jobs |
 | FX023 | Opportunity assessment against a track | src/components/JobEvidenceCoverage.tsx:159 | docs/design/UNIVERSAL_USER_STORIES.md (US-14 to US-18) | tests/e2e/evidence-coverage.spec.ts | verified | /jobs |
@@ -65,12 +66,22 @@ Surface is the route (or runtime surface) where the feature ships.
 | FX048 | Web runtime non-Latin resume PDF | src/pwa/runtime/resume-pdf.ts:1 | docs/design/PWA_RUNTIME.md | tests/pwa/unicode-resume.spec.ts | unverified | web runtime |
 | FX049 | Desktop Help window and data folder menu | electron/src/main.cts:190 | HELP.md |  | unverified | desktop menu |
 | FX050 | Desktop tray and notifications | electron/src/tray-notifications.cts:30 | HELP.md |  | unverified | desktop tray |
-| FX051 | Personal Brand drafts and deterministic readiness | src/pages/PersonalBrand.tsx:84 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/pwa/personal-brand.spec.ts | unverified | /personal-brand |
+| FX051 | Personal Brand drafts and deterministic readiness | src/pages/PersonalBrand.tsx:85 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/pwa/personal-brand.spec.ts | unverified | /personal-brand |
 | FX052 | Human-reviewed exact-copy post package and manual receipt | src/shared/personal-brand.ts:121 | docs/adr/0001-personal-brand-publishing-and-analytics.md | tests/personal-brand.test.mjs | unverified | /personal-brand |
-| FX053 | Local LinkedIn XLSX import preview and user-confirmed persistence | src/pages/PersonalBrand.tsx:647 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-analytics.test.mjs; tests/personal-brand-persistence.test.cjs | unverified | /personal-brand |
+| FX053 | Local LinkedIn XLSX import preview and user-confirmed persistence | src/pages/PersonalBrand.tsx:649 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-analytics.test.mjs; tests/personal-brand-persistence.test.cjs | unverified | /personal-brand |
 | FX054 | Reconciled observed LinkedIn metrics | src/components/LinkedInObservedDashboard.tsx:19 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-reconciliation.test.mjs; tests/linkedin-observed-dashboard.test.mjs | unverified | /personal-brand |
 | FX055 | User-attested historical LinkedIn post text | src/components/HistoricalLinkedInArchive.tsx:10 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-history.test.mjs | unverified | /personal-brand |
 | FX056 | Human-confirmed LinkedIn topic labels | src/components/LinkedInTopicAttestations.tsx:8 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-topics.test.mjs | unverified | /personal-brand |
 | FX057 | Approved-content cohort comparisons | src/components/LinkedInApprovedContentCohorts.tsx:31 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-approved-content-cohorts.test.mjs | unverified | /personal-brand |
 | FX058 | User-authored economic pathway scenario comparison | src/pages/TargetTracks.tsx:354 | docs/rfc/RFC_ECONOMIC_PATHWAYS_2026-10-09.md | tests/economic-pathways.test.mjs; tests/pwa/economic-pathways-exploration.spec.ts | unverified | /target-tracks |
 | FX059 | Development-only read-only MCP adapter | mcp/read-only-adapter.mjs:1 | docs/integrations/JOB_RANGER_MCP_READONLY.md | tests/mcp-readonly-adapter.test.mjs; tests/mcp-readonly-stdio.test.mjs | unverified | local agent stdio (not an end-user route) |
+| FX060 | Topic cohort comparisons from user-attested labels (#246) | src/components/LinkedInTopicCohortSummary.tsx:12 | docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md | tests/linkedin-topic-cohorts.test.mjs; tests/pwa/personal-brand.spec.ts | unverified | /personal-brand |
+| FX061 | In-app offline Help page (#186) | src/pages/Help.tsx:44 | HELP.md | tests/pwa/help.spec.ts | unverified | /help |
+| FX062 | Grouped sidebar navigation with pinned Settings and Help (#273, #318) | src/components/Sidebar.tsx:36 | docs/design/GROUPED_NAVIGATION_271.md | tests/pwa/sidebar-scroll.spec.ts; tests/pwa/sidebar-group-remount.spec.ts | unverified | shell |
+| FX063 | Skip link, Escape and focus after mobile navigation (#279) | src/components/Layout.tsx:25 | HELP.md | tests/pwa/nav-keyboard-a11y.spec.ts | unverified | shell |
+| FX064 | Pause, resume and reschedule a job source (#275) | src/pages/Companies.tsx:542 | HELP.md | tests/pwa/source-schedule.spec.ts | unverified | /companies |
+| FX065 | Edit, enable and disable a filter (#272) | src/pages/Filters.tsx:112 | HELP.md | tests/pwa/filter-editing.spec.ts | unverified | /filters |
+| FX066 | Copy current cover-letter text (#270) | src/components/ApplicationMaterialsPanel.tsx:182 | HELP.md | tests/pwa/cover-letter-copy.spec.ts | unverified | /applications |
+| FX067 | Save notification settings in place (#276) | src/pages/Settings.tsx:289 | HELP.md | tests/pwa/settings-save-feedback.spec.ts | unverified | /settings |
+| FX068 | Task-first Home decision cards (#306, #317) | src/pages/Dashboard.tsx:177 | HELP.md | tests/pwa/home-task-first.spec.ts | unverified | / |
+| FX069 | Applications status focus with unsaved-editor retention (#310) | src/pages/Applications.tsx:101 | HELP.md | tests/pwa/applications-status-focus.spec.ts | unverified | /applications |
