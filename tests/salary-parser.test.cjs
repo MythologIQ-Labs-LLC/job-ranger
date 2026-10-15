@@ -72,4 +72,26 @@ assert.strictEqual(parseSalary(""), null);
 assert.strictEqual(parseSalary("No salary mentioned"), null);
 assert.strictEqual(parseSalary("Competitive compensation"), null);
 
+// Linear time on long scraped text (#326): unbounded whitespace and thousands-group runs made
+// these quadratic (a digit followed by 100,000 spaces took about 8 seconds).
+assert.deepStrictEqual(parseSalary("$100,000\n   -\n   $150,000")?.raw, "$100,000\n   -\n   $150,000");
+// Pretty-printed listings indent a range across lines.
+assert.deepStrictEqual(parseSalary("$100,000 \u2013\r\n            $120,000")?.max, 120000);
+assert.deepStrictEqual(parseSalary("$1,250,000,000,000 - $2,000,000,000,000")?.max, 2000000000000);
+for (const text of [
+  "1" + " ".repeat(200000) + "x",
+  "$" + " ".repeat(200000),
+  "1".repeat(200000),
+  "-".repeat(200000) + "1",
+  "1" + ",000".repeat(50000) + "x",
+  "$1" + ",000".repeat(50000),
+  " 1".repeat(100000) + "x",
+  "$ ".repeat(100000),
+]) {
+  const started = Date.now();
+  parseSalary(text);
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed < 1000, `parseSalary took ${elapsed} ms on a ${text.length}-character adversarial input`);
+}
+
 console.log("All salary-parser tests passed!");
