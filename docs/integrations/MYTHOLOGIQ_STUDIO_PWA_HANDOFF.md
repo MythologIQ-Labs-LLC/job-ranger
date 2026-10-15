@@ -15,7 +15,7 @@ Do not put early users on a throwaway temporary origin with plans to move them l
 
 Every `npm run build:pwa` now produces:
 
-- `dist-pwa/build-info.json`: existing build ID, version, commit, CSP and SHA-256 shell asset inventory.
+- `dist-pwa/build-info.json`: existing build ID, version, commit, CSP, SHA-256 shell asset inventory, and **exact service-worker byte digest**.
 - `dist-pwa/studio-handoff.json`: strictly build-derived schema version 1 describing the external-link entry, local-data boundary, real PWA limitations, and human approval gates.
 - The existing `index.html`, `sw.js`, `_headers`, PWA manifest and verified runtime assets.
 
@@ -52,7 +52,7 @@ node scripts/verify-studio-handoff.mjs --site dist-pwa
 npm run package:pwa
 ```
 
-The offline verifier checks manifest identity, hashed assets, service worker identity and required static security headers. This is a **candidate** check, not proof of correct provider deployment or end-to-end browser behavior.
+The offline verifier checks manifest identity, hashed assets, **service-worker byte digest**, and required static security headers. This is a **candidate** check, not proof of correct provider deployment or end-to-end browser behavior.
 
 After a separate owner-authorized staged deployment, verify the real HTTPS origin:
 
@@ -60,7 +60,7 @@ After a separate owner-authorized staged deployment, verify the real HTTPS origi
 node scripts/verify-studio-handoff.mjs --origin https://APP-ORIGIN-APPROVED-BY-OWNER.example --build-id 'PINNED_VERSION+COMMIT' --build-info-sha256 'SHA256_FROM_VERIFIED_LOCAL_ARTIFACT'
 ```
 
-This checks the root HTTPS security headers against the approved CSP, requires the pinned release build-info SHA-256, and verifies the live `studio-handoff.json`. It reports **artifact verified, owner approval still required**, not "public launch approved". A staged deployment must additionally pass real-browser testing, persistence/quota and backup/restore, first-load/offline/update, runtime CSP and provider CORS testing, responsiveness/accessibility, and honest feature-status review. The PWA must never be served as an arbitrary source checkout or unreviewed CI branch.
+This checks the root HTTPS security headers against the approved CSP, requires the pinned release build-info SHA-256, verifies **every live shell asset against that release's SHA-256 manifest (plus the service-worker digest)**, and verifies the live `studio-handoff.json`. Downloads are streamed with bounded concurrency and size limits; a substituted hosted JS file or altered worker cannot pass by retaining the same build ID. It reports **artifact verified, owner approval still required**, not "public launch approved". A staged deployment must additionally pass real-browser testing, persistence/quota and backup/restore, first-load/offline/update, runtime CSP and provider CORS testing, responsiveness/accessibility, and honest feature-status review. The PWA must never be served as an arbitrary source checkout or unreviewed CI branch.
 
 ## Website hookup, only after launch acceptance
 
