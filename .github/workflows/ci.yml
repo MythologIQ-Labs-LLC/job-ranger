@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -10,11 +12,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   repository-health:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -46,6 +49,7 @@ jobs:
         run: xvfb-run -a npm run test:e2e
 
   release-upgrade:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -77,6 +81,7 @@ jobs:
 
   # Same upgrade verification on a Windows host (sqlite3.exe emits CRLF).
   release-upgrade-windows:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: windows-latest
     timeout-minutes: 30
 
