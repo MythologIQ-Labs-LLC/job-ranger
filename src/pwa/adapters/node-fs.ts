@@ -12,6 +12,7 @@
  * and are reported to the runtime's storage-health listener.
  */
 import { basename, dirname, join, resolve } from "./node-path";
+import { readFileInChunks } from "./opfs-chunks";
 
 type DirectoryHandle = FileSystemDirectoryHandle & {
   keys(): AsyncIterableIterator<string>;
@@ -332,12 +333,21 @@ async function access(target: string): Promise<void> {
 }
 
 function createReadStream(target: string): AsyncIterable<Uint8Array> {
-  const chunkSize = 1024 * 1024;
   return {
     async *[Symbol.asyncIterator]() {
-      const bytes = (await readFile(target)) as Uint8Array;
-      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-        yield bytes.subarray(offset, offset + chunkSize);
+      const entry = await lookup(target);
+      if (!entry) throw fsError("ENOENT", `no such file or directory, open '${target}'`);
+      if (entry.kind !== "file") {
+        throw fsError("EISDIR", `illegal operation on a directory, read '${target}'`);
+      }
+      try {
+        const file = await (entry.handle as FileSystemFileHandle).getFile();
+        // Unlike readFile(), this never constructs a full-file ArrayBuffer.
+        // Backup hash verification and other stream consumers can process
+        // large artifacts with bounded transient read buffers.
+        for await (const chunk of readFileInChunks(file)) yield chunk;
+      } catch (error) {
+        wrapStorageError(error, `stream ${basename(target)}`);
       }
     },
   };
