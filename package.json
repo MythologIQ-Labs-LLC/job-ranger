@@ -45,7 +45,9 @@
     "test:mcp:readonly": "npm run desktop:compile && node tests/mcp-readonly-adapter.test.mjs && node tests/mcp-readonly-stdio.test.mjs",
     "mcp:tunnel:check": "node mcp/tunnel-operator.mjs --mode=check",
     "mcp:tunnel:run": "node mcp/tunnel-operator.mjs --mode=run",
-    "test:mcp:tunnel": "node tests/mcp-tunnel-operator.test.mjs"
+    "test:mcp:tunnel": "node tests/mcp-tunnel-operator.test.mjs",
+    "repo:hygiene": "node scripts/repo-hygiene-audit.mjs",
+    "repo:hygiene:test": "node --test tests/repo-hygiene-audit.test.mjs"
   },
   "dependencies": {
     "@firecrawl/anydoc": "0.2.4",

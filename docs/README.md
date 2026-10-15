@@ -4,6 +4,8 @@ Job Ranger documentation is intentionally divided into **current product truth**
 
 This hierarchy exists because the repository has accumulated multiple generations of planning documents. A reader should never have to guess whether an old phase plan still describes the product.
 
+For the repository's active issue/PR intake, work-in-progress limits, hygiene audit and closure discipline, use [REPOSITORY_WORKFLOW.md](./REPOSITORY_WORKFLOW.md). This is operational guidance, not a replacement for the product-documentation authority below.
+
 ## Authority hierarchy
 
 When documents disagree, use this order:

@@ -1,0 +1,49 @@
+name: Bounded implementation request
+description: An accepted user problem with a clear completion gate
+title: "[Delivery] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Avoid creating a new ticket for each thought or test. Search for an existing parent and record decisions there until a distinct implementable slice is ready.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem and why this is needed now
+    validations:
+      required: true
+  - type: textarea
+    id: completion
+    attributes:
+      label: Acceptance criteria
+      description: Observable behavior, negative cases, tests, and release/trust boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Out of scope and data/authority boundaries
+      description: Explain impact on local-first storage, canonical career truth, opt-in agents, privacy, and product claims.
+    validations:
+      required: true
+  - type: dropdown
+    id: readiness
+    attributes:
+      label: Proposed disposition
+      options:
+        - Candidate (not approved or scheduled)
+        - Ready for scoped implementation after owner approval
+        - Blocked pending external decision or evidence
+        - Deferred for a later milestone
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Proposed accountable owner
+      placeholder: GitHub handle or Unassigned pending triage
+  - type: input
+    id: related
+    attributes:
+      label: Parent issue, prior proposal, or superseded path
+      placeholder: "#248"
