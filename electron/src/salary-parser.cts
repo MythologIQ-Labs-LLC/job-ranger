@@ -95,8 +95,11 @@ function parseNumericValue(text: string): number | null {
 export function parseSalary(text: string | null | undefined): ParsedSalary | null {
   if (!text) return null;
 
+  // Bounded whitespace, separator and thousands-group runs keep both patterns linear on long
+  // scraped text (#326): with unbounded `\s*` or `(?:,\d{3})*`, every start inside a long run
+  // rescanned the rest of it. Four groups still cover amounts up to 999,999,999,999,999.
   const rangeMatch = text.match(
-    /[$\u20AC\u00A3]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?[kK]?)\s*[-\u2013\u2014to]+\s*[$\u20AC\u00A3]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?[kK]?)/
+    /[$\u20AC\u00A3]?\s{0,32}(\d{1,3}(?:,\d{3}){0,4}(?:\.\d+)?[kK]?)\s{0,32}[-\u2013\u2014to]{1,4}\s{0,32}[$\u20AC\u00A3]?\s{0,32}(\d{1,3}(?:,\d{3}){0,4}(?:\.\d+)?[kK]?)/
   );
 
   if (rangeMatch) {
@@ -111,7 +114,7 @@ export function parseSalary(text: string | null | undefined): ParsedSalary | nul
   }
 
   const singleMatch = text.match(
-    /[$\u20AC\u00A3]\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?[kK]?)/
+    /[$\u20AC\u00A3]\s{0,32}(\d{1,3}(?:,\d{3}){0,4}(?:\.\d+)?[kK]?)/
   );
 
   if (singleMatch) {
