@@ -13,6 +13,9 @@ async function openHome(page: Page, theme: string) {
     localStorage.setItem("theme", name);
     localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true");
   }, theme);
+  // Going to "#/" from "#/" is a same-document fragment change: no reload, so the
+  // init script above would never apply the next theme. Start a fresh document.
+  await page.goto("about:blank");
   await page.goto(server.url + "#/");
   await waitForRuntime(page);
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
