@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/MythologIQ-Labs-LLC/job-ranger/security/policy
+    about: Do not publish credentials, exploits, private career data, or security reports in a public issue.
+  - name: Check existing work before filing
+    url: https://github.com/MythologIQ-Labs-LLC/job-ranger/issues?q=is%3Aissue
+    about: Search open and closed issues; update a current parent issue instead of duplicating its scope.
