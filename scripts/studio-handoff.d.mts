@@ -3,6 +3,7 @@ export type StudioBuildInfo = {
   version: string;
   buildId: string;
   commit: string;
+  serviceWorkerSha256: string;
   assets?: { path: string; sha256: string }[];
 };
 
@@ -18,4 +19,4 @@ export declare function inspectLiveStudioPwa(
   expectedBuildId: string,
   expectedBuildInfoSha256: string,
   fetchImpl?: typeof fetch
-): Promise<{ status: string; origin: string; buildId: string }>;
+): Promise<{ status: string; origin: string; buildId: string; verifiedAssets: number }>;
