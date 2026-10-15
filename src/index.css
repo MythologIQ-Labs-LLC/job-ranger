@@ -105,11 +105,15 @@ p {
   color: var(--color-text-secondary);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* In the base layer so Tailwind font utilities on a control (text-sm, font-semibold) still apply;
+   unlayered, this silently reset every button to the body size and weight (#248). */
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 input,
@@ -701,9 +705,10 @@ textarea {
 .sidebar-brand-eyebrow {
   margin: 0 0 0.18rem;
   color: rgba(255, 255, 255, 0.73);
-  font-size: 0.58rem;
+  font-size: 0.625rem;
   font-weight: 800;
   letter-spacing: 0.17em;
+  text-transform: uppercase;
 }
 
 .sidebar-brand-subtitle {
@@ -718,6 +723,20 @@ textarea {
   font-size: 0.64rem;
   font-weight: 800;
   letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Midnight's orange accent turned the sidebar's lower glow into a brown haze on navy. */
+:root[data-theme="midnight"] .app-sidebar {
+  background:
+    radial-gradient(ellipse at 90% -12%, color-mix(in srgb, var(--color-primary) 27%, transparent), transparent 48%),
+    radial-gradient(ellipse at 0% 110%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 55%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-sidebar) 94%, #000), var(--color-sidebar));
+}
+
+/* The 60% canvas strip of light themes is near-white on a near-white card; outline the strip. */
+.theme-palette-preview {
+  border: 1px solid var(--color-border-strong);
 }
 
 .sidebar-nav-entry {

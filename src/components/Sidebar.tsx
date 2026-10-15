@@ -178,14 +178,15 @@ export function Sidebar() {
             />
           </span>
           <div className="min-w-0">
-            <p className="sidebar-brand-eyebrow">MYTHOLOGIQ LABS</p>
+            <p className="sidebar-brand-eyebrow">MythologIQ Labs</p>
             <h1 className="truncate text-lg font-bold leading-tight !text-white">Job Ranger</h1>
             <p className="sidebar-brand-subtitle">Your career workspace</p>
           </div>
           <button
             type="button"
             ref={toggleRef}
-            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 text-white md:hidden"
+            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 text-white md:hidden
+              focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
             aria-controls="job-ranger-primary-nav job-ranger-utility-nav"
@@ -204,7 +205,7 @@ export function Sidebar() {
           ${mobileOpen ? "block" : "hidden"} md:block`}
         aria-label="Primary navigation"
       >
-        <p className="sidebar-section-label px-3 pb-2">WORKSPACE</p>
+        <p className="sidebar-section-label px-3 pb-2">Workspace</p>
         {primaryLinks.map(item => (
           <SidebarNavLink
             key={item.href}
@@ -261,7 +262,7 @@ export function Sidebar() {
       </nav>
 
       <nav id="job-ranger-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
-        <p className="sidebar-section-label px-3 pb-1.5">PREFERENCES</p>
+        <p className="sidebar-section-label px-3 pb-1.5">Preferences</p>
         {utilityLinks.map(item => (
           <SidebarNavLink
             key={item.href}
