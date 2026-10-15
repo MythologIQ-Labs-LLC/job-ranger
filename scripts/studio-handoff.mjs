@@ -164,22 +164,29 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
   const expected = requiredString(expectedBuildId, "expected build ID");
   if (!HASH.test(expectedBuildInfoSha256)) fail("approved build-info SHA-256 is required");
   const get = async (pathname) => {
-    const response = await fetchImpl(new URL(pathname, url), { redirect: "manual", cache: "no-store" });
+    const response = await fetchImpl(new URL(pathname, url), {
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!response.ok || response.redirected || response.status >= 300) fail("live response failed: " + pathname);
     return response;
   };
   const root = await get("/");
   const rootBytes = new Uint8Array(await root.arrayBuffer());
+  if (rootBytes.byteLength > 2 * 1024 * 1024) fail("live HTML exceeds verification size limit");
   const html = new TextDecoder().decode(rootBytes);
   if (!html.includes('name="job-ranger-build" content="' + expected + '"')) {
     fail("live HTML build identity mismatch");
   }
   const swBytes = new Uint8Array(await (await get("/sw.js")).arrayBuffer());
+  if (swBytes.byteLength > 10 * 1024 * 1024) fail("live service worker exceeds verification size limit");
   const sw = new TextDecoder().decode(swBytes);
   if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) {
     fail("live service worker build identity mismatch");
   }
   const infoBytes = new Uint8Array(await (await get("/build-info.json")).arrayBuffer());
+  if (infoBytes.byteLength > 2 * 1024 * 1024) fail("live build-info exceeds verification size limit");
   if (sha256(infoBytes) !== expectedBuildInfoSha256) fail("live build-info checksum differs from approved release");
   const info = JSON.parse(new TextDecoder().decode(infoBytes));
   if (info.product !== PRODUCT || info.buildId !== expected) fail("live build identity mismatch");
