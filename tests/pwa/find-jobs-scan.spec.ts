@@ -51,7 +51,10 @@ async function seed(page: Page) {
   await page.reload();
   await waitForRuntime(page);
   await expect(page.getByRole("button", { name: "Medical Office Coordinator", exact: true })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: /^Assessment (target track|direction)$/ })).toHaveValue(/track-/);
+  // The visible label is the accessible name; a stale aria-label must not override it.
+  const direction = page.getByRole("combobox", { name: "Assessment direction", exact: true });
+  await expect(direction).toHaveValue(/track-/);
+  await expect(direction).not.toHaveAttribute("aria-label");
 }
 
 test("compact list retains source quality and assessment access without showing verbose details", async ({ page }) => {
@@ -291,4 +294,37 @@ test("assessment read failure is announced and retry stays unverified until data
   dialog = page.getByRole("dialog", { name: /Opportunity assessment:/ });
   await expect(dialog.getByText("Eligibility and blockers")).toBeVisible();
   await expect(dialog.getByText("Evidence coverage", { exact: true })).toBeVisible();
+});
+
+test("a failed Prepare resume is reported inside the drawer and a retry tracks the job once", async ({ page }) => {
+  await seed(page);
+  await page.evaluate(() => {
+    const api = window.electronAPI.applications;
+    const original = api.track.bind(api);
+    let failOnce = true;
+    api.track = async (id) => {
+      if (failOnce) {
+        failOnce = false;
+        throw new Error("Synthetic local application-write interruption");
+      }
+      return original(id);
+    };
+  });
+  const trigger = page.getByRole("button", { name: /Opportunity assessment/ }).first();
+  await trigger.click();
+  const drawer = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  const prepare = drawer.getByRole("button", { name: "Prepare resume" });
+  await prepare.click();
+  // The failure must be visible in the modal layer, not only on the page behind it.
+  await expect(drawer.getByRole("alert"))
+    .toContainText("Resume preparation could not start: Synthetic local application-write interruption");
+  await expect(prepare).toBeFocused();
+  await expect(page).toHaveURL(/#\/jobs$/);
+  expect(await page.evaluate(() => window.electronAPI.applications.list().then((rows) => rows.length))).toBe(0);
+
+  await prepare.click();
+  await expect(page).toHaveURL(/#\/resume\?job=/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveClass(/body-modal-open/);
+  expect(await page.evaluate(() => window.electronAPI.applications.list().then((rows) => rows.length))).toBe(1);
 });
