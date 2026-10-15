@@ -40,6 +40,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: production-web
     steps:
+      - name: Check out Studio handoff verifier
+        uses: actions/checkout@v4
+
+      - name: Set up Node for release verification
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
       - name: Download released web build and evidence
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,10 +72,12 @@ jobs:
         run: |
           set -euo pipefail
           unzip -q artifact/job-ranger-web-*.zip -d site
-          for required in index.html sw.js _headers manifest.webmanifest build-info.json; do
+          for required in index.html sw.js _headers manifest.webmanifest build-info.json studio-handoff.json; do
             test -s "site/$required"
           done
           node -e "const a=require('./site/build-info.json'), b=require('./artifact/web-build-info.json'); if (a.buildId !== b.buildId) { throw new Error('build identity mismatch'); } console.log('Deploying build', a.buildId, 'from commit', a.commit)"
+          expected=$(node -p "require('./site/build-info.json').buildId")
+          node scripts/verify-studio-handoff.mjs --site site --build-id "$expected"
 
       - name: Deploy to Cloudflare Pages
         env:
@@ -99,4 +109,12 @@ jobs:
           echo "$headers" | grep -qi "content-security-policy: default-src 'none'"
           echo "$headers" | grep -qi "strict-transport-security"
           echo "$headers" | grep -qi "x-frame-options: DENY"
-          echo "Production origin verified: $origin serves $expected"
+          # A matching build ID is insufficient: require the exact approved
+          # service-worker bytes, index document, JS/CSS and every shell asset
+          # to match the unpacked release's pinned SHA-256 inventory.
+          approved_digest=$(sha256sum site/build-info.json | cut -d ' ' -f1)
+          node scripts/verify-studio-handoff.mjs \
+            --origin "$origin" \
+            --build-id "$expected" \
+            --build-info-sha256 "$approved_digest"
+          echo "Production origin byte-verified: $origin serves $expected (Studio CTA still requires separate owner approval)"
