@@ -4,6 +4,8 @@ Job Ranger documentation is intentionally divided into **current product truth**
 
 This hierarchy exists because the repository has accumulated multiple generations of planning documents. A reader should never have to guess whether an old phase plan still describes the product.
 
+For the repository's active issue/PR intake, work-in-progress limits, hygiene audit and closure discipline, use [REPOSITORY_WORKFLOW.md](./REPOSITORY_WORKFLOW.md). This is operational guidance, not a replacement for the product-documentation authority below.
+
 ## Authority hierarchy
 
 When documents disagree, use this order:
@@ -105,6 +107,7 @@ Key current research:
 - [`research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md)
 - [`research/RESUME_PARSER_ADOPTION_2026-09-25.md`](./research/RESUME_PARSER_ADOPTION_2026-09-25.md)
 - [`research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md`](./research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md)
+- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **unmerged developer-tool candidate**, local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
 
 Research can recommend or reject a capability. It does not make that capability product truth until accepted and implemented.
 

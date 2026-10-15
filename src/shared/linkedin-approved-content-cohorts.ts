@@ -28,6 +28,7 @@ export interface ApprovedPostCohortMember {
   audiences: string[];
   approvedCopy: string;
   hypothesis: string;
+  sourceFingerprint: string;
 }
 export interface ApprovedPostComparison {
   first: ApprovedPostCohortMember;
@@ -56,12 +57,12 @@ function audienceKey(audiences:readonly string[]):string|null {
   const values=[...new Set(audiences.map(s=>s.trim().toLowerCase()).filter(Boolean))].sort();
   return values.length ? JSON.stringify(values) : null;
 }
-export async function compareLinkedInApprovedPostContexts(
+export async function verifiedApprovedPostMembers(
   learning: LearningReport,
   receipts: readonly ManualPublicationReceipt[],
   packages: readonly ManualPostPackage[],
   drafts: readonly PersonalBrandDraft[],
-): Promise<ApprovedPostCohortReport> {
+): Promise<ApprovedPostCohortMember[]> {
   if (learning.rows.length > 500 || receipts.length > 1000 ||
       packages.length > 1000 || drafts.length > 1000) {
     throw new Error("Too many records in post content comparison.");
@@ -102,9 +103,20 @@ export async function compareLinkedInApprovedPostContexts(
       sourceLabel:row.sourceLabel,states:[...row.states],
       hook:draft.hookArchetype,format:draft.format,objective:draft.objective,
       audiences:[...draft.audiences],approvedCopy:original.body,hypothesis:draft.hypothesis,
+      sourceFingerprint:receipt.contentSha256,
     });
   }
   candidates.sort((a,b)=>a.publishedAt.localeCompare(b.publishedAt)||a.postId.localeCompare(b.postId));
+  return candidates;
+}
+
+export async function compareLinkedInApprovedPostContexts(
+  learning: LearningReport,
+  receipts: readonly ManualPublicationReceipt[],
+  packages: readonly ManualPostPackage[],
+  drafts: readonly PersonalBrandDraft[],
+): Promise<ApprovedPostCohortReport> {
+  const candidates=await verifiedApprovedPostMembers(learning,receipts,packages,drafts);
   const comparisons:ApprovedPostComparison[]=[];
   const ageTolerance=learning.targetAgeHours===24?2:learning.targetAgeHours===48?4:8;
   for(let i=0;i<candidates.length;i++){

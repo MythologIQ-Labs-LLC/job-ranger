@@ -103,7 +103,7 @@ test.describe("progressive first-run onboarding", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -144,7 +144,7 @@ test.describe("progressive first-run onboarding", () => {
     await page.reload();
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();

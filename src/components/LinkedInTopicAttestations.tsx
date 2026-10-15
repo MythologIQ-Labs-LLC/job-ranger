@@ -5,8 +5,9 @@ import type { HistoricalLinkedInPost } from "../shared/linkedin-history";
 import type { LinkedInTopicEvent, TopicTarget } from "../shared/linkedin-topics";
 
 /** Explicit human classifications. Never treat an analytics metric as a topic label. */
-export function LinkedInTopicAttestations({ publications }:{
+export function LinkedInTopicAttestations({ publications,onLabelsChanged }:{
   publications: readonly ManualPublicationReceipt[];
+  onLabelsChanged?: () => void;
 }) {
   const [historical,setHistorical]=useState<HistoricalLinkedInPost[]>([]);
   const [labels,setLabels]=useState<LinkedInTopicEvent[]>([]);
@@ -71,6 +72,7 @@ export function LinkedInTopicAttestations({ publications }:{
       const event=await getDesktopApi().personalBrand.attestLinkedInTopics(
         {...selected,topics},current?.revision??0,true);
       await refresh();
+      onLabelsChanged?.();
       setHistory(await getDesktopApi().personalBrand.listLinkedInTopicHistory(selected));
       setConfirmed(false);
       setNotice(event.action==="clear"?

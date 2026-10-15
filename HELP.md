@@ -184,6 +184,8 @@ Career Stories provide reusable evidence-linked narratives for interviews/applic
 
 Job Ranger can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
 
+Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Job Ranger says so, and you can select and copy the text manually.
+
 ### 13. Search Insights
 
 Search Insights summarizes observed search state such as applications by Target Track/source/status, interview/offer outcomes, recurring unsupported requirements, and evidence-based strategy signals above bounded sample thresholds.
@@ -311,10 +313,10 @@ See [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md) and [`docs/DI
 Check:
 
 1. the source URL points to a real careers/jobs page;
-2. the source is active;
+2. the source is active. On **Companies**, **Pause** stops scheduled runs for a source without deleting it, **Resume** restarts them, and the cadence menu changes how often it runs. To monitor a different URL, add it as a new source;
 3. the latest acquisition status/diagnostic;
 4. the source support state is not `manual-review`;
-5. filters are not excluding results;
+5. filters are not excluding results. Each card on **Filters** lists the filter's include and exclude rules; use **Edit** to change them or **Disable** to pause a filter without deleting it;
 6. the third-party portal has not changed underneath its extraction path.
 
 ### Job Ranger found no requirements for a job

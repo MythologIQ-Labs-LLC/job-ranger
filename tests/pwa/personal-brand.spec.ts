@@ -489,8 +489,11 @@ test("LinkedIn dashboard compares only complete seven-day windows and withholds 
   await page.evaluate(payload=>window.electronAPI.personalBrand.saveLinkedInImport(payload,true),content(22));
   await page.reload();
   await waitForRuntime(page);
-  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
+  // Before the saved exports load, both windows read "Unavailable"; wait for the settled
+  // conflict state before using the exact-text locator (#298).
   await expect(impressions.getByText("Conflicting observations")).toBeVisible();
+  await expect(impressions.getByText("Unavailable",{exact:true})).toHaveCount(1);
+  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
   await expect(impressions.getByText("Change unavailable")).toBeVisible();
   await expect(dashboard.getByTestId("linkedin-weekly-engagements").getByText("14",{exact:true})).toBeVisible();
 });
@@ -570,4 +573,74 @@ test("user-attested LinkedIn topic labels survive reload, protect revisions and 
   const surviving=await page.evaluate(()=>window.electronAPI.personalBrand.listLinkedInTopicLabels());
   expect(surviving).toHaveLength(1);
   expect(surviving[0].targetId).toBe(source.receipt.postId);
+});
+
+
+test("reviewed topics show qualified same-context samples and clear to withheld",async({page})=>{
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  const ids=await page.evaluate(async()=>{
+    const api=window.electronAPI.personalBrand;
+    const newPosts:string[]=[];
+    for(let i=0;i<6;i++){
+      const publishedAt=new Date(Date.parse("2026-09-01T12:00:00.000Z")+i*86400000).toISOString();
+      const d=await api.createDraft({
+        body:"Distinct original reviewed LinkedIn topic experiment "+i+".",
+        objective:"expertise_proof",audiences:["recruiters"],
+        destination:"linkedin",format:"text",hookArchetype:"lesson",
+        hypothesis:"Compare observations without causal topic attribution.",
+        claimChecks:[],mediaCount:0,mediaAccessibilityReviewed:true,
+      });
+      await api.prepareDraft(d.id,d.revision,true);
+      const receipt=await api.confirmPublication({
+        draftId:d.id,revision:d.revision,
+        publishedUrl:"https://www.linkedin.com/posts/topic-synthetic-approved-"+i,
+        publishedAt,userConfirmed:true,
+      });
+      await api.appendSnapshot(receipt.postId,{
+        capturedAt:new Date(Date.parse(publishedAt)+48*3600000).toISOString(),
+        windowStart:publishedAt,
+        windowEnd:new Date(Date.parse(publishedAt)+24*3600000).toISOString(),
+        sourceLabel:"Common manual individual post analytics",
+        observations:[
+          {name:"profile_views",state:"manual",value:i+1},
+          {name:"reached",state:"manual",value:100},
+        ],
+      });
+      await api.attestLinkedInTopics({
+        targetKind:"confirmed_publication",targetId:receipt.postId,
+        topics:[i<3?"career change":"ai governance"],
+      },0,true);
+      newPosts.push(receipt.postId);
+    }
+    return newPosts;
+  });
+  await page.goto(`${server.url}#/personal-brand`);
+  const area=page.getByTestId("linkedin-topic-cohorts");
+  await expect(area.getByText(/1 descriptive topic comparison group/)).toBeVisible();
+  await expect(area.getByTestId("topic-coverage")).toContainText(/6 single-topic, age-matched posts/);
+  const rows=area.getByRole("row");
+  const aiRow=rows.filter({hasText:"ai governance"});
+  const careerRow=rows.filter({hasText:"career change"});
+  await expect(aiRow.getByRole("rowheader")).toHaveText("ai governance");
+  await expect(aiRow.getByRole("cell").nth(0)).toHaveText("3");
+  await expect(aiRow.getByRole("cell").nth(1)).toHaveText("5.00%");
+  await expect(careerRow.getByRole("rowheader")).toHaveText("career change");
+  await expect(careerRow.getByRole("cell").nth(0)).toHaveText("3");
+  await expect(careerRow.getByRole("cell").nth(1)).toHaveText("2.00%");
+  await page.getByLabel("Observation age").selectOption("48");
+  await expect(area.getByText(/0 descriptive topic comparison group/)).toBeVisible();
+  await page.getByLabel("Observation age").selectOption("24");
+  await expect(area.getByText(/1 descriptive topic comparison group/)).toBeVisible();
+
+  const form=page.getByTestId("linkedin-topic-attestations");
+  await form.getByLabel("Choose an existing LinkedIn post")
+    .selectOption("confirmed_publication:"+ids[0]);
+  await form.getByRole("checkbox",{name:/I personally reviewed these topic labels/}).check();
+  await form.getByRole("button",{name:"Clear active topic labels"}).click();
+  await expect(form.getByText(/Current revision: 2/)).toBeVisible();
+  await expect(area.getByText(/0 descriptive topic comparison group/)).toBeVisible();
+  const medianCells=area.getByRole("cell",{name:"Withheld",exact:true});
+  await expect(medianCells.first()).toBeVisible();
+  expect(await page.evaluate(()=>window.electronAPI.personalBrand.listPublications())).toHaveLength(6);
 });
