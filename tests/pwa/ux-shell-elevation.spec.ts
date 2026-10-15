@@ -81,9 +81,13 @@ test("reduced motion suppresses decorative transitions", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openHome(page, "canopy");
   const action = page.locator(".home-action-row").first();
-  if (await action.count()) await expect(action).toHaveCSS("transition-duration", "0s");
+  // Global reduced-motion safety already pins decorative transitions at
+  // 0.01ms !important, rather than reporting an exact computed "0s".
+  if (await action.count()) {
+    expect(await action.evaluate(el => parseFloat(getComputedStyle(el).transitionDuration))).toBeLessThanOrEqual(0.001);
+  }
   const icon = page.locator(".sidebar-nav-glyph").first();
-  await expect(icon).toHaveCSS("transition-duration", "0s");
+  expect(await icon.evaluate(el => parseFloat(getComputedStyle(el).transitionDuration))).toBeLessThanOrEqual(0.001);
 });
 
 test("theme picker previews each 60/30/10 palette and reflects the active selection", async ({ page }) => {
