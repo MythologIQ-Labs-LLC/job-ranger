@@ -143,14 +143,46 @@ async function run() {
       [],
       'overlapping coverage recomputes for one job must all succeed',
     );
-    const [{ count: requirementCount }] = await sqlite.queryAll(
-      `SELECT COUNT(*) AS count FROM job_requirements WHERE job_id = '${job.id}';`,
+    const storedCoverage = async () => ({
+      requirements: (await sqlite.queryAll(
+        `SELECT id FROM job_requirements WHERE job_id = '${job.id}' ORDER BY id;`,
+      )).map((row) => row.id),
+      mappings: (await sqlite.queryAll(
+        `SELECT m.id FROM requirement_evidence_maps m JOIN job_requirements r ON r.id = m.job_requirement_id WHERE r.job_id = '${job.id}' ORDER BY m.id;`,
+      )).map((row) => row.id),
+      orphans: (await sqlite.queryOne(
+        'SELECT COUNT(*) AS n FROM requirement_evidence_maps WHERE job_requirement_id NOT IN (SELECT id FROM job_requirements);',
+      )).n,
+    });
+    const expectedCoverage = {
+      requirements: coverage.items.map((item) => item.requirement.id).sort(),
+      mappings: coverage.items.map((item) => item.mapping.id).sort(),
+      orphans: 0,
+    };
+    // Content-derived ids stay stable across recomputes, with exactly one copy and no orphans.
+    assert.deepEqual(await storedCoverage(), expectedCoverage);
+
+    // A replacement that fails part-way rolls back completely: the deletes and the
+    // earlier inserts of the failed attempt must not persist.
+    const repository = new RequirementRepository(sqlite);
+    const duplicateLast = { ...coverage, items: [...coverage.items, coverage.items[coverage.items.length - 1]] };
+    await assert.rejects(repository.replaceCoverage(duplicateLast, null), /UNIQUE constraint failed/);
+    assert.deepEqual(await storedCoverage(), expectedCoverage, 'a failed replacement must leave the previous coverage intact');
+
+    // Requirement text taken from listings can carry control characters; they must
+    // round-trip exactly through the transaction on every engine.
+    const tricky = 'Line one\r\nline\u001atwo\u0000three\tfour\u007f';
+    const [first, ...rest] = coverage.items;
+    await repository.replaceCoverage({
+      ...coverage,
+      items: [{ ...first, requirement: { ...first.requirement, sourceText: tricky } }, ...rest],
+    }, null);
+    const storedText = await sqlite.queryOne(
+      `SELECT hex(source_text) AS h FROM job_requirements WHERE id = '${first.requirement.id}';`,
     );
-    const [{ count: mappingCount }] = await sqlite.queryAll(
-      `SELECT COUNT(*) AS count FROM requirement_evidence_maps WHERE job_requirement_id IN (SELECT id FROM job_requirements WHERE job_id = '${job.id}');`,
-    );
-    assert.equal(requirementCount, coverage.totalCount);
-    assert.equal(mappingCount, coverage.totalCount);
+    assert.equal(storedText.h, Buffer.from(tricky).toString('hex').toUpperCase());
+    await requirements.getJobEvidenceCoverage(job.id);
+    assert.deepEqual(await storedCoverage(), expectedCoverage);
 
     const restarted = new RequirementBackend({
       databasePath: status.databasePath,
