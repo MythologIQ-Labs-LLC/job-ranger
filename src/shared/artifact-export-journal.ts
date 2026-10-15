@@ -3,6 +3,7 @@
  * Offline domain-only code: the host must supply durable atomic storage.
  * No OAuth, Drive API call, upload, or persistence backend is introduced.
  */
+import { advanceExportReceipt } from "./artifact-export-approval.ts";
 import type { ExportReceipt, ExportStatus } from "./artifact-export-approval.ts";
 
 export type RecoveryDecision =
@@ -121,9 +122,15 @@ export async function advanceDurableExport(
       current.remoteId && receipt.remoteId !== current.remoteId) {
     throw new Error("Export journal identity or expected state mismatch.");
   }
+  const checked = advanceExportReceipt(
+    { operationId: current.operationId, proposalId: receipt.proposalId,
+      status: current.status, bytesSha256: current.bytesSha256,
+      remoteId: current.remoteId, verifiedSha256: current.verifiedSha256 },
+    receipt.status, receipt.remoteId, receipt.verifiedSha256,
+  );
   const next: ExportJournalRecord = {
-    ...current, status: receipt.status, remoteId: receipt.remoteId,
-    verifiedSha256: receipt.verifiedSha256, updatedAt: nextTimestamp,
+    ...current, status: checked.status, remoteId: checked.remoteId,
+    verifiedSha256: checked.verifiedSha256, updatedAt: nextTimestamp,
   };
   validateJournalRecord(next);
   if (Date.parse(nextTimestamp) < Date.parse(current.updatedAt) ||
