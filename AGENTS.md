@@ -1,6 +1,6 @@
 # Job Ranger agent working agreement
 
-Start with [GOVERNANCE.md](./GOVERNANCE.md), [docs/REPOSITORY_WORKFLOW.md](./docs/REPOSITORY_WORKFLOW.md), and [CONTRIBUTING.md](./CONTRIBUTING.md).
+Start with [docs/ARCHITECTURE_INDEX.md](./docs/ARCHITECTURE_INDEX.md), [GOVERNANCE.md](./GOVERNANCE.md), [docs/REPOSITORY_WORKFLOW.md](./docs/REPOSITORY_WORKFLOW.md), and [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 - Read exact current \`main\` and parent issue before modifying code. Reuse
   active delivery branches; do not proliferate duplicate PRs.
