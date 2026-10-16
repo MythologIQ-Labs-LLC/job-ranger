@@ -165,7 +165,7 @@ const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & 
   },
   drive: {
     status: () => ipcRenderer.invoke("drive:status"),
-    connect: () => ipcRenderer.invoke("drive:connect"),
+    connect: (flowId) => ipcRenderer.invoke("drive:connect", flowId),
     cancelConnect: (flowId) => ipcRenderer.invoke("drive:cancel-connect", flowId),
     disconnect: () => ipcRenderer.invoke("drive:disconnect"),
     prepareExport: (artifactId) => ipcRenderer.invoke("drive:prepare-export", artifactId),

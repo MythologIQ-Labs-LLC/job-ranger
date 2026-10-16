@@ -26,8 +26,8 @@ export function validateDriveApproveRequest(value: unknown): DriveApproveRequest
   };
 }
 
-export function validateConnectFlowId(value: unknown): string | undefined {
-  if (value === undefined || value === null) return undefined;
+/** A cancel must name the sign-in it targets; without an id it could end someone else's. */
+export function validateConnectFlowId(value: unknown): string {
   if (typeof value !== "string" || !OPERATION_ID.test(value)) {
     throw new DriveError("invalid_request", "Invalid Google sign-in id.");
   }

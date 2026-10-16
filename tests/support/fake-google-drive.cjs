@@ -75,6 +75,7 @@ function createFakeGoogle(options = {}) {
       tamperChallenge: false,
       redirectMismatch: false,
       token: null,
+      revoke: null,
       lastAuthorizeParams: null,
     },
   };
@@ -223,6 +224,7 @@ function createFakeGoogle(options = {}) {
     }
 
     if (method === "POST" && url.pathname === "/revoke") {
+      if (state.faults.revoke) return json(Number(state.faults.revoke.slice(7)), { error: "server_error" });
       const token = form().get("token");
       state.revoked.push(token);
       // Revoking any token ends the whole grant for that account.
@@ -275,6 +277,7 @@ function createFakeGoogle(options = {}) {
         return googleError(Number(status), reason ?? "backendError");
       }
       if (fault === "reset-before-store") return { fault: "drop" };
+      if (fault === "reject-reserved-id") return googleError(400, "fileIdNotUsable", "The provided file ID is not usable.");
       const { metadata, bytes } = parseMultipart(headers["content-type"] ?? headers["Content-Type"], body);
       if (metadata.id && state.files.has(metadata.id)) {
         state.counts.conflicts += 1;

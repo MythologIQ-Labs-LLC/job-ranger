@@ -9,6 +9,7 @@ export function GoogleDrivePanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [flowId, setFlowId] = useState<string | null>(null);
 
   if (!status || status.reason === "desktop-only") return null;
 
@@ -16,18 +17,28 @@ export function GoogleDrivePanel() {
     setBusy(true);
     setError(null);
     setMessage(null);
-    const pending = getDesktopApi().drive.connect();
+    const id = crypto.randomUUID();
+    setFlowId(id);
+    const pending = getDesktopApi().drive.connect(id);
     // The connect call stays open while the browser sign-in runs; poll so Cancel appears meanwhile.
     const timer = window.setInterval(() => void refresh(), 300);
-    const result = await pending.finally(() => window.clearInterval(timer));
+    const result = await pending.finally(() => {
+      window.clearInterval(timer);
+      setFlowId(null);
+    });
     setBusy(false);
-    if (result.ok) setMessage("Google Drive connected.");
+    if (result.ok) {
+      setMessage("Google Drive connected.");
+      if (result.value.warning) setError(result.value.warning);
+    }
     else setError(result.error.message);
     await refresh();
   };
 
   const cancel = async () => {
-    const result = await getDesktopApi().drive.cancelConnect(status?.connectFlowId);
+    // Only the sign-in this panel started can be cancelled from here.
+    if (!flowId) return;
+    const result = await getDesktopApi().drive.cancelConnect(flowId);
     if (!result.ok) setError(result.error.message);
     await refresh();
   };
@@ -72,7 +83,7 @@ export function GoogleDrivePanel() {
             <p className="text-sm text-[var(--color-text-secondary)]" role="status">
               Waiting for you to finish signing in to Google in your browser…
             </p>
-            <button type="button" className="secondary-button" onClick={() => void cancel()}>
+            <button type="button" className="secondary-button disabled:opacity-60" disabled={!flowId} onClick={() => void cancel()}>
               <X className="h-4 w-4" aria-hidden="true" /> Cancel sign-in
             </button>
           </div>

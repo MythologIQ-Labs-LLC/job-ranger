@@ -11,6 +11,7 @@ const RETRYABLE: ReadonlySet<DriveErrorCode> = new Set<DriveErrorCode>([
   "network",
   "timeout",
   "invalid_response",
+  "remote_trashed",
 ]);
 
 /**
@@ -77,6 +78,13 @@ function reasonsOf(body: GoogleErrorBody | null): string[] {
 export function classifyGoogleResponse(status: number, body: GoogleErrorBody | null): DriveError {
   const reasons = reasonsOf(body);
   const has = (...names: string[]) => reasons.some((reason) => names.includes(reason));
+  if (has("fileIdNotUsable", "fileIdNotUsableInCreate", "invalidFileId")) {
+    return new DriveError(
+      "reserved_id_rejected",
+      "Google Drive refused the file id Job Ranger reserved for this upload, so nothing was uploaded. Abandon this attempt, then upload a new copy.",
+      status,
+    );
+  }
   if (has("invalid_client", "unauthorized_client")) {
     return new DriveError("not_configured", "Google rejected this build's OAuth client configuration. See the Google Drive setup guide.", status);
   }

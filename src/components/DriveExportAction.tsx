@@ -43,7 +43,8 @@ export function DriveExportAction({
   const [error, setError] = useState<DriveErrorInfo | null>(null);
   const signingIn = useRef(false);
   /** The sign-in this dialog started, so Cancel and close only end that one. */
-  const flowId = useRef<string | undefined>(undefined);
+  const flowId = useRef<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const loadRecords = useCallback(async () => {
     if (!status.configured) return;
@@ -114,25 +115,27 @@ export function DriveExportAction({
   const reconnect = async () => {
     setPhase("connecting");
     signingIn.current = true;
-    flowId.current = undefined;
-    const pending = getDesktopApi().drive.connect();
-    const timer = window.setInterval(() => {
-      void getDesktopApi().drive.status().then((next) => {
-        if (signingIn.current && next.connectFlowId) flowId.current = next.connectFlowId;
-      });
-      void onStatusChange();
-    }, 300);
+    const id = crypto.randomUUID();
+    flowId.current = id;
+    const pending = getDesktopApi().drive.connect(id);
+    const timer = window.setInterval(() => void onStatusChange(), 300);
     const result = await pending.finally(() => {
       window.clearInterval(timer);
       signingIn.current = false;
-      flowId.current = undefined;
+      flowId.current = null;
     });
     await onStatusChange();
-    if (result.ok) await review();
-    else fail(result.error);
+    if (result.ok) {
+      setNotice(result.value.warning ?? null);
+      await review();
+    } else {
+      fail(result.error);
+    }
   };
 
   const cancelSignIn = async () => {
+    // Only the sign-in this dialog started; never someone else's.
+    if (!flowId.current) return;
     await getDesktopApi().drive.cancelConnect(flowId.current);
     await onStatusChange();
   };
@@ -173,6 +176,10 @@ export function DriveExportAction({
 
       <Modal open={open} onClose={close} title="Save to Google Drive" size="lg">
         {phase === "loading" && <p className="text-sm text-[var(--color-text-secondary)]" role="status">Checking the PDF…</p>}
+
+        {notice && phase === "review" && (
+          <p className="support-note mb-4 px-4 py-3 text-sm text-[var(--color-danger)]" role="status">{notice}</p>
+        )}
 
         {phase === "review" && proposal && (
           <DriveExportReview

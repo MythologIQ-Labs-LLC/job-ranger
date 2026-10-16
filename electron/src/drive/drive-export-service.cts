@@ -248,6 +248,10 @@ export class DriveExportService {
       }
       if (current.state === "verified" && current.driveFileId) return receiptFor(current);
       if (current.state === "abandoned") throw new DriveError("invalid_request", "This upload attempt was abandoned. Start a new upload instead.");
+      if (current.state === "failed" && current.errorCode === "reserved_id_rejected") {
+        // Never re-POST an id Drive refused; the attempt can only be abandoned.
+        throw new DriveError("reserved_id_rejected", current.errorMessage ?? "Google Drive refused the reserved file id. Abandon this attempt, then upload a new copy.");
+      }
       if (isMismatchedCopy(current)) {
         throw new DriveError("verification_failed", current.errorMessage ?? "A non-matching copy exists in Google Drive. Upload a new copy instead.");
       }
@@ -286,8 +290,11 @@ export class DriveExportService {
 
 const PENDING_STATES: ReadonlySet<DriveExportState> = new Set<DriveExportState>(["approved", "uploading", "unknown_remote_outcome"]);
 
+/** Failed attempts that still need a decision (restore + retry, or abandon) before a new upload. */
+const UNRESOLVED_FAILURES: ReadonlySet<string> = new Set(["remote_trashed", "reserved_id_rejected"]);
+
 function isPending(record: DriveExportRecord): boolean {
-  return PENDING_STATES.has(record.state);
+  return PENDING_STATES.has(record.state) || (record.state === "failed" && UNRESOLVED_FAILURES.has(record.errorCode ?? ""));
 }
 
 function isMismatchedCopy(record: DriveExportRecord): boolean {

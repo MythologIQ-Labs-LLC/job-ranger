@@ -35,6 +35,8 @@ export interface DriveStatus {
    * a locked keychain). It is kept; try again later or reconnect.
    */
   credentialUnavailable?: boolean;
+  /** One-time notice from the call that returned this status (e.g. a grant that could not be revoked). */
+  warning?: string;
 }
 
 export type DriveErrorCode =
@@ -55,6 +57,8 @@ export type DriveErrorCode =
   | "export_in_progress"
   | "already_exported"
   | "account_mismatch"
+  | "remote_trashed"
+  | "reserved_id_rejected"
   | "remote_rejected"
   | "invalid_response"
   | "invalid_request";
@@ -151,9 +155,10 @@ export type DriveResult<T> = { ok: true; value: T } | { ok: false; error: DriveE
 export interface GoogleDriveDesktopApi {
   drive: {
     status: () => Promise<DriveStatus>;
-    connect: () => Promise<DriveResult<DriveStatus>>;
-    /** Cancels the sign-in identified by flowId (or the current one); a stale id is refused. */
-    cancelConnect: (flowId?: string) => Promise<DriveResult<DriveStatus>>;
+    /** Starts a sign-in identified by flowId (a UUID chosen by the caller, used to cancel exactly it). */
+    connect: (flowId: string) => Promise<DriveResult<DriveStatus>>;
+    /** Cancels the sign-in identified by flowId; a stale id is refused. */
+    cancelConnect: (flowId: string) => Promise<DriveResult<DriveStatus>>;
     disconnect: () => Promise<DriveResult<{ revoked: boolean; status: DriveStatus }>>;
     prepareExport: (artifactId: string) => Promise<DriveResult<DriveExportProposal>>;
     approveExport: (request: DriveApproveRequest) => Promise<DriveResult<DriveExportReceipt>>;

@@ -80,15 +80,21 @@ export function DriveExportReview({ proposal, onApprove, onRetry, onAbandon, onO
 
       {proposal.pendingExport ? (
         <div className="support-note space-y-3 px-4 py-3" role="status">
-          <p>
-            An earlier upload of this PDF was not confirmed. Retry first looks in Google Drive for the exact file reserved for that upload,
-            so it does not create a second copy.
-          </p>
+          {proposal.pendingExport.state === "failed" ? (
+            <p data-testid="drive-pending-reason">{proposal.pendingExport.errorMessage}</p>
+          ) : (
+            <p>
+              An earlier upload of this PDF was not confirmed. Retry first looks in Google Drive for the exact file reserved for that upload,
+              so it does not create a second copy.
+            </p>
+          )}
           <p>{ABANDON_COPY}</p>
           <div className="flex flex-wrap gap-3">
-            <button type="button" className="primary-button" onClick={() => onRetry(proposal.pendingExport!.operationId)}>
-              <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry upload
-            </button>
+            {proposal.pendingExport.errorCode !== "reserved_id_rejected" && (
+              <button type="button" className="primary-button" onClick={() => onRetry(proposal.pendingExport!.operationId)}>
+                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry upload
+              </button>
+            )}
             <button type="button" className="secondary-button" onClick={() => onAbandon(proposal.pendingExport!.operationId)}>
               <XCircle className="h-4 w-4" aria-hidden="true" /> Abandon this attempt
             </button>

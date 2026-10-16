@@ -8,7 +8,7 @@ import { validateConnectFlowId, validateDriveApproveRequest, validateDriveOperat
 import { DriveError } from "./drive/drive-errors.cjs";
 import { DriveExportService } from "./drive/drive-export-service.cjs";
 import { DriveTransport } from "./drive/drive-transport.cjs";
-import { GoogleDesktopAuth } from "./drive/google-desktop-auth.cjs";
+import { GoogleDesktopAuth, MANUAL_REVOKE_HINT } from "./drive/google-desktop-auth.cjs";
 import { GoogleTransport } from "./drive/google-transport.cjs";
 import {
   resolveGoogleClientConfig,
@@ -84,10 +84,16 @@ export async function initializeDriveIpc(options: DriveIpcOptions): Promise<Driv
   await service.initialize();
 
   ipcMain.handle("drive:status", () => service.status());
-  ipcMain.handle("drive:connect", () =>
+  ipcMain.handle("drive:connect", (_event, flowId: unknown) =>
     settle(async () => {
-      await auth.connect();
-      return service.status();
+      const outcome = await auth.connect(validateConnectFlowId(flowId));
+      const status = await service.status();
+      return outcome.previousAccountNotRevoked === undefined
+        ? status
+        : {
+            ...status,
+            warning: `Job Ranger could not revoke the previous Google account (${outcome.previousAccountNotRevoked ?? "unknown"}). ${MANUAL_REVOKE_HINT}`,
+          };
     }),
   );
   ipcMain.handle("drive:cancel-connect", (_event, flowId: unknown) =>

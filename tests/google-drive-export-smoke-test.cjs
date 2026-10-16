@@ -179,7 +179,8 @@ async function run() {
     assert.throws(() => validateDriveApproveRequest({ artifactId: "a", expectedSha256: first.hash, expectedAccountId: account, saveAnotherCopy: "yes" }), /true or false/);
     assert.throws(() => validateDriveApproveRequest({ artifactId: "a", expectedSha256: first.hash }), /reviewed Google account/, "the renderer must echo the reviewed account");
     assert.throws(() => validateConnectFlowId("not-a-flow"), /sign-in id/);
-    assert.equal(validateConnectFlowId(undefined), undefined);
+    assert.throws(() => validateConnectFlowId(undefined), /sign-in id/, "a cancel must name the sign-in it targets");
+    assert.equal(validateConnectFlowId("00000000-0000-4000-8000-000000000000"), "00000000-0000-4000-8000-000000000000");
     assert.throws(() => validateDriveOperationId("1; DROP TABLE drive_exports"), /operation id/);
     const journalDump = JSON.stringify(await sqlite.queryAll("SELECT * FROM drive_exports;"));
     assert.doesNotMatch(journalDump, /fake-access|fake-refresh|Bearer/, "no token is ever written to SQLite");

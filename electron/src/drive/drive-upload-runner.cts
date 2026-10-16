@@ -73,7 +73,8 @@ export class DriveUploadRunner {
       return await this.verifyAndRecord(operationId, reservedId, await this.drive.getFile(reservedId), local);
     } catch (caught) {
       const error = toDriveError(caught);
-      if (error.code !== "verification_failed") {
+      // These were already recorded with the remote file's id and link.
+      if (error.code !== "verification_failed" && error.code !== "remote_trashed") {
         const ambiguous = mayExistRemotely || (posted && isAmbiguousUploadFailure(error));
         await this.journal.update(operationId, {
           state: ambiguous ? "unknown_remote_outcome" : "failed",
@@ -119,6 +120,18 @@ export class DriveUploadRunner {
     remote: DriveFileMetadata,
     local: LocalUploadBytes,
   ): Promise<DriveExportReceipt> {
+    if (remote.trashed) {
+      // The upload landed but the file is in Drive's trash: not saved, but restorable.
+      const message = "The uploaded file is in Google Drive's trash, so it is not counted as saved. Restore it in Drive and choose Retry, or abandon this attempt and upload a new copy.";
+      await this.journal.update(operationId, {
+        state: "failed",
+        driveFileId: remote.id,
+        webViewLink: remote.webViewLink,
+        errorCode: "remote_trashed",
+        errorMessage: message,
+      });
+      throw new DriveError("remote_trashed", message);
+    }
     try {
       if (remote.id !== expectedId || remote.appProperties.jobRangerOperationId !== operationId) {
         throw new DriveError("verification_failed", "Google Drive returned a different file than the one Job Ranger uploaded.");

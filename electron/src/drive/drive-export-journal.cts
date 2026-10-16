@@ -38,6 +38,14 @@ const DRIVE_EXPORT_SCHEMA = `
     ON drive_exports(artifact_id, approved_at DESC);
 `;
 
+const REQUIRED_COLUMNS = ["reserved_file_id", "account_id", "account_email"];
+/** Columns present in every shape of the table, copied when the table is rebuilt. */
+const LEGACY_COLUMNS = [
+  "operation_id", "artifact_id", "content_sha256", "file_name", "size_bytes", "state",
+  "reserved_file_id", "drive_file_id", "web_view_link", "error_code", "error_message",
+  "account_id", "account_email", "approved_at", "updated_at",
+];
+
 interface DriveExportRow {
   operation_id: string;
   artifact_id: string;
@@ -101,11 +109,38 @@ export class DriveExportJournal {
     const existing = await this.sqlite.queryOne<{ version: number }>(sql`
       SELECT version FROM schema_migrations WHERE version = ${migration.version} LIMIT 1;
     `);
-    if (existing) return;
+    if (existing) {
+      await this.upgradeEarlyShape();
+      return;
+    }
     await this.sqlite.transaction([
       DRIVE_EXPORT_SCHEMA,
       sql`INSERT INTO schema_migrations (version, name, applied_at)
           VALUES (${migration.version}, ${migration.name}, ${new Date().toISOString()});`,
+    ]);
+  }
+
+  /**
+   * Development databases may hold the first (unreleased) shape of migration
+   * 1010: no reserved_file_id/account columns and a state CHECK without
+   * 'abandoned'. SQLite cannot alter a CHECK constraint, so the table is
+   * rebuilt in one transaction, keeping every row.
+   */
+  private async upgradeEarlyShape(): Promise<void> {
+    const table = await this.sqlite.queryOne<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'drive_exports';",
+    );
+    if (!table) return;
+    const columns = (await this.sqlite.queryAll<{ name: string }>("PRAGMA table_info(drive_exports);")).map((column) => column.name);
+    const current = REQUIRED_COLUMNS.every((column) => columns.includes(column)) && table.sql.includes("'abandoned'");
+    if (current) return;
+    const kept = LEGACY_COLUMNS.filter((column) => columns.includes(column)).join(", ");
+    await this.sqlite.transaction([
+      "DROP INDEX IF EXISTS idx_drive_exports_artifact;",
+      "ALTER TABLE drive_exports RENAME TO drive_exports_early;",
+      DRIVE_EXPORT_SCHEMA,
+      `INSERT INTO drive_exports (${kept}) SELECT ${kept} FROM drive_exports_early;`,
+      "DROP TABLE drive_exports_early;",
     ]);
   }
 

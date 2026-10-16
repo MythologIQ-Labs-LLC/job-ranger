@@ -46,7 +46,7 @@ async function harness(options = {}) {
   const store = new DriveCredentialStore(directory, fakeEncryption(options.encryption ?? true));
   const transport = new GoogleTransport({
     fetch: async (url, init) => {
-      if (options.fetchGate) await options.fetchGate(url);
+      if (options.fetchGate) await options.fetchGate(url, init);
       return fake.fetch(url.replace(TEST_BASE, "http://fake.test"), init);
     },
     allowedOrigins: endpoints().allowedOrigins,
@@ -272,6 +272,134 @@ async function testConcurrentConnectAndDisconnectRace() {
     assert.equal(raced.fake.state.refreshTokens.size, 0, "the orphaned grant was revoked");
   } finally {
     await raced.cleanup();
+  }
+}
+
+async function testLateConnectCannotUndoDisconnect() {
+  // Minor 1 (re-review): a disconnect while the previous account's grant is being
+  // revoked (after the exchange) must win over the finishing sign-in.
+  let releaseRevoke;
+  let revokeStarted = false;
+  const h = await harness({
+    fetchGate: async (url) => {
+      if (url.endsWith("/revoke") && releaseRevoke === undefined) {
+        revokeStarted = true;
+        await new Promise((resolve) => { releaseRevoke = resolve; });
+      }
+    },
+  });
+  try {
+    releaseRevoke = null;
+    await h.auth.connect();
+    h.fake.signInAs("second@example.test", "99999999999999999999");
+    releaseRevoke = undefined;
+    const switching = h.auth.connect();
+    switching.catch(() => undefined);
+    while (!revokeStarted) await new Promise((resolve) => setTimeout(resolve, 5));
+    const disconnecting = h.auth.disconnect();
+    releaseRevoke();
+    await disconnecting;
+    await assert.rejects(switching, (error) => error.code === "auth_cancelled");
+    assert.equal(await h.auth.isConnected(), false, "the disconnect was not undone");
+    await assert.rejects(() => fs.access(path.join(h.directory, DRIVE_CREDENTIAL_FILE)));
+  } finally {
+    await h.cleanup();
+  }
+
+  // ...and while the new credential is being written.
+  const writing = await harness();
+  try {
+    const save = writing.store.save.bind(writing.store);
+    let saving = false;
+    let releaseSave;
+    writing.store.save = async (credential) => {
+      saving = true;
+      await new Promise((resolve) => { releaseSave = resolve; });
+      return save(credential);
+    };
+    const connecting = writing.auth.connect();
+    connecting.catch(() => undefined);
+    while (!saving) await new Promise((resolve) => setTimeout(resolve, 5));
+    const disconnecting = writing.auth.disconnect();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    releaseSave();
+    await disconnecting;
+    await assert.rejects(connecting, (error) => error.code === "auth_cancelled");
+    assert.equal(await writing.auth.isConnected(), false);
+    await assert.rejects(() => fs.access(path.join(writing.directory, DRIVE_CREDENTIAL_FILE)));
+    assert.equal(writing.fake.state.refreshTokens.size, 0, "the late grant was revoked");
+  } finally {
+    await writing.cleanup();
+  }
+}
+
+async function testAccessTokenBoundToAccount() {
+  // Minor 2 (re-review): a cached token for A is never used after B connects, and a
+  // refresh for A that finishes after B was saved changes nothing for B.
+  let gateRefresh = false;
+  let refreshStarted = false;
+  let releaseRefresh;
+  const h = await harness({
+    fetchGate: async (url, init) => {
+      if (gateRefresh && url.endsWith("/token") && String(init?.body ?? "").includes("grant_type=refresh_token")) {
+        gateRefresh = false;
+        refreshStarted = true;
+        await new Promise((resolve) => { releaseRefresh = resolve; });
+      }
+    },
+  });
+  try {
+    await h.auth.connect();
+    const tokenA = await h.auth.getAccessToken();
+    assert.equal(h.fake.state.accessTokens.get(tokenA), "01234567890123456789");
+
+    h.fake.signInAs("second@example.test", "99999999999999999999");
+    await h.auth.connect();
+    const tokenB = await h.auth.getAccessToken();
+    assert.notEqual(tokenB, tokenA);
+    assert.equal(h.fake.state.accessTokens.get(tokenB), "99999999999999999999", "the cached token belongs to the connected account");
+
+    // In-flight refresh for C (rotating its token) while D replaces it.
+    h.fake.signInAs("third@example.test", "33333333333333333333");
+    await h.auth.connect();
+    gateRefresh = true;
+    h.fake.state.faults.rotateRefreshToken = true;
+    const staleRefresh = h.auth.getAccessToken(true);
+    while (!refreshStarted) await new Promise((resolve) => setTimeout(resolve, 5));
+    h.fake.signInAs("fourth@example.test", "44444444444444444444");
+    // Keep C's grant alive (revoke fails) so its late refresh really returns a rotated C token.
+    h.fake.state.faults.revoke = "status:500";
+    await h.auth.connect();
+    h.fake.state.faults.revoke = null;
+    const credentialD = await new DriveCredentialStore(h.directory, fakeEncryption()).load();
+    releaseRefresh();
+    const token = await staleRefresh;
+    assert.equal(h.fake.state.accessTokens.get(token), "44444444444444444444", "the late refresh yields D's token, not C's");
+    const after = await new DriveCredentialStore(h.directory, fakeEncryption()).load();
+    assert.equal(after.accountId, "44444444444444444444");
+    assert.equal(after.refreshToken, credentialD.refreshToken, "C's rotated refresh token did not overwrite D's credential");
+    assert.equal(h.fake.state.accessTokens.get(await h.auth.getAccessToken()), "44444444444444444444");
+  } finally {
+    await h.cleanup();
+  }
+}
+
+async function testSwitchRevokeFailureIsReported() {
+  // Minor 7 (re-review): a previous account that could not be revoked is reported, not ignored.
+  const h = await harness();
+  try {
+    await h.auth.connect();
+    h.fake.signInAs("second@example.test", "99999999999999999999");
+    h.fake.state.faults.revoke = "status:500";
+    const outcome = await h.auth.connect();
+    assert.equal(outcome.account.id, "99999999999999999999");
+    assert.equal(outcome.previousAccountNotRevoked, "drive-tester@example.test");
+    h.fake.state.faults.revoke = null;
+    h.fake.signInAs("third@example.test", "33333333333333333333");
+    const clean = await h.auth.connect();
+    assert.equal("previousAccountNotRevoked" in clean, false, "nothing to report when the revoke succeeded");
+  } finally {
+    await h.cleanup();
   }
 }
 
@@ -602,6 +730,9 @@ async function run() {
   await testConnectFlow();
   await testOneFlowAtATimeAndCancel();
   await testConcurrentConnectAndDisconnectRace();
+  await testLateConnectCannotUndoDisconnect();
+  await testAccessTokenBoundToAccount();
+  await testSwitchRevokeFailureIsReported();
   await testStaleCancel();
   await testAccountBinding();
   await testTokenResponseRules();

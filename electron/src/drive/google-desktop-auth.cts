@@ -19,6 +19,8 @@ interface TokenResponse {
 interface AccessToken {
   token: string;
   expiresAt: number;
+  /** The account the token was issued for; never used for another account. */
+  accountId: string;
 }
 
 export interface GoogleDesktopAuthOptions {
@@ -62,6 +64,17 @@ export interface DriveAccount {
   id: string;
   email: string | null;
 }
+
+export interface DriveConnectOutcome {
+  account: DriveAccount;
+  /**
+   * Set when this connection replaced another Google account whose grant
+   * Job Ranger could not revoke; the person should remove it manually.
+   */
+  previousAccountNotRevoked?: string | null;
+}
+
+export const MANUAL_REVOKE_HINT = "You can remove Job Ranger's access at myaccount.google.com/permissions.";
 
 interface ValidatedTokens {
   accessToken: string;
@@ -110,14 +123,15 @@ export class GoogleDesktopAuth {
     return this.options.client;
   }
 
-  async connect(): Promise<DriveAccount> {
+  /** @param flowId caller-chosen id of this sign-in; only a cancel naming it can end it. */
+  async connect(flowId: string = randomUUID()): Promise<DriveConnectOutcome> {
     const client = this.requireClient();
     // Claimed synchronously, before any await, so a second call cannot start a parallel flow.
     if (this.connectInFlight) {
       throw new DriveError("auth_in_progress", "A Google sign-in is already waiting in your browser. Finish or cancel it first.");
     }
     this.connectInFlight = true;
-    this.flowId = randomUUID();
+    this.flowId = flowId;
     const generation = this.generation;
     const cancelled = () => new DriveError("auth_cancelled", "Google Drive sign-in was cancelled.");
     let flow: LoopbackReceiver | null = null;
@@ -177,12 +191,17 @@ export class GoogleDesktopAuth {
         throw cancelled();
       }
       const previous = await this.options.store.load();
+      let previousAccountNotRevoked: string | null | undefined;
       if (previous && previous.accountId !== account.id) {
         // A different Google account replaces the old one: end the old grant first.
-        await this.revokeToken(previous.refreshToken);
+        if (!(await this.revokeToken(previous.refreshToken))) previousAccountNotRevoked = previous.accountEmail;
+      }
+      // Re-check after every await above: a disconnect or cancel during them wins.
+      if (generation !== this.generation) {
+        await this.discardNewGrant(tokens.refreshToken, account.id);
+        throw cancelled();
       }
       if (previous) await this.options.store.clear();
-      this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt };
       await this.options.store.save({
         refreshToken: tokens.refreshToken,
         accountId: account.id,
@@ -190,7 +209,16 @@ export class GoogleDesktopAuth {
         scope: GOOGLE_DRIVE_FILE_SCOPE,
         savedAt: new Date(this.now()).toISOString(),
       });
-      return account;
+      if (generation !== this.generation) {
+        // Disconnected while the credential was being written: undo it.
+        await this.options.store.clear();
+        await this.revokeToken(tokens.refreshToken);
+        throw cancelled();
+      }
+      // A new credential invalidates any refresh still running for the previous one.
+      this.generation += 1;
+      this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt, accountId: account.id };
+      return previousAccountNotRevoked === undefined ? { account } : { account, previousAccountNotRevoked };
     } finally {
       flow?.cancel();
       this.flow = null;
@@ -264,9 +292,11 @@ export class GoogleDesktopAuth {
     return (await this.account())?.email ?? null;
   }
 
-  /** Returns a valid access token, refreshing it when needed. */
+  /** Returns a valid access token for the stored account, refreshing it when needed. */
   async getAccessToken(forceRefresh = false): Promise<string> {
     this.requireClient();
+    const credential = await this.options.store.load();
+    if (this.access && this.access.accountId !== credential?.accountId) this.access = null;
     if (!forceRefresh && this.access && this.access.expiresAt - REFRESH_MARGIN_MS > this.now()) {
       return this.access.token;
     }
@@ -296,6 +326,12 @@ export class GoogleDesktopAuth {
       });
     } catch (error) {
       const driveError = toDriveError(error);
+      if (!(await this.stillStored(credential.refreshToken))) {
+        // The account changed (or was disconnected) while refreshing; its old grant may
+        // already be revoked. Refresh for whatever is stored now instead.
+        if (await this.options.store.load()) return this.refresh();
+        throw new DriveError("not_connected", "Google Drive was disconnected.");
+      }
       if (driveError.code === "auth_expired" || driveError.code === "insufficient_scope") {
         // invalid_grant: revoked, expired (7 days in Testing mode), or password reset.
         this.access = null;
@@ -306,13 +342,23 @@ export class GoogleDesktopAuth {
       }
       throw driveError;
     }
-    if (generation !== this.generation) throw new DriveError("not_connected", "Google Drive was disconnected.");
+    if (generation !== this.generation || !(await this.stillStored(credential.refreshToken))) {
+      // Disconnected or switched accounts while refreshing: this token belongs to the old
+      // account; it must neither become the access token nor overwrite the new credential.
+      const current = await this.options.store.load();
+      if (!current) throw new DriveError("not_connected", "Google Drive was disconnected.");
+      return this.refresh();
+    }
     if (tokens.refreshToken && tokens.refreshToken !== credential.refreshToken) {
       // Google rotated the refresh token; the old one may stop working.
       await this.options.store.save({ ...credential, refreshToken: tokens.refreshToken, savedAt: new Date(this.now()).toISOString() });
     }
-    this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt };
+    this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt, accountId: credential.accountId };
     return tokens.accessToken;
+  }
+
+  private async stillStored(refreshToken: string): Promise<boolean> {
+    return (await this.options.store.load())?.refreshToken === refreshToken;
   }
 
   /** Drops the cached access token (after a 401) so the next call refreshes. */

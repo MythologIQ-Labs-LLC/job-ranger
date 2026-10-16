@@ -5,6 +5,7 @@
 const assert = require("node:assert/strict");
 
 const { createDriveHarness, rejectsWith, ACCOUNT_A, ACCOUNT_B } = require("./support/drive-export-harness.cjs");
+const { DriveExportJournal } = require("../electron-runtime/electron/src/drive/drive-export-journal.cjs");
 
 const filesFor = (fake, artifactId) => fake.uploadedFiles().filter((file) => file.appProperties.jobRangerArtifactId === artifactId);
 
@@ -142,6 +143,85 @@ async function testVerificationFailureAndAbandon(h, rejects) {
   assert.equal((await service.retry(verified.operationId)).webViewLink, null);
 }
 
+async function testTrashedAndRejectedIds(h, rejects) {
+  const { fake, service } = h;
+  // Minor 4 (re-review): a file found in Drive's trash is not "saved"; restoring it and
+  // retrying verifies the same file, with no new upload.
+  const trashed = await h.createArtifact();
+  fake.state.faults.nextUpload = "hang";
+  await assert.rejects(service.approve({ artifactId: trashed.artifact.id, expectedSha256: trashed.hash }));
+  const record = (await service.listExports(trashed.artifact.id))[0];
+  const [file] = filesFor(fake, trashed.artifact.id);
+  file.trashed = true;
+  const posts = fake.state.counts.uploadPosts;
+  const error = await rejects(service.retry(record.operationId), "remote_trashed", "trashed upload");
+  assert.match(error.message, /trash/);
+  assert.equal(error.retryable, true);
+  const afterTrash = (await service.listExports(trashed.artifact.id))[0];
+  assert.equal(afterTrash.state, "failed");
+  assert.equal(afterTrash.driveFileId, file.id);
+  assert.equal((await service.prepare(trashed.artifact.id)).pendingExport.operationId, record.operationId, "it must be restored or abandoned first");
+  await rejects(service.approve({ artifactId: trashed.artifact.id, expectedSha256: trashed.hash, saveAnotherCopy: true }), "export_in_progress", "blocked while unresolved");
+  file.trashed = false;
+  assert.equal((await service.retry(record.operationId)).driveFileId, file.id);
+  assert.equal(fake.state.counts.uploadPosts, posts, "restoring and retrying uploads nothing");
+
+  // Minor 5 (re-review): Drive refuses the reserved id. Actionable error, no blind re-POST,
+  // abandon unblocks a new upload under a fresh id.
+  const refused = await h.createArtifact();
+  fake.state.faults.nextUpload = "reject-reserved-id";
+  const refusal = await rejects(service.approve({ artifactId: refused.artifact.id, expectedSha256: refused.hash }), "reserved_id_rejected", "refused id");
+  assert.match(refusal.message, /Abandon this attempt/);
+  assert.equal(refusal.retryable, false);
+  const refusedRecord = (await service.prepare(refused.artifact.id)).pendingExport;
+  assert.equal(refusedRecord.errorCode, "reserved_id_rejected");
+  const refusedPosts = fake.state.counts.uploadPosts;
+  await rejects(service.retry(refusedRecord.operationId), "reserved_id_rejected", "never re-POST a refused id");
+  assert.equal(fake.state.counts.uploadPosts, refusedPosts);
+  await service.abandon(refusedRecord.operationId);
+  const fresh = await service.approve({ artifactId: refused.artifact.id, expectedSha256: refused.hash });
+  assert.equal(filesFor(fake, refused.artifact.id).length, 1);
+  assert.ok(fresh.driveFileId);
+}
+
+async function testEarlyShapeUpgrade(h) {
+  // Minor 6 (re-review): a dev database that applied the first shape of migration 1010
+  // gets the new columns and the 'abandoned' state, keeping its rows.
+  const { sqlite, sql, now } = h;
+  await sqlite.exec("DROP INDEX IF EXISTS idx_drive_exports_artifact; DROP TABLE drive_exports;");
+  await sqlite.exec(`
+    CREATE TABLE drive_exports (
+      operation_id TEXT PRIMARY KEY,
+      artifact_id TEXT NOT NULL,
+      content_sha256 TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('approved', 'uploading', 'verified', 'failed', 'unknown_remote_outcome')),
+      drive_file_id TEXT,
+      web_view_link TEXT,
+      error_code TEXT,
+      error_message TEXT,
+      approved_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX idx_drive_exports_artifact ON drive_exports(artifact_id, approved_at DESC);
+  `);
+  await sqlite.exec(sql`
+    INSERT INTO drive_exports (operation_id, artifact_id, content_sha256, file_name, size_bytes, state, drive_file_id, approved_at, updated_at)
+    VALUES (${"22222222-3333-4444-8555-666666666666"}, ${"resume-artifact-drive-1"}, ${"a".repeat(64)}, ${"early.pdf"}, ${10}, ${"unknown_remote_outcome"}, ${null}, ${now}, ${now});
+  `);
+  await new DriveExportJournal(sqlite).initialize();
+  const columns = (await sqlite.queryAll("PRAGMA table_info(drive_exports);")).map((column) => column.name);
+  for (const column of ["reserved_file_id", "account_id", "account_email"]) assert.ok(columns.includes(column), column);
+  const kept = await sqlite.queryOne("SELECT file_name, state, account_id FROM drive_exports WHERE operation_id = '22222222-3333-4444-8555-666666666666';");
+  assert.deepEqual(kept, { file_name: "early.pdf", state: "unknown_remote_outcome", account_id: null });
+  await sqlite.exec("UPDATE drive_exports SET state = 'abandoned' WHERE operation_id = '22222222-3333-4444-8555-666666666666';");
+  const index = await sqlite.queryOne("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_drive_exports_artifact';");
+  assert.ok(index, "the index exists on the rebuilt table");
+  await new DriveExportJournal(sqlite).initialize();
+  assert.equal((await sqlite.queryAll("SELECT operation_id FROM drive_exports;")).length, 1, "a second initialize changes nothing");
+}
+
 async function testAccountBinding(h, rejects) {
   const { fake, service } = h;
   // Exports made with account A.
@@ -229,6 +309,8 @@ async function run() {
     await testVerificationFailureAndAbandon(h, rejects);
     await testAccountBinding(h, rejects);
     await testFolderSerialization(h);
+    await testTrashedAndRejectedIds(h, rejects);
+    await testEarlyShapeUpgrade(h);
     console.log("Google Drive export recovery tests passed");
   } finally {
     await h.cleanup();
