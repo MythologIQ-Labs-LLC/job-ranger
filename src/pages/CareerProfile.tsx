@@ -91,7 +91,6 @@ export function CareerProfile() {
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
     setSaveError(null);
-    setSaveNotice(null);
   };
 
   const reset = () => {
@@ -99,7 +98,6 @@ export function CareerProfile() {
     setDraft(emptyCareerProfile);
     setSaved(false);
     setSaveError(null);
-    setSaveNotice(null);
   };
 
   const handleSave = async () => {
@@ -381,7 +379,7 @@ export function CareerProfile() {
             </button>
             <div className="flex items-center gap-3">
               {saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved on this device</span>}
-              {saveNotice && <span role="status" className="max-w-sm text-xs text-[var(--color-text-secondary)]">{saveNotice}</span>}
+              {saveNotice && <span role="status" data-testid="profile-save-notice" className="max-w-sm text-xs text-[var(--color-text-secondary)]">{saveNotice}</span>}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={loading || saving}>
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save career profile"}

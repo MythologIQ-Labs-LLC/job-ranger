@@ -78,11 +78,16 @@ test("edits made while Save is pending remain unsaved and can be saved again", a
   await expect(page.getByRole("button", { name: "Save career profile" })).toBeEnabled();
   await expect(payBasis).toHaveValue(later);
   await expect(page.getByText("Saved on this device")).not.toBeVisible();
-  await expect(page.getByRole("status")).toContainText("Changes made during saving are still here");
+  const notice = page.getByTestId("profile-save-notice");
+  await expect(notice).toContainText("Changes made during saving are still here");
+  // Still unsaved after another edit, so the note stays until a save succeeds.
+  await payBasis.selectOption(first);
+  await payBasis.selectOption(later);
+  await expect(notice).toBeVisible();
 
   await page.getByRole("button", { name: "Save career profile" }).click();
   await expect(page.getByText("Saved on this device")).toBeVisible();
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(notice).toHaveCount(0);
   expect(await page.evaluate(() => window.electronAPI.career.getProfile()))
     .toMatchObject({ payBasis: later });
 });
@@ -129,15 +134,50 @@ test("rapid text and list edits during a pending save are kept, and a background
   expect(await page.evaluate(() => window.electronAPI.career.getProfile())).toMatchObject({ fullName: "Avery Submitted" });
 
   // A later background refresh of the stored (older) profile must not replace the newer draft.
-  await page.evaluate(async () => {
+  // Wait for the hook's own refresh read to complete (counted through a wrapper), not a fixed delay.
+  await page.evaluate(() => {
+    const career = window.electronAPI.career;
+    const actual = career.getProfile;
+    const state = window as unknown as { __profileReads: number };
+    state.__profileReads = 0;
+    career.getProfile = async () => {
+      const value = await actual();
+      state.__profileReads += 1;
+      return value;
+    };
     window.dispatchEvent(new CustomEvent("job-ranger:career-profile-changed"));
-    await window.electronAPI.career.getProfile();
-    await new Promise((resolve) => setTimeout(resolve, 300));
   });
+  await page.waitForFunction(() => (window as unknown as { __profileReads: number }).__profileReads > 0);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(name).toHaveValue("Avery Later");
 
   await page.getByRole("button", { name: "Save career profile" }).click();
   await expect(page.getByText("Saved on this device")).toBeVisible();
   expect(await page.evaluate(() => window.electronAPI.career.getProfile()))
     .toMatchObject({ fullName: "Avery Later", skills: ["Scheduling", "Referrals"] });
+});
+
+test("a save with no later edits shows the stored, normalized profile", async ({ page }) => {
+  await openProfile(page);
+  const name = page.getByLabel("Your name");
+  await name.fill("   Avery Normalized   ");
+  await page.getByRole("button", { name: "Save career profile" }).click();
+  await expect(page.getByText("Saved on this device")).toBeVisible();
+  await expect(name).toHaveValue("Avery Normalized");
+  await expect(page.getByTestId("profile-save-notice")).toHaveCount(0);
+  expect(await page.evaluate(() => window.electronAPI.career.getProfile())).toMatchObject({ fullName: "Avery Normalized" });
+});
+
+test("whitespace-only typing in a list field during a save is not treated as a new edit", async ({ page }) => {
+  await openProfile(page);
+  const skills = page.getByLabel("Skills you already use");
+  await skills.fill("Scheduling");
+  await deferNextSave(page, false);
+  await page.getByRole("button", { name: "Save career profile" }).click();
+  await page.waitForFunction(() => (window as ControlledPage).__jrInFlightSave?.pending === true);
+  await skills.press("End");
+  await skills.type(" \n");
+  await releaseSave(page);
+  await expect(page.getByText("Saved on this device")).toBeVisible();
+  await expect(page.getByTestId("profile-save-notice")).toHaveCount(0);
 });
