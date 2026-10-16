@@ -4,13 +4,15 @@
 
 # Job Ranger
 
+> **Architecture authority:** [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). The supported future product is the browser/PWA; Electron is retained for engineering validation, not native product distribution.
+
 <p align="center">
   <strong>A local-first Career Ops companion for understanding where you want to go, finding the right paths to employment, preparing truthful materials, and managing a focused search without turning your career into somebody else's cloud product.</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/MythologIQ-Labs-LLC/job-ranger/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/published%20release-v1.2.0-0f172a.svg" alt="Published release v1.2.0" /></a>
-  <img src="https://img.shields.io/badge/forward%20distribution-PWA%20%7C%20Microsoft%20Store-2563eb.svg" alt="Forward distribution: PWA and Microsoft Store" />
+  <img src="https://img.shields.io/badge/forward%20distribution-PWA%20only-2563eb.svg" alt="Forward distribution: PWA only" />
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-15803d.svg" alt="AGPL-3.0-only License" /></a>
 </p>
 
