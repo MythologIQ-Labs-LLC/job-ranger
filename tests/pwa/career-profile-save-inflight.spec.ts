@@ -104,3 +104,40 @@ test("failed in-flight save never discards subsequently edited form values", asy
   await page.getByRole("button", { name: "Save career profile" }).click();
   await expect(page.getByText("Saved on this device")).toBeVisible();
 });
+
+test("rapid text and list edits during a pending save are kept, and a background refresh does not undo them", async ({ page }) => {
+  await openProfile(page);
+  const name = page.getByLabel("Your name");
+  const skills = page.getByLabel("Skills you already use");
+  await name.fill("Avery Submitted");
+  await deferNextSave(page, false);
+  await page.getByRole("button", { name: "Save career profile" }).click();
+  await page.waitForFunction(() => (window as ControlledPage).__jrInFlightSave?.pending === true);
+
+  // Several quick edits while the older snapshot's save is unresolved, including a list
+  // field whose typed text (trailing space, new line) must survive as typed.
+  await name.fill("Avery Later");
+  await skills.fill("Scheduling ");
+  await skills.press("End");
+  await skills.type("\nReferrals");
+  await releaseSave(page);
+
+  await expect(page.getByRole("button", { name: "Save career profile" })).toBeEnabled();
+  await expect(name).toHaveValue("Avery Later");
+  await expect(skills).toHaveValue("Scheduling \nReferrals");
+  await expect(page.getByText("Saved on this device")).not.toBeVisible();
+  expect(await page.evaluate(() => window.electronAPI.career.getProfile())).toMatchObject({ fullName: "Avery Submitted" });
+
+  // A later background refresh of the stored (older) profile must not replace the newer draft.
+  await page.evaluate(async () => {
+    window.dispatchEvent(new CustomEvent("job-ranger:career-profile-changed"));
+    await window.electronAPI.career.getProfile();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+  await expect(name).toHaveValue("Avery Later");
+
+  await page.getByRole("button", { name: "Save career profile" }).click();
+  await expect(page.getByText("Saved on this device")).toBeVisible();
+  expect(await page.evaluate(() => window.electronAPI.career.getProfile()))
+    .toMatchObject({ fullName: "Avery Later", skills: ["Scheduling", "Referrals"] });
+});
