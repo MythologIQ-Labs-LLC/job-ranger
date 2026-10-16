@@ -42,6 +42,16 @@ import {
   type WorkerToPageMessage,
 } from "./protocol";
 import { setActiveWasmSqliteEngine, WasmSqliteEngine } from "./wasm-sqlite-engine";
+import {
+  DEMO_REFUSAL_MESSAGE,
+  createDemoSentinel,
+  decideDemoStartup,
+  resetDemoWorkspace,
+  shouldRecordDemoActivity,
+  writeDemoSentinel,
+  type DemoWorkspaceFs,
+  type DemoWorkspaceSentinel,
+} from "./demo-workspace";
 import { fileBytesForTransfer } from "./transfer-file-bytes";
 
 declare const __JOB_RANGER_VERSION__: string;
@@ -90,16 +100,24 @@ async function storageStatus(): Promise<RuntimeInfo["storage"]> {
   } catch {
     // Estimates are advisory; absence is reported as unknown.
   }
-  if (persisted !== true) {
-    warnings.push(
-      "This browser has not granted persistent storage, so it may evict Job Ranger data under storage pressure. Install the app or allow persistent storage, and export backups regularly.",
-    );
-  }
-  if (usage !== null && quota !== null && quota > 0 && usage / quota > 0.8) {
-    warnings.push("Browser storage for Job Ranger is more than 80% full. Export a backup and free space.");
+  const nearlyFull = usage !== null && quota !== null && quota > 0 && usage / quota > 0.8;
+  if (IS_DEMO_FLAVOR) {
+    // The demo workspace is temporary sample data: persistence and backup advice do not apply.
+    if (nearlyFull) warnings.push("Browser storage for this demo is more than 80% full. Use Reset demo to start again from the sample data.");
+  } else {
+    if (persisted !== true) {
+      warnings.push(
+        "This browser has not granted persistent storage, so it may evict Job Ranger data under storage pressure. Install the app or allow persistent storage, and export backups regularly.",
+      );
+    }
+    if (nearlyFull) {
+      warnings.push("Browser storage for Job Ranger is more than 80% full. Export a backup and free space.");
+    }
   }
   return {
-    location: "This browser profile's private storage for this site (origin-private file system)",
+    location: IS_DEMO_FLAVOR
+      ? "This browser's private storage for this demo site (temporary demo workspace, replaced with fresh sample data in each new demo session)"
+      : "This browser profile's private storage for this site (origin-private file system)",
     engine: "SQLite WASM",
     persisted,
     usageBytes: usage,
@@ -158,7 +176,23 @@ async function cleanupIo(paths: string[]): Promise<void> {
   }
 }
 
+// Demo flavor only: the workspace's ownership sentinel (src/pwa/runtime/demo-workspace.ts).
+const demoFs = fs as unknown as DemoWorkspaceFs;
+let demoSentinel: DemoWorkspaceSentinel | null = null;
+let demoActivityRecordedAt = 0;
+
+/** Demo flavor: refresh the sentinel's lastActiveAt, at most every few minutes. */
+function recordDemoActivity(): void {
+  if (!demoSentinel) return;
+  const now = Date.now();
+  if (!shouldRecordDemoActivity(demoActivityRecordedAt, now)) return;
+  demoActivityRecordedAt = now;
+  demoSentinel = { ...demoSentinel, lastActiveAt: new Date(now).toISOString() };
+  void writeDemoSentinel(demoFs, USER_DATA_DIRECTORY, demoSentinel).catch(() => undefined);
+}
+
 async function handleInvoke(message: Extract<PageToWorkerMessage, { type: "invoke" }>): Promise<void> {
+  if (IS_DEMO_FLAVOR) recordDemoActivity();
   const openPaths = message.dialog?.kind === "open" ? await writeInbox(message.dialog.files) : null;
   const context: InvocationContext = { openPaths, saveTargets: [] };
   try {
@@ -183,17 +217,17 @@ async function handleInvoke(message: Extract<PageToWorkerMessage, { type: "invok
   }
 }
 
-// Demo flavor only: the page says once, at startup, whether this tab begins a new
-// demo session. The standard flavor never waits for (or acts on) this message.
-let resolveDemoSession: (reset: boolean) => void = () => undefined;
-const demoSessionRequest = new Promise<boolean>((resolve) => {
+// Demo flavor only: the page sends this tab's demo session id once, at startup.
+// The standard flavor never waits for (or acts on) this message.
+let resolveDemoSession: (sessionId: string) => void = () => undefined;
+const demoSessionRequest = new Promise<string>((resolve) => {
   resolveDemoSession = resolve;
 });
 
 scope.addEventListener("message", (event) => {
   const message = event.data;
   if (IS_DEMO_FLAVOR && message?.type === "demo-session") {
-    resolveDemoSession(message.reset === true);
+    resolveDemoSession(String(message.sessionId));
     return;
   }
   if (!message || message.type !== "invoke") return;
@@ -245,17 +279,6 @@ async function verifyStorage(): Promise<void> {
   await fs.rm(IO_DIRECTORY, { recursive: true, force: true });
 }
 
-/**
- * Demo flavor: erase the whole session-scoped workspace (database, managed
- * artifacts, staged restores, transient I/O) BEFORE anything opens it. Runs only
- * while this worker holds the exclusive runtime lock.
- */
-async function wipeDemoWorkspace(): Promise<void> {
-  for (const directory of [USER_DATA_DIRECTORY, IO_DIRECTORY]) {
-    await fs.rm(directory, { recursive: true, force: true });
-  }
-}
-
 async function boot(): Promise<void> {
   try {
     await acquireExclusiveLock();
@@ -271,11 +294,32 @@ async function boot(): Promise<void> {
   }
 
   let demo: DemoWorkspaceStartup | undefined;
+  let demoClaim: DemoWorkspaceSentinel | null = null;
   try {
     if (IS_DEMO_FLAVOR) {
-      const reset = await demoSessionRequest;
-      if (reset) await wipeDemoWorkspace();
-      demo = { reset, seeded: false };
+      // Demo flavor, under the exclusive lock and BEFORE anything opens the workspace:
+      // keep it, replace it with fresh sample data, or refuse to touch a workspace that
+      // carries no demo sentinel (it may be someone's real workspace).
+      const sessionId = await demoSessionRequest;
+      const now = Date.now();
+      const decision = await decideDemoStartup(demoFs, { userDataDirectory: USER_DATA_DIRECTORY, sessionId, now });
+      if (decision.action === "refuse") {
+        post({ type: "fatal", code: "demo-workspace-refused", message: DEMO_REFUSAL_MESSAGE });
+        return;
+      }
+      if (decision.action === "reset") {
+        demoClaim = await resetDemoWorkspace(
+          demoFs,
+          { userDataDirectory: USER_DATA_DIRECTORY, ioDirectory: IO_DIRECTORY, sessionId, now },
+          decision,
+        );
+        demo = { reset: true, reason: decision.reason, seeded: false };
+      } else {
+        demoSentinel = { ...decision.sentinel, lastActiveAt: new Date(now).toISOString() };
+        await writeDemoSentinel(demoFs, USER_DATA_DIRECTORY, demoSentinel);
+        demoActivityRecordedAt = now;
+        demo = { reset: false, reason: null, seeded: false };
+      }
     }
 
     const sqlite3 = await (sqlite3InitModule as (options?: Record<string, unknown>) => ReturnType<typeof sqlite3InitModule>)({
@@ -353,8 +397,9 @@ async function boot(): Promise<void> {
       throw new Error("Importing a desktop installation directly is only available in the Microsoft Store app. Export a .jobranger backup from the desktop app and restore it here instead.");
     });
 
-    if (demo?.reset) {
-      // A new demo session starts from the fictional workspace, written through the real core.
+    if (demo && demoClaim) {
+      // A new demo session starts from the fictional workspace, written through the real core,
+      // then the sentinel records that this session owns a completely seeded workspace.
       await seedDemoWorkspace({
         backend,
         careerBackend,
@@ -362,6 +407,15 @@ async function boot(): Promise<void> {
         databasePath: systemStatus.databasePath,
         sqliteBinaryPath: systemStatus.sqliteBinaryPath,
       });
+      const seededAt = Date.now();
+      demoSentinel = createDemoSentinel({
+        sessionId: demoClaim.sessionId,
+        now: seededAt,
+        seeded: true,
+        createdAt: demoClaim.createdAt,
+      });
+      await writeDemoSentinel(demoFs, USER_DATA_DIRECTORY, demoSentinel);
+      demoActivityRecordedAt = seededAt;
       demo.seeded = true;
     }
 

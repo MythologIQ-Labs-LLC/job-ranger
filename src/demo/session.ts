@@ -1,17 +1,20 @@
 /**
- * Session-scoped demo workspace (demo flavor only).
+ * Demo flavor: the page's per-tab demo session id.
  *
- * Each browser session of the demo starts from a freshly reset, seeded
- * workspace. A per-tab `sessionStorage` marker, written by the page once the
- * runtime worker has reset and seeded the workspace, distinguishes "reload in
- * the same session" (keep the visitor's changes) from "new tab, new window or
- * restarted browser" (start over). The worker performs the wipe itself, under
- * the single-writer Web Lock and before it opens the database.
+ * Each tab keeps a random session id in `sessionStorage` (a new tab, a new
+ * window or a restarted browser without session restore gets a new one). The
+ * runtime worker compares it with the session id recorded in the workspace's
+ * demo sentinel (src/pwa/runtime/demo-workspace.ts) and replaces the workspace
+ * with fresh sample data when they differ, when the workspace has been idle too
+ * long, or when the visitor chose Reset demo. A reload keeps the id, so the
+ * visitor's changes survive it.
  *
- * Nothing here runs in the standard flavor: callers gate on IS_DEMO_FLAVOR.
+ * Nothing here runs in the standard flavor: only the demo-flavor branch of
+ * src/pwa/main.tsx uses this module.
  */
 export const DEMO_SESSION_KEY = "job-ranger.demo.session.v1";
 export const ONBOARDING_DISMISSED_KEY = "job-ranger.onboarding.dismissed.v1";
+const SESSION_ID = /^[A-Za-z0-9-]{16,80}$/;
 
 interface StorageLike {
   readonly length: number;
@@ -38,17 +41,27 @@ function localStore(): StorageLike | null {
 }
 
 /**
- * True when this tab must start a new demo session (no marker yet). If
- * sessionStorage is unavailable the safe answer is also "reset": the demo
- * never carries one visitor's entries into an unidentifiable session.
+ * Returns this tab's demo session id, creating one when the tab has none.
+ * Without usable sessionStorage every load is a new session, so the demo never
+ * carries entries into a session it cannot identify.
  */
-export function demoSessionNeedsReset(storage: StorageLike | null = sessionStore()): boolean {
-  if (!storage) return true;
+export function demoSessionId(
+  storage: StorageLike | null = sessionStore(),
+  randomId: () => string = () => crypto.randomUUID(),
+): string {
   try {
-    return storage.getItem(DEMO_SESSION_KEY) === null;
+    const existing = storage?.getItem(DEMO_SESSION_KEY) ?? null;
+    if (existing && SESSION_ID.test(existing)) return existing;
   } catch {
-    return true;
+    // Fall through to a new session.
   }
+  const id = randomId();
+  try {
+    storage?.setItem(DEMO_SESSION_KEY, id);
+  } catch {
+    // Unpersisted: the next load starts another fresh session.
+  }
+  return id;
 }
 
 /** Job Ranger's own localStorage keys: `job-ranger.*` preferences/legacy keys and the theme. */
@@ -68,29 +81,17 @@ export function resetDemoLocalStorage(storage: StorageLike | null = localStore()
   storage.setItem(ONBOARDING_DISMISSED_KEY, "true");
 }
 
-/**
- * Called once the worker reports the demo workspace is ready. After a reset,
- * clears this origin's Job Ranger preferences before the app renders; in every
- * case records that this tab's session now owns the workspace.
- */
-export function completeDemoSession(
-  reset: boolean,
-  storage: { session: StorageLike | null; local: StorageLike | null } = { session: sessionStore(), local: localStore() },
-): void {
-  if (reset) resetDemoLocalStorage(storage.local);
-  try {
-    storage.session?.setItem(DEMO_SESSION_KEY, new Date().toISOString());
-  } catch {
-    // Without sessionStorage every load is a new session; the demo still works.
-  }
+/** Once the worker reports the workspace ready: after a replacement, reset preferences before the app renders. */
+export function completeDemoSession(reset: boolean, storage: StorageLike | null = localStore()): void {
+  if (reset) resetDemoLocalStorage(storage);
 }
 
-/** "Reset demo": forget this session and reload; the worker wipes and reseeds before opening the database. */
-export function restartDemoSession(): void {
+/** "Reset demo": forget this tab's session and reload; the worker replaces the workspace before opening it. */
+export function restartDemoSession(storage: StorageLike | null = sessionStore()): void {
   try {
-    sessionStore()?.removeItem(DEMO_SESSION_KEY);
+    storage?.removeItem(DEMO_SESSION_KEY);
   } catch {
-    // A missing marker already means "reset" on the next load.
+    // A missing id already means "new session" on the next load.
   }
   window.location.reload();
 }

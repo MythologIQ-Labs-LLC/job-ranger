@@ -1,5 +1,5 @@
 import { FlaskConical } from "lucide-react";
-import { IS_DEMO_FLAVOR } from "../demo/flavor";
+import { DEMO_IDLE_RESET_HOURS, IS_DEMO_FLAVOR } from "../demo/flavor";
 
 /** Honest description of what the demo is and is not (demo flavor only; Settings and Help). */
 export function DemoLimitations() {
@@ -27,9 +27,15 @@ export function DemoLimitations() {
           and there is no account, sync or analytics.
         </li>
         <li>
-          The workspace belongs to this browser session only. Opening the demo in a new tab or window, or after the
-          browser restarts, starts again from the sample data, and Reset demo does so immediately. A browser that
-          restores your previous session may keep it until you reset. Do not rely on the demo for real career records.
+          The workspace belongs to one demo session. It is replaced with fresh sample data when a new demo session starts
+          (opening the demo in a new tab or window, or after the browser restarts without restoring your tabs), when it
+          has not been used for {DEMO_IDLE_RESET_HOURS} hours, or when you choose Reset demo. Until then it stays in this
+          browser, even after you close the tab; to remove it right away, use Reset demo or clear this site's data. Do not
+          rely on the demo for real career records.
+        </li>
+        <li>
+          Files you export, such as resume PDFs and JSON Resume files, contain the fictional sample data and carry no demo
+          marker. Do not submit them as a real application.
         </li>
         <li>
           Public job-board sources you add yourself are real openings, read directly by your browser like in the full

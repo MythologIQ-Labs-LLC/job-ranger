@@ -46,7 +46,14 @@ assert.equal(handoff.flavor, "standard");
 assert.equal(handoff.runtime.canonicalCareerData, "browser-origin-private");
 assert.equal(handoff.studio.ctaLabel, "Try Job Ranger in your browser");
 assert.equal("demo" in handoff, false);
-assert.throws(() => createStudioHandoff({ ...info, flavor: undefined }), /flavor is missing or unknown/);
+// Legacy builds (made before flavors existed) have no flavor: standard only, legacy shape.
+const { flavor: _omitted, ...legacyInfo } = info;
+const legacyHandoff = createStudioHandoff(legacyInfo);
+assert.equal("flavor" in legacyHandoff, false, "a legacy build keeps the legacy handoff shape");
+assert.deepEqual(assertStudioHandoff(legacyHandoff, legacyInfo), legacyHandoff);
+assert.throws(() => assertStudioHandoff(handoff, legacyInfo), /does not match/);
+assert.throws(() => createStudioHandoff({ ...legacyInfo, buildId: buildId + ".demo" }), /flavor is missing for a demo build ID/);
+assert.throws(() => createStudioHandoff({ ...info, flavor: null }), /flavor is missing or unknown/);
 assert.throws(() => createStudioHandoff({ ...info, flavor: "preview" }), /flavor is missing or unknown/);
 // A demo flavor must carry a demo build ID and a standard flavor must not.
 assert.throws(() => createStudioHandoff({ ...info, flavor: "demo" }), /does not match the demo build flavor/);
@@ -60,8 +67,10 @@ assert.equal(demoHandoff.runtime.canonicalCareerData, "none-session-scoped-demo"
 assert.deepEqual(demoHandoff.demo, {
   fictionalSampleData: true,
   sessionScopedWorkspace: true,
-  resetsWhenBrowserSessionEnds: true,
+  resetsAtNextSessionStart: true,
+  idleResetHours: 8,
   visitorResettable: true,
+  refusesToEraseNonDemoWorkspace: true,
   requiresDedicatedOrigin: true,
   sharesOriginWithRealWorkspace: false,
 });
@@ -87,7 +96,7 @@ try {
     "studio-handoff.json": JSON.stringify(handoff),
   };
   for (const [filename, content] of Object.entries(files)) await writeFile(path.join(dir, filename), content);
-  const verified = await inspectStudioPwaBuild(dir, buildId);
+  const verified = await inspectStudioPwaBuild(dir, buildId, "standard");
   assert.equal(verified.status, "candidate-verified-not-approved");
   assert.equal(verified.verifiedAssets, 2);
   assert.equal(verified.buildId, buildId);
@@ -97,24 +106,35 @@ try {
   assert.equal((await runVerifierCli(["--site", dir, "--flavor", "standard"])).flavor, "standard");
   await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "demo"]), /unexpected build flavor/);
   await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "staging"]), /Unknown Job Ranger PWA flavor/);
-  await assert.rejects(inspectStudioPwaBuild(dir, "wrong-build"), /unexpected build ID/);
+  // --flavor is mandatory for the CLI and both verification functions.
+  await assert.rejects(runVerifierCli(["--site", dir]), /--flavor standard\|demo is required/);
+  await assert.rejects(runVerifierCli(["--origin", "https://jobs.example.org", "--build-id", buildId, "--build-info-sha256", "0".repeat(64)]), /--flavor standard\|demo is required/);
+  await assert.rejects(inspectStudioPwaBuild(dir, buildId), /expected build flavor is missing/);
+  // A legacy (flavor-less) standard build still verifies, as standard only.
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify(legacyInfo));
+  await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(legacyHandoff));
+  assert.equal((await inspectStudioPwaBuild(dir, buildId, "standard")).flavor, "standard");
+  await assert.rejects(inspectStudioPwaBuild(dir, buildId, "demo"), /unexpected build flavor/);
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify(info));
+  await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(handoff));
+  await assert.rejects(inspectStudioPwaBuild(dir, "wrong-build", "standard"), /unexpected build ID/);
   await writeFile(path.join(dir, "index.html"), index + "tampered");
-  await assert.rejects(inspectStudioPwaBuild(dir), /checksum mismatch/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /checksum mismatch/);
   await writeFile(path.join(dir, "index.html"), index);
   await writeFile(path.join(dir, "_headers"), headersFile.replace("X-Frame-Options: DENY", ""));
-  await assert.rejects(inspectStudioPwaBuild(dir), /missing required static security header/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /missing required static security header/);
   await writeFile(path.join(dir, "_headers"), headersFile.replace(policy, policy + "; script-src * 'unsafe-inline'"));
-  await assert.rejects(inspectStudioPwaBuild(dir), /static CSP differs/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /static CSP differs/);
   await writeFile(path.join(dir, "_headers"), headersFile);
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify({ ...handoff, studio: { autoEnableCta: true } }));
-  await assert.rejects(inspectStudioPwaBuild(dir), /does not match/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /does not match/);
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(handoff));
   const unsafeInfo = { ...info, assets: [...info.assets, { path: "../outside.txt", sha256: hash("outside") }] };
   await writeFile(path.join(dir, "build-info.json"), JSON.stringify(unsafeInfo));
-  await assert.rejects(inspectStudioPwaBuild(dir), /invalid asset path/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /invalid asset path/);
   await writeFile(path.join(dir, "build-info.json"), JSON.stringify(info));
   await writeFile(path.join(dir, "sw.js"), sw + "/* injected change */");
-  await assert.rejects(inspectStudioPwaBuild(dir), /service-worker checksum mismatch/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /service-worker checksum mismatch/);
   await writeFile(path.join(dir, "sw.js"), sw);
 
   const fakeFetch = async (url) => {
@@ -134,9 +154,11 @@ try {
     return new Response("", { status: 404 });
   };
   const pinnedDigest = hash(JSON.stringify(info));
-  const acceptedLive = await inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, fakeFetch);
+  const acceptedLive = await inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", fakeFetch);
   assert.equal(acceptedLive.buildId, buildId);
   assert.equal(acceptedLive.flavor, "standard");
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "demo", fakeFetch), /unexpected build flavor/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, undefined, fakeFetch), /expected build flavor is missing/);
   assert.equal(acceptedLive.verifiedAssets, 2);
   // The host can serve the approved metadata while replacing actual JS bytes.
   // That deployment must fail even if its build ID, CSP and service worker match.
@@ -146,12 +168,12 @@ try {
     }
     return fakeFetch(url, options);
   };
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedJs), /live asset checksum mismatch/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "0".repeat(64), fakeFetch), /checksum differs/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "not-a-sha", fakeFetch), /approved build-info SHA-256/);
-  await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, pinnedDigest, fakeFetch), /HTTPS origin/);
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, fakeFetch), /live HTML build identity mismatch/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", compromisedJs), /live asset checksum mismatch/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "0".repeat(64), "standard", fakeFetch), /checksum differs/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, "not-a-sha", "standard", fakeFetch), /approved build-info SHA-256/);
+  await assert.rejects(inspectLiveStudioPwa("http://jobs.example.org", buildId, pinnedDigest, "standard", fakeFetch), /HTTPS origin/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org/preview", buildId, pinnedDigest, "standard", fakeFetch), /HTTPS origin/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", "wrong-build", pinnedDigest, "standard", fakeFetch), /live HTML build identity mismatch/);
   const compromisedHeaders = async (url, options) => {
     if (new URL(url).pathname === "/") return new Response(index, { status: 200, headers: {
       "content-security-policy": policy + "; script-src * 'unsafe-inline'",
@@ -161,17 +183,17 @@ try {
     } });
     return fakeFetch(url, options);
   };
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedHeaders), /live security headers differ/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", compromisedHeaders), /live security headers differ/);
   const compromisedWorker = async (url, options) => {
     if (new URL(url).pathname === "/sw.js") return new Response('const BUILD_ID = "fake-build";', { status: 200 });
     return fakeFetch(url, options);
   };
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, compromisedWorker), /live service worker build identity mismatch/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", compromisedWorker), /live service worker build identity mismatch/);
   const tamperedWorkerSameId = async (url, options) => {
     if (new URL(url).pathname === "/sw.js") return new Response(sw + "/* injected change */", { status: 200 });
     return fakeFetch(url, options);
   };
-  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, tamperedWorkerSameId), /live service-worker checksum mismatch/);
+  await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", tamperedWorkerSameId), /live service-worker checksum mismatch/);
 
   // A complete demo-flavor build verifies as demo, and only as demo.
   const demoIndex = '<meta name="job-ranger-build" content="' + demoBuildId + '">';
@@ -195,10 +217,10 @@ try {
   await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "standard"]), /unexpected build flavor/);
   // A standard handoff shipped inside a demo build (or a relabelled flavor) fails closed.
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify({ ...createStudioHandoff(demoBuildInfo), flavor: "standard" }));
-  await assert.rejects(inspectStudioPwaBuild(dir), /does not match/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "demo"), /does not match/);
   await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(createStudioHandoff(demoBuildInfo)));
   await writeFile(path.join(dir, "build-info.json"), JSON.stringify({ ...demoBuildInfo, flavor: "standard" }));
-  await assert.rejects(inspectStudioPwaBuild(dir), /does not match the standard build flavor/);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "demo"), /does not match the standard build flavor/);
   console.log("Studio PWA handoff contract: local and simulated live checks passed");
 } finally {
   await rm(dir, { recursive: true, force: true });

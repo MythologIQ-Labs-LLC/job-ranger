@@ -31,11 +31,14 @@ import { validateCareerTargetTrackInput } from "./target-track-validator.cjs";
 
 export const DEMO_PERSON_NAME = "Morgan Rivera";
 export const DEMO_EMPLOYER_NAME = "Harbor Health";
-export const DEMO_EMPLOYER_URL = demoListingUrl("harbor-health");
+// Plain literals and functions only at module level: the standard web build drops
+// every fixture string because nothing here runs unless the demo flavor seeds.
+export const DEMO_EMPLOYER_URL = "https://demo-listing.invalid/harbor-health";
 export const DEMO_TARGET_TRACK_NAME = "Practice operations";
 export const DEMO_EXTRACTION_VERSION = "job-ranger-demo-fixture-v1";
 
-export const demoProfile: CareerProfile = {
+export function demoProfile(): CareerProfile {
+  return {
   version: 2,
   fullName: DEMO_PERSON_NAME,
   homeLocation: "Baltimore, MD",
@@ -49,9 +52,11 @@ export const demoProfile: CareerProfile = {
   onCallPreference: "no",
   fullTimeOnly: true,
   updatedAt: null,
-};
+  };
+}
 
-export const demoTargetTrack: CareerTargetTrackInput = {
+export function demoTargetTrack(): CareerTargetTrackInput {
+  return {
   name: DEMO_TARGET_TRACK_NAME,
   relation: "target",
   roleTitles: ["Practice Operations Coordinator", "Clinic Operations Coordinator"],
@@ -67,7 +72,20 @@ export const demoTargetTrack: CareerTargetTrackInput = {
     industries: { values: ["Healthcare"], strength: "preferred" },
   },
   isActive: true,
-};
+  };
+}
+
+/** `YYYY-MM` of the UTC month `offsetMonths` away from `now`. */
+function monthOf(now: Date, offsetMonths: number): string {
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offsetMonths, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** ISO timestamp `days` before `now` at 13:00 UTC (a listing's publication time). */
+function daysBefore(now: Date, days: number): string {
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days, 13));
+  return date.toISOString();
+}
 
 const EVIDENCE_BASE = {
   methodsOrTools: [] as string[],
@@ -78,14 +96,19 @@ const EVIDENCE_BASE = {
   endDate: null as string | null,
 };
 
-/** User-authored (therefore confirmed) Career Evidence: two roles, one achievement, one active credential. */
-export const demoEvidence: UserAuthoredEvidenceInput[] = [
+/**
+ * User-authored (therefore confirmed) Career Evidence: two roles, one achievement, one
+ * active credential. Dates are relative to `now`, so the story (about three years in the
+ * current role, a credential that is still active) reads the same whenever it is seeded.
+ */
+export function demoEvidence(now: Date): UserAuthoredEvidenceInput[] {
+  return [
   {
     ...EVIDENCE_BASE,
     subjectType: "role",
     organization: "Harbor Family Clinic",
     titleOrName: "Patient Services Coordinator",
-    startDate: "2023-01",
+    startDate: monthOf(now, -33),
     statement:
       "Coordinated patient scheduling, referral coordination, and insurance verification for six providers at an outpatient clinic.",
     skills: ["Patient scheduling", "Referral coordination", "Insurance verification"],
@@ -96,7 +119,7 @@ export const demoEvidence: UserAuthoredEvidenceInput[] = [
     subjectType: "achievement",
     organization: "Harbor Family Clinic",
     titleOrName: "Referral backlog cleanup",
-    startDate: "2024-03",
+    startDate: monthOf(now, -19),
     statement:
       "Rebuilt the referral queue so each request was paired with insurance verification, cutting the backlog from weeks to days.",
     skills: ["Referral coordination", "Process improvement"],
@@ -107,8 +130,8 @@ export const demoEvidence: UserAuthoredEvidenceInput[] = [
     subjectType: "role",
     organization: "Chesapeake Family Dental",
     titleOrName: "Front Desk Coordinator",
-    startDate: "2020-06",
-    endDate: "2022-12",
+    startDate: monthOf(now, -64),
+    endDate: monthOf(now, -34),
     statement: "Scheduled patients and handled patient intake and insurance questions for a three-chair dental practice.",
     skills: ["Patient scheduling", "Patient intake"],
   },
@@ -117,18 +140,19 @@ export const demoEvidence: UserAuthoredEvidenceInput[] = [
     subjectType: "credential",
     organization: "American Heart Association",
     titleOrName: "BLS Provider",
-    startDate: "2025-02",
+    startDate: monthOf(now, -8),
     statement: "Current Basic Life Support (CPR/BLS) certification.",
     skills: ["CPR", "BLS"],
     credential: {
       issuer: "American Heart Association",
       jurisdiction: null,
       status: "active",
-      expirationDate: "2027-02-28",
+      expirationDate: `${monthOf(now, 16)}-28`,
       credentialId: null,
     },
   },
-] as UserAuthoredEvidenceInput[];
+  ] as UserAuthoredEvidenceInput[];
+}
 
 export interface DemoListing {
   sourceJobId: string;
@@ -136,20 +160,22 @@ export interface DemoListing {
   location: string;
   employmentType: string;
   path: string;
-  postDate: string;
+  /** Days before seeding that the listing was published. */
+  publishedDaysAgo: number;
   /** Listing body as a job board would publish it (HTML). */
   content: string;
 }
 
 /** Three fictional Harbor Health listings: annual and hourly pay, City, ST locations. */
-export const demoListings: DemoListing[] = [
+export function demoListings(): DemoListing[] {
+  return [
   {
     sourceJobId: "demo-practice-operations-coordinator",
     title: "Practice Operations Coordinator",
     location: "Baltimore, MD",
     employmentType: "full-time",
     path: "harbor-health/practice-operations-coordinator",
-    postDate: "2026-10-05T09:00:00-04:00",
+    publishedDaysAgo: 10,
     content: [
       "<p>Harbor Health is hiring a Practice Operations Coordinator to keep a six-provider outpatient practice running smoothly: scheduling, referrals, insurance verification, and front-office workflow.</p>",
       "<ul>",
@@ -169,7 +195,7 @@ export const demoListings: DemoListing[] = [
     location: "Towson, MD",
     employmentType: "full-time",
     path: "harbor-health/patient-access-representative",
-    postDate: "2026-10-07T09:00:00-04:00",
+    publishedDaysAgo: 8,
     content: [
       "<p>Harbor Health's Towson clinic needs a Patient Access Representative to greet patients, register visits, and confirm coverage before appointments.</p>",
       "<ul>",
@@ -186,7 +212,7 @@ export const demoListings: DemoListing[] = [
     location: "Columbia, MD",
     employmentType: "full-time",
     path: "harbor-health/clinic-operations-coordinator",
-    postDate: "2026-10-01T09:00:00-04:00",
+    publishedDaysAgo: 14,
     content: [
       "<p>Coordinate daily operations for a Harbor Health primary care clinic: provider schedules, referral workflow, and front-office process improvement.</p>",
       "<ul>",
@@ -198,7 +224,8 @@ export const demoListings: DemoListing[] = [
       "<p>Hybrid, full-time role. Salary: $60,000 - $70,000 per year.</p>",
     ].join(""),
   },
-];
+  ];
+}
 
 /** The listing the seeded application tracks. */
 export const DEMO_TRACKED_LISTING_ID = "demo-clinic-operations-coordinator";
@@ -235,10 +262,10 @@ export interface DemoSeedResult {
 }
 
 async function seedDirection(careerBackend: CareerBackend): Promise<string> {
-  await careerBackend.saveProfile(validateCareerProfile(demoProfile));
+  await careerBackend.saveProfile(validateCareerProfile(demoProfile()));
   // Saving a profile may derive a target track from it; configure that track as the
   // demo's single Target Track rather than leaving a duplicate beside it.
-  const track = validateCareerTargetTrackInput(demoTargetTrack);
+  const track = validateCareerTargetTrackInput(demoTargetTrack());
   const derived = (await careerBackend.listTargetTracks()).find((candidate) => candidate.origin === "legacy-profile");
   const saved = derived
     ? await careerBackend.updateTargetTrack(derived.id, track)
@@ -248,12 +275,13 @@ async function seedDirection(careerBackend: CareerBackend): Promise<string> {
 
 async function seedListings(options: DemoSeedOptions, companyId: string): Promise<Job[]> {
   const repository = new JobScoutRepository(new SqliteClient(options.databasePath, options.sqliteBinaryPath));
-  const capturedAt = (options.now ?? new Date()).getTime();
+  const now = options.now ?? new Date();
+  const capturedAt = now.getTime();
   const jobs: Job[] = [];
   // The same normalization a job-board adapter applies to a published listing. Each
   // listing is recorded one minute apart, so Find Jobs (newest first) lists them in
   // this order, starting with the primary listing.
-  for (const [index, listing] of demoListings.entries()) {
+  for (const [index, listing] of demoListings().entries()) {
     const descriptionText = toSourceText(listing.content);
     const salary = parseSalary(listing.content);
     jobs.push(
@@ -273,7 +301,7 @@ async function seedListings(options: DemoSeedOptions, companyId: string): Promis
         salaryMax: salary?.max ?? null,
         salaryCurrency: salary?.currency ?? null,
         salaryText: salary?.text ?? null,
-        postDate: listing.postDate,
+        postDate: daysBefore(now, listing.publishedDaysAgo),
         lastSeenAt: new Date(capturedAt - index * 60_000).toISOString(),
         matchedFilterCount: 0,
       }),
@@ -303,10 +331,11 @@ export async function seedDemoWorkspace(options: DemoSeedOptions): Promise<DemoS
     };
   }
 
+  const now = options.now ?? new Date();
   const targetTrackId = await seedDirection(options.careerBackend);
 
   const evidenceIds: string[] = [];
-  for (const record of demoEvidence) {
+  for (const record of demoEvidence(now)) {
     const created = await options.careerBackend.createUserEvidence(validateUserAuthoredEvidenceInput(record));
     evidenceIds.push(created.id);
   }
@@ -318,7 +347,7 @@ export async function seedDemoWorkspace(options: DemoSeedOptions): Promise<DemoS
     throw new Error("Demo seed: the fictional employer must not be a monitorable job source");
   }
 
-  const jobs = await seedListings(options, company.id);
+  const jobs = await seedListings({ ...options, now }, company.id);
 
   const coverage: DemoSeedCoverage[] = [];
   for (const job of jobs) {

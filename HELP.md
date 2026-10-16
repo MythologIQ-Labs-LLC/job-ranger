@@ -48,11 +48,13 @@ Then open **http://localhost:4174** in Chrome or Edge. Your data belongs to that
 A separate **demo** build of the web app exists for trying Job Ranger without entering anything about yourself. It is the same application, hosted on its own address (never the address of a real workspace), with a fictional workspace: Morgan Rivera, a Harbor Health employer, three Harbor Health listings, one Target Track, Career Evidence and one tracked application. Not published yet.
 
 - A banner on every page says it is a demo. Every sample listing carries a **Demo listing — fictional, not a real opening** label; opening or applying to one shows an explanation instead of a website.
-- What you enter stays in this browser on the demo site. Each new browser session (a new tab or window, or the browser after a restart) starts again from the sample data; reloading the page keeps your changes. **Reset demo** starts over immediately. Browsers that restore your previous session may keep it until you reset.
+- What you enter stays in this browser on the demo site, even after you close the tab, until a new demo session starts (opening the demo in a new tab or window, or after a browser restart that does not restore your tabs) or the demo sits unused for 8 hours. Then it is replaced with fresh sample data. Reloading the page keeps your changes. To remove them right away, use **Reset demo** or clear the site's data.
+- Exported resume PDFs and JSON Resume files contain the fictional sample data and have no demo marker. Do not submit them as a real application.
+- If the demo's address already holds a real (non-demo) Job Ranger workspace, the demo refuses to start and leaves it untouched.
 - Public job-board sources you add yourself are real openings, read directly by your browser like in the full web app.
 - Not included: monitoring or notifications while the browser is closed, AI inference and MCP connections, desktop-only features, Google Drive, sync and accounts. Do not keep real career records in the demo.
 
-To try it locally: `npm run build:pwa:demo` (output in `dist-pwa-demo/`, build ID ending in `.demo`), then `npm run preview:pwa:demo` and open **http://localhost:4175**. The demo deliberately uses a different address from the self-hosted web app (4174): it erases its own address's browser storage every session, so never serve it at the address of a real workspace.
+To try it locally: `npm run build:pwa:demo` (output in `dist-pwa-demo/`, build ID ending in `.demo`), then `npm run preview:pwa:demo` and open **http://localhost:4175**. The demo deliberately uses a different address from the self-hosted web app (4174), and refuses to run on 4174 or 5174: it replaces its own address's workspace in every new demo session, so never serve it at the address of a real workspace.
 
 ## Workflow
 

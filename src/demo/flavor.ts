@@ -23,6 +23,13 @@ export const IS_DEMO_FLAVOR: boolean =
 export const PWA_FLAVOR: PwaFlavor = IS_DEMO_FLAVOR ? "demo" : "standard";
 
 /**
+ * A demo workspace unused for this many hours is replaced with fresh sample data
+ * at the next start (src/pwa/runtime/demo-workspace.ts), so browsers that restore
+ * sessions do not keep a previous visitor's entries indefinitely.
+ */
+export const DEMO_IDLE_RESET_HOURS = 8;
+
+/**
  * Window event the demo banner dispatches to reset the demo workspace. The
  * demo-flavor entry point (src/pwa/main.tsx) owns the session bookkeeping, so
  * the standard build carries none of it.

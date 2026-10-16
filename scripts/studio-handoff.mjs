@@ -10,6 +10,9 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { PWA_FLAVORS, buildIdMatchesFlavor, parsePwaFlavor } from "./pwa-flavor.mjs";
 
+/** Mirrors DEMO_IDLE_RESET_HOURS in src/pwa/runtime/demo-workspace.ts (checked by tests/pwa-flavor.test.mjs). */
+export const DEMO_IDLE_RESET_HOURS = 8;
+
 export const STUDIO_HANDOFF_FILE = "studio-handoff.json";
 const PRODUCT = "job-ranger-web";
 const HASH = /^[a-f0-9]{64}$/;
@@ -37,8 +40,20 @@ function safeAssetPath(value) {
   return value;
 }
 
-/** The build flavor recorded in build-info.json, which must agree with the build ID. */
-function buildFlavor(buildInfo, buildId) {
+/**
+ * The build flavor recorded in build-info.json, which must agree with the build ID.
+ *
+ * Builds made before flavors existed have no `flavor` field. Such a legacy build is
+ * treated as the standard flavor ONLY when its build ID has no ".demo" suffix, and
+ * its handoff must then be the legacy shape (no `flavor` field). Any other value,
+ * or a legacy build carrying a demo build ID, fails closed.
+ */
+export function effectiveBuildFlavor(buildInfo) {
+  const buildId = requiredString(buildInfo?.buildId, "buildId");
+  if (buildInfo.flavor === undefined) {
+    if (!buildIdMatchesFlavor(buildId, "standard")) fail("build-info flavor is missing for a demo build ID");
+    return "standard";
+  }
   const flavor = buildInfo.flavor;
   if (!PWA_FLAVORS.includes(flavor)) fail("build-info flavor is missing or unknown");
   if (!buildIdMatchesFlavor(buildId, flavor)) fail("build ID does not match the " + flavor + " build flavor");
@@ -50,13 +65,14 @@ export function createStudioHandoff(buildInfo) {
   const version = requiredString(buildInfo.version, "version");
   const buildId = requiredString(buildInfo.buildId, "buildId");
   const commit = requiredString(buildInfo.commit, "commit");
-  const flavor = buildFlavor(buildInfo, buildId);
+  const flavor = effectiveBuildFlavor(buildInfo);
+  const legacy = buildInfo.flavor === undefined;
   const demo = flavor === "demo";
   return {
     schemaVersion: 1,
     kind: "job-ranger-studio-handoff",
     product: "job-ranger",
-    flavor,
+    ...(legacy ? {} : { flavor }),
     build: { version, buildId, commit },
     entry: {
       path: "/",
@@ -79,8 +95,13 @@ export function createStudioHandoff(buildInfo) {
           demo: {
             fictionalSampleData: true,
             sessionScopedWorkspace: true,
-            resetsWhenBrowserSessionEnds: true,
+            // The workspace is NOT erased when the browser closes: it is replaced with
+            // fresh sample data when the next demo session starts or after this many
+            // idle hours (src/pwa/runtime/demo-workspace.ts DEMO_IDLE_RESET_HOURS).
+            resetsAtNextSessionStart: true,
+            idleResetHours: DEMO_IDLE_RESET_HOURS,
             visitorResettable: true,
+            refusesToEraseNonDemoWorkspace: true,
             requiresDedicatedOrigin: true,
             sharesOriginWithRealWorkspace: false,
           },
@@ -107,6 +128,7 @@ export function assertStudioHandoff(handoff, buildInfo) {
 
 /** Validate the deployable directory without requiring a network or npm install. */
 export async function inspectStudioPwaBuild(directory, expectedBuildId, expectedFlavor) {
+  const wantedFlavor = parsePwaFlavor(requiredString(expectedFlavor, "expected build flavor"));
   const dist = path.resolve(directory);
   const root = await realpath(dist);
   const read = async (filename) => {
@@ -130,7 +152,7 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId, expected
   const expected = requiredString(expectedBuildId ?? buildInfo.buildId, "expected build ID");
   if (buildInfo.buildId !== expected) fail("unexpected build ID");
 
-  if (expectedFlavor !== undefined && buildInfo.flavor !== parsePwaFlavor(expectedFlavor)) fail("unexpected build flavor");
+  if (effectiveBuildFlavor(buildInfo) !== wantedFlavor) fail("unexpected build flavor");
 
   const handoff = JSON.parse((await read(STUDIO_HANDOFF_FILE)).toString("utf8"));
   assertStudioHandoff(handoff, buildInfo);
@@ -172,7 +194,7 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId, expected
   return {
     status: "candidate-verified-not-approved",
     buildId: expected,
-    flavor: buildInfo.flavor,
+    flavor: wantedFlavor,
     commit: buildInfo.commit,
     version: buildInfo.version,
     verifiedAssets: seen.size,
@@ -184,7 +206,8 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId, expected
  * Inspect the real HTTPS origin AFTER deployment. This does not authorize the
  * Studio button or prove browser storage/functional acceptance.
  */
-export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuildInfoSha256, fetchImpl = fetch) {
+export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuildInfoSha256, expectedFlavor, fetchImpl = fetch) {
+  const wantedFlavor = parsePwaFlavor(requiredString(expectedFlavor, "expected build flavor"));
   const url = new URL(origin);
   if (url.protocol !== "https:" || url.username || url.password ||
       url.pathname !== "/" || url.search || url.hash) {
@@ -219,6 +242,7 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
   if (sha256(infoBytes) !== expectedBuildInfoSha256) fail("live build-info checksum differs from approved release");
   const info = JSON.parse(new TextDecoder().decode(infoBytes));
   if (info.product !== PRODUCT || info.buildId !== expected) fail("live build identity mismatch");
+  if (effectiveBuildFlavor(info) !== wantedFlavor) fail("unexpected build flavor");
   if (!HASH.test(info.serviceWorkerSha256) || sha256(swBytes) !== info.serviceWorkerSha256) {
     fail("live service-worker checksum mismatch");
   }
@@ -292,7 +316,7 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
     status: "live-artifact-verified-owner-approval-still-required",
     origin: url.origin,
     buildId: expected,
-    flavor: info.flavor,
+    flavor: wantedFlavor,
     verifiedAssets: assets.size,
   };
 }

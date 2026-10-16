@@ -27,22 +27,26 @@ export type PageToWorkerMessage =
       dialog?: DialogPayload;
     }
   /**
-   * Demo flavor only, sent once right after the worker starts: whether this
-   * tab begins a new demo session (wipe + reseed before opening the database).
-   * The standard-flavor worker ignores it.
+   * Demo flavor only, sent once right after the worker starts: this tab's demo
+   * session id. The worker compares it with the workspace's demo sentinel to
+   * decide whether to keep, replace or refuse to touch the workspace. The
+   * standard-flavor worker ignores it.
    */
-  | { type: "demo-session"; reset: boolean };
+  | { type: "demo-session"; sessionId: string };
 
-/** Demo flavor only: what the worker did to the session-scoped demo workspace at startup. */
+/** Demo flavor only: what the worker did to the demo workspace at startup. */
 export interface DemoWorkspaceStartup {
   reset: boolean;
+  reason: "empty" | "new-session" | "idle" | "incomplete-seed" | null;
   seeded: boolean;
 }
 
 export type WorkerFailureCode =
   | "storage-unsupported"
   | "storage-unavailable"
-  | "startup-failed";
+  | "startup-failed"
+  /** Demo flavor: storage holds a workspace without a demo sentinel; the demo will not erase it. */
+  | "demo-workspace-refused";
 
 export type WorkerToPageMessage =
   | { type: "waiting-for-lock" }

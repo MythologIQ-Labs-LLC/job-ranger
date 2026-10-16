@@ -34,6 +34,18 @@ const DEMO_ONLY = [
   "Morgan Rivera",
   "Demo seed: the fictional employer must not be a monitorable job source",
   "job-ranger.demo.session.v1",
+  // Fixture data (electron/src/demo-seed.cts) and the workspace-ownership guard.
+  "Harbor Health",
+  "Practice Operations Coordinator",
+  "Patient Access Representative",
+  "Clinic Operations Coordinator",
+  "Referral backlog cleanup",
+  "demo-listing.invalid/harbor-health",
+  "job-ranger-demo-workspace",
+  ".demo-workspace.json",
+  "This site holds a Job Ranger workspace that is not a demo",
+  "The Job Ranger demo is open in another tab or window",
+  "temporary demo workspace",
 ];
 
 const standard = await load("standard");

@@ -14,6 +14,8 @@ const { RequirementBackend } = require(path.join(runtime, "electron/src/requirem
 const seed = require(path.join(runtime, "electron/src/demo-seed.cjs"));
 
 const CAPTURED_AT = new Date("2026-10-15T12:00:00.000Z");
+// Years later: relative dates keep the same story (still-active credential, same coverage).
+const LATER = new Date("2031-03-01T08:30:00.000Z");
 
 /** Any network attempt fails the test: the demo never fetches anything. */
 const networkCalls = [];
@@ -81,6 +83,7 @@ async function run() {
   const { buildOpportunityAssessment } = await import(pathToFileURL(path.join(runtime, "src/shared/opportunity-assessment.js")).href);
   const first = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-a-"));
   const second = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-b-"));
+  const third = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-c-"));
   try {
     const workspace = await openWorkspace(first);
     const started = Date.now();
@@ -176,6 +179,29 @@ async function run() {
     const other = await openWorkspace(second);
     await seed.seedDemoWorkspace({ ...other, now: CAPTURED_AT });
     assert.deepEqual(await stableProjection(other), await stableProjection(workspace));
+
+    // Stable over time: seeded years later, the dates move with the clock but the
+    // credential is still active and the assessment results are identical.
+    const later = await openWorkspace(third);
+    await seed.seedDemoWorkspace({ ...later, now: LATER });
+    const [nowView, laterView] = [await stableProjection(workspace), await stableProjection(later)];
+    assert.deepEqual(laterView.coverage, nowView.coverage);
+    assert.deepEqual(laterView.evidence, nowView.evidence);
+    assert.deepEqual(laterView.tracks, nowView.tracks);
+    assert.deepEqual(laterView.applications, nowView.applications);
+    assert.deepEqual(laterView.jobs.map((job) => job.slice(0, 7)), nowView.jobs.map((job) => job.slice(0, 7)));
+    for (const [view, at] of [[nowView, CAPTURED_AT], [laterView, LATER]]) {
+      for (const job of view.jobs) {
+        const posted = Date.parse(job[7]);
+        assert.ok(posted < at.getTime() && at.getTime() - posted <= 15 * 86_400_000, `posted within two weeks of seeding: ${job[7]}`);
+      }
+    }
+    for (const [workspaceAt, at] of [[workspace, CAPTURED_AT], [later, LATER]]) {
+      const credential = (await workspaceAt.careerBackend.listEvidence()).find((item) => item.evidence.subjectType === "credential");
+      assert.ok(Date.parse(credential.evidence.credential.expirationDate) > at.getTime(), "credential still active when seeded");
+      assert.ok(Date.parse(`${credential.evidence.startDate}-01`) < at.getTime(), "credential obtained before seeding");
+    }
+    await later.backend.dispose();
     assert.deepEqual(networkCalls, []);
 
     await workspace.backend.dispose();
@@ -184,6 +210,7 @@ async function run() {
   } finally {
     await fs.rm(first, { recursive: true, force: true });
     await fs.rm(second, { recursive: true, force: true });
+    await fs.rm(third, { recursive: true, force: true });
   }
 }
 

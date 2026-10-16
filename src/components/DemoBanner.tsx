@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FlaskConical, RotateCcw } from "lucide-react";
-import { DEMO_RESET_REQUEST_EVENT, IS_DEMO_FLAVOR } from "../demo/flavor";
+import { DEMO_IDLE_RESET_HOURS, DEMO_RESET_REQUEST_EVENT, IS_DEMO_FLAVOR } from "../demo/flavor";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 /**
@@ -28,7 +28,8 @@ export function DemoBanner() {
       </div>
       <p className="mt-1 leading-5 text-[var(--color-text-secondary)]">
         Morgan Rivera, Harbor Health and the listings are made up. What you enter stays in this browser on this site
-        and is erased when this browser session ends.
+        until a new demo session starts (a new tab or window) or the demo sits unused for {DEMO_IDLE_RESET_HOURS} hours;
+        then it is replaced with fresh sample data. To remove it now, use Reset demo or clear this site's data.
       </p>
       <ConfirmDialog
         open={confirming}

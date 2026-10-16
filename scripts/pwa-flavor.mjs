@@ -47,6 +47,26 @@ export function buildIdMatchesFlavor(buildId, flavor) {
   return flavor === "demo" ? buildId.endsWith(DEMO_BUILD_SUFFIX) : !buildId.endsWith(DEMO_BUILD_SUFFIX);
 }
 
+/** Local addresses of the standard web app (selfhost:pwa / preview:pwa and dev:pwa). */
+export const STANDARD_LOCAL_PORTS = Object.freeze({ preview: 4174, dev: 5174 });
+/** The demo flavor's own local addresses. */
+export const DEMO_LOCAL_PORTS = Object.freeze({ preview: 4175, dev: 5175 });
+
+/**
+ * The demo replaces its origin's browser storage with sample data, so it must
+ * never be served on the standard app's local address (the same origin as a
+ * self-hosted real workspace). Throws for those ports.
+ */
+export function assertDemoPortAllowed(port) {
+  const value = Number(port);
+  if (Object.values(STANDARD_LOCAL_PORTS).includes(value)) {
+    throw new Error(
+      `Refusing to serve the Job Ranger demo on port ${value}: that is the standard web app's local address, where a real workspace may live. Use the demo's own port (${DEMO_LOCAL_PORTS.preview} for preview, ${DEMO_LOCAL_PORTS.dev} for dev).`,
+    );
+  }
+  return value;
+}
+
 /** Output directory (relative to the repository root) for a flavor's production build. */
 export function pwaOutDirName(flavor) {
   return parsePwaFlavor(flavor) === "demo" ? "dist-pwa-demo" : "dist-pwa";

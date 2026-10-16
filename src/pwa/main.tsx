@@ -16,7 +16,7 @@ import { PwaBootGate, PwaRuntimeBanners } from "./PwaShell";
 import { trustedScriptUrl } from "./security/trusted-types";
 import runtimeWorkerUrl from "./runtime/worker-main.ts?worker&url";
 import { DEMO_RESET_REQUEST_EVENT, IS_DEMO_FLAVOR } from "../demo/flavor";
-import { completeDemoSession, demoSessionNeedsReset, restartDemoSession } from "../demo/session";
+import { completeDemoSession, demoSessionId, restartDemoSession } from "../demo/session";
 import type { PageToWorkerMessage } from "./runtime/protocol";
 
 const worker = new Worker(trustedScriptUrl(runtimeWorkerUrl), {
@@ -27,17 +27,18 @@ const client = new WebRuntimeClient(worker);
 setActiveWebRuntimeClient(client);
 
 if (IS_DEMO_FLAVOR) {
-  // Demo flavor: a tab without this session's marker starts a fresh, seeded demo
-  // workspace (the worker wipes it under the Web Lock before opening the database).
-  // Registered before React mounts, so preferences are reset before the app renders.
-  const start: PageToWorkerMessage = { type: "demo-session", reset: demoSessionNeedsReset() };
+  // Demo flavor: the worker keeps this tab's demo workspace only if it belongs to this
+  // tab's session id; otherwise (and never for a non-demo workspace) it decides what to do
+  // under the Web Lock before opening the database. Registered before React mounts, so
+  // preferences are reset before the app renders.
+  const start: PageToWorkerMessage = { type: "demo-session", sessionId: demoSessionId() };
   worker.postMessage(start);
   const stop = client.onStateChange((state) => {
     if (state.status !== "ready") return;
     stop();
     completeDemoSession(state.demo?.reset ?? false);
   });
-  // "Reset demo" (DemoBanner): forget this session and reload; the worker wipes and reseeds.
+  // "Reset demo" (DemoBanner): forget this session and reload; the worker replaces the workspace.
   window.addEventListener(DEMO_RESET_REQUEST_EVENT, () => restartDemoSession());
 }
 

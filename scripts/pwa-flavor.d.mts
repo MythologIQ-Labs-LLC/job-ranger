@@ -10,6 +10,9 @@ export declare function pwaBuildId(options: {
   override?: string | null;
 }): string;
 export declare function buildIdMatchesFlavor(buildId: unknown, flavor: unknown): boolean;
+export declare const STANDARD_LOCAL_PORTS: Readonly<{ preview: number; dev: number }>;
+export declare const DEMO_LOCAL_PORTS: Readonly<{ preview: number; dev: number }>;
+export declare function assertDemoPortAllowed(port: unknown): number;
 export declare function pwaOutDirName(flavor: string | null | undefined): string;
 export declare function pwaArchiveName(version: string, flavor: string | null | undefined): string;
 export declare function pwaTrustFileName(flavor: string | null | undefined): string;

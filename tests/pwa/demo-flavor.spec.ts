@@ -131,7 +131,12 @@ test("first visit opens a labeled, seeded demo workspace that runs the real flow
   const banner = page.getByTestId("demo-banner");
   await expect(banner).toContainText("fictional sample data");
   await expect(banner).toContainText("stays in this browser on this site");
-  await expect(banner).toContainText("erased when this browser session ends");
+  // Accurate about when entries go away: not on tab close, but at the next session or after idling.
+  await expect(banner).toContainText("until a new demo session starts");
+  await expect(banner).toContainText("unused for 8 hours");
+  await expect(banner).toContainText("replaced with fresh sample data");
+  await expect(banner).toContainText("use Reset demo or clear this site's data");
+  await expect(banner).not.toContainText("erased when");
   await expect(banner.getByRole("button", { name: "Reset demo" })).toBeVisible();
   // Pre-seeded: onboarding is skipped and the dashboard is the landing page.
   await expect(page.locator("main h1").first()).toContainText("Your next steps");
@@ -172,6 +177,7 @@ test("first visit opens a labeled, seeded demo workspace that runs the real flow
   await drawer.getByRole("button", { name: "Prepare resume" }).click();
   await expect(page).toHaveURL(/#\/resume\?job=/);
   await expect(page.getByText("Targeting tracked job", { exact: false })).toBeVisible();
+  await expect(page.getByTestId("demo-listing-badge").first()).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Morgan Rivera");
   await page.getByRole("textbox", { name: "Email", exact: true }).fill("morgan.rivera@example.org");
   await page.getByRole("button", { name: "Create truthful draft" }).click();
@@ -204,7 +210,13 @@ test("first visit opens a labeled, seeded demo workspace that runs the real flow
     await expect(limits).toContainText("while the browser is closed");
     await expect(limits).toContainText("MCP");
     await expect(limits).toContainText("sync and accounts");
+    await expect(limits).toContainText("carry no demo marker");
+    await expect(limits).not.toContainText("erased when");
   }
+  // No persistence or install advice for a temporary demo workspace.
+  await page.goto(demoServer.url + "#/settings");
+  await expect(page.getByRole("button", { name: "Request persistent storage" })).toHaveCount(0);
+  await expect(page.getByText("has not granted persistent storage", { exact: false })).toHaveCount(0);
 
   expect(opened, "no demo listing opened a window").toEqual([]);
   expect(foreign, "the demo makes no requests beyond its own origin").toEqual([]);
@@ -245,8 +257,136 @@ test("a session keeps its data across reloads; a new tab starts from a fresh see
   }
 });
 
+async function sessionIdOf(page: Page): Promise<string> {
+  const id = await page.evaluate((key) => sessionStorage.getItem(key), SESSION_KEY);
+  expect(id).toMatch(/^[0-9a-f-]{36}$/);
+  return id!;
+}
+
+test("a tab never opens a demo workspace another session took over while it waited", async ({ browser }) => {
+  const context = await browser.newContext();
+  try {
+    const tabA = await context.newPage();
+    await openDemo(tabA);
+    await addEvidence(tabA, "Entered in tab A");
+
+    // Tab B waits on the single-writer lock and says what closing the other tab means.
+    const tabB = await context.newPage();
+    await tabB.goto(demoServer.url);
+    const waiting = tabB.getByTestId("pwa-boot-screen");
+    await expect(waiting).toContainText("The Job Ranger demo is open in another tab or window");
+    await expect(waiting).toContainText("discards that tab's demo changes");
+
+    // A reloads: B (queued first) takes the workspace and starts its own fresh session.
+    await tabA.reload();
+    await waitForRuntime(tabB);
+    const inB = await workspaceSummary(tabB);
+    expect(inB).toMatchObject(SEEDED);
+    expect(inB.evidence).not.toContain("Entered in tab A");
+    await addEvidence(tabB, "Entered in tab B");
+    await expect(tabA.getByTestId("pwa-boot-screen")).toContainText("open in another tab");
+
+    // When B closes, A gets the lock but must not open B's workspace: it starts fresh.
+    await tabB.close();
+    await waitForRuntime(tabA);
+    const inA = await workspaceSummary(tabA);
+    expect(inA).toMatchObject(SEEDED);
+    expect(inA.evidence).not.toContain("Entered in tab B");
+    expect(inA.evidence).not.toContain("Entered in tab A");
+    expect(inA.evidence).toHaveLength(4);
+  } finally {
+    await context.close();
+  }
+});
+
+test("a restored tab (same session id) does not reopen a workspace a later session owns", async ({ browser }) => {
+  const context = await browser.newContext();
+  try {
+    const original = await context.newPage();
+    await openDemo(original);
+    const originalSession = await sessionIdOf(original);
+    await original.close();
+
+    const later = await context.newPage();
+    await openDemo(later);
+    expect(await sessionIdOf(later)).not.toBe(originalSession);
+    await addEvidence(later, "Entered by the later session");
+    await later.close();
+
+    // Ctrl+Shift+T / session restore brings back the original tab's sessionStorage.
+    const restored = await context.newPage();
+    await restored.addInitScript(
+      ([key, id]) => {
+        if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, id);
+      },
+      [SESSION_KEY, originalSession] as const,
+    );
+    await openDemo(restored);
+    expect(await sessionIdOf(restored)).toBe(originalSession);
+    const summary = await workspaceSummary(restored);
+    expect(summary).toMatchObject(SEEDED);
+    expect(summary.evidence).not.toContain("Entered by the later session");
+  } finally {
+    await context.close();
+  }
+});
+
+test("the demo refuses to erase a non-demo workspace on its origin, which stays intact", async ({ browser }) => {
+  // One origin that first serves the standard app, then the demo build (a mis-deployment,
+  // or the demo served on a real workspace's address).
+  const shared = await startPwaServer(distPwa);
+  const context = await browser.newContext();
+  const dropShell = async (page: Page) =>
+    page.evaluate(async () => {
+      for (const registration of await navigator.serviceWorker.getRegistrations()) await registration.unregister();
+      for (const key of await caches.keys()) await caches.delete(key);
+    });
+  try {
+    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    const real = await context.newPage();
+    await real.goto(shared.url);
+    await waitForRuntime(real);
+    await addEvidence(real, "Real workspace entry");
+    await real.evaluate(() => window.electronAPI.career.saveProfile({
+      version: 2, fullName: "Real Person", homeLocation: "Towson, MD", radiusMiles: 10, minimumPay: null, payBasis: "hourly",
+      targetTitles: [], skills: [], certifications: [], sectors: [], onCallPreference: "either", fullTimeOnly: true, updatedAt: null,
+    } as never));
+    await dropShell(real);
+    await real.close();
+
+    shared.setRoot(distPwaDemo);
+    const demo = await context.newPage();
+    await demo.goto(shared.url);
+    await expect(demo).toHaveTitle("Job Ranger Demo");
+    await expect(demo.getByTestId("pwa-boot-error")).toHaveText(
+      "This site holds a Job Ranger workspace that is not a demo; the demo will not erase it.",
+    );
+    await expect(demo.getByRole("heading", { name: "The Job Ranger demo cannot start on this site" })).toBeVisible();
+    await expect(demo.getByTestId("demo-banner")).toHaveCount(0);
+    // Reloading (same session) or a new tab (new session) refuses the same way.
+    await demo.reload();
+    await expect(demo.getByTestId("pwa-boot-error")).toContainText("the demo will not erase it");
+    await dropShell(demo);
+    await demo.close();
+
+    shared.setRoot(distPwa);
+    const back = await context.newPage();
+    await back.goto(shared.url);
+    await waitForRuntime(back);
+    const intact = await workspaceSummary(back);
+    expect(intact.profileName).toBe("Real Person");
+    expect(intact.evidence).toEqual(["Real workspace entry"]);
+    expect(intact.jobs).toEqual([]);
+    expect(intact.companies).toEqual([]);
+  } finally {
+    await context.close();
+    await shared.close();
+  }
+});
+
 test("Reset demo wipes the session's changes and reseeds immediately", async ({ page }) => {
   await openDemo(page);
+  const sessionBefore = await sessionIdOf(page);
   const marker = `Entered before reset ${Date.now()}`;
   await addEvidence(page, marker);
   await page.evaluate(() => window.electronAPI.applications.list().then((apps) => window.electronAPI.applications.delete(apps[0].id)));
@@ -263,6 +403,7 @@ test("Reset demo wipes the session's changes and reseeds immediately", async ({ 
   ]);
   await waitForRuntime(page);
   await expect(page.getByTestId("demo-banner")).toBeVisible();
+  expect(await sessionIdOf(page)).not.toBe(sessionBefore);
   const reset = await workspaceSummary(page);
   expect(reset).toMatchObject(SEEDED);
   expect(reset.evidence).not.toContain(marker);

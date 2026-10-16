@@ -18,7 +18,14 @@ import { buildContentSecurityPolicy, buildSecurityHeaders } from "./src/pwa/secu
 import { NODE_BUILTIN_ADAPTERS, SHARED_CORE_ADAPTERS } from "./src/pwa/adapter-map.ts";
 import { buildPdfFonts } from "./scripts/pdf-fonts.mjs";
 import { createStudioHandoff } from "./scripts/studio-handoff.mjs";
-import { PWA_FLAVOR_ENV, parsePwaFlavor, pwaBuildId, pwaOutDirName } from "./scripts/pwa-flavor.mjs";
+import {
+  DEMO_LOCAL_PORTS,
+  PWA_FLAVOR_ENV,
+  assertDemoPortAllowed,
+  parsePwaFlavor,
+  pwaBuildId,
+  pwaOutDirName,
+} from "./scripts/pwa-flavor.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -147,6 +154,18 @@ function writeDemoManifest(): void {
   );
 }
 
+/** Demo flavor: never serve on the standard web app's local addresses (even with --port). */
+function demoPortGuardPlugin(): Plugin {
+  return {
+    name: "job-ranger-demo-port-guard",
+    configResolved(config) {
+      if (config.command !== "serve") return;
+      assertDemoPortAllowed(config.server.port);
+      assertDemoPortAllowed(config.preview.port);
+    },
+  };
+}
+
 function shellManifestPlugin(): Plugin {
   return {
     name: "job-ranger-shell-manifest",
@@ -229,7 +248,14 @@ export default defineConfig({
   root: path.join(root, "web"),
   publicDir: path.join(root, "public"),
   base: "./",
-  plugins: [runtimeAdapterPlugin("page"), pdfFontsPlugin(true), react(), tailwindcss(), shellManifestPlugin()],
+  plugins: [
+    runtimeAdapterPlugin("page"),
+    pdfFontsPlugin(true),
+    react(),
+    tailwindcss(),
+    shellManifestPlugin(),
+    ...(flavor === "demo" ? [demoPortGuardPlugin()] : []),
+  ],
   resolve: {
     alias: { "@": path.resolve(root, "src") },
   },
@@ -254,10 +280,11 @@ export default defineConfig({
   },
   server: {
     fs: { allow: [root] },
-    // The demo flavor wipes its origin's storage every session, so locally it never
-    // shares an address (origin) with the standard web app's workspace.
-    port: flavor === "demo" ? 5175 : 5174,
+    port: 5174,
     strictPort: true,
+    // The demo flavor replaces its origin's storage every session, so locally it never
+    // shares an address (origin) with the standard web app's workspace.
+    ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.dev } : {}),
     headers: {
       ...buildSecurityHeaders(),
       // Vite's dev client needs inline/eval support; the production CSP is
@@ -267,8 +294,9 @@ export default defineConfig({
   },
   preview: {
     host: "localhost",
-    port: flavor === "demo" ? 4175 : 4174,
+    port: 4174,
     strictPort: true,
     headers: buildSecurityHeaders(),
+    ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.preview } : {}),
   },
 });
