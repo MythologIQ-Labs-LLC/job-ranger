@@ -38,7 +38,8 @@ export function LineListTextarea({ values, onValuesChange, ...props }: LineListT
       value={text}
       onChange={(event) => {
         setText(event.target.value);
-        onValuesChange(parseLineList(event.target.value));
+        const next = parseLineList(event.target.value);
+        if (!sameList(next, values)) onValuesChange(next);
       }}
     />
   );

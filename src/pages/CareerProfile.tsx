@@ -65,6 +65,7 @@ export function CareerProfile() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteLabel, setPasteLabel] = useState("Previous resume");
   const [pasteText, setPasteText] = useState("");
@@ -73,40 +74,48 @@ export function CareerProfile() {
   const [editingType, setEditingType] = useState<EvidenceSubjectType>("other");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
 
-  // A refresh (for example after a save elsewhere) produces a new profile object. Replace
-  // the form only when it has no unsaved edits relative to the last stored profile it
-  // showed, so a background refresh never discards what the person is typing (#278).
-  // A layout effect seeds the form in the same commit that enables its controls, so no
-  // choice can land between enabling and seeding and then be overwritten by the seed.
-  const shownProfile = useRef<CareerProfileValue | null>(null);
+  // Every edit bumps editVersion synchronously; storedVersion is the newest edit known to be
+  // stored. A stored profile (first load, a refresh after a save elsewhere, or the result of a
+  // save) may replace the form only when the form holds no edit newer than what is stored, so
+  // neither a background refresh (#278) nor a save that completes after further typing (#288)
+  // discards what the person entered. A layout effect seeds the form in the same commit that
+  // enables its controls, so no choice can land between enabling and seeding.
+  const editVersion = useRef(0);
+  const storedVersion = useRef(0);
   useLayoutEffect(() => {
-    if (loading) return;
-    const previous = shownProfile.current;
-    shownProfile.current = profile;
-    setDraft((current) =>
-      previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
-    );
+    if (!loading && editVersion.current === storedVersion.current) setDraft(profile);
   }, [loading, profile]);
 
   const update = <K extends keyof CareerProfileValue,>(key: K, value: CareerProfileValue[K]) => {
+    editVersion.current += 1;
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
     setSaveError(null);
   };
 
   const reset = () => {
+    editVersion.current += 1;
     setDraft(emptyCareerProfile);
     setSaved(false);
     setSaveError(null);
   };
 
   const handleSave = async () => {
+    const savedVersion = editVersion.current;
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
     try {
       const next = await save(draft);
-      setDraft(next);
-      setSaved(true);
+      // Only the snapshot that was submitted is stored; later edits stay in the form.
+      storedVersion.current = savedVersion;
+      if (editVersion.current === savedVersion) {
+        setDraft(next);
+        setSaved(true);
+      } else {
+        setSaved(false);
+        setSaveNotice("Changes made during saving are still here. Save again to keep them.");
+      }
     } catch (saveFailure) {
       setSaved(false);
       setSaveError(
@@ -370,6 +379,7 @@ export function CareerProfile() {
             </button>
             <div className="flex items-center gap-3">
               {saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved on this device</span>}
+              {saveNotice && <span role="status" data-testid="profile-save-notice" className="max-w-sm text-xs text-[var(--color-text-secondary)]">{saveNotice}</span>}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={loading || saving}>
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save career profile"}
