@@ -79,10 +79,14 @@ async function connectInSettings(page: Page) {
  * Hosted Linux runners have no keyring, so safeStorage reports the basic_text backend and the app
  * deliberately keeps the sign-in for the session only; Windows and macOS encrypt it.
  */
+async function driveStatus(page: Page): Promise<{ connected: boolean; credentialStorage: string }> {
+  return page.evaluate(async () => (window as unknown as {
+    electronAPI: { drive: { status: () => Promise<{ connected: boolean; credentialStorage: string }> } };
+  }).electronAPI.drive.status());
+}
+
 async function credentialStorage(page: Page): Promise<string> {
-  return page.evaluate(async () => (await (window as unknown as {
-    electronAPI: { drive: { status: () => Promise<{ credentialStorage: string }> } };
-  }).electronAPI.drive.status()).credentialStorage);
+  return (await driveStatus(page)).credentialStorage;
 }
 
 async function createVerifiedPdf(page: Page, expectedVersion: number) {
@@ -234,8 +238,8 @@ test.describe("Google Drive export", () => {
 
       fixture = await launch(server.baseUrl, userDataDir, "60000");
       const { page } = fixture;
-      if (await credentialStorage(page) === "session") {
-        // Without OS encryption the sign-in did not survive the crash; reconnect the same account.
+      if (!(await driveStatus(page)).connected) {
+        // Without OS encryption (hosted Linux) the sign-in did not survive the crash; reconnect the same account.
         await connectInSettings(page);
       }
       await navigateTo(page, "/resume");
