@@ -2,7 +2,7 @@
 
 **Authority:** canonical routing document for Job Ranger architecture decisions.  
 **Effective decision:** 2026-10-16 (owner direction).  
-**Status:** proposed on this branch until merged into `main`.
+**Status:** active on `main` since PR #335 (2026-10-16).
 
 ## Mandatory resolution rule
 
@@ -54,6 +54,10 @@ Truth is still distinguished by type:
 | Native Google Desktop OAuth client required to release Job Ranger | **Superseded for PWA release** | Browser-specific web OAuth requirement if Drive is enabled |
 | #334 native Drive CI green = web Drive feature delivered | **Invalid inference** | Browser Drive must be separately implemented and validated |
 | Existing v1.2.0 installer release | **Historical fact, not current roadmap** | A previously published artifact does not define supported future distribution |
+
+## Commercial brand decision boundary (2026-10-16)
+
+The commercial product name is **not yet approved**. `Job Ranger` is retained as an internal working identifier while PWA engineering proceeds. The intended long-term name will change; `Pathwise` and `Trailmark` are rejected/removed from active consideration. See [brand decision issue #339](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/339) and its linked cumulative four-agent review for commercial decision evidence. This issue **does not amend runtime architecture**, does not authorize rename, domain/hosting change, trademark filings, or public release. Do not create a competing architectural authority from naming research.
 
 ## Change control
 
