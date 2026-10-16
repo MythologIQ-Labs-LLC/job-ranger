@@ -2,6 +2,8 @@
 
 Thanks for helping improve Job Ranger. The project is intentionally consumer-facing: contributions should make the job-search experience more reliable, understandable, private, and usable by people who do not have software-development expertise.
 
+Architecture decisions, supported distribution targets and explicit supersessions are governed by the [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). Electron and Store tests remain engineering validation, not obligations to ship a native application.
+
 ## Before you start
 
 The day-to-day [repository workflow](./docs/REPOSITORY_WORKFLOW.md) explains work-in-progress limits, status/area triage, review/merge standards, and closeout responsibilities. It applies to maintainers, contributors, and local coding agents. Run `npm run repo:hygiene` with the authenticated GitHub CLI before opening additional PRs.

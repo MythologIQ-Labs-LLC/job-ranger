@@ -1,5 +1,7 @@
 # Documentation Index
 
+> **Architecture authority:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md). All architecture choices, supersessions and canonical domain routing start there. Older priority hierarchies below govern evidence/status only and cannot override the architecture index.
+
 Job Ranger documentation is intentionally divided into **current product truth**, **active design/roadmap**, **validation evidence**, **research**, **release evidence**, and **historical provenance**.
 
 This hierarchy exists because the repository has accumulated multiple generations of planning documents. A reader should never have to guess whether an old phase plan still describes the product.
@@ -14,7 +16,7 @@ When documents disagree, use this order:
 2. **Current source and tests on `main`** for what is actually implemented in the repository.
 3. **`SYSTEM_STATE.md`** for the reconciled factual snapshot of `main` versus the published release.
 4. **Root `README.md` and `HELP.md`** for public/user-facing product behavior.
-5. **`ARCHITECTURE_PLAN.md`** for current architecture and accepted trust boundaries.
+5. **`ARCHITECTURE_INDEX.md`** for architecture decisions, supersessions, and designated canonical domain documents.
 6. **`planning/PLAN.md`** for genuine next work.
 7. **Current design documents** for normative contracts and accepted architectural decisions.
 8. **Validation/research documents** for evidence and alternatives.
@@ -39,7 +41,7 @@ The [October 10, 2026 source-backed reconciliation](./validation/DOCUMENTATION_R
 | [`SYSTEM_STATE.md`](./SYSTEM_STATE.md) | Factual current repository/product snapshot. |
 | [`ARCHITECTURE_PLAN.md`](./ARCHITECTURE_PLAN.md) | Current architecture, authority model, trust boundaries, and accepted evolution. |
 | [`adr/README.md`](./adr/README.md) | Architecture decision log and accepted durable product/technical boundaries. |
-| [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md) | Accepted post-v1.2 dual-channel distribution architecture: cross-platform PWA plus Microsoft Store Windows native app. |
+| [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md) | Historical 2026-10-05 dual-channel decision, superseded by ARCH-001/002 in the architecture index. |
 | [`design/PWA_RUNTIME.md`](./design/PWA_RUNTIME.md) | Web/PWA runtime implementation: shared core and adapters, persistence, security, service worker, capability parity, deployment. |
 | [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT_STORE_PACKAGING.md) | Microsoft Store (AppX) packaging, Store runtime behavior, NSIS coexistence/migration, validation, external steps. |
 | [`planning/PLAN.md`](./planning/PLAN.md) | Actual prioritized next work. |

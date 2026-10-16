@@ -1,5 +1,8 @@
 # System State
 
+> **Snapshot and supersession notice (2026-10-16):** This file is an October 15 historical source-state snapshot and is **not** current architecture authority. Use [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) for the binding PWA-only distribution decision and retired Microsoft Store/native product targets. Sections below recording native Store implementation, candidate installers, signing and dual-channel plans describe what was implemented or believed at the dated snapshot, not what may now ship. An updated code-backed snapshot is still required for later merges; do not treat this notice as a fresh verification of every capability.
+
+
 **Snapshot date:** 2026-10-15 (reconciled against `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; the previous 2026-10-10 reconciliation used `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 After that snapshot, `main` gained only #319 (test-only: a busy timeout for two Electron e2e helpers), #263 (CI only: draft pull requests skip the heavy hosted jobs until marked ready for review) and #312 (development dependencies: Electron 44.7.0, Playwright 1.64.0, Vite 8.3.4, CJK font packages 5.3.1). None is intended to change user-facing behavior; #312 updates the packaged Electron runtime and CJK font packages and is covered only by the final-main validation at `dd0cf63`, recorded on #194.

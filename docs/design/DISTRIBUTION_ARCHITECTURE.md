@@ -1,5 +1,8 @@
 # Distribution Architecture
 
+> **SUPERSEDED for current product distribution (2026-10-16).** This documents the historical 2026-10-05 dual-channel decision. The authoritative replacement is [Canonical Architecture Index](../ARCHITECTURE_INDEX.md), ARCH-001–003: PWA-only user distribution; Electron retained as an internal testing harness; no native app/Store/signing release track. Statements below about a first-class Microsoft Store app, localhost-only rollout assumptions, and required native distribution are **historical**, not normative. Preserve technical implementation evidence as history.
+
+
 **Status:** Accepted architectural direction  
 **Decision date:** 2026-10-05  
 **Applies after:** v1.2.0  
