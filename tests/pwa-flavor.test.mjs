@@ -3,6 +3,7 @@
 // Run: node --experimental-strip-types tests/pwa-flavor.test.mjs
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -220,5 +221,67 @@ assert.match(deploy, /--build-info-sha256 "\$approved_digest" \\\n\s+--flavor st
 assert.doesNotMatch(release, /job-ranger-web-\*|build\/trust\/web-\*/);
 assert.match(release, /subject-path: web\/release\/job-ranger-web-v\*\.zip/);
 assert.match(release, /gh release upload "\$tag" web\/release\/job-ranger-web-v\*\.zip web\/build\/trust\/web-build-info\.json web\/build\/trust\/web-pwa-e2e\.json web\/build\/trust\/web-SHA256SUMS\.txt web\/build\/trust\/web-release-manifest\.json --clobber/);
+
+// --- the demo has its own guarded deploy path, never the real web app's project or origin
+const demoDeploy = (await readFile(path.join(root, ".github/workflows/deploy-pwa-demo.yml"), "utf8")).replace(/\r\n/g, "\n");
+assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n/m, "demo deploys only on manual dispatch");
+assert.doesNotMatch(demoDeploy, /^\s+(push|pull_request|schedule|workflow_run):/m, "no automatic trigger");
+assert.match(demoDeploy, /\n    environment: demo-web\n/, "deployment authority is the protected demo-web environment");
+assert.doesNotMatch(demoDeploy, /production-web/, "never the production environment");
+assert.equal((demoDeploy.match(/\[ "\$GITHUB_REF" = "refs\/heads\/main" \]/g) ?? []).length, 2, "build and deploy both require a dispatch from main");
+assert.doesNotMatch(demoDeploy, /inputs\.|\n      ref:/, "no caller-chosen ref: only the dispatched commit on main is built and deployed");
+assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n\n/m, "workflow_dispatch takes no inputs");
+// The guard's inputs come from exactly these repository variables (renaming one would silently disable it).
+for (const [name, variable] of [
+  ["DEMO_PROJECT", "JOB_RANGER_DEMO_PAGES_PROJECT"],
+  ["DEMO_ORIGIN", "JOB_RANGER_DEMO_ORIGIN"],
+  ["APP_PROJECT", "JOB_RANGER_PWA_PAGES_PROJECT"],
+  ["APP_ORIGIN", "JOB_RANGER_PWA_ORIGIN"],
+]) {
+  assert.match(demoDeploy, new RegExp(`- name: Refuse a project or origin shared with the real web app\\n        env:\\n(?:          [A-Z_]+: \\$\\{\\{ vars\\.[A-Z_]+ \\}\\}\\n)*          ${name}: \\$\\{\\{ vars\\.${variable} \\}\\}\\n`), `${name} <- vars.${variable}`);
+}
+assert.match(demoDeploy, /--project-name "\$DEMO_PROJECT"/);
+assert.equal((demoDeploy.match(/--flavor demo/g) ?? []).length, 3, "every verification pins the demo flavor");
+assert.doesNotMatch(demoDeploy, /--flavor standard/);
+assert.match(demoDeploy, /a\.flavor !== 'demo' \|\| a\.buildId !== process\.env\.EXPECTED \|\| a\.commit !== process\.env\.COMMIT/, "the deployed build is the demo flavor of the requested commit");
+assert.match(demoDeploy, /COMMIT: \$\{\{ github\.sha \}\}/, "identity checks compare against the dispatched commit");
+assert.match(demoDeploy, /b\.commit !== process\.env\.COMMIT/, "the built commit must equal the requested commit");
+assert.match(demoDeploy, /tests\/pwa\/demo-flavor\.spec\.ts/, "demo browser journeys run before deploying");
+assert.match(demoDeploy, /--signer-workflow "\$\{\{ github\.repository \}\}\/\.github\/workflows\/deploy-pwa-demo\.yml"/);
+{
+  // Signing runs in a job that installs nothing; the build job cannot mint OIDC tokens.
+  const jobs = demoDeploy.slice(demoDeploy.indexOf("\njobs:\n")).split(/\n(?=  [a-z][a-z0-9_-]*:\n)/);
+  const job = (name) => jobs.find((text) => text.startsWith(`  ${name}:\n`));
+  assert.doesNotMatch(job("build"), /id-token|attest-build-provenance/);
+  assert.match(job("attest"), /id-token: write/);
+  assert.doesNotMatch(job("attest"), /npm |npx /);
+  assert.match(job("deploy"), /needs: \[build, attest\]/);
+}
+assert.equal((demoDeploy.match(/persist-credentials: false/g) ?? []).length, 2);
+assert.doesNotMatch(demoDeploy, /^\s+cache:|actions\/cache@/m, "no dependency cache in a workflow that runs code from a requested commit");
+{
+  // Run the project/origin guard step itself (bash + node) against shared, distinct and unconfigured setups.
+  const guard = demoDeploy.match(/- name: Refuse a project or origin shared with the real web app\n[\s\S]*?\n        run: \|\n([\s\S]*?)\n\n/)[1]
+    .split("\n").map((line) => line.replace(/^ {10}/, "")).join("\n");
+  const bash = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "bash";
+  if (process.platform === "win32" && !existsSync(bash)) {
+    console.warn("SKIPPED: demo deploy guard execution (Git bash not found); CI runs it on Linux");
+  } else {
+    const run = (env) => spawnSync(bash, ["-c", guard], { env: { PATH: process.env.PATH, GITHUB_REF: "refs/heads/main", ...env }, encoding: "utf8" }).status;
+    const ok = { DEMO_PROJECT: "job-ranger-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "job-ranger", APP_ORIGIN: "https://app.example.org" };
+    assert.equal(run(ok), 0, "distinct demo project and origin pass");
+    assert.notEqual(run({ ...ok, DEMO_PROJECT: " Job-Ranger " }), 0, "same project (case, whitespace) is refused");
+    for (const same of ["https://APP.example.org/", "https://app.example.org:443", "https://app.example.org/some/path", " https://app.example.org "]) {
+      assert.notEqual(run({ ...ok, DEMO_ORIGIN: same }), 0, `same origin is refused: ${same}`);
+    }
+    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "http://demo.example.org" }), 0, "non-HTTPS demo origin is refused");
+    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "not a url" }), 0, "invalid demo origin is refused");
+    for (const missing of ["DEMO_PROJECT", "DEMO_ORIGIN", "APP_PROJECT", "APP_ORIGIN"]) {
+      assert.notEqual(run({ ...ok, [missing]: "" }), 0, `missing ${missing} is refused`);
+      assert.notEqual(run({ ...ok, [missing]: "   " }), 0, `blank ${missing} is refused`);
+    }
+    assert.notEqual(run({ ...ok, GITHUB_REF: "refs/heads/feature" }), 0, "a dispatch from another branch is refused");
+  }
+}
 
 console.log("pwa flavor tests passed");
