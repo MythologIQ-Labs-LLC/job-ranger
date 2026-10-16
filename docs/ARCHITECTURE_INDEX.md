@@ -40,6 +40,7 @@ Truth is still distinguished by type:
 | User stories and career workflow correctness | [`design/UNIVERSAL_USER_STORIES.md`](./design/UNIVERSAL_USER_STORIES.md) | Core deterministic acceptance, within browser-relevant scope. |
 | Google Drive artifact consent/export | [Issue #314](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/314) for pending implementation; future reviewed **PWA** normative contract | Existing Electron-only docs/code and draft #315 are partial/historical implementation references, not a PWA shipping claim. |
 | Governance process and compliance | [`GOVERNANCE_INDEX.md`](./GOVERNANCE_INDEX.md), [`../GOVERNANCE.md`](../GOVERNANCE.md) | Governance index covers evidence, policy and workflow; **not** an alternative architecture index. |
+| PWA release acceptance and deployment permission | [`RELEASE_READINESS.md`](./RELEASE_READINESS.md), section **Current PWA release acceptance** | Native installer, Store, signing and notarization checklists below that section are historical, not PWA release gates. |
 | Actual repo vs published state | [`SYSTEM_STATE.md`](./SYSTEM_STATE.md), [`../CHANGELOG.md`](../CHANGELOG.md) | Factual snapshots, not independent architecture decisions. |
 
 ## Explicit supersession register
