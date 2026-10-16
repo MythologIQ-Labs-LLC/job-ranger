@@ -1,0 +1,214 @@
+name: Deploy web demo (PWA demo flavor)
+
+# Controlled deployment of the session-scoped demo flavor (#311) to its OWN
+# origin. The demo replaces the workspace stored at its origin at the start of
+# every demo session, so it must never share an origin or hosting project with
+# real workspaces: this workflow refuses to run when its project or origin
+# equals the production web app's (deploy-pwa.yml).
+#
+# Unlike deploy-pwa.yml there is no attested release archive for the demo:
+# the demo is built here from a reviewed commit that is already on main,
+# verified (handoff contract, demo browser journeys), attested, and only then
+# deployed. Deployment authority = the protected `demo-web` environment
+# (configure required reviewers in repository settings).
+#
+# Required configuration (not present until the owner sets it up):
+#   secrets.CLOUDFLARE_API_TOKEN, secrets.CLOUDFLARE_ACCOUNT_ID
+#   vars.JOB_RANGER_DEMO_PAGES_PROJECT  (Cloudflare Pages project for the demo only)
+#   vars.JOB_RANGER_DEMO_ORIGIN         (e.g. https://demo.example.org; HTTPS, demo only)
+# Compared against (to fail closed if they are the same):
+#   vars.JOB_RANGER_PWA_PAGES_PROJECT, vars.JOB_RANGER_PWA_ORIGIN
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Full 40-character commit SHA on main to build the demo from"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-pwa-demo
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      build-id: ${{ steps.identity.outputs.build-id }}
+    steps:
+      - name: Check out the requested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require a reviewed commit on main
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "commit must be a full 40-character SHA"; exit 1; }
+          [ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "checked-out HEAD is not $COMMIT"; exit 1; }
+          git merge-base --is-ancestor "$COMMIT" origin/main || { echo "$COMMIT is not on main; the demo is only deployed from reviewed, merged code"; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # On workflow_dispatch GITHUB_SHA is the tip of the dispatching branch, not the requested
+      # commit; the build would stamp that into build-info.json. Unset it so the build records
+      # `git rev-parse HEAD` (the checked-out, requested commit).
+      - name: Build the standard and demo flavors (the demo journeys compare both)
+        run: |
+          set -euo pipefail
+          env -u GITHUB_SHA npm run build:pwa
+          env -u GITHUB_SHA npm run build:pwa:demo
+
+      - name: Verify the demo build identity and handoff contract
+        id: identity
+        run: |
+          set -euo pipefail
+          node -e "const b=require('./dist-pwa-demo/build-info.json'); if (b.flavor !== 'demo' || typeof b.buildId !== 'string' || !b.buildId.endsWith('.demo')) { throw new Error('not a demo build: ' + b.flavor + ' ' + b.buildId); } if (b.commit !== process.env.COMMIT) { throw new Error('build commit ' + b.commit + ' != requested ' + process.env.COMMIT); }"
+          build_id=$(node -p "require('./dist-pwa-demo/build-info.json').buildId")
+          node scripts/verify-studio-handoff.mjs --site dist-pwa-demo --build-id "$build_id" --flavor demo
+          echo "build-id=$build_id" >> "$GITHUB_OUTPUT"
+        env:
+          COMMIT: ${{ inputs.commit }}
+
+      - name: Compile shared core
+        run: npm run desktop:compile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Demo browser journeys
+        run: env -u GITHUB_SHA npx playwright test --config playwright.pwa.config.ts tests/pwa/demo-flavor.spec.ts --reporter=list
+
+      - name: Package the demo archive
+        run: env -u GITHUB_SHA npm run package:pwa:demo
+
+      - name: Attest build provenance (demo archive)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/job-ranger-web-demo-v*.zip
+
+      - name: Keep the verified demo archive for the deploy job
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-ranger-web-demo-${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/job-ranger-web-demo-v*.zip
+            build/trust/web-demo-build-info.json
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: demo-web
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Refuse a project or origin shared with the real web app
+        env:
+          DEMO_PROJECT: ${{ vars.JOB_RANGER_DEMO_PAGES_PROJECT }}
+          DEMO_ORIGIN: ${{ vars.JOB_RANGER_DEMO_ORIGIN }}
+          APP_PROJECT: ${{ vars.JOB_RANGER_PWA_PAGES_PROJECT }}
+          APP_ORIGIN: ${{ vars.JOB_RANGER_PWA_ORIGIN }}
+        run: |
+          set -euo pipefail
+          test -n "$DEMO_PROJECT" || { echo "JOB_RANGER_DEMO_PAGES_PROJECT is not configured"; exit 1; }
+          test -n "$DEMO_ORIGIN" || { echo "JOB_RANGER_DEMO_ORIGIN is not configured"; exit 1; }
+          case "$DEMO_ORIGIN" in https://*) ;; *) echo "Demo origin must be HTTPS"; exit 1;; esac
+          normalize() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's:/*$::'; }
+          if [ -n "$APP_PROJECT" ] && [ "$(normalize "$DEMO_PROJECT")" = "$(normalize "$APP_PROJECT")" ]; then
+            echo "The demo Pages project must not be the real web app's project"; exit 1
+          fi
+          if [ -n "$APP_ORIGIN" ] && [ "$(normalize "$DEMO_ORIGIN")" = "$(normalize "$APP_ORIGIN")" ]; then
+            echo "The demo origin must not be the real web app's origin"; exit 1
+          fi
+
+      - name: Check out the handoff verifier at the same commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
+      - name: Download the verified demo archive
+        uses: actions/download-artifact@v4
+        with:
+          name: job-ranger-web-demo-${{ github.run_id }}
+          path: artifact
+
+      - name: Verify provenance and unpack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED: ${{ needs.build.outputs.build-id }}
+        run: |
+          set -euo pipefail
+          gh attestation verify artifact/release/job-ranger-web-demo-v*.zip --repo "${{ github.repository }}"
+          mkdir site
+          unzip -q artifact/release/job-ranger-web-demo-v*.zip -d site
+          for required in index.html sw.js _headers manifest.webmanifest build-info.json studio-handoff.json; do
+            test -s "site/$required"
+          done
+          node -e "const a=require('./site/build-info.json'); if (a.flavor !== 'demo' || a.buildId !== process.env.EXPECTED) { throw new Error('unpacked build ' + a.flavor + ' ' + a.buildId + ' != ' + process.env.EXPECTED); }"
+          node scripts/verify-studio-handoff.mjs --site site --build-id "$EXPECTED" --flavor demo
+
+      - name: Deploy to the demo's Cloudflare Pages project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEMO_PROJECT: ${{ vars.JOB_RANGER_DEMO_PAGES_PROJECT }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          commit=$(node -p "require('./site/build-info.json').commit")
+          npx --yes wrangler@4 pages deploy site \
+            --project-name "$DEMO_PROJECT" \
+            --branch main --commit-hash "$commit" --commit-dirty=false
+
+      - name: Verify the live demo origin serves this exact build
+        env:
+          DEMO_ORIGIN: ${{ vars.JOB_RANGER_DEMO_ORIGIN }}
+          EXPECTED: ${{ needs.build.outputs.build-id }}
+        run: |
+          set -euo pipefail
+          origin="${DEMO_ORIGIN%/}"
+          for attempt in 1 2 3 4 5 6; do
+            live=$(curl -fsS "$origin/build-info.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).buildId))") || true
+            [ "$live" = "$EXPECTED" ] && break
+            sleep 10
+          done
+          [ "$live" = "$EXPECTED" ] || { echo "Live build $live does not match $EXPECTED"; exit 1; }
+          headers=$(curl -fsSI "$origin/")
+          echo "$headers" | grep -qi "content-security-policy: default-src 'none'"
+          echo "$headers" | grep -qi "strict-transport-security"
+          echo "$headers" | grep -qi "x-frame-options: DENY"
+          approved_digest=$(sha256sum site/build-info.json | cut -d ' ' -f1)
+          node scripts/verify-studio-handoff.mjs \
+            --origin "$origin" \
+            --build-id "$EXPECTED" \
+            --build-info-sha256 "$approved_digest" \
+            --flavor demo
+          echo "Demo origin byte-verified: $origin serves $EXPECTED (Studio CTA still requires separate owner approval)"

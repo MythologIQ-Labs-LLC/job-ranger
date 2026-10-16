@@ -3,6 +3,7 @@
 // Run: node --experimental-strip-types tests/pwa-flavor.test.mjs
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -220,5 +221,42 @@ assert.match(deploy, /--build-info-sha256 "\$approved_digest" \\\n\s+--flavor st
 assert.doesNotMatch(release, /job-ranger-web-\*|build\/trust\/web-\*/);
 assert.match(release, /subject-path: web\/release\/job-ranger-web-v\*\.zip/);
 assert.match(release, /gh release upload "\$tag" web\/release\/job-ranger-web-v\*\.zip web\/build\/trust\/web-build-info\.json web\/build\/trust\/web-pwa-e2e\.json web\/build\/trust\/web-SHA256SUMS\.txt web\/build\/trust\/web-release-manifest\.json --clobber/);
+
+// --- the demo has its own guarded deploy path, never the real web app's project or origin
+const demoDeploy = (await readFile(path.join(root, ".github/workflows/deploy-pwa-demo.yml"), "utf8")).replace(/\r\n/g, "\n");
+assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n/m, "demo deploys only on manual dispatch");
+assert.doesNotMatch(demoDeploy, /^\s+(push|pull_request|schedule|workflow_run):/m, "no automatic trigger");
+assert.match(demoDeploy, /\n    environment: demo-web\n/, "deployment authority is the protected demo-web environment");
+assert.doesNotMatch(demoDeploy, /production-web/, "never the production environment");
+assert.match(demoDeploy, /git merge-base --is-ancestor "\$COMMIT" origin\/main/, "only reviewed commits already on main");
+assert.match(demoDeploy, /\^\[0-9a-f\]\{40\}\$/, "a full commit SHA, not a branch name");
+assert.match(demoDeploy, /"\$\(normalize "\$DEMO_PROJECT"\)" = "\$\(normalize "\$APP_PROJECT"\)"/, "refuses the real app's Pages project");
+assert.match(demoDeploy, /"\$\(normalize "\$DEMO_ORIGIN"\)" = "\$\(normalize "\$APP_ORIGIN"\)"/, "refuses the real app's origin");
+assert.match(demoDeploy, /--project-name "\$DEMO_PROJECT"/);
+assert.doesNotMatch(demoDeploy, /JOB_RANGER_PWA_PAGES_PROJECT \}\}"? *\\?\n\s*--branch/, "never deploys to the real app's project");
+assert.equal((demoDeploy.match(/--flavor demo/g) ?? []).length, 3, "every verification pins the demo flavor");
+assert.doesNotMatch(demoDeploy, /--flavor standard/);
+assert.match(demoDeploy, /a\.flavor !== 'demo'/, "the unpacked build must be the demo flavor");
+assert.match(demoDeploy, /env -u GITHUB_SHA npm run build:pwa:demo/, "the build records the requested commit, not the dispatch ref");
+assert.match(demoDeploy, /b\.commit !== process\.env\.COMMIT/, "the built commit must equal the requested commit");
+assert.match(demoDeploy, /tests\/pwa\/demo-flavor\.spec\.ts/, "demo browser journeys run before deploying");
+assert.match(demoDeploy, /gh attestation verify artifact\/release\/job-ranger-web-demo-v\*\.zip/);
+assert.equal((demoDeploy.match(/persist-credentials: false/g) ?? []).length, 2);
+{
+  // Run the project/origin guard step itself (bash) against shared and distinct configurations.
+  const guard = demoDeploy.match(/- name: Refuse a project or origin shared with the real web app\n[\s\S]*?\n        run: \|\n([\s\S]*?)\n\n/)[1]
+    .split("\n").map((line) => line.replace(/^ {10}/, "")).join("\n");
+  const bash = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "bash";
+  const run = (env) => spawnSync(bash, ["-c", guard], { env: { PATH: process.env.PATH, ...env }, encoding: "utf8" }).status;
+  const ok = { DEMO_PROJECT: "job-ranger-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "job-ranger", APP_ORIGIN: "https://app.example.org" };
+  if (existsSync(bash) || process.platform !== "win32") {
+    assert.equal(run(ok), 0, "distinct demo project and origin pass");
+    assert.notEqual(run({ ...ok, DEMO_PROJECT: "Job-Ranger" }), 0, "same project (case-insensitive) is refused");
+    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "https://APP.example.org/" }), 0, "same origin (case, trailing slash) is refused");
+    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "http://demo.example.org" }), 0, "non-HTTPS demo origin is refused");
+    assert.notEqual(run({ ...ok, DEMO_PROJECT: "" }), 0, "unconfigured demo project is refused");
+    assert.equal(run({ ...ok, APP_PROJECT: "", APP_ORIGIN: "" }), 0, "no real app configured yet is fine");
+  }
+}
 
 console.log("pwa flavor tests passed");
