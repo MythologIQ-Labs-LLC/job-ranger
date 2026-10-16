@@ -1,8 +1,11 @@
 # Web / PWA Runtime
 
-**Status:** implemented (merged to `main` via #142; post-v1.2.0, not released). **Not publicly deployed.** A production origin does not exist yet, by design. The PWA is intended to be self-hosted on localhost for dogfooding and trusted testing before external demand justifies public hosting.
+> **Product authority:** [Canonical Architecture Index](../ARCHITECTURE_INDEX.md), ARCH-001–003. The PWA is the sole future user-facing distribution target. This document remains normative for PWA runtime mechanics, not for historical localhost-only rollout timing. Electron is retained for internal engineering validation, not user installation.
+
+
+**Status:** implemented (merged to `main` via #142; post-v1.2.0, not released). **Not publicly deployed.** A production origin was not present at the historical implementation checkpoint. A separately authorized HTTPS-hosted demo is now an active delivery objective; local self-hosting remains available for development.
 **Tracks:** #130
-**Architecture:** [`DISTRIBUTION_ARCHITECTURE.md`](./DISTRIBUTION_ARCHITECTURE.md)
+**Architecture:** [`../ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md) (the former dual-channel distribution document is historical).
 
 ## Summary
 
