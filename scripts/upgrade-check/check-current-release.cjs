@@ -30,10 +30,11 @@ const { PersonalBrandBackend } = load("personal-brand-backend.cjs");
 const { ApplicationMaterialsBackend } = load("application-materials-backend.cjs");
 const { ApplicationInsightsBackend } = load("application-insights-backend.cjs");
 const { ResumeService } = load("resume-service.cjs");
+const { DriveExportJournal } = load("drive/drive-export-journal.cjs");
 const { BackupService, applyPendingRestore } = load("backup-service.cjs");
 const { migrations } = load("migrations.cjs");
 const { FEATURE_MIGRATION_VERSIONS } = load("feature-migrations.cjs");
-const { resolveSqliteBinary } = load("sqlite.cjs");
+const { resolveSqliteBinary, SqliteClient } = load("sqlite.cjs");
 
 const outputRoot = path.resolve(process.argv[2] ?? "");
 
@@ -79,6 +80,8 @@ async function openCurrent(dataDirectory) {
   await insights.initialize();
   const resume = new ResumeService({ dataDirectory, ...options });
   await resume.initialize();
+  // Desktop-only Drive export journal (#314); opening it applies migration 1010.
+  await new DriveExportJournal(new SqliteClient(options.databasePath, options.sqliteBinaryPath)).initialize();
 
   const applications = await career.listApplications();
   for (const application of applications) {

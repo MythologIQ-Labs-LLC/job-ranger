@@ -6,6 +6,7 @@ import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "./evidence-extension-ipc.cjs";
 import { initializeBackupIpc } from "./backup-ipc.cjs";
+import { initializeDriveIpc } from "./drive-ipc.cjs";
 import { applyPendingRestore } from "./backup-service.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
@@ -288,6 +289,12 @@ app.whenReady().then(async () => {
     });
     await initializeResumeIpc({
       dataDirectory,
+      databasePath: systemStatus.databasePath,
+      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+    });
+    await initializeDriveIpc({
+      dataDirectory,
+      userDataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });

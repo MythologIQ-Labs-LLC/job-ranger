@@ -12,6 +12,7 @@ import type { ResumeDesktopApi } from "../shared/resume-api";
 import type { SourceDiscoveryDesktopApi } from "../shared/source-discovery";
 import type { RuntimeDesktopApi } from "../shared/runtime";
 import type { LegacyInstallDesktopApi } from "../shared/legacy-install";
+import type { GoogleDriveDesktopApi } from "../shared/google-drive";
 
 export type JobRangerDesktopApi = DesktopApi &
   ResumeDesktopApi &
@@ -26,7 +27,8 @@ export type JobRangerDesktopApi = DesktopApi &
   ApplicationInsightsDesktopApi &
   JsonResumeDesktopApi &
   RuntimeDesktopApi &
-  LegacyInstallDesktopApi;
+  LegacyInstallDesktopApi &
+  GoogleDriveDesktopApi;
 
 export class DesktopApiError extends Error {
   constructor(message: string) {

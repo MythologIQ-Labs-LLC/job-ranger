@@ -18,6 +18,7 @@ import { initializeBackupIpc } from "../../../electron/src/backup-ipc.cjs";
 import { applyPendingRestore } from "../../../electron/src/backup-service.cjs";
 import type { RuntimeInfo } from "../../shared/runtime";
 import { WEB_CAPABILITIES, WEB_RUNNABLE_SOURCE_TYPES } from "../../shared/runtime";
+import { DRIVE_DESKTOP_ONLY_STATUS, type DriveResult } from "../../shared/google-drive";
 import { createPinnedFetch } from "../adapters/pinned-fetch";
 import {
   dispatchInvocation,
@@ -320,6 +321,19 @@ async function boot(): Promise<void> {
     ipcMain.handle("legacy-install:stage-import", () => {
       throw new Error("Importing a desktop installation directly is only available in the Microsoft Store app. Export a .jobranger backup from the desktop app and restore it here instead.");
     });
+
+    // Google Drive export is desktop-only (#314): the web app reports it as
+    // unavailable and never performs Google requests.
+    const driveUnsupported = (): DriveResult<never> => ({
+      ok: false,
+      error: { code: "not_configured", message: "Saving to Google Drive is available in the desktop app only.", retryable: false },
+    });
+    ipcMain.handle("drive:status", () => DRIVE_DESKTOP_ONLY_STATUS);
+    ipcMain.handle("drive:cancel-connect", () => DRIVE_DESKTOP_ONLY_STATUS);
+    ipcMain.handle("drive:list-exports", () => []);
+    for (const channel of ["drive:connect", "drive:disconnect", "drive:prepare-export", "drive:approve-export", "drive:retry-export"]) {
+      ipcMain.handle(channel, driveUnsupported);
+    }
 
     ready = true;
     post({ type: "ready", info: await runtimeInfo() });
