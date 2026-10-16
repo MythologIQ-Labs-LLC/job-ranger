@@ -74,6 +74,17 @@ async function connectInSettings(page: Page) {
   return panel;
 }
 
+/**
+ * Where the refresh token lives: "encrypted" (OS keychain via safeStorage) or "session" (memory only).
+ * Hosted Linux runners have no keyring, so safeStorage reports the basic_text backend and the app
+ * deliberately keeps the sign-in for the session only; Windows and macOS encrypt it.
+ */
+async function credentialStorage(page: Page): Promise<string> {
+  return page.evaluate(async () => (await (window as unknown as {
+    electronAPI: { drive: { status: () => Promise<{ credentialStorage: string }> } };
+  }).electronAPI.drive.status()).credentialStorage);
+}
+
 async function createVerifiedPdf(page: Page, expectedVersion: number) {
   if (expectedVersion === 1) {
     const statement = "Coordinated scheduling for regional field teams.";
@@ -123,9 +134,17 @@ test.describe("Google Drive export", () => {
     const { page, tempDataDir } = fixture;
     try {
       const settings = await connectInSettings(page);
-      await expect(settings.getByText(/encrypted by your operating system/)).toBeVisible();
-      const stored = await fs.readFile(path.join(tempDataDir, CREDENTIAL_FILE));
-      expect(stored.toString("latin1")).not.toContain("fake-refresh");
+      const storage = await credentialStorage(page);
+      if (storage === "encrypted") {
+        await expect(settings.getByText(/encrypted by your operating system/)).toBeVisible();
+        const stored = await fs.readFile(path.join(tempDataDir, CREDENTIAL_FILE));
+        expect(stored.toString("latin1")).not.toContain("fake-refresh");
+      } else {
+        // No OS encryption: the sign-in is kept in memory only and nothing is written to disk.
+        expect(storage).toBe("session");
+        await expect(settings.getByText(/kept only until Job Ranger quits/)).toBeVisible();
+        await expect(fs.access(path.join(tempDataDir, CREDENTIAL_FILE))).rejects.toThrow();
+      }
 
       const row = await createVerifiedPdf(page, 1);
       await row.getByRole("button", { name: "Save to Google Drive", exact: true }).click();
@@ -215,6 +234,10 @@ test.describe("Google Drive export", () => {
 
       fixture = await launch(server.baseUrl, userDataDir, "60000");
       const { page } = fixture;
+      if (await credentialStorage(page) === "session") {
+        // Without OS encryption the sign-in did not survive the crash; reconnect the same account.
+        await connectInSettings(page);
+      }
       await navigateTo(page, "/resume");
       await page.getByRole("button", { name: /ATS-safe standard/ }).first().click();
       const relaunchedRow = page.getByTestId("resume-artifact-v1");
