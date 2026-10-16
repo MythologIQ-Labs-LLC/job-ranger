@@ -1,5 +1,8 @@
 # Governance Index
 
+> **Separate architecture authority:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md). This governance inventory cannot authorize an architecture contradictory to that index.
+
+
 **Last Reviewed**: 2026-10-15 (review of `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; previous review 2026-10-10 at `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 A single authoritative map of every governance artifact in this project, organized
@@ -16,7 +19,8 @@ MUST be current at every cycle close. Drift signal: wrong version / wrong state 
 | Meta Ledger | `docs/META_LEDGER.md` | latest entry on main #94, Phase 16 seal; later Phase 17 VETOs/remediations exist on draft PR #232 only |
 | System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-15; main and published release distinguished |
 | Concept | `docs/CONCEPT.md` | stable |
-| Architecture Plan | `docs/ARCHITECTURE_PLAN.md` | stable |
+| Architecture Index | `docs/ARCHITECTURE_INDEX.md` | authoritative current decisions and supersession register |
+| Architecture Plan | `docs/ARCHITECTURE_PLAN.md` | product authority within architecture index |
 | Backlog | `docs/BACKLOG.md` | open items current |
 | Governance Index | `docs/GOVERNANCE_INDEX.md` | Last Reviewed date current |
 | Feature Index | `docs/FEATURE_INDEX.md` | every row's status matches its cited test |
