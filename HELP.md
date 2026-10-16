@@ -29,7 +29,7 @@ The web app supports the same Career Ops workflow, with a few browser limits:
 - It checks sources only while it is open.
 - It has no system tray or desktop notifications.
 - "Show file" becomes "Download file".
-- It cannot export resume PDFs that contain right-to-left (Arabic, Hebrew) or Indic (for example Devanagari) text; use the Windows app for those. Other scripts (accented Latin, Greek, Cyrillic, Thai, Chinese, Japanese, Korean) are supported.
+- It cannot export resume PDFs that contain right-to-left (Arabic, Hebrew) or Indic (for example Devanagari) text; the web app cannot export those yet, so remove or transliterate that text before exporting. Other scripts (accented Latin, Greek, Cyrillic, Thai, Chinese, Japanese, Korean) are supported.
 - The first export that uses a new script must be online so the matching font can be downloaded and verified. After that it works offline.
 
 #### Running the web app locally
@@ -216,7 +216,7 @@ Job Ranger provides versioned local backup/restore with:
 - path rebasing when restored to another data root;
 - rollback preservation until the restored state is validated.
 
-Builds after v1.2.0 (including the Store app and the web app) save a backup as a single **`.jobranger` file**. The same file restores into the Windows app or the web app, which is how you move your data between installations. Restores check every file's integrity and refuse backups that are corrupted, were modified by another tool, or were created by a newer Job Ranger version.
+Builds after v1.2.0 (including the Store app and the web app) save a backup as a single **`.jobranger` file**. The same file restores into another installation, for example from an earlier desktop installation into the web app, which is how you move your data between installations. Restores check every file's integrity and refuse backups that are corrupted, were modified by another tool, or were created by a newer Job Ranger version.
 
 v1.2.0 backups are folders. In the Windows app, restore one by selecting the `manifest.json` inside the folder.
 

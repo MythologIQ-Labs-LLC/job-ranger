@@ -506,7 +506,7 @@ export function Companies() {
                     </p>
                     {canRun && !runnableHere && (
                       <p className="mt-1 text-sm text-[var(--color-warning)]" data-testid="web-source-limit">
-                        Needs the Windows app: this site cannot be read from a browser tab.
+                        Not available in the web app: this site cannot be read from a browser tab.
                       </p>
                     )}
                     <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[var(--color-text-muted)]">

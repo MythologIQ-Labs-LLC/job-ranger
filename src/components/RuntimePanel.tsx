@@ -79,8 +79,8 @@ export function RuntimePanel() {
           <h2 className="text-2xl font-semibold">This installation</h2>
         </div>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-          Job Ranger keeps your career data on this device. Different installations (web app, Windows app) keep separate
-          data; move data between them with a portable <code>.jobranger</code> backup.
+          Job Ranger keeps your career data on this device. Different installations (the web app at another address, or an
+          earlier desktop installation) keep separate data; move data between them with a portable <code>.jobranger</code> backup.
         </p>
       </div>
       <div className="panel panel-strong space-y-4 p-6 text-sm text-[var(--color-text-secondary)]">

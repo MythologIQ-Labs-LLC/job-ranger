@@ -71,7 +71,7 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
       {state.code === "storage-unsupported" ? (
         <p className="text-sm leading-6">
           This browser does not provide the durable private storage Job Ranger needs (for example, some private-browsing
-          modes). Use a current version of Chrome, Edge, Firefox, or Safari in a normal window, or use the Windows app.
+          modes). Use a current version of Chrome, Edge, Firefox, or Safari in a normal window.
           Job Ranger will not silently fall back to temporary storage that could lose your career data.
         </p>
       ) : IS_DEMO_FLAVOR ? (

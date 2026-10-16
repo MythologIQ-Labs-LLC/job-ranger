@@ -70,7 +70,7 @@ export function BackupRestorePanel() {
           <h2 className="text-2xl font-semibold">Backup and restore</h2>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          Create a portable <code>.jobranger</code> backup of Job Ranger career data and managed artifacts. The same file restores into the Windows app or the web app. Restores are validated before the current data is replaced and require a restart (the web app reloads).
+          Create a portable <code>.jobranger</code> backup of Job Ranger career data and managed artifacts. The same file restores into another Job Ranger installation, which is how you move data, for example from an earlier desktop installation into the web app. Restores are validated before the current data is replaced and require a restart (the web app reloads).
         </p>
       </div>
 
