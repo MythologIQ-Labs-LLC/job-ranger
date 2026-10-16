@@ -93,22 +93,36 @@ async function run() {
   }
 
   // A manual release build publishes nothing unless the dispatcher turns publish on: every step that
-  // creates or uploads to a GitHub release, or writes a public provenance attestation, is gated.
+  // writes to a GitHub release, pushes, or writes a public provenance attestation is gated, and a
+  // build-only run never receives the production signing identity.
   const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/release-build.yml"), "utf8").replace(/\r\n/g, "\n");
   assert.match(workflow, /\n      publish:\n(?:        .*\n)*?        default: false\n/);
   assert.match(workflow, /\n  PUBLISH_RELEASE: \$\{\{ \(github\.event_name == 'push' \|\| inputs\.publish\) && 'true' \|\| 'false' \}\}\n/);
+  assert.equal((workflow.match(/PUBLISH_RELEASE\s*:/g) || []).length, 1, "PUBLISH_RELEASE must be defined only once, at workflow level");
   const jobs = workflow.split(/\n(?=  [a-z][\w-]*:\n)/);
   let gatedSteps = 0;
+  let signingLines = 0;
   for (const job of jobs) {
     const jobGated = /^  [\w-]+:\n    needs: [\w-]+\n    if: github\.event_name == 'push' \|\| inputs\.publish\n/.test(job);
-    for (const step of job.split(/\n(?=      - name: )/).slice(1)) {
-      if (/gh release (create|upload)|attest-build-provenance/.test(step)) {
+    for (const step of job.split(/\n(?=      - )/).slice(1)) {
+      if (/gh release|gh api[^\n]*releases|action-gh-release|attest|git push|git tag/.test(step)) {
         assert.ok(jobGated || step.includes("\n        if: env.PUBLISH_RELEASE == 'true'\n"), `ungated publishing step:\n${step.slice(0, 200)}`);
         gatedSteps += 1;
+      }
+      const verifiesPublicSigning = /\n        if: steps\.release_tag\.outputs\.(signed|public) == 'true'\n/.test(step);
+      for (const line of step.split("\n")) {
+        if (/(secrets|vars)\.(AZURE_|MAC_CSC_|APPLE_|JOB_RANGER_WINDOWS_SIGN_)/.test(line)) {
+          assert.ok(verifiesPublicSigning || line.includes("${{ env.PUBLISH_RELEASE == 'true' && "), `signing credential reaches a build-only run: ${line.trim()}`);
+          signingLines += 1;
+        }
       }
     }
   }
   assert.ok(gatedSteps >= 9, `expected to find every publishing step, found ${gatedSteps}`);
+  assert.ok(signingLines >= 12, `expected to find the signing credentials, found ${signingLines}`);
+  assert.match(workflow, /JOB_RANGER_REQUIRE_WINDOWS_SIGNING \}\}" == "1" && "\$PUBLISH_RELEASE" == "true" \]\]/);
+  assert.match(workflow, /\[0-9\]\+\$ && "\$PUBLISH_RELEASE" == "true" \]\]/);
+  assert.equal((workflow.match(/\n          persist-credentials: false\n/g) || []).length, 2);
   assert.equal((workflow.match(/name: Keep build-only candidate as a workflow artifact\n        if: env\.PUBLISH_RELEASE != 'true'\n/g) || []).length, 2);
 
   console.log("Distribution trust configuration tests passed!");
