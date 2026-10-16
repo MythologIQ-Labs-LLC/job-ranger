@@ -4,6 +4,7 @@ import type { RuntimeBootState } from "./runtime/client";
 import { STORAGE_FAILURE_EVENT } from "./runtime/client";
 import { applyWaitingUpdate, UPDATE_FAILED_EVENT, UPDATE_READY_EVENT } from "./service-worker-registration";
 import { repairAppShell } from "./shell-repair";
+import { IS_DEMO_FLAVOR } from "../demo/flavor";
 
 function BootScreen({ title, children, tone = "info" }: { title: string; children: ReactNode; tone?: "info" | "error" }) {
   return (
@@ -30,12 +31,36 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
       </BootScreen>
     );
   }
+  if (state.status === "waiting-for-lock" && IS_DEMO_FLAVOR) {
+    return (
+      <BootScreen title="The Job Ranger demo is open in another tab or window">
+        <p className="text-sm leading-6">
+          Only one tab can use the demo workspace at a time. Close the other demo tab or window to continue here.
+          Closing it discards that tab's demo changes: unless this tab is a copy of it, this tab then starts with fresh
+          sample data.
+        </p>
+      </BootScreen>
+    );
+  }
   if (state.status === "waiting-for-lock") {
     return (
       <BootScreen title="Job Ranger is open in another tab or window">
         <p className="text-sm leading-6">
           To protect your data, only one Job Ranger tab can use this browser's local workspace at a time. Close the other
           Job Ranger tab or window; this tab will continue automatically.
+        </p>
+      </BootScreen>
+    );
+  }
+  if (state.code === "demo-workspace-refused") {
+    return (
+      <BootScreen title="The Job Ranger demo cannot start on this site" tone="error">
+        <p className="text-sm leading-6" data-testid="pwa-boot-error">{state.message}</p>
+        <p className="text-sm leading-6">
+          This browser already has a Job Ranger workspace for this address that was not created by the demo, so the demo
+          has not opened, changed or erased it. The demo must be served from its own address. If that workspace is
+          yours, open the full Job Ranger app at the address where you created it; if it is left over from an earlier
+          demo, clear this site&apos;s data in your browser settings and reload.
         </p>
       </BootScreen>
     );
@@ -48,6 +73,11 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
           This browser does not provide the durable private storage Job Ranger needs (for example, some private-browsing
           modes). Use a current version of Chrome, Edge, Firefox, or Safari in a normal window, or use the Windows app.
           Job Ranger will not silently fall back to temporary storage that could lose your career data.
+        </p>
+      ) : IS_DEMO_FLAVOR ? (
+        <p className="text-sm leading-6">
+          The demo workspace could not be prepared. It only ever holds fictional sample data, which may have been
+          replaced already. Reload to start the demo again.
         </p>
       ) : (
         <p className="text-sm leading-6">

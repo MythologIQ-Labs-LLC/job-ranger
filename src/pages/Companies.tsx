@@ -20,10 +20,12 @@ import { CompanyForm } from "../components/CompanyForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Layout } from "../components/Layout";
 import { Modal } from "../components/Modal";
+import { openListingUrl } from "../components/DemoListingNotice";
 import { useAppContext } from "../context/AppContext";
 import { getDesktopApi } from "../services/api";
 import { useRuntimeInfo } from "../services/runtime";
 import { isRunnableInRuntime } from "../shared/runtime";
+import { DEMO_SOURCE_BADGE_TEXT, DEMO_SOURCE_LINK_MESSAGE, isDemoListing } from "../shared/demo-listing";
 import type {
   SourceDiscoveryCandidate,
   SourceDiscoveryResult,
@@ -66,6 +68,8 @@ export function Companies() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const deleteTarget = companies.find((company) => company.id === deleteTargetId) ?? null;
   const [runningId, setRunningId] = useState<string | null>(null);
+  // The fictional demo employer has no real careers page; opening it explains that instead.
+  const [demoLinkCompanyId, setDemoLinkCompanyId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [discovery, setDiscovery] = useState<SourceDiscoveryResult | null>(null);
   const [discoveryBusy, setDiscoveryBusy] = useState(false);
@@ -469,11 +473,21 @@ export function Companies() {
                         <p className="font-semibold text-[var(--color-text-primary)]">{company.name}</p>
                         <button
                           type="button"
-                          onClick={() => void getDesktopApi().openExternal(company.url)}
+                          onClick={() => openListingUrl(company.url, () => setDemoLinkCompanyId(company.id))}
                           className="surface-link surface-link-button mt-1 block max-w-xs truncate text-left text-sm"
                         >
                           {company.url}
                         </button>
+                        {isDemoListing(company.url) && (
+                          <span className="soft-badge soft-badge-warning mt-2" data-testid="demo-source-badge">
+                            {DEMO_SOURCE_BADGE_TEXT}
+                          </span>
+                        )}
+                        {demoLinkCompanyId === company.id && (
+                          <p role="status" className="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">
+                            {DEMO_SOURCE_LINK_MESSAGE}
+                          </p>
+                        )}
                         <p className="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">{profile.summary}</p>
                         {company.lastErrorMessage && (
                           <p className="mt-2 max-w-md text-sm text-[var(--color-danger)]">{company.lastErrorMessage}</p>

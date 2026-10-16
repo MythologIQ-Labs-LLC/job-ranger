@@ -17,10 +17,23 @@ import { defineConfig, type Plugin } from "vite";
 import { buildContentSecurityPolicy, buildSecurityHeaders } from "./src/pwa/security/policy.ts";
 import { NODE_BUILTIN_ADAPTERS, SHARED_CORE_ADAPTERS } from "./src/pwa/adapter-map.ts";
 import { buildPdfFonts } from "./scripts/pdf-fonts.mjs";
+import { createStudioHandoff } from "./scripts/studio-handoff.mjs";
+import {
+  DEMO_LOCAL_PORTS,
+  PWA_FLAVOR_ENV,
+  assertDemoPortAllowed,
+  parsePwaFlavor,
+  pwaBuildId,
+  pwaOutDirName,
+} from "./scripts/pwa-flavor.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.join(root, "dist-pwa");
+// Build flavor (scripts/pwa-flavor.mjs): "standard" (default) or "demo". The
+// demo flavor builds into its own directory so it can never overwrite, or be
+// deployed as, the standard workspace build.
+const flavor = parsePwaFlavor(process.env[PWA_FLAVOR_ENV]);
+const outDir = path.join(root, pwaOutDirName(flavor));
 const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
 
 function gitCommit(): string {
@@ -33,7 +46,12 @@ function gitCommit(): string {
 }
 
 const commit = gitCommit();
-const buildId = process.env.JOB_RANGER_BUILD_ID?.trim() || `${packageJson.version}+${commit.slice(0, 12)}`;
+const buildId = pwaBuildId({
+  version: packageJson.version,
+  commit,
+  flavor,
+  override: process.env.JOB_RANGER_BUILD_ID,
+});
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
@@ -103,21 +121,68 @@ function headersFile(): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** The demo flavor names itself as a demo in the document and the install manifest. */
+function demoIndexHtml(html: string): string {
+  const title = "<title>Job Ranger</title>";
+  const description = /<meta name="description" content="[^"]*" \/>/;
+  if (!html.includes(title) || !description.test(html)) throw new Error("demo flavor: index.html title/description markers changed");
+  return html
+    .replace(title, "<title>Job Ranger Demo</title>")
+    .replace(
+      description,
+      '<meta name="description" content="Job Ranger demo: the real app with fictional sample data. Everything stays in this browser and resets when the browser session ends." />',
+    );
+}
+
+function writeDemoManifest(): void {
+  const manifestPath = path.join(outDir, "manifest.webmanifest");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        ...manifest,
+        name: "Job Ranger Demo",
+        short_name: "JR Demo",
+        description:
+          "Demonstration of the Job Ranger Career Ops workspace with fictional sample data. Everything stays in this browser and resets when the browser session ends.",
+      },
+      null,
+      2,
+    )}
+`,
+  );
+}
+
+/** Demo flavor: never serve on the standard web app's local addresses (even with --port). */
+function demoPortGuardPlugin(): Plugin {
+  return {
+    name: "job-ranger-demo-port-guard",
+    configResolved(config) {
+      if (config.command !== "serve") return;
+      assertDemoPortAllowed(config.server.port);
+      assertDemoPortAllowed(config.preview.port);
+    },
+  };
+}
+
 function shellManifestPlugin(): Plugin {
   return {
     name: "job-ranger-shell-manifest",
     apply: "build",
     transformIndexHtml(html) {
-      return html
+      const shell = html
         .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy().replace(/; frame-ancestors 'none'/, ""))
         .replace("%JOB_RANGER_BUILD_ID%", buildId);
+      return flavor === "demo" ? demoIndexHtml(shell) : shell;
     },
     closeBundle() {
+      if (flavor === "demo") writeDemoManifest();
       const files = listFiles(outDir).filter(
         (file) =>
           !file.endsWith(".map") &&
           !file.startsWith(`${PDF_FONTS_DIRECTORY}/`) &&
-          !["sw.js", "_headers", "build-info.json"].includes(file),
+          !["sw.js", "_headers", "build-info.json", "studio-handoff.json"].includes(file),
       );
       const fontFiles = listFiles(path.join(outDir, PDF_FONTS_DIRECTORY))
         .filter((file) => file.endsWith(".ttf"))
@@ -147,10 +212,16 @@ function shellManifestPlugin(): Plugin {
             product: "job-ranger-web",
             version: packageJson.version,
             buildId,
+            flavor,
             commit,
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
             contentSecurityPolicy: buildContentSecurityPolicy(),
+            // Exact deployed service-worker bytes are pinned independently of the
+            // immutable precache list; the worker itself is intentionally not precached.
+            serviceWorkerSha256: createHash("sha256")
+              .update(readFileSync(path.join(outDir, "sw.js")))
+              .digest("hex"),
             assets,
             onDemandAssets: {
               purpose: "resume PDF fonts for text outside Windows-1252, loaded only when a resume needs them",
@@ -162,6 +233,13 @@ function shellManifestPlugin(): Plugin {
           2,
         )}\n`,
       );
+      // A build-derived, non-authorizing contract for the Studio external link.
+      // Excluded from the service-worker shell manifest to avoid a digest cycle.
+      const buildInfo = JSON.parse(readFileSync(path.join(outDir, "build-info.json"), "utf8"));
+      writeFileSync(
+        path.join(outDir, "studio-handoff.json"),
+        `${JSON.stringify(createStudioHandoff(buildInfo), null, 2)}\n`,
+      );
     },
   };
 }
@@ -170,13 +248,21 @@ export default defineConfig({
   root: path.join(root, "web"),
   publicDir: path.join(root, "public"),
   base: "./",
-  plugins: [runtimeAdapterPlugin("page"), pdfFontsPlugin(true), react(), tailwindcss(), shellManifestPlugin()],
+  plugins: [
+    runtimeAdapterPlugin("page"),
+    pdfFontsPlugin(true),
+    react(),
+    tailwindcss(),
+    shellManifestPlugin(),
+    ...(flavor === "demo" ? [demoPortGuardPlugin()] : []),
+  ],
   resolve: {
     alias: { "@": path.resolve(root, "src") },
   },
   define: {
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
+    __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
   },
   worker: {
     format: "es",
@@ -196,6 +282,9 @@ export default defineConfig({
     fs: { allow: [root] },
     port: 5174,
     strictPort: true,
+    // The demo flavor replaces its origin's storage every session, so locally it never
+    // shares an address (origin) with the standard web app's workspace.
+    ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.dev } : {}),
     headers: {
       ...buildSecurityHeaders(),
       // Vite's dev client needs inline/eval support; the production CSP is
@@ -208,5 +297,6 @@ export default defineConfig({
     port: 4174,
     strictPort: true,
     headers: buildSecurityHeaders(),
+    ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.preview } : {}),
   },
 });

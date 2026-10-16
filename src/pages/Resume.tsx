@@ -11,6 +11,8 @@ import { Layout } from "../components/Layout";
 import { ResumeTailoringPanel } from "../components/ResumeTailoringPanel";
 import { DriveExportAction } from "../components/DriveExportAction";
 import { useDriveStatus } from "../services/drive";
+import { DemoListingBadge } from "../components/DemoListingNotice";
+import { isDemoListing } from "../shared/demo-listing";
 import { useCareerProfile } from "../career/storage";
 import { getDesktopApi } from "../services/api";
 import { useRuntimeInfo } from "../services/runtime";
@@ -246,6 +248,11 @@ export function Resume() {
             Targeting tracked job {jobId}. Evidence mapped as direct or transferable is preselected where available.
           </p>
         )}
+        {application && isDemoListing(application.url) && (
+          <div className="mt-2">
+            <DemoListingBadge url={application.url} />
+          </div>
+        )}
       </section>
 
       {(error || message) && (
@@ -361,7 +368,7 @@ export function Resume() {
 
               {diff && <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]"><p className="font-semibold text-[var(--color-text-primary)]">Latest version difference</p><p className="mt-2">{diff.addedStatements.length} added · {diff.removedStatements.length} removed · {diff.unchangedStatements.length} unchanged</p></div>}
 
-              {application && <div className="support-note mt-5 flex items-start gap-3 px-4 py-3 text-sm text-[var(--color-text-secondary)]"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[var(--color-success)]" /><p>Exports from this targeted workspace are linked to the tracked application for <strong>{application.title}</strong>.</p></div>}
+              {application && <div className="support-note mt-5 flex items-start gap-3 px-4 py-3 text-sm text-[var(--color-text-secondary)]"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[var(--color-success)]" /><div><p>Exports from this targeted workspace are linked to the tracked application for <strong>{application.title}</strong>.</p>{isDemoListing(application.url) && <div className="mt-2"><DemoListingBadge url={application.url} /></div>}</div></div>}
             </>
           )}
         </div>

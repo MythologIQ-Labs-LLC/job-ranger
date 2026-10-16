@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 dist-pwa
+dist-pwa-demo
 *.local
 
 # Editor directories and files

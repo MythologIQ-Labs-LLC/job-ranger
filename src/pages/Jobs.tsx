@@ -13,6 +13,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { Layout } from "../components/Layout";
 import { JobEvidenceCoveragePanel } from "../components/JobEvidenceCoverage";
+import { DemoListingBadge, DemoListingLinkMessage, openListingUrl } from "../components/DemoListingNotice";
 import { useAppContext } from "../context/AppContext";
 import { getDesktopApi } from "../services/api";
 import type { CareerTargetTrack } from "../shared/contracts";
@@ -29,6 +30,8 @@ export function Jobs() {
   const [targetTracksLoading, setTargetTracksLoading] = useState(true);
   const [targetTrackError, setTargetTrackError] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
+  // Fictional demo listings have no real posting; opening one explains that instead.
+  const [demoLinkJobId, setDemoLinkJobId] = useState<string | null>(null);
   // Presentation-only choice: neither filter/matching rules nor stored data changes.
   const [listingView, setListingView] = useState<"compact" | "detailed">("compact");
 
@@ -273,6 +276,7 @@ export function Jobs() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <DemoListingBadge url={job.url} />
                     {selectedTargetTrack && (
                       <span className="soft-badge">
                         <Target className="h-3.5 w-3.5" />
@@ -302,12 +306,13 @@ export function Jobs() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => void getDesktopApi().openExternal(job.url)}
+                    onClick={() => openListingUrl(job.url, () => setDemoLinkJobId(job.id))}
                     className="surface-link-button mt-3 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
                   >
                     {job.title}
                     <ExternalLink className="h-4 w-4" />
                   </button>
+                  {demoLinkJobId === job.id && <DemoListingLinkMessage />}
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)]">
                     <span className="inline-flex items-center gap-1.5">
                       <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
