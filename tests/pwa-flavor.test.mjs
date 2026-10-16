@@ -250,7 +250,7 @@ assert.match(demoDeploy, /tests\/pwa\/demo-flavor\.spec\.ts/, "demo browser jour
 assert.match(demoDeploy, /--signer-workflow "\$\{\{ github\.repository \}\}\/\.github\/workflows\/deploy-pwa-demo\.yml"/);
 {
   // Signing runs in a job that installs nothing; the build job cannot mint OIDC tokens.
-  const jobs = demoDeploy.split(/\n(?=  [a-z]+:\n)/);
+  const jobs = demoDeploy.slice(demoDeploy.indexOf("\njobs:\n")).split(/\n(?=  [a-z][a-z0-9_-]*:\n)/);
   const job = (name) => jobs.find((text) => text.startsWith(`  ${name}:\n`));
   assert.doesNotMatch(job("build"), /id-token|attest-build-provenance/);
   assert.match(job("attest"), /id-token: write/);
