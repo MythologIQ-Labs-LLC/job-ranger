@@ -235,6 +235,18 @@ The v1.2.0 installers do not have these. Where earlier sections of this guide me
 - **Settings:** notifications have their own **Save notification settings** button and say whether changes are saved.
 - **Career Profile:** unsaved edits are no longer replaced when the profile refreshes in the background.
 
+### Save a resume PDF to Google Drive (desktop, development line)
+
+Builds that include a Google Drive client can save a verified resume PDF into **your own** Google Drive. Job Ranger asks Google only for access to files it creates (`drive.file`), so it cannot see anything else in your Drive.
+
+1. **Settings → Google Drive → Connect Google Drive.** Sign in in your browser and allow access. Return to Job Ranger when the browser says you can close the tab. **Cancel sign-in** stops a sign-in you do not want to finish.
+2. **Resume → Exported versions → Save to Google Drive** on a PDF. Review the file name, size, pages, SHA-256, destination (**My Drive › Job Ranger**) and account, then choose **Approve and upload**. Nothing is uploaded before that.
+3. The receipt shows the Drive file ID and **Open in Google Drive**. Job Ranger checked that the copy in Drive matches your PDF before calling it saved.
+4. If an upload fails, use **Retry**. Job Ranger first checks whether Drive already received the file, so retrying does not create duplicates. **Reconnect Google Drive** appears when Google no longer accepts the sign-in. If the PDF changed on disk after you reviewed it, nothing is uploaded; review it again.
+5. **Disconnect Google Drive** in Settings revokes Job Ranger's access at Google and deletes the stored sign-in.
+
+The sign-in is stored on your device, encrypted by the operating system, and is never part of backups. If your device cannot encrypt it, Job Ranger keeps it only until you quit. A Drive export never changes or removes your local PDF. If Settings says *This build has no Google Drive client configured*, this build cannot use Drive; use **Show file** to get the PDF instead. The web app does not offer Drive export.
+
 ### Personal Brand and LinkedIn (manual-first)
 
 The Personal Brand page lets you author post drafts and inspect deterministic readiness findings. After reviewing the exact copy, you can prepare a manual posting package, publish it yourself, then record a user-confirmed publication receipt. Job Ranger does **not** log into LinkedIn or post on your behalf.
@@ -299,6 +311,8 @@ The desktop app keeps structured career/search state behind the Electron/SQLite 
 Managed source/resume artifacts are stored in Job Ranger's local data/artifact directory rather than uploaded to a hosted Job Ranger account.
 
 Core functionality does not require a remote inference provider.
+
+On the development line, the desktop app sends a file to Google only when you connect Google Drive and approve that specific PDF (see *Save a resume PDF to Google Drive*). Job Ranger has no server of its own in that path.
 
 In the web app, the same data lives in the browser's private storage for the Job Ranger site (origin-private file system) on your device. The web app's security policy allows outbound requests only to the public job-board APIs it reads. Your resumes, Career Evidence, and applications never leave the device unless you download a file.
 
