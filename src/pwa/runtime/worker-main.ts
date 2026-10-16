@@ -394,7 +394,7 @@ async function boot(): Promise<void> {
       lastModified: null,
     }));
     ipcMain.handle("legacy-install:stage-import", () => {
-      throw new Error("Importing a desktop installation directly is only available in the Microsoft Store app. Export a .jobranger backup from the desktop app and restore it here instead.");
+      throw new Error("The web app cannot import a desktop installation directly. Export a .jobranger backup from your desktop installation and restore it here instead.");
     });
 
     if (demo && demoClaim) {

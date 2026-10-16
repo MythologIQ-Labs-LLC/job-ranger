@@ -227,8 +227,8 @@ export function Settings() {
           <div className="panel panel-strong p-6 space-y-4">
             {webRuntime && (
               <p className="text-sm text-[var(--color-text-secondary)]" data-testid="web-notification-limit">
-                Desktop notifications and the system tray are part of the Windows app. In the web app these preferences are
-                saved with your data but have no effect here.
+                The web app does not show desktop notifications or a system tray icon. These preferences are saved with your
+                data but have no effect here.
               </p>
             )}
             <label className="flex items-center gap-3 cursor-pointer">
