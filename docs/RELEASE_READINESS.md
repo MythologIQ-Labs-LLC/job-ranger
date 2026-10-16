@@ -22,7 +22,40 @@ Historical native-release assumptions below have been superseded by [ARCH-001–
 - **Advanced/test artifacts:** the direct-download NSIS installer, unless it is independently signed. Azure Artifact Signing is optional and never blocks a release.
 - **Not part of the forward architecture:** native macOS and Linux packages.
 
-## Release-blocking checklist
+## Current PWA release acceptance (authoritative; effective 2026-10-16)
+
+This section replaces native distribution acceptance for **all future product releases**. It is governed by [ARCH-001–006](./ARCHITECTURE_INDEX.md). The native installation, signing, Store and notarization procedures further below are preserved **only for historical verification and internal engineering tests**. They MUST NOT be required for release of the PWA or Studio demo.
+
+### PWA candidate identification
+- [ ] State exactly whether the candidate is a **bounded Studio-linked demonstration**, a fuller PWA public release, or an internal staging preview; distinguish deliberately excluded capabilities in public copy and UI.
+- [ ] Pin a source commit, production build ID, generated asset manifest, tested HTTPS origin, and rollback build.
+- [ ] Keep the production Studio site unchanged unless separately approved; a GitHub merge is never implicit hosting or link-publication authorization.
+
+### Browser and real-user behavior
+- [ ] Production PWA build, integrity verification, and browser E2E run against **that exact candidate**, not only against development mode or a synthetic fixture.
+- [ ] Prove real onboarding, Career Evidence, Target Tracks, Find Jobs assessments, document generation, and applicable application lifecycle workflows for the advertised scope.
+- [ ] Verify fresh browser profile, reload, close/reopen, service-worker upgrade, stale cache, offline behavior (where advertised), data export/restore and failure recovery.
+- [ ] Verify supported desktop/mobile viewports and browsers or explicitly document unsupported combinations.
+
+### Privacy and demo boundaries
+- [ ] Demo workspace starts from clearly fictional data, isolates separate visitor sessions and browser profiles, marks sample job openings as non-live, and prevents sample links from initiating real applications.
+- [ ] Demo reset does not accidentally erase non-demo records, and no demo identity, history, or cached workspace crosses visitors.
+- [ ] Hosting does not collect or forward sensitive career information without deliberate user authorization and accurate notices.
+- [ ] Native-only code paths and features (including Electron Google Drive OAuth, background closed-browser monitoring, accounts/sync) are absent, disabled, or honestly explained in the hosted demo; do not substitute a fake success path.
+
+### Deployment and governance
+- [ ] Check exact build identity, cryptographic asset hashes, CSP and security headers, HTTPS origin, service-worker identity, navigation policy and staging/production separation.
+- [ ] Validate browser storage scope, same-origin isolation and update compatibility at the **real hosted preview URL**.
+- [ ] Obtain an independent adversarial review of the candidate trust boundaries, resolve blocker/major findings and record precise evidence.
+- [ ] Record deployment permissions and GitHub Actions budget; do not auto-publish from PR checks or development branches.
+- [ ] Obtain distinct owner authorization for (a) staged hosting, (b) public PWA availability, and (c) changing the MythologIQ Studio link, as applicable.
+- [ ] Record the live origin, deployed build identity, timestamp, acceptance outcome and rollback procedure only **after** the site has actually been verified.
+
+**Do not treat an Electron installer build, Store package test, native trust verifier, or historical GitHub Release as evidence that any of the preceding PWA acceptance gates passed.**
+
+## Historical native release verification (not a PWA release gate)
+
+## Release-blocking checklist (historical native artifact checklist)
 
 ### 1. Scope and version
 
