@@ -1,4 +1,7 @@
-# Microsoft Store Packaging (Windows native channel)
+# Microsoft Store Packaging (historical engineering reference)
+
+> **SUPERSEDED as a product distribution plan (2026-10-16):** [Canonical Architecture Index](../ARCHITECTURE_INDEX.md), ARCH-001/002. No Microsoft Store product listing, native release, code-signing or certification gate is planned. Keep this document only to explain existing Electron/AppX harness code, package tests and historical behavior. All future-distribution language below is historical.
+
 
 **Status:** implemented (merged to `main` via #142; post-v1.2.0, not released). Package build, manifest verification, and in-package runtime validation run in CI (`.github/workflows/windows-store-package.yml`). **Partner Center reservation, submission, and certification are external and pending.** No Store listing exists, so the Store channel is not shipped.
 **Tracks:** #125 (decision record: #133)
