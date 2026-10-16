@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createStudioHandoff, assertStudioHandoff, inspectStudioPwaBuild, inspectLiveStudioPwa } from "../scripts/studio-handoff.mjs";
+import { run as runVerifierCli } from "../scripts/verify-studio-handoff.mjs";
 
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 const buildId = "1.3.0+123456789abc";
@@ -23,6 +24,7 @@ const info = {
   version: "1.3.0",
   contentSecurityPolicy: policy,
   buildId,
+  flavor: "standard",
   commit: "123456789abc123456789abc123456789abc1234",
   serviceWorkerSha256: hash(sw),
   assets: [
@@ -38,6 +40,39 @@ assert.equal(handoff.runtime.hostedMonitoringAvailable, false);
 assert.equal(handoff.runtime.closedBrowserMonitoring, false);
 assert.deepEqual(assertStudioHandoff(handoff, info), handoff);
 assert.throws(() => assertStudioHandoff({ ...handoff, studio: { ...handoff.studio, autoEnableCta: true } }, info), /does not match/);
+
+// Build flavor: the standard contract only gains the flavor field.
+assert.equal(handoff.flavor, "standard");
+assert.equal(handoff.runtime.canonicalCareerData, "browser-origin-private");
+assert.equal(handoff.studio.ctaLabel, "Try Job Ranger in your browser");
+assert.equal("demo" in handoff, false);
+assert.throws(() => createStudioHandoff({ ...info, flavor: undefined }), /flavor is missing or unknown/);
+assert.throws(() => createStudioHandoff({ ...info, flavor: "preview" }), /flavor is missing or unknown/);
+// A demo flavor must carry a demo build ID and a standard flavor must not.
+assert.throws(() => createStudioHandoff({ ...info, flavor: "demo" }), /does not match the demo build flavor/);
+assert.throws(() => createStudioHandoff({ ...info, buildId: buildId + ".demo" }), /does not match the standard build flavor/);
+const demoBuildId = buildId + ".demo";
+const demoInfo = { ...info, buildId: demoBuildId, flavor: "demo" };
+const demoHandoff = createStudioHandoff(demoInfo);
+assert.equal(demoHandoff.flavor, "demo");
+assert.equal(demoHandoff.build.buildId, demoBuildId);
+assert.equal(demoHandoff.runtime.canonicalCareerData, "none-session-scoped-demo");
+assert.deepEqual(demoHandoff.demo, {
+  fictionalSampleData: true,
+  sessionScopedWorkspace: true,
+  resetsWhenBrowserSessionEnds: true,
+  visitorResettable: true,
+  requiresDedicatedOrigin: true,
+  sharesOriginWithRealWorkspace: false,
+});
+assert.equal(demoHandoff.studio.ctaLabel, "Try the Job Ranger demo in your browser");
+assert.equal(demoHandoff.studio.autoEnableCta, false);
+assert.equal(demoHandoff.studio.requiresOwnerApproval, true);
+assert.equal(demoHandoff.entry.iframeAllowed, false);
+// A handoff for one flavor never validates against the other flavor's build.
+assert.throws(() => assertStudioHandoff(handoff, demoInfo), /does not match/);
+assert.throws(() => assertStudioHandoff(demoHandoff, info), /does not match/);
+assert.throws(() => assertStudioHandoff({ ...demoHandoff, flavor: "standard" }, demoInfo), /does not match/);
 
 const dir = await mkdtemp(path.join(os.tmpdir(), "studio-handoff-test-"));
 try {
@@ -56,6 +91,12 @@ try {
   assert.equal(verified.status, "candidate-verified-not-approved");
   assert.equal(verified.verifiedAssets, 2);
   assert.equal(verified.buildId, buildId);
+  assert.equal(verified.flavor, "standard");
+  assert.equal((await inspectStudioPwaBuild(dir, buildId, "standard")).flavor, "standard");
+  await assert.rejects(inspectStudioPwaBuild(dir, buildId, "demo"), /unexpected build flavor/);
+  assert.equal((await runVerifierCli(["--site", dir, "--flavor", "standard"])).flavor, "standard");
+  await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "demo"]), /unexpected build flavor/);
+  await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "staging"]), /Unknown Job Ranger PWA flavor/);
   await assert.rejects(inspectStudioPwaBuild(dir, "wrong-build"), /unexpected build ID/);
   await writeFile(path.join(dir, "index.html"), index + "tampered");
   await assert.rejects(inspectStudioPwaBuild(dir), /checksum mismatch/);
@@ -95,6 +136,7 @@ try {
   const pinnedDigest = hash(JSON.stringify(info));
   const acceptedLive = await inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, fakeFetch);
   assert.equal(acceptedLive.buildId, buildId);
+  assert.equal(acceptedLive.flavor, "standard");
   assert.equal(acceptedLive.verifiedAssets, 2);
   // The host can serve the approved metadata while replacing actual JS bytes.
   // That deployment must fail even if its build ID, CSP and service worker match.
@@ -130,6 +172,33 @@ try {
     return fakeFetch(url, options);
   };
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, tamperedWorkerSameId), /live service-worker checksum mismatch/);
+
+  // A complete demo-flavor build verifies as demo, and only as demo.
+  const demoIndex = '<meta name="job-ranger-build" content="' + demoBuildId + '">';
+  const demoSw = "const BUILD_ID = " + JSON.stringify(demoBuildId) + ";";
+  const demoBuildInfo = {
+    ...demoInfo,
+    serviceWorkerSha256: hash(demoSw),
+    assets: [
+      { path: "index.html", sha256: hash(demoIndex) },
+      { path: "assets/app.js", sha256: hash(appChunk) },
+    ],
+  };
+  await writeFile(path.join(dir, "index.html"), demoIndex);
+  await writeFile(path.join(dir, "sw.js"), demoSw);
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify(demoBuildInfo));
+  await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(createStudioHandoff(demoBuildInfo)));
+  const verifiedDemo = await inspectStudioPwaBuild(dir, demoBuildId, "demo");
+  assert.equal(verifiedDemo.flavor, "demo");
+  assert.equal((await runVerifierCli(["--site", dir, "--flavor", "demo"])).buildId, demoBuildId);
+  await assert.rejects(inspectStudioPwaBuild(dir, undefined, "standard"), /unexpected build flavor/);
+  await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "standard"]), /unexpected build flavor/);
+  // A standard handoff shipped inside a demo build (or a relabelled flavor) fails closed.
+  await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify({ ...createStudioHandoff(demoBuildInfo), flavor: "standard" }));
+  await assert.rejects(inspectStudioPwaBuild(dir), /does not match/);
+  await writeFile(path.join(dir, "studio-handoff.json"), JSON.stringify(createStudioHandoff(demoBuildInfo)));
+  await writeFile(path.join(dir, "build-info.json"), JSON.stringify({ ...demoBuildInfo, flavor: "standard" }));
+  await assert.rejects(inspectStudioPwaBuild(dir), /does not match the standard build flavor/);
   console.log("Studio PWA handoff contract: local and simulated live checks passed");
 } finally {
   await rm(dir, { recursive: true, force: true });

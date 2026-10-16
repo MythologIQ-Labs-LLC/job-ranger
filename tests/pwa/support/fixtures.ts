@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 export const distPwa = path.join(projectRoot, "dist-pwa");
+/** Demo-flavor production build (npm run build:pwa:demo), served on its own origin by its tests. */
+export const distPwaDemo = path.join(projectRoot, "dist-pwa-demo");
 
 /** Minimal, valid DOCX (OOXML package) for a non-software career history. */
 export function healthcareResumeDocx(): Buffer {

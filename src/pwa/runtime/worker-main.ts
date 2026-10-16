@@ -16,6 +16,8 @@ import { initializeEvidenceExtensionIpc } from "../../../electron/src/evidence-e
 import { initializeResumeIpc } from "../../../electron/src/resume-ipc.cjs";
 import { initializeBackupIpc } from "../../../electron/src/backup-ipc.cjs";
 import { applyPendingRestore } from "../../../electron/src/backup-service.cjs";
+import { seedDemoWorkspace } from "../../../electron/src/demo-seed.cjs";
+import { IS_DEMO_FLAVOR } from "../../demo/flavor";
 import type { RuntimeInfo } from "../../shared/runtime";
 import { WEB_CAPABILITIES, WEB_RUNNABLE_SOURCE_TYPES } from "../../shared/runtime";
 import { createPinnedFetch } from "../adapters/pinned-fetch";
@@ -34,6 +36,7 @@ import {
   mediaTypeForFileName,
   RUNTIME_LOCK_NAME,
   USER_DATA_DIRECTORY,
+  type DemoWorkspaceStartup,
   type DownloadPayload,
   type PageToWorkerMessage,
   type WorkerToPageMessage,
@@ -53,7 +56,7 @@ interface WorkerScope {
 const scope = self as unknown as WorkerScope;
 const appVersion = __JOB_RANGER_VERSION__;
 const buildId = __JOB_RANGER_BUILD_ID__;
-const pending: PageToWorkerMessage[] = [];
+const pending: Extract<PageToWorkerMessage, { type: "invoke" }>[] = [];
 let ready = false;
 
 function post(message: WorkerToPageMessage, transfer: Transferable[] = []): void {
@@ -180,8 +183,19 @@ async function handleInvoke(message: Extract<PageToWorkerMessage, { type: "invok
   }
 }
 
+// Demo flavor only: the page says once, at startup, whether this tab begins a new
+// demo session. The standard flavor never waits for (or acts on) this message.
+let resolveDemoSession: (reset: boolean) => void = () => undefined;
+const demoSessionRequest = new Promise<boolean>((resolve) => {
+  resolveDemoSession = resolve;
+});
+
 scope.addEventListener("message", (event) => {
   const message = event.data;
+  if (IS_DEMO_FLAVOR && message?.type === "demo-session") {
+    resolveDemoSession(message.reset === true);
+    return;
+  }
   if (!message || message.type !== "invoke") return;
   if (!ready) {
     pending.push(message);
@@ -231,6 +245,17 @@ async function verifyStorage(): Promise<void> {
   await fs.rm(IO_DIRECTORY, { recursive: true, force: true });
 }
 
+/**
+ * Demo flavor: erase the whole session-scoped workspace (database, managed
+ * artifacts, staged restores, transient I/O) BEFORE anything opens it. Runs only
+ * while this worker holds the exclusive runtime lock.
+ */
+async function wipeDemoWorkspace(): Promise<void> {
+  for (const directory of [USER_DATA_DIRECTORY, IO_DIRECTORY]) {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+}
+
 async function boot(): Promise<void> {
   try {
     await acquireExclusiveLock();
@@ -245,7 +270,14 @@ async function boot(): Promise<void> {
     return;
   }
 
+  let demo: DemoWorkspaceStartup | undefined;
   try {
+    if (IS_DEMO_FLAVOR) {
+      const reset = await demoSessionRequest;
+      if (reset) await wipeDemoWorkspace();
+      demo = { reset, seeded: false };
+    }
+
     const sqlite3 = await (sqlite3InitModule as (options?: Record<string, unknown>) => ReturnType<typeof sqlite3InitModule>)({
       print: () => undefined,
       printErr: () => undefined,
@@ -321,8 +353,20 @@ async function boot(): Promise<void> {
       throw new Error("Importing a desktop installation directly is only available in the Microsoft Store app. Export a .jobranger backup from the desktop app and restore it here instead.");
     });
 
+    if (demo?.reset) {
+      // A new demo session starts from the fictional workspace, written through the real core.
+      await seedDemoWorkspace({
+        backend,
+        careerBackend,
+        requirementBackend,
+        databasePath: systemStatus.databasePath,
+        sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+      });
+      demo.seeded = true;
+    }
+
     ready = true;
-    post({ type: "ready", info: await runtimeInfo() });
+    post(demo ? { type: "ready", info: await runtimeInfo(), demo } : { type: "ready", info: await runtimeInfo() });
     for (const message of pending.splice(0)) void handleInvoke(message);
   } catch (error) {
     post({

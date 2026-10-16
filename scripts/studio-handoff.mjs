@@ -8,6 +8,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
+import { PWA_FLAVORS, buildIdMatchesFlavor, parsePwaFlavor } from "./pwa-flavor.mjs";
 
 export const STUDIO_HANDOFF_FILE = "studio-handoff.json";
 const PRODUCT = "job-ranger-web";
@@ -36,15 +37,26 @@ function safeAssetPath(value) {
   return value;
 }
 
+/** The build flavor recorded in build-info.json, which must agree with the build ID. */
+function buildFlavor(buildInfo, buildId) {
+  const flavor = buildInfo.flavor;
+  if (!PWA_FLAVORS.includes(flavor)) fail("build-info flavor is missing or unknown");
+  if (!buildIdMatchesFlavor(buildId, flavor)) fail("build ID does not match the " + flavor + " build flavor");
+  return flavor;
+}
+
 export function createStudioHandoff(buildInfo) {
   if (!buildInfo || buildInfo.product !== PRODUCT) fail("unexpected build-info product");
   const version = requiredString(buildInfo.version, "version");
   const buildId = requiredString(buildInfo.buildId, "buildId");
   const commit = requiredString(buildInfo.commit, "commit");
+  const flavor = buildFlavor(buildInfo, buildId);
+  const demo = flavor === "demo";
   return {
     schemaVersion: 1,
     kind: "job-ranger-studio-handoff",
     product: "job-ranger",
+    flavor,
     build: { version, buildId, commit },
     entry: {
       path: "/",
@@ -54,15 +66,29 @@ export function createStudioHandoff(buildInfo) {
     },
     runtime: {
       platform: "web-pwa",
-      canonicalCareerData: "browser-origin-private",
+      // The demo flavor never holds anyone's canonical career data: its workspace
+      // is fictional, session-scoped and reset, on an origin of its own.
+      canonicalCareerData: demo ? "none-session-scoped-demo" : "browser-origin-private",
       noAccountRequiredForCore: true,
       browserJobAcquisition: "provider-and-cors-limited",
       closedBrowserMonitoring: false,
       hostedMonitoringAvailable: false,
     },
+    ...(demo
+      ? {
+          demo: {
+            fictionalSampleData: true,
+            sessionScopedWorkspace: true,
+            resetsWhenBrowserSessionEnds: true,
+            visitorResettable: true,
+            requiresDedicatedOrigin: true,
+            sharesOriginWithRealWorkspace: false,
+          },
+        }
+      : {}),
     studio: {
       pagePath: "/side-projects/job-ranger",
-      ctaLabel: "Try Job Ranger in your browser",
+      ctaLabel: demo ? "Try the Job Ranger demo in your browser" : "Try Job Ranger in your browser",
       autoEnableCta: false,
       requiresOwnerApproval: true,
       requiresVerifiedHttpsOrigin: true,
@@ -80,7 +106,7 @@ export function assertStudioHandoff(handoff, buildInfo) {
 }
 
 /** Validate the deployable directory without requiring a network or npm install. */
-export async function inspectStudioPwaBuild(directory, expectedBuildId) {
+export async function inspectStudioPwaBuild(directory, expectedBuildId, expectedFlavor) {
   const dist = path.resolve(directory);
   const root = await realpath(dist);
   const read = async (filename) => {
@@ -103,6 +129,8 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId) {
   if (buildInfo.product !== PRODUCT) fail("wrong build-info product");
   const expected = requiredString(expectedBuildId ?? buildInfo.buildId, "expected build ID");
   if (buildInfo.buildId !== expected) fail("unexpected build ID");
+
+  if (expectedFlavor !== undefined && buildInfo.flavor !== parsePwaFlavor(expectedFlavor)) fail("unexpected build flavor");
 
   const handoff = JSON.parse((await read(STUDIO_HANDOFF_FILE)).toString("utf8"));
   assertStudioHandoff(handoff, buildInfo);
@@ -144,6 +172,7 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId) {
   return {
     status: "candidate-verified-not-approved",
     buildId: expected,
+    flavor: buildInfo.flavor,
     commit: buildInfo.commit,
     version: buildInfo.version,
     verifiedAssets: seen.size,
@@ -263,6 +292,7 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
     status: "live-artifact-verified-owner-approval-still-required",
     origin: url.origin,
     buildId: expected,
+    flavor: info.flavor,
     verifiedAssets: assets.size,
   };
 }

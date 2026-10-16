@@ -16,6 +16,8 @@ import {
 } from "../shared/opportunity-assessment";
 import { getDesktopApi } from "../services/api";
 import { Modal } from "./Modal";
+import { DemoListingBadge } from "./DemoListingNotice";
+import { isDemoListing } from "../shared/demo-listing";
 
 interface Props {
   job: Job;
@@ -218,6 +220,11 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
         size="xl"
         placement="right"
       >
+          {isDemoListing(job.url) && (
+            <div className="mb-4">
+              <DemoListingBadge url={job.url} />
+            </div>
+          )}
           {loading && (
             <p role="status" className="text-sm text-[var(--color-text-secondary)]">
               Comparing this listing with {targetTrack.name} and your confirmed Career Evidence...

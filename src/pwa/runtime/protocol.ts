@@ -18,13 +18,26 @@ export interface DownloadPayload {
   bytes: ArrayBuffer;
 }
 
-export type PageToWorkerMessage = {
-  type: "invoke";
-  id: number;
-  channel: string;
-  args: unknown[];
-  dialog?: DialogPayload;
-};
+export type PageToWorkerMessage =
+  | {
+      type: "invoke";
+      id: number;
+      channel: string;
+      args: unknown[];
+      dialog?: DialogPayload;
+    }
+  /**
+   * Demo flavor only, sent once right after the worker starts: whether this
+   * tab begins a new demo session (wipe + reseed before opening the database).
+   * The standard-flavor worker ignores it.
+   */
+  | { type: "demo-session"; reset: boolean };
+
+/** Demo flavor only: what the worker did to the session-scoped demo workspace at startup. */
+export interface DemoWorkspaceStartup {
+  reset: boolean;
+  seeded: boolean;
+}
 
 export type WorkerFailureCode =
   | "storage-unsupported"
@@ -33,7 +46,7 @@ export type WorkerFailureCode =
 
 export type WorkerToPageMessage =
   | { type: "waiting-for-lock" }
-  | { type: "ready"; info: RuntimeInfo }
+  | { type: "ready"; info: RuntimeInfo; demo?: DemoWorkspaceStartup }
   | { type: "fatal"; code: WorkerFailureCode; message: string }
   | {
       type: "result";

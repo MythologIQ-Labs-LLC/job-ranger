@@ -18,10 +18,15 @@ import { buildContentSecurityPolicy, buildSecurityHeaders } from "./src/pwa/secu
 import { NODE_BUILTIN_ADAPTERS, SHARED_CORE_ADAPTERS } from "./src/pwa/adapter-map.ts";
 import { buildPdfFonts } from "./scripts/pdf-fonts.mjs";
 import { createStudioHandoff } from "./scripts/studio-handoff.mjs";
+import { PWA_FLAVOR_ENV, parsePwaFlavor, pwaBuildId, pwaOutDirName } from "./scripts/pwa-flavor.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.join(root, "dist-pwa");
+// Build flavor (scripts/pwa-flavor.mjs): "standard" (default) or "demo". The
+// demo flavor builds into its own directory so it can never overwrite, or be
+// deployed as, the standard workspace build.
+const flavor = parsePwaFlavor(process.env[PWA_FLAVOR_ENV]);
+const outDir = path.join(root, pwaOutDirName(flavor));
 const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
 
 function gitCommit(): string {
@@ -34,7 +39,12 @@ function gitCommit(): string {
 }
 
 const commit = gitCommit();
-const buildId = process.env.JOB_RANGER_BUILD_ID?.trim() || `${packageJson.version}+${commit.slice(0, 12)}`;
+const buildId = pwaBuildId({
+  version: packageJson.version,
+  commit,
+  flavor,
+  override: process.env.JOB_RANGER_BUILD_ID,
+});
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
@@ -104,16 +114,51 @@ function headersFile(): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** The demo flavor names itself as a demo in the document and the install manifest. */
+function demoIndexHtml(html: string): string {
+  const title = "<title>Job Ranger</title>";
+  const description = /<meta name="description" content="[^"]*" \/>/;
+  if (!html.includes(title) || !description.test(html)) throw new Error("demo flavor: index.html title/description markers changed");
+  return html
+    .replace(title, "<title>Job Ranger Demo</title>")
+    .replace(
+      description,
+      '<meta name="description" content="Job Ranger demo: the real app with fictional sample data. Everything stays in this browser and resets when the browser session ends." />',
+    );
+}
+
+function writeDemoManifest(): void {
+  const manifestPath = path.join(outDir, "manifest.webmanifest");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        ...manifest,
+        name: "Job Ranger Demo",
+        short_name: "JR Demo",
+        description:
+          "Demonstration of the Job Ranger Career Ops workspace with fictional sample data. Everything stays in this browser and resets when the browser session ends.",
+      },
+      null,
+      2,
+    )}
+`,
+  );
+}
+
 function shellManifestPlugin(): Plugin {
   return {
     name: "job-ranger-shell-manifest",
     apply: "build",
     transformIndexHtml(html) {
-      return html
+      const shell = html
         .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy().replace(/; frame-ancestors 'none'/, ""))
         .replace("%JOB_RANGER_BUILD_ID%", buildId);
+      return flavor === "demo" ? demoIndexHtml(shell) : shell;
     },
     closeBundle() {
+      if (flavor === "demo") writeDemoManifest();
       const files = listFiles(outDir).filter(
         (file) =>
           !file.endsWith(".map") &&
@@ -148,6 +193,7 @@ function shellManifestPlugin(): Plugin {
             product: "job-ranger-web",
             version: packageJson.version,
             buildId,
+            flavor,
             commit,
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
@@ -190,6 +236,7 @@ export default defineConfig({
   define: {
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
+    __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
   },
   worker: {
     format: "es",
@@ -207,7 +254,9 @@ export default defineConfig({
   },
   server: {
     fs: { allow: [root] },
-    port: 5174,
+    // The demo flavor wipes its origin's storage every session, so locally it never
+    // shares an address (origin) with the standard web app's workspace.
+    port: flavor === "demo" ? 5175 : 5174,
     strictPort: true,
     headers: {
       ...buildSecurityHeaders(),
@@ -218,7 +267,7 @@ export default defineConfig({
   },
   preview: {
     host: "localhost",
-    port: 4174,
+    port: flavor === "demo" ? 4175 : 4174,
     strictPort: true,
     headers: buildSecurityHeaders(),
   },

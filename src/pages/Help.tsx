@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CircleHelp, ShieldCheck } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { DemoLimitations } from "../components/DemoLimitations";
 
 const workflow = [
   {
@@ -56,6 +57,7 @@ export function Help() {
           a connected social account, or a finished resume to begin.
         </p>
       </section>
+      <DemoLimitations />
 
       <section className="mt-8" aria-labelledby="help-workflow">
         <h2 id="help-workflow" className="text-2xl font-semibold text-[var(--color-text-primary)]">
