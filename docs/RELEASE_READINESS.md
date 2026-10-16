@@ -1,5 +1,8 @@
 # Release Readiness Contract
 
+> **CURRENT ARCHITECTURE OVERRIDE (2026-10-16):** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) governs product distribution. **Only the PWA/web product is a future public release target.** Native NSIS/Store/macOS checklists below remain historical or engineering-test procedures, never release blockers. This document is being reconciled; no native signing, Store listing, notarization or installer checks may be demanded for PWA publication.
+
+
 This document defines the minimum evidence required before Job Ranger publishes a new user-installable release.
 
 A merged `main` branch is **not** a release. A passing unit test is **not** a release. Electron Builder being configured for a platform is **not** a release. A release exists only when an immutable version/tag has been validated and published with the artifacts users are actually expected to run.
@@ -13,9 +16,9 @@ A merged `main` branch is **not** a release. A passing unit test is **not** a re
 
 The current published stable release is **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`, promoted byte-for-byte from rc.5). It is immutable historical release truth.
 
-Forward releases follow the accepted distribution architecture ([`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md)):
+Historical native-release assumptions below have been superseded by [ARCH-001–003](./ARCHITECTURE_INDEX.md). For PWA releases, qualify actual HTTPS origin, browser workflows, data isolation, persistence, build identity, CSP/headers, and service-worker safety. Historic channels were:
 
-- **Supported channels:** the Microsoft Store package (Windows native) and the web/PWA runtime (cross-platform).
+- **Current supported target:** web/PWA only. Microsoft Store native is historical testing infrastructure, **not** a forward channel.
 - **Advanced/test artifacts:** the direct-download NSIS installer, unless it is independently signed. Azure Artifact Signing is optional and never blocks a release.
 - **Not part of the forward architecture:** native macOS and Linux packages.
 
