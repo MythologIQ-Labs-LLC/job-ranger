@@ -85,3 +85,28 @@ test("Only Atelier palette changes, without redefining semantic status badges", 
   }
   assert.match(source, /export type ThemeName = "atelier" \| "midnight" \| "canopy"/);
 });
+
+test("primary button text keeps AA contrast across the whole gradient in every theme", () => {
+  const hex = (value) => [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16));
+  const toHex = (rgb) => "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+  const mix = (a, b, weight) => a.map((v, i) => v * weight + b[i] * (1 - weight));
+  const white = [255, 255, 255];
+  const black = [0, 0, 0];
+  const block = (name, next) => source.split(`  ${name}: {`)[1]?.split(next ? `  ${next}: {` : "\n};")[0];
+  const token = (text, name) => text.match(new RegExp("^\\s*" + name + ': "(#[0-9a-fA-F]{6})",', "m"))[1].toLowerCase();
+  const themes = { atelier: block("atelier", "midnight"), midnight: block("midnight", "canopy"), canopy: block("canopy") };
+  // Shared gradient: primary+white -> secondary+black. Midnight overrides the end with primary+black.
+  assert.match(css, /\.primary-button \{[\s\S]*?color-mix\(in srgb, var\(--color-primary\) 92%, white\),\s*color-mix\(in srgb, var\(--color-secondary\) 88%, black\)/);
+  assert.match(css, /:root\[data-theme="midnight"\] \.primary-button \{[\s\S]*?color-mix\(in srgb, var\(--color-primary\) 80%, black\)/);
+  for (const [name, text] of Object.entries(themes)) {
+    assert.ok(text, `missing ${name} theme`);
+    const primary = hex(token(text, "primary"));
+    const secondary = hex(token(text, "secondary"));
+    const ink = token(text, "textInverse");
+    const start = mix(primary, white, 0.92);
+    const end = name === "midnight" ? mix(primary, black, 0.8) : mix(secondary, black, 0.88);
+    for (const stop of [start, mix(start, end, 0.5), end]) {
+      assert.ok(contrast(ink, toHex(stop)) >= 4.5, `${name} primary button ink ${ink} on ${toHex(stop)}: ${contrast(ink, toHex(stop)).toFixed(2)}`);
+    }
+  }
+});

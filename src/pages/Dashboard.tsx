@@ -38,7 +38,10 @@ function formatSourceCoverageMessage(
 }
 
 export function Dashboard() {
-  const { companies, jobs, scrapeRuns, systemStatus, loading, error } = useAppContext();
+  const { companies, jobs, scrapeRuns, systemStatus, loading, loaded, error } = useAppContext();
+  // Source and job facts exist only once the workspace has been read; a failed or pending read
+  // must never look like an empty workspace.
+  const workspaceUnavailable = !loading && !loaded;
   // This pilot only reads existing canonical data. Every domain retains its current owner.
   const evidence = useCareerEvidence();
   const targetTracks = useTargetTracks();
@@ -54,6 +57,13 @@ export function Dashboard() {
     (company) => getSourceProfile(company.sourceType).supportLevel === "manual-review",
   ).length;
   const failedScrapes = companies.filter((company) => company.lastRunStatus === "failure").length;
+  // Paused sources keep their last result; only active sources need attention.
+  const failingActiveSources = companies.filter(
+    (company) => company.isActive && company.lastRunStatus === "failure",
+  ).length;
+  const scannableSources = companies.filter(
+    (company) => company.isActive && canRunSourceType(company.sourceType),
+  ).length;
   const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
   const pendingFacts = evidence.pending.length;
   const trackedApplications = applications.applications.length;
@@ -81,7 +91,7 @@ export function Dashboard() {
     });
   }
 
-  if (!loading && newJobs > 0) {
+  if (loaded && newJobs > 0) {
     nextActions.push({
       title: `${newJobs} unseen ${newJobs === 1 ? "opportunity" : "opportunities"} to assess`,
       copy: "Compare eligibility, evidence, career direction, preferences, and unknowns before deciding.",
@@ -91,17 +101,17 @@ export function Dashboard() {
     });
   }
 
-  if (!loading && failedScrapes > 0) {
+  if (loaded && failingActiveSources > 0) {
     nextActions.push({
-      title: `${failedScrapes} ${failedScrapes === 1 ? "source" : "sources"} failed on the last scan`,
-      copy: "Open the source to see the recorded error. Nothing from a failed scan is shown as a new opportunity.",
+      title: `${failingActiveSources} ${failingActiveSources === 1 ? "source" : "sources"} failed on the last scan`,
+      copy: "Open the source to see the recorded error before relying on its listings.",
       href: "/companies",
       action: "Check job sources",
       icon: AlertCircle,
     });
   }
 
-  if (!loading && companies.length === 0) {
+  if (loaded && companies.length === 0) {
     nextActions.push({
       title: "Add an opportunity source",
       copy: "Choose a careers page to monitor when you are ready to discover opportunities.",
@@ -111,33 +121,48 @@ export function Dashboard() {
     });
   }
 
-  if (!applications.loading && !applications.error && trackedApplications > 0) {
-    nextActions.push({
-      title: `${trackedApplications} tracked ${trackedApplications === 1 ? "application" : "applications"}`,
-      copy: "Update a status or add notes when something actually changes.",
-      href: "/applications",
-      action: "Open applications",
-      icon: ClipboardList,
-    });
+  // With sources and nothing unseen, the useful step is a fresh scan (or fixing the sources
+  // when none can be scanned), not "nothing to do".
+  if (loaded && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
+    nextActions.push(
+      scannableSources > 0
+        ? {
+            title: "No unseen opportunities right now",
+            copy: "Scan your sources from Find Jobs, or add another careers page you care about.",
+            href: "/jobs",
+            action: "Open Find Jobs",
+            icon: Search,
+          }
+        : {
+            title: "None of your sources can be scanned right now",
+            copy: "They are paused or need a reader this app does not have. Resume one or add another careers page.",
+            href: "/companies",
+            action: "Review job sources",
+            icon: Building2,
+          },
+    );
   }
 
-  // With sources and nothing unseen, the useful step is a fresh scan, not "nothing to do".
-  if (!loading && companies.length > 0 && newJobs === 0 && failedScrapes === 0) {
-    nextActions.push({
-      title: "No unseen opportunities right now",
-      copy: "Scan your sources from Find Jobs, or add another careers page you care about.",
-      href: "/jobs",
-      action: "Open Find Jobs",
-      icon: Search,
-    });
-  }
+  // Applications are a place to go, never a suggested step on their own: a recorded status
+  // does not mean anything is due.
+  const applicationsEntry: NextAction | null =
+    !applications.loading && !applications.error && trackedApplications > 0
+      ? {
+          title: "Your applications",
+          copy: "Update a status or add notes when something actually changes.",
+          href: "/applications",
+          action: "Open applications",
+          icon: ClipboardList,
+        }
+      : null;
 
   // One dominant next step; the rest stay available but secondary.
-  const [primaryAction, ...otherActions] = nextActions;
+  const [primaryAction, ...laterActions] = nextActions;
+  const otherActions = applicationsEntry ? [...laterActions, applicationsEntry] : laterActions;
 
   // Places to work, in the order most people use them. Never a progress or completion state.
   const workflow = [
-    { title: "Set your direction", copy: "Career Profile and Target Tracks say what you are looking for.", href: "/target-tracks", icon: Compass },
+    { title: "Set your direction", copy: "Target Tracks describe the roles and conditions you want.", href: "/target-tracks", icon: Compass },
     { title: "Find opportunities", copy: "Scan the sources you chose and assess each listing on its evidence.", href: "/jobs", icon: Search },
     { title: "Back it with evidence", copy: "Confirmed Career Evidence is what truthful resumes are built from.", href: "/career-evidence/new", icon: BookOpenText },
     { title: "Track applications", copy: "Record where you applied and what actually happened.", href: "/applications", icon: ClipboardList },
@@ -155,33 +180,35 @@ export function Dashboard() {
     {
       kicker: "Source coverage",
       title:
-        loading
-          ? "Loading your job sources"
+        !loaded
+          ? workspaceUnavailable ? "Job sources could not be loaded" : "Loading your job sources"
           : companies.length === 0
           ? "Add your first careers page"
           : `${runnableCompanies.length} source${runnableCompanies.length === 1 ? "" : "s"} can run right now`,
       copy:
-        loading
+        !loaded
           ? "Source coverage appears once your saved sources load."
           : companies.length === 0
           ? "Job Ranger can detect broader ATS families and generic careers pages. Start with the sources you actually care about."
           : formatSourceCoverageMessage(browserRequiredCompanies, manualReviewCompanies),
-      action: companies.length === 0 ? "Add a job source" : "Manage job sources",
+      action: loaded && companies.length === 0 ? "Add a job source" : "Manage job sources",
       href: "/companies",
     },
     {
       kicker: "Signal quality",
       title:
-        loading
-          ? "Loading recent scan results"
+        !loaded
+          ? workspaceUnavailable ? "Recent scan results could not be loaded" : "Loading recent scan results"
           : scrapeRuns.length > 0
           ? `${scrapeRuns[0]?.jobsMatchedCount ?? 0} jobs matched your latest rules`
           : "Filters become useful after your first scrape",
       copy:
-        scrapeRuns.length > 0
+        !loaded
+          ? "Filter guidance appears once your recent scans load."
+          : scrapeRuns.length > 0
           ? "Use Filters to make the next scrape quieter and more relevant, especially if the latest run found too much noise."
           : "A simple title-plus-keyword rule is usually enough to turn a noisy board into a focused review deck.",
-      action: scrapeRuns.length > 0 ? "Tune filters" : "Set up filters",
+      action: loaded && scrapeRuns.length === 0 ? "Set up filters" : "Tune filters",
       href: "/filters",
     },
   ];
@@ -249,13 +276,9 @@ export function Dashboard() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Based on saved records, not predictions or activity quotas.
           </p>
-          {loading || careerLoading ? (
+          {(loading && !loaded) || careerLoading ? (
             <p role="status" className="mt-5 text-sm text-[var(--color-text-secondary)]">
               Loading your next steps...
-            </p>
-          ) : nextActions.length === 0 && careerErrors.length === 0 && !error ? (
-            <p className="mt-5 text-sm text-[var(--color-text-secondary)]">
-              Nothing is waiting for review. You can explore other career directions or check your applications.
             </p>
           ) : nextActions.length === 0 ? (
             <p className="mt-5 text-sm text-[var(--color-text-secondary)]">
@@ -279,8 +302,8 @@ export function Dashboard() {
               </div>
               {otherActions.length > 0 && (
                 <>
-                  <h3 className="metric-label mt-6">Also waiting</h3>
-                  <ul className="home-action-list mt-2" data-testid="home-other-actions">
+                  <p id="home-other-actions-title" className="metric-label mt-6">Other things you can do</p>
+                  <ul aria-labelledby="home-other-actions-title" className="home-action-list mt-2" data-testid="home-other-actions">
                     {otherActions.map((item) => (
                       <li key={`${item.href}:${item.action}`} className="home-action-row">
                         <span className="home-action-icon" aria-hidden="true">
@@ -337,7 +360,7 @@ export function Dashboard() {
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           Places to work, in any order. This is not a checklist or a score.
         </p>
-        <ol className="home-workflow-list mt-4">
+        <ul className="home-workflow-list mt-4">
           {workflow.map((step) => (
             <li key={step.href} className="home-workflow-step">
               <Link to={step.href} className="home-workflow-link">
@@ -351,7 +374,7 @@ export function Dashboard() {
               </Link>
             </li>
           ))}
-        </ol>
+        </ul>
       </section>
 
       <details className="panel panel-strong mt-6 px-5 py-5 sm:px-7">
@@ -369,8 +392,8 @@ export function Dashboard() {
               <p className="metric-label">{item.name}</p>
               <item.icon className="h-5 w-5 text-[var(--color-primary)]" />
             </div>
-            <p className="metric-value">{loading ? "…" : item.stat}</p>
-            <p className="metric-detail">{loading ? "Loading" : item.detail}</p>
+            <p className="metric-value">{loaded ? item.stat : workspaceUnavailable ? "—" : "…"}</p>
+            <p className="metric-detail">{loaded ? item.detail : workspaceUnavailable ? "Unavailable" : "Loading"}</p>
           </div>
         ))}
       </section>
@@ -403,8 +426,8 @@ export function Dashboard() {
           <div className="divide-divider">
             {scrapeRuns.length === 0 && (
               <div className="px-6 py-10 text-sm text-[var(--color-text-secondary)]">
-                {loading
-                  ? "Loading recent activity..."
+                {!loaded
+                  ? workspaceUnavailable ? "Recent activity could not be loaded." : "Loading recent activity..."
                   : "No scrape runs yet. Add a company careers page and run a scrape to create your first review loop."}
               </div>
             )}
@@ -451,11 +474,11 @@ export function Dashboard() {
             <dl className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
               <div>
                 <dt className="font-semibold text-[var(--color-text-primary)]">Platform</dt>
-                <dd>{systemStatus?.platform ?? "Loading..."}</dd>
+                <dd>{systemStatus?.platform ?? (workspaceUnavailable ? "Unavailable" : "Loading...")}</dd>
               </div>
               <div>
                 <dt className="font-semibold text-[var(--color-text-primary)]">SQLite binary</dt>
-                <dd className="break-all">{systemStatus?.sqliteBinaryPath ?? "Loading..."}</dd>
+                <dd className="break-all">{systemStatus?.sqliteBinaryPath ?? (workspaceUnavailable ? "Unavailable" : "Loading...")}</dd>
               </div>
             </dl>
           </div>

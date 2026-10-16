@@ -727,6 +727,16 @@ textarea {
 }
 
 /* Midnight's orange accent turned the sidebar's lower glow into a brown haze on navy. */
+:root[data-theme="midnight"] .primary-button {
+  /* Midnight's secondary is near-black and its inverse text is dark: the shared gradient
+     ended at about 1:1 contrast. Keep the sky-blue primary across the whole button. */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 92%, white),
+    color-mix(in srgb, var(--color-primary) 80%, black)
+  );
+}
+
 :root[data-theme="midnight"] .app-sidebar {
   background:
     radial-gradient(ellipse at 90% -12%, color-mix(in srgb, var(--color-primary) 27%, transparent), transparent 48%),
