@@ -230,18 +230,20 @@ test("a person without a resume can author evidence, assess a fixture job and tr
   await expect(job).toBeVisible();
   await expect(job).toContainText(sourceName);
   await job.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await expect(job.getByText("Evidence coverage", { exact: true })).toBeVisible();
+  // The assessment opens in a dialog rendered outside the listing card.
+  const drawer = page.getByRole("dialog", { name: /Opportunity assessment:/ });
+  await expect(drawer.getByText("Evidence coverage", { exact: true })).toBeVisible();
 
   // Explicit support: the authored volunteer statement is the cited evidence.
-  await expect(job.getByText(`Evidence: ${rtEvidence.statement}`).first()).toBeVisible();
+  await expect(drawer.getByText(`Evidence: ${rtEvidence.statement}`).first()).toBeVisible();
   // Blockers: none established; the absence of a resume is not a negative signal.
-  await expect(job.getByText("Eligibility and blockers")).toBeVisible();
-  await expect(job.getByText("Known blockers")).toHaveCount(0);
-  await expect(job.getByText("Potential blockers")).toHaveCount(0);
-  await expect(job.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
-  await expect(job.getByText(/resume/i).filter({ hasNotText: "Prepare resume" })).toHaveCount(0);
+  await expect(drawer.getByText("Eligibility and blockers")).toBeVisible();
+  await expect(drawer.getByText("Known blockers")).toHaveCount(0);
+  await expect(drawer.getByText("Potential blockers")).toHaveCount(0);
+  await expect(drawer.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
+  await expect(drawer.getByText(/resume/i).filter({ hasNotText: "Prepare resume" })).toHaveCount(0);
   // Unknowns: a preference the listing cannot answer stays unknown, not a penalty.
-  await expect(job.getByText(/does not provide a usable employment arrangement/).first()).toBeVisible();
+  await expect(drawer.getByText(/does not provide a usable employment arrangement/).first()).toBeVisible();
 
   const assessment = await page.evaluate(async (title) => {
     const api = window.electronAPI;
@@ -254,6 +256,8 @@ test("a person without a resume can author evidence, assess a fixture job and tr
   expect(new Set(cited)).toEqual(new Set([evidenceId]));
 
   // Track the job from the listing, then reload the whole app.
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
   await job.getByRole("button", { name: "Track this job" }).click();
   await expect(page).toHaveURL(/#\/applications$/);
   const application = page.locator("article").filter({ hasText: sourceName });
