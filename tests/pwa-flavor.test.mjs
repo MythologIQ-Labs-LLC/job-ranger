@@ -228,34 +228,58 @@ assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n/m, "demo deploys only on 
 assert.doesNotMatch(demoDeploy, /^\s+(push|pull_request|schedule|workflow_run):/m, "no automatic trigger");
 assert.match(demoDeploy, /\n    environment: demo-web\n/, "deployment authority is the protected demo-web environment");
 assert.doesNotMatch(demoDeploy, /production-web/, "never the production environment");
-assert.match(demoDeploy, /git merge-base --is-ancestor "\$COMMIT" origin\/main/, "only reviewed commits already on main");
+assert.equal((demoDeploy.match(/\[ "\$GITHUB_REF" = "refs\/heads\/main" \]/g) ?? []).length, 2, "build and deploy both require a dispatch from main");
+assert.match(demoDeploy, /git merge-base --is-ancestor "\$COMMIT" origin\/main/, "only commits already on main");
 assert.match(demoDeploy, /\^\[0-9a-f\]\{40\}\$/, "a full commit SHA, not a branch name");
-assert.match(demoDeploy, /"\$\(normalize "\$DEMO_PROJECT"\)" = "\$\(normalize "\$APP_PROJECT"\)"/, "refuses the real app's Pages project");
-assert.match(demoDeploy, /"\$\(normalize "\$DEMO_ORIGIN"\)" = "\$\(normalize "\$APP_ORIGIN"\)"/, "refuses the real app's origin");
+// The guard's inputs come from exactly these repository variables (renaming one would silently disable it).
+for (const [name, variable] of [
+  ["DEMO_PROJECT", "JOB_RANGER_DEMO_PAGES_PROJECT"],
+  ["DEMO_ORIGIN", "JOB_RANGER_DEMO_ORIGIN"],
+  ["APP_PROJECT", "JOB_RANGER_PWA_PAGES_PROJECT"],
+  ["APP_ORIGIN", "JOB_RANGER_PWA_ORIGIN"],
+]) {
+  assert.match(demoDeploy, new RegExp(`- name: Refuse a project or origin shared with the real web app\\n        env:\\n(?:          [A-Z_]+: \\$\\{\\{ vars\\.[A-Z_]+ \\}\\}\\n)*          ${name}: \\$\\{\\{ vars\\.${variable} \\}\\}\\n`), `${name} <- vars.${variable}`);
+}
 assert.match(demoDeploy, /--project-name "\$DEMO_PROJECT"/);
-assert.doesNotMatch(demoDeploy, /JOB_RANGER_PWA_PAGES_PROJECT \}\}"? *\\?\n\s*--branch/, "never deploys to the real app's project");
 assert.equal((demoDeploy.match(/--flavor demo/g) ?? []).length, 3, "every verification pins the demo flavor");
 assert.doesNotMatch(demoDeploy, /--flavor standard/);
-assert.match(demoDeploy, /a\.flavor !== 'demo'/, "the unpacked build must be the demo flavor");
+assert.match(demoDeploy, /a\.flavor !== 'demo' \|\| a\.buildId !== process\.env\.EXPECTED \|\| a\.commit !== process\.env\.COMMIT/, "the deployed build is the demo flavor of the requested commit");
 assert.match(demoDeploy, /env -u GITHUB_SHA npm run build:pwa:demo/, "the build records the requested commit, not the dispatch ref");
 assert.match(demoDeploy, /b\.commit !== process\.env\.COMMIT/, "the built commit must equal the requested commit");
 assert.match(demoDeploy, /tests\/pwa\/demo-flavor\.spec\.ts/, "demo browser journeys run before deploying");
-assert.match(demoDeploy, /gh attestation verify artifact\/release\/job-ranger-web-demo-v\*\.zip/);
+assert.match(demoDeploy, /--signer-workflow "\$\{\{ github\.repository \}\}\/\.github\/workflows\/deploy-pwa-demo\.yml"/);
+{
+  // Signing runs in a job that installs nothing; the build job cannot mint OIDC tokens.
+  const jobs = demoDeploy.split(/\n(?=  [a-z]+:\n)/);
+  const job = (name) => jobs.find((text) => text.startsWith(`  ${name}:\n`));
+  assert.doesNotMatch(job("build"), /id-token|attest-build-provenance/);
+  assert.match(job("attest"), /id-token: write/);
+  assert.doesNotMatch(job("attest"), /npm |npx /);
+  assert.match(job("deploy"), /needs: \[build, attest\]/);
+}
 assert.equal((demoDeploy.match(/persist-credentials: false/g) ?? []).length, 2);
 {
-  // Run the project/origin guard step itself (bash) against shared and distinct configurations.
+  // Run the project/origin guard step itself (bash + node) against shared, distinct and unconfigured setups.
   const guard = demoDeploy.match(/- name: Refuse a project or origin shared with the real web app\n[\s\S]*?\n        run: \|\n([\s\S]*?)\n\n/)[1]
     .split("\n").map((line) => line.replace(/^ {10}/, "")).join("\n");
   const bash = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "bash";
-  const run = (env) => spawnSync(bash, ["-c", guard], { env: { PATH: process.env.PATH, ...env }, encoding: "utf8" }).status;
-  const ok = { DEMO_PROJECT: "job-ranger-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "job-ranger", APP_ORIGIN: "https://app.example.org" };
-  if (existsSync(bash) || process.platform !== "win32") {
+  if (process.platform === "win32" && !existsSync(bash)) {
+    console.warn("SKIPPED: demo deploy guard execution (Git bash not found); CI runs it on Linux");
+  } else {
+    const run = (env) => spawnSync(bash, ["-c", guard], { env: { PATH: process.env.PATH, GITHUB_REF: "refs/heads/main", ...env }, encoding: "utf8" }).status;
+    const ok = { DEMO_PROJECT: "job-ranger-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "job-ranger", APP_ORIGIN: "https://app.example.org" };
     assert.equal(run(ok), 0, "distinct demo project and origin pass");
-    assert.notEqual(run({ ...ok, DEMO_PROJECT: "Job-Ranger" }), 0, "same project (case-insensitive) is refused");
-    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "https://APP.example.org/" }), 0, "same origin (case, trailing slash) is refused");
+    assert.notEqual(run({ ...ok, DEMO_PROJECT: " Job-Ranger " }), 0, "same project (case, whitespace) is refused");
+    for (const same of ["https://APP.example.org/", "https://app.example.org:443", "https://app.example.org/some/path", " https://app.example.org "]) {
+      assert.notEqual(run({ ...ok, DEMO_ORIGIN: same }), 0, `same origin is refused: ${same}`);
+    }
     assert.notEqual(run({ ...ok, DEMO_ORIGIN: "http://demo.example.org" }), 0, "non-HTTPS demo origin is refused");
-    assert.notEqual(run({ ...ok, DEMO_PROJECT: "" }), 0, "unconfigured demo project is refused");
-    assert.equal(run({ ...ok, APP_PROJECT: "", APP_ORIGIN: "" }), 0, "no real app configured yet is fine");
+    assert.notEqual(run({ ...ok, DEMO_ORIGIN: "not a url" }), 0, "invalid demo origin is refused");
+    for (const missing of ["DEMO_PROJECT", "DEMO_ORIGIN", "APP_PROJECT", "APP_ORIGIN"]) {
+      assert.notEqual(run({ ...ok, [missing]: "" }), 0, `missing ${missing} is refused`);
+      assert.notEqual(run({ ...ok, [missing]: "   " }), 0, `blank ${missing} is refused`);
+    }
+    assert.notEqual(run({ ...ok, GITHUB_REF: "refs/heads/feature" }), 0, "a dispatch from another branch is refused");
   }
 }
 

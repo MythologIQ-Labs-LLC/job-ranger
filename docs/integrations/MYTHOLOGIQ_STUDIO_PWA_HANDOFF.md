@@ -101,12 +101,16 @@ The Studio page's "try it" experience is a **demo flavor** of the same PWA: the 
 
 **Not included in the demo:** Google Drive, monitoring and notifications while the browser is closed, inference and MCP connections, desktop-only features (tray, hidden-browser career sites, revealing files), and sync or accounts. Exported backups download to the visitor's device; a restore in the demo lasts only for that session. Exported resume PDFs and JSON Resume files contain the fictional data and carry no demo marker; Settings and Help say so.
 
-**Deploying the demo** (`.github/workflows/deploy-pwa-demo.yml`, manual dispatch only). `deploy-pwa.yml` deploys only the standard flavor from an attested release; the demo has its own path:
+**Deploying the demo** (`.github/workflows/deploy-pwa-demo.yml`, manual dispatch from `main` only). `deploy-pwa.yml` deploys only the standard flavor from an attested release; the demo has its own path:
 
-1. Dispatch with a full 40-character commit SHA that is already on `main` (the workflow refuses any other commit). It builds both flavors from that commit (with `GITHUB_SHA` unset, so `build-info.json` records the requested commit rather than the dispatch ref), checks the demo build identity and handoff (`--flavor demo`), runs the demo browser journeys, packages and attests `job-ranger-web-demo-v*.zip`.
-2. The `deploy` job runs in the protected **`demo-web`** environment (configure required reviewers). It refuses to run if `JOB_RANGER_DEMO_PAGES_PROJECT` or `JOB_RANGER_DEMO_ORIGIN` is missing, if the origin is not HTTPS, or if either equals the real web app's `JOB_RANGER_PWA_PAGES_PROJECT` / `JOB_RANGER_PWA_ORIGIN` (case-insensitive, ignoring a trailing slash). It verifies the attestation, re-verifies the unpacked site, deploys with `wrangler pages deploy`, then byte-verifies the live origin (`--flavor demo`, pinned build-info digest, security headers).
+1. **build**: dispatch with a full 40-character commit SHA that is on `main` (any commit ever merged to `main`, not necessarily the latest). It builds both flavors from that commit (with `GITHUB_SHA` unset, so `build-info.json` records the requested commit rather than the dispatch ref), checks the demo build identity and handoff (`--flavor demo`), runs the demo browser journeys and packages `job-ranger-web-demo-v*.zip`. This job has no OIDC or attestation permission.
+2. **attest**: a separate job that installs nothing attests the archive.
+3. **deploy** (environment **`demo-web`**): refuses unless it was dispatched from `main` and all four repository variables are set; refuses a non-HTTPS or invalid demo origin, an origin equal to the real web app's (compared as parsed URL origins, so case, default port, path and whitespace do not matter), or a Pages project equal to the real web app's. It verifies the attestation (pinned to this workflow), re-checks flavor, build ID and commit of the unpacked site, deploys with `wrangler pages deploy`, then byte-verifies the live origin (`--flavor demo`, pinned build-info digest, security headers).
 
-Owner configuration: `secrets.CLOUDFLARE_API_TOKEN`, `secrets.CLOUDFLARE_ACCOUNT_ID`, `vars.JOB_RANGER_DEMO_PAGES_PROJECT` (a Pages project used for nothing else), `vars.JOB_RANGER_DEMO_ORIGIN`, and the `demo-web` environment. Never point the demo project or origin at one that serves, or will serve, real workspaces.
+**Owner setup** (nothing exists yet):
+- Repository variables (repository-level, not environment variables: the guard must see the real app's values to compare them): `JOB_RANGER_DEMO_PAGES_PROJECT` (a Pages project used for nothing else), `JOB_RANGER_DEMO_ORIGIN`, `JOB_RANGER_PWA_PAGES_PROJECT`, `JOB_RANGER_PWA_ORIGIN`.
+- Environment `demo-web`, created before the first run (otherwise GitHub creates it unprotected): required reviewers, deployment branches limited to `main`, and the environment secrets `CLOUDFLARE_API_TOKEN` (preferably scoped so it can deploy only the demo project) and `CLOUDFLARE_ACCOUNT_ID`.
+- Never point the demo project or origin at one that serves, or will serve, real workspaces.
 
 **Studio wiring** follows the same rules as above: a normal external link to the approved demo origin and pinned `.demo` build ID, never an iframe, disabled until owner approval.
 
@@ -126,6 +130,6 @@ The PWA's existing job-source integration remains provider/CORS-dependent; it ca
 - [ ] Execute full PWA production build and browser suite against the exact candidate in a supported runtime, record proof.
 - [ ] Run staged hosted acceptance after separate owner authorization.
 - [ ] Confirm final origin, pricing non-claims, privacy copy and owner approval.
-- [x] Guarded demo deploy path (`deploy-pwa-demo.yml`): commits on `main` only, own environment, project and origin; refuses the real app's project or origin; live byte verification.
+- [x] Guarded demo deploy path (`deploy-pwa-demo.yml`) implemented and statically tested; **not yet exercised** (needs the owner setup above).
 - [ ] Choose and approve the demo's own origin (distinct from any real-workspace origin) and run staged acceptance of the demo build there.
 - [ ] Only then wire the Studio CTA (in the Studio repo) and publish by its separate release process.
