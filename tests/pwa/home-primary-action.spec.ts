@@ -211,9 +211,10 @@ async function interceptFirstWorkspaceRead(page: Page, mode: "hold" | "fail") {
         (window as unknown as { __releaseJobs: () => void }).__releaseJobs = release;
         let first = true;
         jobs.list = async (...args: unknown[]) => {
+          // "fail": every read fails, so the 30 s background refresh cannot recover mid-test.
+          if (failRead) throw new Error("Synthetic workspace read failure");
           if (!first) return actual(...args);
           first = false;
-          if (failRead) throw new Error("Synthetic workspace read failure");
           await gate;
           return actual(...args);
         };
