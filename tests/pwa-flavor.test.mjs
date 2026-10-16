@@ -229,8 +229,8 @@ assert.doesNotMatch(demoDeploy, /^\s+(push|pull_request|schedule|workflow_run):/
 assert.match(demoDeploy, /\n    environment: demo-web\n/, "deployment authority is the protected demo-web environment");
 assert.doesNotMatch(demoDeploy, /production-web/, "never the production environment");
 assert.equal((demoDeploy.match(/\[ "\$GITHUB_REF" = "refs\/heads\/main" \]/g) ?? []).length, 2, "build and deploy both require a dispatch from main");
-assert.match(demoDeploy, /git merge-base --is-ancestor "\$COMMIT" origin\/main/, "only commits already on main");
-assert.match(demoDeploy, /\^\[0-9a-f\]\{40\}\$/, "a full commit SHA, not a branch name");
+assert.doesNotMatch(demoDeploy, /inputs\.|\n      ref:/, "no caller-chosen ref: only the dispatched commit on main is built and deployed");
+assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n\n/m, "workflow_dispatch takes no inputs");
 // The guard's inputs come from exactly these repository variables (renaming one would silently disable it).
 for (const [name, variable] of [
   ["DEMO_PROJECT", "JOB_RANGER_DEMO_PAGES_PROJECT"],
@@ -244,7 +244,7 @@ assert.match(demoDeploy, /--project-name "\$DEMO_PROJECT"/);
 assert.equal((demoDeploy.match(/--flavor demo/g) ?? []).length, 3, "every verification pins the demo flavor");
 assert.doesNotMatch(demoDeploy, /--flavor standard/);
 assert.match(demoDeploy, /a\.flavor !== 'demo' \|\| a\.buildId !== process\.env\.EXPECTED \|\| a\.commit !== process\.env\.COMMIT/, "the deployed build is the demo flavor of the requested commit");
-assert.match(demoDeploy, /env -u GITHUB_SHA npm run build:pwa:demo/, "the build records the requested commit, not the dispatch ref");
+assert.match(demoDeploy, /COMMIT: \$\{\{ github\.sha \}\}/, "identity checks compare against the dispatched commit");
 assert.match(demoDeploy, /b\.commit !== process\.env\.COMMIT/, "the built commit must equal the requested commit");
 assert.match(demoDeploy, /tests\/pwa\/demo-flavor\.spec\.ts/, "demo browser journeys run before deploying");
 assert.match(demoDeploy, /--signer-workflow "\$\{\{ github\.repository \}\}\/\.github\/workflows\/deploy-pwa-demo\.yml"/);

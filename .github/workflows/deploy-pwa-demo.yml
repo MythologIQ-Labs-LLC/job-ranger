@@ -7,7 +7,8 @@ name: Deploy web demo (PWA demo flavor)
 # project and origin are configured AND differ from the demo's.
 #
 # Unlike deploy-pwa.yml there is no attested release archive for the demo:
-# the demo is built here from a commit that is already on main, verified
+# the demo is built here from the commit at the tip of main when the workflow
+# is dispatched (github.sha; dispatching from any other ref is refused), verified
 # (build identity, handoff contract, demo browser journeys), attested in a
 # separate job that installs no dependencies, and only then deployed.
 #
@@ -24,13 +25,11 @@ name: Deploy web demo (PWA demo flavor)
 #   can only deploy the demo project):
 #     secrets.CLOUDFLARE_API_TOKEN, secrets.CLOUDFLARE_ACCOUNT_ID
 
+# No inputs: the deployed commit is always the dispatched tip of main, so the
+# workflow never checks out a caller-chosen ref. To roll back, revert on main
+# and dispatch again.
 on:
   workflow_dispatch:
-    inputs:
-      commit:
-        description: "Full 40-character commit SHA on main to build the demo from"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -52,21 +51,15 @@ jobs:
           set -euo pipefail
           [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "Run this workflow from main (got $GITHUB_REF)"; exit 1; }
 
-      - name: Check out the requested commit
+      - name: Check out the dispatched commit on main
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }}
-          fetch-depth: 0
           persist-credentials: false
 
-      - name: Require a commit that is on main
-        env:
-          COMMIT: ${{ inputs.commit }}
+      - name: Confirm the checkout is the dispatched commit
         run: |
           set -euo pipefail
-          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "commit must be a full 40-character SHA"; exit 1; }
-          [ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "checked-out HEAD is not $COMMIT"; exit 1; }
-          git merge-base --is-ancestor "$COMMIT" origin/main || { echo "$COMMIT is not on main; the demo is only deployed from merged code"; exit 1; }
+          [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ] || { echo "checked-out HEAD is not $GITHUB_SHA"; exit 1; }
 
       # No dependency cache: this job runs code from the requested commit, and a cache written
       # here would be restored by default-branch workflows (cache poisoning).
@@ -78,19 +71,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # On workflow_dispatch GITHUB_SHA is the tip of the dispatching branch, not the requested
-      # commit; the build would stamp that into build-info.json. Unset it so the build records
-      # `git rev-parse HEAD` (the checked-out, requested commit).
       - name: Build the standard and demo flavors (the demo journeys compare both)
         run: |
           set -euo pipefail
-          env -u GITHUB_SHA npm run build:pwa
-          env -u GITHUB_SHA npm run build:pwa:demo
+          npm run build:pwa
+          npm run build:pwa:demo
 
       - name: Verify the demo build identity and handoff contract
         id: identity
         env:
-          COMMIT: ${{ inputs.commit }}
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           node -e "const b=require('./dist-pwa-demo/build-info.json'); if (b.flavor !== 'demo' || typeof b.buildId !== 'string' || !b.buildId.endsWith('.demo')) { throw new Error('not a demo build: ' + b.flavor + ' ' + b.buildId); } if (b.commit !== process.env.COMMIT) { throw new Error('build commit ' + b.commit + ' != requested ' + process.env.COMMIT); }"
@@ -105,10 +95,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Demo browser journeys
-        run: env -u GITHUB_SHA npx playwright test --config playwright.pwa.config.ts tests/pwa/demo-flavor.spec.ts --reporter=list
+        run: npx playwright test --config playwright.pwa.config.ts tests/pwa/demo-flavor.spec.ts --reporter=list
 
       - name: Package the demo archive
-        run: env -u GITHUB_SHA npm run package:pwa:demo
+        run: npm run package:pwa:demo
 
       - name: Keep the verified demo archive for attestation and deployment
         uses: actions/upload-artifact@v4
@@ -182,7 +172,6 @@ jobs:
       - name: Check out the handoff verifier at the same commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }}
           persist-credentials: false
 
       - name: Set up Node.js
@@ -200,7 +189,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EXPECTED: ${{ needs.build.outputs.build-id }}
-          COMMIT: ${{ inputs.commit }}
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           gh attestation verify artifact/release/job-ranger-web-demo-v*.zip \
