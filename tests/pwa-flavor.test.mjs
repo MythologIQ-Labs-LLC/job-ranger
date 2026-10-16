@@ -79,7 +79,7 @@ assert.deepEqual(
 );
 
 // --- the vite define reaches the page and the worker, and defaults to standard elsewhere
-const viteConfig = await readFile(path.join(root, "vite.pwa.config.ts"), "utf8");
+const viteConfig = (await readFile(path.join(root, "vite.pwa.config.ts"), "utf8")).replace(/\r\n/g, "\n");
 assert.match(viteConfig, /__JOB_RANGER_PWA_FLAVOR__: JSON\.stringify\(flavor\)/);
 assert.match(viteConfig, /const flavor = parsePwaFlavor\(process\.env\[PWA_FLAVOR_ENV\]\)/);
 assert.equal(PWA_FLAVOR, "standard", "outside the PWA build (Electron, Node) the flavor is standard");
@@ -165,7 +165,7 @@ assert.equal(local3.getItem("theme"), null, "a replaced workspace resets prefere
 assert.equal(local3.getItem(ONBOARDING_DISMISSED_KEY), "true", "the seeded workspace skips onboarding");
 
 // --- the standard-flavor runtime never acts on demo session messages
-const worker = await readFile(path.join(root, "src/pwa/runtime/worker-main.ts"), "utf8");
+const worker = (await readFile(path.join(root, "src/pwa/runtime/worker-main.ts"), "utf8")).replace(/\r\n/g, "\n");
 assert.match(worker, /if \(IS_DEMO_FLAVOR && message\?\.type === "demo-session"\)/);
 // The only erase path is gated on the demo flavor AND a reset decision, and runs before the database opens.
 assert.equal((worker.match(/resetDemoWorkspace\(/g) ?? []).length, 1);
@@ -177,7 +177,7 @@ assert.ok(demoBlock.indexOf('decision.action === "refuse"') < demoBlock.indexOf(
 assert.ok(demoBlock.indexOf("resetDemoWorkspace(") < demoBlock.indexOf("sqlite3InitModule"), "erase happens before the database opens");
 assert.equal((worker.match(/seedDemoWorkspace\(\{/g) ?? []).length, 1);
 assert.match(worker, /if \(demo && demoClaim\) \{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*await seedDemoWorkspace\(\{/);
-const page = await readFile(path.join(root, "src/pwa/main.tsx"), "utf8");
+const page = (await readFile(path.join(root, "src/pwa/main.tsx"), "utf8")).replace(/\r\n/g, "\n");
 assert.match(page, /if \(IS_DEMO_FLAVOR\) \{[\s\S]*type: "demo-session", sessionId: demoSessionId\(\)[\s\S]*worker\.postMessage\(start\);/);
 
 // --- the handoff advertises the real idle-reset limit
