@@ -68,11 +68,12 @@ jobs:
           [ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "checked-out HEAD is not $COMMIT"; exit 1; }
           git merge-base --is-ancestor "$COMMIT" origin/main || { echo "$COMMIT is not on main; the demo is only deployed from merged code"; exit 1; }
 
+      # No dependency cache: this job runs code from the requested commit, and a cache written
+      # here would be restored by default-branch workflows (cache poisoning).
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22.12.0"
-          cache: npm
 
       - name: Install dependencies
         run: npm ci

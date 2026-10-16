@@ -258,6 +258,7 @@ assert.match(demoDeploy, /--signer-workflow "\$\{\{ github\.repository \}\}\/\.g
   assert.match(job("deploy"), /needs: \[build, attest\]/);
 }
 assert.equal((demoDeploy.match(/persist-credentials: false/g) ?? []).length, 2);
+assert.doesNotMatch(demoDeploy, /^\s+cache:|actions\/cache@/m, "no dependency cache in a workflow that runs code from a requested commit");
 {
   // Run the project/origin guard step itself (bash + node) against shared, distinct and unconfigured setups.
   const guard = demoDeploy.match(/- name: Refuse a project or origin shared with the real web app\n[\s\S]*?\n        run: \|\n([\s\S]*?)\n\n/)[1]
