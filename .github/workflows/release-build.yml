@@ -123,6 +123,11 @@ jobs:
       - name: Build release artifacts
         run: npm run electron:build:win
         env:
+          # Google Drive export (#314): an installed app's Desktop OAuth client id and
+          # secret are distributed application configuration, not confidential values.
+          # Repository variables; when unset the build ships with Drive export disabled.
+          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID }}
+          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
