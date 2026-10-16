@@ -15,11 +15,11 @@ Do not put early users on a throwaway temporary origin with plans to move them l
 
 Every `npm run build:pwa` now produces:
 
-- `dist-pwa/build-info.json`: existing build ID, version, commit, CSP, SHA-256 shell asset inventory, and **exact service-worker byte digest**.
-- `dist-pwa/studio-handoff.json`: strictly build-derived schema version 1 describing the external-link entry, local-data boundary, real PWA limitations, and human approval gates.
+- `dist-pwa/build-info.json`: existing build ID, version, **build flavor**, commit, CSP, SHA-256 shell asset inventory, and **exact service-worker byte digest**.
+- `dist-pwa/studio-handoff.json`: strictly build-derived schema version 1 describing the build flavor, external-link entry, local-data boundary, real PWA limitations, and human approval gates.
 - The existing `index.html`, `sw.js`, `_headers`, PWA manifest and verified runtime assets.
 
-`npm run package:pwa` includes these exact files in the attested web archive and rejects tampering, mismatched build identity, missing security policy and wrong or unsafe asset hashes before packaging. The handoff file is **not** a billing entitlement, feature permission, marketing authorization or proof of a published release.
+The **standard** flavor (above) is the real workspace. A separate **demo** flavor (`npm run build:pwa:demo`, see *Demo flavor* below) produces the same files in `dist-pwa-demo/`. `npm run package:pwa` includes these exact files in the attested web archive and rejects tampering, mismatched build identity, missing security policy and wrong or unsafe asset hashes before packaging. The handoff file is **not** a billing entitlement, feature permission, marketing authorization or proof of a published release.
 
 Example **candidate** handoff shape (values are from the actual artifact, never hard-code this example as a release):
 
@@ -28,6 +28,7 @@ Example **candidate** handoff shape (values are from the actual artifact, never 
   "schemaVersion": 1,
   "kind": "job-ranger-studio-handoff",
   "product": "job-ranger",
+  "flavor": "standard",
   "build": { "version": "1.3.0", "buildId": "1.3.0+SOURCE_SHA", "commit": "SOURCE_SHA" },
   "entry": { "path": "/", "mode": "external-navigation", "iframeAllowed": false, "preserveOrigin": true },
   "studio": {
@@ -48,9 +49,16 @@ Studio must treat the pinned `buildId` and final owner-approved HTTPS origin as 
 ```sh
 npm run build:pwa
 npm run test:studio-handoff
-node scripts/verify-studio-handoff.mjs --site dist-pwa
+node scripts/verify-studio-handoff.mjs --site dist-pwa --flavor standard
 npm run package:pwa
+
+# Demo flavor (separate output directory, build ID and archive)
+npm run build:pwa:demo            # same as JOB_RANGER_PWA_FLAVOR=demo npm run build:pwa
+node scripts/verify-studio-handoff.mjs --site dist-pwa-demo --flavor demo
+npm run package:pwa:demo          # same as JOB_RANGER_PWA_FLAVOR=demo npm run package:pwa
 ```
+
+`--flavor` pins the expected flavor, so a demo artifact is rejected where the standard workspace is expected, and the reverse.
 
 The offline verifier checks manifest identity, hashed assets, **service-worker byte digest**, and required static security headers. This is a **candidate** check, not proof of correct provider deployment or end-to-end browser behavior.
 
@@ -75,9 +83,27 @@ Make the smallest possible change in `Knapp-Kevin/MythologIQ`:
 
 There should be **no Job Ranger feature implementation in Studio**. Future Studio redesigns or a dedicated Job Ranger marketing domain only change the outbound link, not the PWA origin.
 
+## Demo flavor (#311)
+
+The Studio page's "try it" experience is a **demo flavor** of the same PWA: the actual application and deterministic core, built with `JOB_RANGER_PWA_FLAVOR=demo` (`npm run build:pwa:demo`), running a fictional, session-scoped workspace. It is the separately designed, resettable demonstration mode this document previously required before any fictional data could appear in a live workspace.
+
+**Build identity.** `build-info.json` and `studio-handoff.json` carry `"flavor": "demo"`; the build ID is `VERSION+SHA12.demo`; the document title and install manifest say *Job Ranger Demo*. The handoff states `runtime.canonicalCareerData: "none-session-scoped-demo"`, adds a `demo` block (fictional sample data, session-scoped, visitor-resettable, dedicated origin required) and uses the CTA label *Try the Job Ranger demo in your browser* (still `autoEnableCta: false`, owner approval required). `npm run package:pwa:demo` writes `release/job-ranger-web-demo-vVERSION.zip` and `build/trust/web-demo-build-info.json`; the release manifest never selects the demo archive as the web release artifact. The security policy (CSP and headers) is identical to the standard flavor: the demo adds no network destinations and no analytics.
+
+**Separate origin, always.** Origin-private storage is shared by everything served from one origin, and the demo wipes that storage at the start of every session. Host the demo on its **own** HTTPS origin, never on the origin of a real workspace (present or future), and never switch an origin between flavors. Locally, `npm run preview:pwa:demo` serves it at `http://localhost:4175`, never the standard self-host address `http://localhost:4174`. The standard flavor contains none of the demo code paths: the bundler removes them, and `tests/pwa-flavor-build.test.mjs` checks the built files.
+
+**Session isolation.** When a tab starts without the page's per-tab `sessionStorage` marker (a new tab or window, or the browser after a restart), the runtime worker, while holding the existing single-writer Web Lock and *before* it opens the database, deletes the PWA data roots: `/job-ranger` (database, managed artifacts and any staged restore) and `/job-ranger-io`. It then seeds the fictional workspace through the shared core (`electron/src/demo-seed.cts`: the boundary validators and backend services, the listing normalizers the job-board adapters use, the repository write a source scan performs, and real requirement extraction). The page then clears Job Ranger's `localStorage` keys, marks onboarding as done and records the marker. Reloading within the session keeps the visitor's changes. **Reset demo** (banner, with confirmation) forgets the marker and reloads, which wipes and reseeds immediately. A second tab waits on the lock exactly as in the standard flavor and starts its own fresh session when it obtains the lock. Browsers that restore a previous session also restore `sessionStorage`, so such a visitor keeps the workspace until Reset demo.
+
+**Seeded workspace.** Morgan Rivera's profile (Baltimore, MD), one Target Track (*Practice operations*), four confirmed Career Evidence records, the fictional employer *Harbor Health* and three listings (annual and hourly pay, *City, ST* locations) whose requirements are extracted, so Find Jobs and the assessment drawer show supported and unsupported requirements, and one tracked application. The seeded evidence is sufficient for the real resume flow to export a verified PDF. Seeding is deterministic in content and idempotent-safe (`tests/demo-seed-smoke-test.cjs`, on both SQLite engines).
+
+**Labeling.** A persistent, accessible banner on every page: fictional sample data; what you enter stays in this browser on this site; it is erased when the browser session ends; **Reset demo**. Listing URLs use the reserved, never-resolving host `demo-listing.invalid`; `isDemoListing(url)` (`src/shared/demo-listing.ts`) drives a *Demo listing — fictional, not a real opening* badge on Find Jobs cards, the assessment drawer and Applications, and opening or applying shows an explanation instead of navigating (the web runtime client also refuses to open such URLs). The demo employer has no job-board token, so it is never a monitorable source and never causes a network fetch. Public sources a visitor adds themselves are real openings and keep working normally. Settings and Help carry an *About this demo* section.
+
+**Not included in the demo:** Google Drive, monitoring and notifications while the browser is closed, inference and MCP connections, desktop-only features (tray, hidden-browser career sites, revealing files), and sync or accounts. Exported backups download to the visitor's device; a restore in the demo lasts only for that session.
+
+**Studio wiring** follows the same rules as above: a normal external link to the approved demo origin and pinned `.demo` build ID, never an iframe, disabled until owner approval.
+
 ## Trial and paid-service boundaries
 
-The initial hosted browser experience is the **actual deterministic free Job Ranger core**, not a fabricated UI mock, ungoverned shadow product, or fake interactive fixture. The original demo video uses fictional sample data; using fictional fixture data in a *live* user workspace requires a separately designed opt-in/resettable demonstration mode so it cannot be mistaken for canonical user history. No fixture seeding on existing user profiles is approved here.
+The initial hosted browser experience is the **actual deterministic free Job Ranger core**, not a fabricated UI mock, ungoverned shadow product, or fake interactive fixture. The original demo video uses fictional sample data. Fictional data in a *live* browser workspace exists only in the demo flavor above, on its own origin; no fixture seeding of existing user profiles or of the standard flavor is approved.
 
 The PWA's existing job-source integration remains provider/CORS-dependent; it cannot perform reliable closed-browser monitoring. Future paid value may include user-authorized **hosted acquisition and scheduled monitoring**, but those require separate contracts for source legality/terms, quotas, secret isolation, consent, user isolation, retention, server cost, notifications, authentication and AGPL compliance. None is shipped or unlocked by the Studio handoff.
 
@@ -87,7 +113,9 @@ The PWA's existing job-source integration remains provider/CORS-dependent; it ca
 - [x] Local and live verification functions with fail-closed identity/security checks.
 - [x] Contract tests for tampering, fake CTA approval, non-HTTPS origin and wrong build ID.
 - [x] PWA build, package and browser-validation wiring.
+- [x] Demo flavor: distinct build identity, handoff and archive; session-scoped seeded workspace; labeling; browser tests (`tests/pwa/demo-flavor.spec.ts`).
 - [ ] Execute full PWA production build and browser suite against the exact candidate in a supported runtime, record proof.
 - [ ] Run staged hosted acceptance after separate owner authorization.
 - [ ] Confirm final origin, pricing non-claims, privacy copy and owner approval.
+- [ ] Choose and approve the demo's own origin (distinct from any real-workspace origin) and run staged acceptance of the demo build there.
 - [ ] Only then wire the Studio CTA (in the Studio repo) and publish by its separate release process.
