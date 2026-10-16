@@ -5,12 +5,15 @@ import type {
 } from "../../../src/shared/google-drive.js";
 import { FEATURE_MIGRATIONS } from "../feature-migrations.cjs";
 import { sql, type SqliteClient } from "../sqlite.cjs";
+import { safeWebViewLink } from "./drive-transport.cjs";
 
 /**
  * Write-once journal of user-approved Drive exports. A row is inserted with a
- * fresh operation id before any network call, so a retry after a crash or an
- * ambiguous failure can find the remote file by that id instead of uploading
- * again. Tokens are never stored here.
+ * fresh operation id before any network call, and the Drive file id reserved
+ * with files.generateIds is persisted before the upload, so a retry after a
+ * crash or an ambiguous failure reads that exact file (strongly consistent)
+ * instead of uploading again. Rows are bound to the Google account they were
+ * approved for. Tokens are never stored here.
  */
 const DRIVE_EXPORT_SCHEMA = `
   CREATE TABLE IF NOT EXISTS drive_exports (
@@ -19,11 +22,14 @@ const DRIVE_EXPORT_SCHEMA = `
     content_sha256 TEXT NOT NULL,
     file_name TEXT NOT NULL,
     size_bytes INTEGER NOT NULL,
-    state TEXT NOT NULL CHECK (state IN ('approved', 'uploading', 'verified', 'failed', 'unknown_remote_outcome')),
+    state TEXT NOT NULL CHECK (state IN ('approved', 'uploading', 'verified', 'failed', 'unknown_remote_outcome', 'abandoned')),
+    reserved_file_id TEXT,
     drive_file_id TEXT,
     web_view_link TEXT,
     error_code TEXT,
     error_message TEXT,
+    account_id TEXT,
+    account_email TEXT,
     approved_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -39,15 +45,23 @@ interface DriveExportRow {
   file_name: string;
   size_bytes: number;
   state: DriveExportState;
+  reserved_file_id: string | null;
   drive_file_id: string | null;
   web_view_link: string | null;
   error_code: DriveErrorCode | null;
   error_message: string | null;
+  account_id: string | null;
+  account_email: string | null;
   approved_at: string;
   updated_at: string;
 }
 
-function mapRow(row: DriveExportRow): DriveExportRecord {
+export interface DriveJournalRecord extends DriveExportRecord {
+  /** Drive file id reserved before the upload; never sent to the renderer. */
+  reservedFileId: string | null;
+}
+
+function mapRow(row: DriveExportRow): DriveJournalRecord {
   return {
     operationId: row.operation_id,
     artifactId: row.artifact_id,
@@ -56,9 +70,13 @@ function mapRow(row: DriveExportRow): DriveExportRecord {
     sizeBytes: Number(row.size_bytes),
     state: row.state,
     driveFileId: row.drive_file_id,
-    webViewLink: row.web_view_link,
+    // Restored backups are untrusted: only a validated Drive link is ever exposed.
+    webViewLink: safeWebViewLink(row.web_view_link),
     errorCode: row.error_code,
     errorMessage: row.error_message,
+    accountId: row.account_id,
+    accountEmail: row.account_email,
+    reservedFileId: row.reserved_file_id,
     approvedAt: row.approved_at,
     updatedAt: row.updated_at,
   };
@@ -97,15 +115,18 @@ export class DriveExportJournal {
     contentSha256: string;
     fileName: string;
     sizeBytes: number;
-  }): Promise<DriveExportRecord> {
+    accountId: string;
+    accountEmail: string | null;
+  }): Promise<DriveJournalRecord> {
     const now = new Date().toISOString();
     await this.sqlite.exec(sql`
       INSERT INTO drive_exports (
         operation_id, artifact_id, content_sha256, file_name, size_bytes,
-        state, approved_at, updated_at
+        state, account_id, account_email, approved_at, updated_at
       ) VALUES (
         ${input.operationId}, ${input.artifactId}, ${input.contentSha256},
-        ${input.fileName}, ${input.sizeBytes}, ${"approved"}, ${now}, ${now}
+        ${input.fileName}, ${input.sizeBytes}, ${"approved"},
+        ${input.accountId}, ${input.accountEmail}, ${now}, ${now}
       );
     `);
     const created = await this.get(input.operationId);
@@ -113,7 +134,18 @@ export class DriveExportJournal {
     return created;
   }
 
-  async update(operationId: string, update: DriveExportUpdate): Promise<DriveExportRecord> {
+  /** Persists the reserved Drive file id; must complete before the upload starts. */
+  async reserveFileId(operationId: string, fileId: string): Promise<DriveJournalRecord> {
+    await this.sqlite.exec(sql`
+      UPDATE drive_exports SET reserved_file_id = ${fileId}, updated_at = ${new Date().toISOString()}
+      WHERE operation_id = ${operationId} AND reserved_file_id IS NULL;
+    `);
+    const updated = await this.get(operationId);
+    if (updated?.reservedFileId !== fileId) throw new Error("Drive export journal did not record the reserved file id.");
+    return updated;
+  }
+
+  async update(operationId: string, update: DriveExportUpdate): Promise<DriveJournalRecord> {
     await this.sqlite.exec(sql`
       UPDATE drive_exports SET
         state = ${update.state},
@@ -129,14 +161,14 @@ export class DriveExportJournal {
     return updated;
   }
 
-  async get(operationId: string): Promise<DriveExportRecord | null> {
+  async get(operationId: string): Promise<DriveJournalRecord | null> {
     const row = await this.sqlite.queryOne<DriveExportRow>(sql`
       SELECT * FROM drive_exports WHERE operation_id = ${operationId} LIMIT 1;
     `);
     return row ? mapRow(row) : null;
   }
 
-  async listForArtifact(artifactId: string): Promise<DriveExportRecord[]> {
+  async listForArtifact(artifactId: string): Promise<DriveJournalRecord[]> {
     const rows = await this.sqlite.queryAll<DriveExportRow>(sql`
       SELECT * FROM drive_exports WHERE artifact_id = ${artifactId}
       ORDER BY approved_at DESC, operation_id ASC;

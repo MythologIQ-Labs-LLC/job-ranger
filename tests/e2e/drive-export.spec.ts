@@ -16,11 +16,13 @@ const { createFakeGoogle } = require("../support/fake-google-drive.cjs") as {
   createFakeGoogle: (options?: Record<string, unknown>) => FakeGoogle;
 };
 
-interface FakeFile { id: string; bytes: Buffer | null; appProperties: Record<string, string> }
+interface FakeFile { id: string; owner: string; bytes: Buffer | null; appProperties: Record<string, string> }
 interface FakeGoogle {
+  signInAs: (email: string, permissionId: string) => void;
   state: {
-    counts: { uploadPosts: number; folderCreates: number };
+    counts: { uploadPosts: number; folderCreates: number; conflicts: number };
     faults: { nextUpload: string | null };
+    listLag: number;
     revoked: string[];
     files: Map<string, FakeFile>;
   };
@@ -52,7 +54,8 @@ async function launch(baseUrl: string, userDataDir?: string, timeoutMs = "4000")
     shell.openExternal = async (url: string) => {
       opened.push(url);
       // Plays the system browser for sign-in only; Drive links are just recorded.
-      if (url.startsWith(fakeOrigin)) void fetch(url).catch(() => undefined);
+      const autoApprove = (globalThis as { __driveAutoApprove?: boolean }).__driveAutoApprove !== false;
+      if (url.startsWith(fakeOrigin) && autoApprove) void fetch(url).catch(() => undefined);
     };
   }, baseUrl);
   return fixture;
@@ -155,6 +158,8 @@ test.describe("Google Drive export", () => {
 
       // Injected timeout after Drive stored the file: Retry reconciles without a second upload.
       const row2 = await createVerifiedPdf(page, 2);
+      // Searches miss the new file (eventual consistency); only the reserved-id read finds it.
+      fake.state.listLag = 1000;
       fake.state.faults.nextUpload = "hang";
       await row2.getByRole("button", { name: "Save to Google Drive", exact: true }).click();
       await dialog.getByRole("button", { name: "Approve and upload", exact: true }).click();
@@ -167,6 +172,7 @@ test.describe("Google Drive export", () => {
       const copies = fake.uploadedFiles().filter((file) => file.bytes && sha256(file.bytes) === sha256(local2));
       expect(copies).toHaveLength(1);
       expect(fake.state.counts.folderCreates).toBe(1);
+      fake.state.listLag = 0;
       await dialog.getByRole("button", { name: "Done", exact: true }).click();
 
       // Disconnect revokes at Google and deletes the stored credential.
@@ -199,6 +205,7 @@ test.describe("Google Drive export", () => {
     try {
       await connectInSettings(fixture.page);
       const row = await createVerifiedPdf(fixture.page, 1);
+      fake.state.listLag = 1000;
       fake.state.faults.nextUpload = "hang";
       await row.getByRole("button", { name: "Save to Google Drive", exact: true }).click();
       await fixture.page.getByRole("dialog", { name: "Save to Google Drive" }).getByRole("button", { name: "Approve and upload", exact: true }).click();
@@ -227,4 +234,71 @@ test.describe("Google Drive export", () => {
       await fs.rm(userDataDir, { recursive: true, force: true });
     }
   });
+
+  test("reconnecting from the dialog can be cancelled, and a new account is not blocked by the old one's copy", async () => {
+    test.setTimeout(180_000);
+    const fake = createFakeGoogle({ clientId: CLIENT_ID, email: ACCOUNT });
+    const server = await fake.listen();
+    const fixture = await launch(server.baseUrl);
+    const { page, electronApp, tempDataDir } = fixture;
+    const setAutoApprove = (value: boolean) =>
+      electronApp.evaluate((_electron, next) => {
+        (globalThis as { __driveAutoApprove?: boolean }).__driveAutoApprove = next;
+      }, value);
+    try {
+      await connectInSettings(page);
+      const row = await createVerifiedPdf(page, 1);
+      await row.getByRole("button", { name: "Save to Google Drive", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Save to Google Drive" });
+      await dialog.getByRole("button", { name: "Approve and upload", exact: true }).click();
+      await expect(dialog.getByText("Saved to Google Drive and verified.", { exact: true })).toBeVisible({ timeout: 20_000 });
+      await dialog.getByRole("button", { name: "Done", exact: true }).click();
+
+      // Disconnect account A, then try to save: the dialog offers Reconnect.
+      await navigateTo(page, "/settings");
+      await page.getByRole("button", { name: "Disconnect Google Drive", exact: true }).click();
+      await expect(page.getByRole("button", { name: "Connect Google Drive", exact: true })).toBeVisible();
+      await navigateTo(page, "/resume");
+      await page.getByRole("button", { name: /ATS-safe standard/ }).first().click();
+      await page.getByTestId("resume-artifact-v1").getByRole("button", { name: "Save to Google Drive", exact: true }).click();
+      await expect(dialog.getByTestId("drive-error")).toContainText("Connect Google Drive");
+
+      // Reconnect without finishing in the browser, then Cancel from the dialog.
+      await setAutoApprove(false);
+      await dialog.getByRole("button", { name: "Reconnect Google Drive", exact: true }).click();
+      await expect(dialog.getByText(/Waiting for you to finish signing in/)).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.electronAPI.drive.status().then((status) => status.connecting))).toBe(true);
+      // A cancel for some other (stale) sign-in id is refused and does not end this one.
+      const stale = await page.evaluate(() => window.electronAPI.drive.cancelConnect("00000000-0000-4000-8000-000000000000"));
+      expect(stale.ok).toBe(false);
+      expect(await page.evaluate(() => window.electronAPI.drive.status().then((status) => status.connecting))).toBe(true);
+      await dialog.getByRole("button", { name: "Cancel sign-in", exact: true }).click();
+      await expect(dialog.getByTestId("drive-error")).toContainText("cancelled");
+      expect(await page.evaluate(() => window.electronAPI.drive.status().then((status) => status.connecting))).toBe(false);
+
+      // Closing the dialog during a sign-in it started also ends that sign-in.
+      await dialog.getByRole("button", { name: "Reconnect Google Drive", exact: true }).click();
+      await expect(dialog.getByText(/Waiting for you to finish signing in/)).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect.poll(() => page.evaluate(() => window.electronAPI.drive.status().then((status) => status.connecting))).toBe(false);
+
+      // Sign in as account B from the dialog: A's copy is listed, but does not block B.
+      fake.signInAs("second-account@example.test", "98765432109876543210");
+      await setAutoApprove(true);
+      await page.getByTestId("resume-artifact-v1").getByRole("button", { name: "Save to Google Drive", exact: true }).click();
+      await dialog.getByRole("button", { name: "Reconnect Google Drive", exact: true }).click();
+      await expect(dialog.getByTestId("drive-review-account")).toHaveText("second-account@example.test", { timeout: 20_000 });
+      await expect(dialog.getByText(new RegExp(`Saved to ${ACCOUNT.replace(".", "\\.")} on`))).toBeVisible();
+      await dialog.getByRole("button", { name: "Approve and upload", exact: true }).click();
+      await expect(dialog.getByText("Saved to Google Drive and verified.", { exact: true })).toBeVisible({ timeout: 20_000 });
+      const owners = fake.uploadedFiles().map((file) => file.owner).sort();
+      expect(owners).toEqual(["01234567890123456789", "98765432109876543210"].sort());
+    } finally {
+      await fixture.electronApp.close().catch(() => undefined);
+      await server.close();
+      await fs.rm(tempDataDir, { recursive: true, force: true });
+    }
+  });
 });
+

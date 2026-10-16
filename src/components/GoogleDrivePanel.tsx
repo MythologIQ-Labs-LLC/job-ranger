@@ -27,7 +27,8 @@ export function GoogleDrivePanel() {
   };
 
   const cancel = async () => {
-    await getDesktopApi().drive.cancelConnect();
+    const result = await getDesktopApi().drive.cancelConnect(status?.connectFlowId);
+    if (!result.ok) setError(result.error.message);
     await refresh();
   };
 
@@ -92,6 +93,11 @@ export function GoogleDrivePanel() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-[var(--color-text-secondary)]">
+              {status.credentialUnavailable && (
+                <span className="block pb-2 text-[var(--color-danger)]" data-testid="drive-credential-unavailable">
+                  Job Ranger could not unlock the stored Google sign-in (your system keychain may be locked). It has been kept; reopen Settings to try again, or connect again to replace it.
+                </span>
+              )}
               Connecting opens Google sign-in in your browser. Job Ranger asks only for access to files it creates.
               {status.encryptionUnavailable ? " This device cannot encrypt the sign-in, so it will last only until Job Ranger quits." : ""}
             </p>

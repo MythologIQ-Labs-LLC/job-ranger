@@ -44,7 +44,13 @@ async function harness(options = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-drive-auth-"));
   const fake = createFakeGoogle({ clientId: CLIENT.clientId, ...options.fake });
   const store = new DriveCredentialStore(directory, fakeEncryption(options.encryption ?? true));
-  const transport = new GoogleTransport({ fetch: (url, init) => fake.fetch(url.replace(TEST_BASE, "http://fake.test"), init), allowedOrigins: endpoints().allowedOrigins });
+  const transport = new GoogleTransport({
+    fetch: async (url, init) => {
+      if (options.fetchGate) await options.fetchGate(url);
+      return fake.fetch(url.replace(TEST_BASE, "http://fake.test"), init);
+    },
+    allowedOrigins: endpoints().allowedOrigins,
+  });
   const opened = [];
   // Plays the system browser: asks the fake authorize endpoint, then follows its redirect to the loopback.
   const browser = async (url) => {
@@ -119,14 +125,15 @@ async function testLoopbackReceiver() {
   const serverError = await startLoopbackReceiver("s", 10_000);
   await fetch(`${serverError.redirectUri}/?state=s&error=server_error`);
   await assert.rejects(serverError.code, (error) => error.code === "auth_failed");
-  const missingCode = await startLoopbackReceiver("s", 10_000);
-  assert.equal((await fetch(`${missingCode.redirectUri}/?state=s`)).status, 400);
-  await assert.rejects(missingCode.code, (error) => error.code === "auth_failed");
-
+  // A wrong state, or the right state without a code or error, is refused but does
+  // not end the flow: a stray or forged request cannot cancel a real sign-in.
   const mismatch = await startLoopbackReceiver("expected-state", 10_000);
-  const bad = await fetch(`${mismatch.redirectUri}/?state=attacker-state&code=stolen`);
-  assert.equal(bad.status, 400);
-  await assert.rejects(mismatch.code, (error) => error.code === "auth_failed");
+  assert.equal((await fetch(`${mismatch.redirectUri}/?state=attacker-state&code=stolen`)).status, 400);
+  assert.equal((await fetch(`${mismatch.redirectUri}/?state=attacker-state&error=access_denied`)).status, 400);
+  assert.equal((await fetch(`${mismatch.redirectUri}/?state=expected-state`)).status, 400);
+  const genuine = await fetch(`${mismatch.redirectUri}/?state=expected-state&code=real-code`);
+  assert.equal(genuine.status, 200);
+  assert.equal(await mismatch.code, "real-code", "the genuine callback still completes after forged ones");
 
   const denied = await startLoopbackReceiver("s", 10_000);
   await fetch(`${denied.redirectUri}/?state=s&error=access_denied`);
@@ -164,9 +171,12 @@ async function testConnectFlow() {
     assert.match(await restarted.getAccessToken(), /^fake-access-/);
     assert.equal(h.fake.state.counts.refreshes, 1);
 
-    // Reconnecting while a refresh token is stored does not force the consent prompt.
+    // Reconnecting always asks for consent (so a refresh token for the chosen account is
+    // issued) and, for the same account, does not revoke the grant it replaces.
     await h.auth.connect();
-    assert.equal(h.fake.state.faults.lastAuthorizeParams.prompt, undefined);
+    assert.equal(h.fake.state.faults.lastAuthorizeParams.prompt, "consent");
+    assert.equal(h.fake.state.revoked.length, 0, "same-account reconnect keeps the grant");
+    assert.match(await h.auth.getAccessToken(true), /^fake-access-/);
 
     // Disconnect revokes at Google and deletes the stored credential.
     const { revoked } = await h.auth.disconnect();
@@ -192,10 +202,11 @@ async function testOneFlowAtATimeAndCancel() {
   try {
     const first = h.auth.connect();
     first.catch(() => undefined);
-    while (!h.auth.connecting) await new Promise((resolve) => setTimeout(resolve, 5));
+    // Cancel while the browser sign-in is open.
+    while (h.opened.length === 0) await new Promise((resolve) => setTimeout(resolve, 5));
     await assert.rejects(() => h.auth.connect(), (error) => error.code === "auth_in_progress");
     h.auth.cancelConnect();
-    release();
+    release?.();
     await assert.rejects(first, (error) => error.code === "auth_cancelled");
     assert.equal(h.auth.connecting, false);
     assert.equal(await h.auth.isConnected(), false);
@@ -218,6 +229,159 @@ async function testOneFlowAtATimeAndCancel() {
     assert.equal(denied.fake.state.counts.tokenExchanges, 0);
   } finally {
     await denied.cleanup();
+  }
+}
+
+async function testConcurrentConnectAndDisconnectRace() {
+  // Minor 1: a second connect issued synchronously, before any await, is refused.
+  let release;
+  const h = await harness({ browser: () => new Promise((resolve) => { release = resolve; }) });
+  try {
+    const first = h.auth.connect();
+    first.catch(() => undefined);
+    await assert.rejects(() => h.auth.connect(), (error) => error.code === "auth_in_progress");
+    assert.equal(h.auth.connecting, true);
+    h.auth.cancelConnect();
+    release?.();
+    await assert.rejects(first, (error) => error.code === "auth_cancelled");
+  } finally {
+    await h.cleanup();
+  }
+
+  // Minor 2: disconnect while the token exchange is running cannot be undone by it.
+  let releaseToken;
+  const gate = new Promise((resolve) => { releaseToken = resolve; });
+  let exchangeStarted = false;
+  const raced = await harness({
+    fetchGate: async (url) => {
+      if (url.endsWith("/token") && !exchangeStarted) {
+        exchangeStarted = true;
+        await gate;
+      }
+    },
+  });
+  try {
+    const connecting = raced.auth.connect();
+    connecting.catch(() => undefined);
+    while (!exchangeStarted) await new Promise((resolve) => setTimeout(resolve, 5));
+    await raced.auth.disconnect();
+    releaseToken();
+    await assert.rejects(connecting, (error) => error.code === "auth_cancelled");
+    assert.equal(await raced.auth.isConnected(), false, "the late exchange did not resurrect the credential");
+    await assert.rejects(() => fs.access(path.join(raced.directory, DRIVE_CREDENTIAL_FILE)));
+    assert.equal(raced.fake.state.refreshTokens.size, 0, "the orphaned grant was revoked");
+  } finally {
+    await raced.cleanup();
+  }
+}
+
+async function testStaleCancel() {
+  // A cancel aimed at a finished sign-in must not cancel a newer one.
+  let release;
+  const h = await harness({
+    browser: async (url) => {
+      if (!release) {
+        const result = h.fake.handle("GET", url.replace(TEST_BASE, "http://fake.test"), {}, Buffer.alloc(0));
+        await fetch(result.headers.Location);
+        return;
+      }
+      await new Promise((resolve) => { release = resolve; });
+    },
+  });
+  try {
+    let firstFlow;
+    const first = h.auth.connect();
+    firstFlow = h.auth.connectFlowId;
+    await first;
+    assert.equal(h.auth.connectFlowId, null);
+    release = () => undefined;
+    const second = h.auth.connect();
+    second.catch(() => undefined);
+    const secondFlow = h.auth.connectFlowId;
+    assert.notEqual(secondFlow, firstFlow);
+    assert.equal(h.auth.cancelConnect(firstFlow), false, "a stale cancel is refused");
+    assert.equal(h.auth.connecting, true, "the newer sign-in keeps running");
+    assert.equal(h.auth.cancelConnect(secondFlow), true);
+    await assert.rejects(second, (error) => error.code === "auth_cancelled");
+    assert.equal(h.auth.cancelConnect(secondFlow), false, "nothing left to cancel");
+  } finally {
+    await h.cleanup();
+  }
+}
+
+async function testAccountBinding() {
+  const h = await harness();
+  try {
+    await h.auth.connect();
+    const first = await h.auth.account();
+    assert.deepEqual(first, { id: "01234567890123456789", email: "drive-tester@example.test" });
+    const firstRefresh = [...h.fake.state.refreshTokens.keys()][0];
+
+    // M1: switching to another Google account stores B's own token and ends A's grant.
+    h.fake.signInAs("second@example.test", "99999999999999999999");
+    await h.auth.connect();
+    assert.deepEqual(await h.auth.account(), { id: "99999999999999999999", email: "second@example.test" });
+    assert.ok(h.fake.state.revoked.includes(firstRefresh), "the previous account's grant was revoked");
+    const reloaded = await new DriveCredentialStore(h.directory, fakeEncryption()).load();
+    assert.equal(reloaded.accountId, "99999999999999999999");
+    assert.notEqual(reloaded.refreshToken, firstRefresh, "B is never stored with A's refresh token");
+    assert.equal(h.fake.state.refreshTokens.get(reloaded.refreshToken), "99999999999999999999");
+  } finally {
+    await h.cleanup();
+  }
+
+  // A consent without a refresh token is refused instead of reusing a stored one.
+  const noRefresh = await harness();
+  try {
+    await noRefresh.auth.connect();
+    noRefresh.fake.state.faults.omitRefreshToken = true;
+    noRefresh.fake.signInAs("second@example.test", "99999999999999999999");
+    await assert.rejects(() => noRefresh.auth.connect(), (error) => error.code === "auth_failed" && /lasting access/.test(error.message));
+    assert.equal((await noRefresh.auth.account()).id, "01234567890123456789", "the existing connection is unchanged");
+  } finally {
+    await noRefresh.cleanup();
+  }
+}
+
+async function testTokenResponseRules() {
+  // Minor 4: token_type must be Bearer (any case).
+  const wrongType = await harness();
+  try {
+    wrongType.fake.state.faults.tokenType = "mac";
+    await assert.rejects(() => wrongType.auth.connect(), (error) => error.code === "invalid_response");
+    assert.equal(await wrongType.auth.isConnected(), false);
+  } finally {
+    await wrongType.cleanup();
+  }
+  const lowercase = await harness();
+  try {
+    lowercase.fake.state.faults.tokenType = "bearer";
+    await lowercase.auth.connect();
+    assert.equal(await lowercase.auth.isConnected(), true);
+  } finally {
+    await lowercase.cleanup();
+  }
+
+  // Minor 4: a rotated refresh token is persisted and keeps working after a restart.
+  const rotating = await harness();
+  try {
+    await rotating.auth.connect();
+    const original = [...rotating.fake.state.refreshTokens.keys()][0];
+    rotating.fake.state.faults.rotateRefreshToken = true;
+    await rotating.auth.getAccessToken(true);
+    const stored = await new DriveCredentialStore(rotating.directory, fakeEncryption()).load();
+    assert.notEqual(stored.refreshToken, original);
+    assert.equal(rotating.fake.state.refreshTokens.has(original), false, "the old token no longer works at Google");
+    const restarted = new GoogleDesktopAuth({
+      client: CLIENT,
+      endpoints: endpoints(),
+      transport: new GoogleTransport({ fetch: (url, init) => rotating.fake.fetch(url, init), allowedOrigins: endpoints().allowedOrigins }),
+      store: new DriveCredentialStore(rotating.directory, fakeEncryption()),
+      openExternal: async () => undefined,
+    });
+    assert.match(await restarted.getAccessToken(), /^fake-access-/);
+  } finally {
+    await rotating.cleanup();
   }
 }
 
@@ -262,12 +426,24 @@ async function testEncryptionFailures() {
   try {
     const throwing = { ...fakeEncryption(true), encryptString: () => { throw new Error("keychain locked"); } };
     const store = new DriveCredentialStore(directory, throwing);
-    assert.equal(await store.save({ refreshToken: "secret-refresh", accountEmail: null, scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "x" }), "session");
+    assert.equal(await store.save({ refreshToken: "secret-refresh", accountId: "1", accountEmail: null, scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "x" }), "session");
     assert.equal(store.storage(), "session");
     assert.deepEqual(await fs.readdir(directory), [], "no credential file, temporary or plaintext");
     const throwingDecrypt = { ...fakeEncryption(true), decryptString: () => { throw new Error("cannot decrypt"); } };
-    await new DriveCredentialStore(directory, fakeEncryption(true)).save({ refreshToken: "r", accountEmail: null, scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "x" });
+    const saved = { refreshToken: "r", accountId: "1", accountEmail: null, scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "x" };
+    await new DriveCredentialStore(directory, fakeEncryption(true)).save(saved);
+    // Minor 5: a decrypt failure (e.g. a locked keychain) keeps the file and reports it; a later load succeeds.
+    let locked = true;
+    const flaky = { ...fakeEncryption(true), decryptString: (buffer) => { if (locked) throw new Error("cannot decrypt"); return fakeEncryption(true).decryptString(buffer); } };
+    const flakyStore = new DriveCredentialStore(directory, flaky);
+    assert.equal(await flakyStore.load(), null);
+    assert.equal(flakyStore.credentialUnavailable(), true);
+    await fs.access(path.join(directory, DRIVE_CREDENTIAL_FILE));
+    locked = false;
+    assert.deepEqual(await flakyStore.load(), saved);
+    assert.equal(flakyStore.credentialUnavailable(), false);
     assert.equal(await new DriveCredentialStore(directory, throwingDecrypt).load(), null);
+    await fs.access(path.join(directory, DRIVE_CREDENTIAL_FILE));
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
@@ -307,7 +483,7 @@ async function testRefreshInvalidGrant() {
 async function testCredentialStore() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-drive-store-"));
   try {
-    const credential = { refreshToken: "secret-refresh", accountEmail: "a@example.test", scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "2026-10-15T00:00:00.000Z" };
+    const credential = { refreshToken: "secret-refresh", accountId: "42", accountEmail: "a@example.test", scope: GOOGLE_DRIVE_FILE_SCOPE, savedAt: "2026-10-15T00:00:00.000Z" };
     const encrypted = new DriveCredentialStore(directory, fakeEncryption(true));
     assert.equal(await encrypted.save(credential), "encrypted");
     assert.deepEqual(await new DriveCredentialStore(directory, fakeEncryption(true)).load(), credential);
@@ -321,10 +497,12 @@ async function testCredentialStore() {
     await assert.rejects(() => fs.access(path.join(sessionDirectory, DRIVE_CREDENTIAL_FILE)), "nothing is written without encryption");
     assert.equal(await new DriveCredentialStore(sessionDirectory, fakeEncryption(false)).load(), null);
 
-    // An undecryptable file (another OS account) is removed, not trusted.
-    await fs.writeFile(path.join(directory, DRIVE_CREDENTIAL_FILE), "garbage");
-    assert.equal(await new DriveCredentialStore(directory, fakeEncryption(true)).load(), null);
-    await assert.rejects(() => fs.access(path.join(directory, DRIVE_CREDENTIAL_FILE)));
+    // A file that decrypts but is not a credential (corrupt, or missing its account) is removed.
+    for (const text of ["not json", JSON.stringify({ refreshToken: "r" })]) {
+      await fs.writeFile(path.join(directory, DRIVE_CREDENTIAL_FILE), fakeEncryption(true).encryptString(text));
+      assert.equal(await new DriveCredentialStore(directory, fakeEncryption(true)).load(), null);
+      await assert.rejects(() => fs.access(path.join(directory, DRIVE_CREDENTIAL_FILE)), text);
+    }
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
@@ -423,6 +601,10 @@ async function run() {
   await testLoopbackReceiver();
   await testConnectFlow();
   await testOneFlowAtATimeAndCancel();
+  await testConcurrentConnectAndDisconnectRace();
+  await testStaleCancel();
+  await testAccountBinding();
+  await testTokenResponseRules();
   await testTokenExchangeFailures();
   await testEncryptionFailures();
   await testScopeEnforcement();

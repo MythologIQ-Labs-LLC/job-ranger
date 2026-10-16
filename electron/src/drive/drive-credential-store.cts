@@ -12,6 +12,8 @@ export interface CredentialEncryption {
 
 export interface StoredDriveCredential {
   refreshToken: string;
+  /** Google Drive permission id of the account that granted this token. */
+  accountId: string;
   accountEmail: string | null;
   scope: string;
   savedAt: string;
@@ -23,8 +25,10 @@ function parseCredential(text: string): StoredDriveCredential | null {
   try {
     const value = JSON.parse(text) as Partial<StoredDriveCredential>;
     if (typeof value.refreshToken !== "string" || !value.refreshToken) return null;
+    if (typeof value.accountId !== "string" || !value.accountId) return null;
     return {
       refreshToken: value.refreshToken,
+      accountId: value.accountId,
       accountEmail: typeof value.accountEmail === "string" ? value.accountEmail : null,
       scope: typeof value.scope === "string" ? value.scope : "",
       savedAt: typeof value.savedAt === "string" ? value.savedAt : new Date(0).toISOString(),
@@ -46,6 +50,7 @@ export class DriveCredentialStore {
   private cached: StoredDriveCredential | null = null;
   private loaded = false;
   private sessionOnly = false;
+  private unavailable = false;
 
   constructor(
     userDataDirectory: string,
@@ -66,28 +71,44 @@ export class DriveCredentialStore {
     }
   }
 
+  /** True while a stored credential exists but cannot be decrypted (it is kept). */
+  credentialUnavailable(): boolean {
+    return this.unavailable;
+  }
+
   async load(): Promise<StoredDriveCredential | null> {
     if (this.loaded) return this.cached;
-    this.loaded = true;
-    if (!this.encryptionAvailable()) return null;
+    if (!this.encryptionAvailable()) {
+      this.loaded = true;
+      return null;
+    }
     let encrypted: Buffer;
     try {
       encrypted = await fs.readFile(this.filePath);
     } catch {
+      this.loaded = true;
+      this.unavailable = false;
       return null;
     }
+    let text: string;
     try {
-      this.cached = parseCredential(this.encryption.decryptString(encrypted));
+      text = this.encryption.decryptString(encrypted);
     } catch {
-      this.cached = null;
+      // Possibly transient (locked keychain): keep the file and try again on the next load.
+      this.unavailable = true;
+      return null;
     }
-    // An unreadable credential (another OS account, corrupted file) is useless; remove it.
+    this.loaded = true;
+    this.unavailable = false;
+    this.cached = parseCredential(text);
+    // Decrypted but not a credential this version understands: corrupt, remove it.
     if (!this.cached) await fs.rm(this.filePath, { force: true });
     return this.cached;
   }
 
   async save(credential: StoredDriveCredential): Promise<DriveCredentialStorage> {
     this.loaded = true;
+    this.unavailable = false;
     this.cached = credential;
     if (!this.encryptionAvailable()) {
       this.sessionOnly = true;
@@ -120,6 +141,7 @@ export class DriveCredentialStore {
     this.cached = null;
     this.loaded = true;
     this.sessionOnly = false;
+    this.unavailable = false;
     await fs.rm(this.filePath, { force: true });
   }
 

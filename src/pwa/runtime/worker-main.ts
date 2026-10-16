@@ -329,9 +329,9 @@ async function boot(): Promise<void> {
       error: { code: "not_configured", message: "Saving to Google Drive is available in the desktop app only.", retryable: false },
     });
     ipcMain.handle("drive:status", () => DRIVE_DESKTOP_ONLY_STATUS);
-    ipcMain.handle("drive:cancel-connect", () => DRIVE_DESKTOP_ONLY_STATUS);
+    ipcMain.handle("drive:cancel-connect", () => driveUnsupported());
     ipcMain.handle("drive:list-exports", () => []);
-    for (const channel of ["drive:connect", "drive:disconnect", "drive:prepare-export", "drive:approve-export", "drive:retry-export"]) {
+    for (const channel of ["drive:connect", "drive:disconnect", "drive:prepare-export", "drive:approve-export", "drive:retry-export", "drive:abandon-export"]) {
       ipcMain.handle(channel, driveUnsupported);
     }
 

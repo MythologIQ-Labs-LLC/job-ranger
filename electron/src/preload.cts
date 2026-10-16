@@ -166,11 +166,12 @@ const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & 
   drive: {
     status: () => ipcRenderer.invoke("drive:status"),
     connect: () => ipcRenderer.invoke("drive:connect"),
-    cancelConnect: () => ipcRenderer.invoke("drive:cancel-connect"),
+    cancelConnect: (flowId) => ipcRenderer.invoke("drive:cancel-connect", flowId),
     disconnect: () => ipcRenderer.invoke("drive:disconnect"),
     prepareExport: (artifactId) => ipcRenderer.invoke("drive:prepare-export", artifactId),
     approveExport: (request) => ipcRenderer.invoke("drive:approve-export", request),
     retryExport: (operationId) => ipcRenderer.invoke("drive:retry-export", operationId),
+    abandonExport: (operationId) => ipcRenderer.invoke("drive:abandon-export", operationId),
     listExports: (artifactId) => ipcRenderer.invoke("drive:list-exports", artifactId),
   },
   jsonResume: {

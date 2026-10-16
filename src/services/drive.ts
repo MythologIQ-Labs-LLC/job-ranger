@@ -42,5 +42,6 @@ export function unavailableMessage(status: DriveStatus): string {
 }
 
 export function needsReconnect(error: DriveErrorInfo): boolean {
-  return error.code === "auth_expired" || error.code === "not_connected" || error.code === "insufficient_scope";
+  // auth_cancelled / auth_failed only come from a sign-in, so offering it again is the useful next step.
+  return ["auth_expired", "not_connected", "insufficient_scope", "auth_cancelled", "auth_failed"].includes(error.code);
 }

@@ -1,12 +1,16 @@
 import type { DriveErrorCode, DriveErrorInfo } from "../../../src/shared/google-drive.js";
 
+/**
+ * Codes for which retrying the same operation is meaningful and safe. A
+ * verification failure is not: a non-matching copy already exists in Drive.
+ */
 const RETRYABLE: ReadonlySet<DriveErrorCode> = new Set<DriveErrorCode>([
   "rate_limited",
+  "storage_quota",
   "server",
   "network",
   "timeout",
-  "auth_expired",
-  "verification_failed",
+  "invalid_response",
 ]);
 
 /**
@@ -41,7 +45,7 @@ export function driveErrorInfo(error: unknown): DriveErrorInfo {
   return {
     code: driveError.code,
     message: driveError.message,
-    retryable: driveError.retryable || Boolean(driveError.operationId),
+    retryable: driveError.retryable && Boolean(driveError.operationId),
     ...(driveError.operationId ? { operationId: driveError.operationId } : {}),
   };
 }

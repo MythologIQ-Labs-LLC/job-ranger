@@ -15,11 +15,23 @@ export function validateDriveApproveRequest(value: unknown): DriveApproveRequest
   if (raw.saveAnotherCopy !== undefined && typeof raw.saveAnotherCopy !== "boolean") {
     throw new DriveError("invalid_request", "saveAnotherCopy must be true or false.");
   }
+  if (typeof raw.expectedAccountId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(raw.expectedAccountId)) {
+    throw new DriveError("invalid_request", "Drive export request needs the reviewed Google account.");
+  }
   return {
+    expectedAccountId: raw.expectedAccountId,
     artifactId: validateCareerEntityId(raw.artifactId, "Resume artifact id"),
     expectedSha256: raw.expectedSha256.toLowerCase(),
     saveAnotherCopy: raw.saveAnotherCopy === true,
   };
+}
+
+export function validateConnectFlowId(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string" || !OPERATION_ID.test(value)) {
+    throw new DriveError("invalid_request", "Invalid Google sign-in id.");
+  }
+  return value.toLowerCase();
 }
 
 export function validateDriveOperationId(value: unknown): string {

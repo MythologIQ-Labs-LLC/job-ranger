@@ -5,7 +5,8 @@ import type { GoogleTransport } from "./google-transport.cjs";
 
 export const DRIVE_FOLDER_NAME = "Job Ranger";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
-const FILE_FIELDS = "id,name,size,md5Checksum,sha256Checksum,webViewLink,appProperties";
+const FILE_FIELDS = "id,name,size,md5Checksum,sha256Checksum,webViewLink,appProperties,trashed";
+const DRIVE_ID = /^[A-Za-z0-9_-]{1,256}$/;
 
 export interface DriveFileMetadata {
   id: string;
@@ -15,6 +16,7 @@ export interface DriveFileMetadata {
   sha256Checksum: string | null;
   webViewLink: string | null;
   appProperties: Record<string, string>;
+  trashed: boolean;
 }
 
 export interface DriveTokenSource {
@@ -23,6 +25,8 @@ export interface DriveTokenSource {
 }
 
 export interface DriveUploadInput {
+  /** Id reserved with files.generateIds; the create is idempotent on it. */
+  fileId: string;
   name: string;
   bytes: Uint8Array;
   folderId: string;
@@ -52,7 +56,7 @@ export function safeWebViewLink(value: unknown): string | null {
 
 function parseFile(value: unknown): DriveFileMetadata {
   const raw = (value ?? {}) as Record<string, unknown>;
-  if (typeof raw.id !== "string" || !/^[A-Za-z0-9_-]{1,256}$/.test(raw.id)) {
+  if (typeof raw.id !== "string" || !DRIVE_ID.test(raw.id)) {
     throw new DriveError("invalid_response", "Google Drive returned a file without a usable id.");
   }
   const size = typeof raw.size === "string" && /^\d+$/.test(raw.size) ? Number(raw.size) : null;
@@ -67,6 +71,7 @@ function parseFile(value: unknown): DriveFileMetadata {
     sha256Checksum: checksum(raw.sha256Checksum, 64),
     webViewLink: safeWebViewLink(raw.webViewLink),
     appProperties: Object.fromEntries(Object.entries(props).filter((entry): entry is [string, string] => typeof entry[1] === "string")),
+    trashed: raw.trashed === true,
   };
 }
 
@@ -96,6 +101,9 @@ export function verifyRemoteFile(
 
 /** DriveTransport: the least-privilege Drive v3 calls Job Ranger needs under drive.file. */
 export class DriveTransport {
+  private folder: { accountId: string; id: string } | null = null;
+  private folderPending: Promise<string> | null = null;
+
   constructor(private readonly options: DriveTransportOptions) {}
 
   /** Sends an authorized request; one 401 drops the cached token and retries after a refresh. */
@@ -122,8 +130,37 @@ export class DriveTransport {
     return body.files.map(parseFile);
   }
 
-  /** Finds (or creates once) the app-owned "Job Ranger" folder in My Drive. */
-  async ensureFolder(): Promise<string> {
+  /**
+   * Finds (or creates once) the app-owned "Job Ranger" folder in My Drive.
+   * Serialized per process and cached per account, so parallel uploads cannot
+   * create two folders; a cached folder is re-read (strongly consistent) and
+   * forgotten when it is gone or trashed.
+   */
+  ensureFolder(accountId: string): Promise<string> {
+    if (!this.folderPending) {
+      this.folderPending = this.resolveFolder(accountId).finally(() => {
+        this.folderPending = null;
+      });
+    }
+    return this.folderPending;
+  }
+
+  invalidateFolder(): void {
+    this.folder = null;
+  }
+
+  private async resolveFolder(accountId: string): Promise<string> {
+    if (this.folder?.accountId === accountId) {
+      const cached = await this.findFile(this.folder.id);
+      if (cached && !cached.trashed) return cached.id;
+    }
+    this.folder = null;
+    const id = await this.findOrCreateFolder();
+    this.folder = { accountId, id };
+    return id;
+  }
+
+  private async findOrCreateFolder(): Promise<string> {
     const existing = await this.listFiles(
       `appProperties has { key='jobRanger' and value='folder' } and mimeType=${queryLiteral(FOLDER_MIME)} and trashed=false`,
     );
@@ -144,14 +181,41 @@ export class DriveTransport {
   }
 
   async getFile(fileId: string): Promise<DriveFileMetadata> {
-    if (!/^[A-Za-z0-9_-]{1,256}$/.test(fileId)) throw new DriveError("invalid_request", "Invalid Drive file id.");
+    if (!DRIVE_ID.test(fileId)) throw new DriveError("invalid_request", "Invalid Drive file id.");
     return parseFile(await this.authorized<unknown>(`${this.options.endpoints.driveApi}/files/${fileId}?fields=${FILE_FIELDS}`));
   }
 
-  /** One multipart create; the operation id rides in appProperties so a retry can find it. */
+  /** files.get by id (strongly consistent): the file, or null when Drive answers 404. */
+  async findFile(fileId: string): Promise<DriveFileMetadata | null> {
+    try {
+      return await this.getFile(fileId);
+    } catch (error) {
+      if (error instanceof DriveError && error.httpStatus === 404) return null;
+      throw error;
+    }
+  }
+
+  /** Reserves one Drive file id (files.generateIds) to make the later create idempotent. */
+  async generateFileId(): Promise<string> {
+    const body = await this.authorized<{ ids?: unknown }>(
+      `${this.options.endpoints.driveApi}/files/generateIds?count=1&space=drive&type=files`,
+    );
+    const id = Array.isArray(body?.ids) ? body.ids[0] : null;
+    if (typeof id !== "string" || !DRIVE_ID.test(id)) {
+      throw new DriveError("invalid_response", "Google Drive did not reserve a file id.");
+    }
+    return id;
+  }
+
+  /**
+   * One multipart create with the reserved id. Drive refuses a second create
+   * with the same id (409), so a repeated POST cannot make a second file. The
+   * operation id also rides in appProperties as a secondary lookup.
+   */
   async uploadPdf(input: DriveUploadInput): Promise<DriveFileMetadata> {
     const boundary = `job-ranger-${randomUUID()}`;
     const metadata = JSON.stringify({
+      id: input.fileId,
       name: input.name,
       mimeType: "application/pdf",
       parents: [input.folderId],

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { DriveError, toDriveError } from "./drive-errors.cjs";
 import { GOOGLE_DRIVE_FILE_SCOPE, type GoogleClientConfig, type GoogleEndpoints } from "./google-config.cjs";
 import { FORM_HEADERS, formBody, type GoogleTransport } from "./google-transport.cjs";
@@ -56,14 +57,31 @@ export function buildAuthorizationUrl(input: {
   return url.toString();
 }
 
+export interface DriveAccount {
+  /** Drive `about.user.permissionId`: stable per Google account. */
+  id: string;
+  email: string | null;
+}
+
+interface ValidatedTokens {
+  accessToken: string;
+  expiresAt: number;
+  refreshToken: string | null;
+}
+
 /**
  * DriveAuthorization for the desktop runtime: system-browser OAuth with
  * authorization code + PKCE (S256) + a one-shot 127.0.0.1 loopback receiver.
- * The access token lives only in memory; the refresh token is handed to the
- * credential store.
+ * Every connection asks for consent and must yield a refresh token bound to
+ * the account that granted it. The access token lives only in memory; the
+ * refresh token is handed to the credential store.
  */
 export class GoogleDesktopAuth {
   private flow: LoopbackReceiver | null = null;
+  private connectInFlight = false;
+  private flowId: string | null = null;
+  /** Incremented by cancel and disconnect so an in-flight sign-in cannot save afterwards. */
+  private generation = 0;
   private access: AccessToken | null = null;
   private refreshing: Promise<string> | null = null;
   private readonly now: () => number;
@@ -77,7 +95,12 @@ export class GoogleDesktopAuth {
   }
 
   get connecting(): boolean {
-    return this.flow !== null;
+    return this.connectInFlight;
+  }
+
+  /** Id of the sign-in in progress, if any. */
+  get connectFlowId(): string | null {
+    return this.flowId;
   }
 
   private requireClient(): GoogleClientConfig {
@@ -87,22 +110,30 @@ export class GoogleDesktopAuth {
     return this.options.client;
   }
 
-  async connect(): Promise<void> {
+  async connect(): Promise<DriveAccount> {
     const client = this.requireClient();
-    if (this.flow) throw new DriveError("auth_in_progress", "A Google sign-in is already waiting in your browser. Finish or cancel it first.");
-    const existing = await this.options.store.load();
-    const pkce = createPkcePair();
-    const state = createOAuthState();
-    const flow = await startLoopbackReceiver(state, this.options.authorizationTimeoutMs ?? AUTHORIZATION_TIMEOUT_MS);
-    this.flow = flow;
+    // Claimed synchronously, before any await, so a second call cannot start a parallel flow.
+    if (this.connectInFlight) {
+      throw new DriveError("auth_in_progress", "A Google sign-in is already waiting in your browser. Finish or cancel it first.");
+    }
+    this.connectInFlight = true;
+    this.flowId = randomUUID();
+    const generation = this.generation;
+    const cancelled = () => new DriveError("auth_cancelled", "Google Drive sign-in was cancelled.");
+    let flow: LoopbackReceiver | null = null;
     try {
+      const pkce = createPkcePair();
+      const state = createOAuthState();
+      flow = await startLoopbackReceiver(state, this.options.authorizationTimeoutMs ?? AUTHORIZATION_TIMEOUT_MS);
+      this.flow = flow;
+      if (generation !== this.generation) throw cancelled();
       const url = buildAuthorizationUrl({
         endpoint: this.options.endpoints.authorize,
         clientId: client.clientId,
         redirectUri: flow.redirectUri,
         codeChallenge: pkce.challenge,
         state,
-        promptConsent: !existing,
+        promptConsent: true,
       });
       this.options.transport.assertAllowed(url);
       try {
@@ -111,7 +142,7 @@ export class GoogleDesktopAuth {
         throw new DriveError("auth_failed", "Job Ranger could not open your browser for Google sign-in.");
       }
       const code = await flow.code;
-      const tokens = await this.requestTokens({
+      const tokens = await this.postToken({
         client_id: client.clientId,
         client_secret: client.clientSecret,
         code,
@@ -126,71 +157,111 @@ export class GoogleDesktopAuth {
         }
         throw driveError;
       });
-      const refreshToken = typeof tokens.refresh_token === "string" && tokens.refresh_token
-        ? tokens.refresh_token
-        : existing?.refreshToken;
-      if (!refreshToken) {
-        throw new DriveError("auth_failed", "Google did not grant lasting access. Disconnect, then connect again.");
+      if (!tokens.refreshToken) {
+        await this.discardNewGrant(tokens.accessToken, null);
+        throw new DriveError(
+          "auth_failed",
+          "Google did not grant lasting access. Remove Job Ranger at myaccount.google.com/permissions, then connect again.",
+        );
       }
-      const accountEmail = await this.fetchAccountEmail();
+      let account: DriveAccount;
+      try {
+        account = await this.fetchAccount(tokens.accessToken);
+      } catch (error) {
+        await this.discardNewGrant(tokens.refreshToken, null);
+        throw error;
+      }
+      if (generation !== this.generation) {
+        // Cancelled or disconnected while the exchange ran: never resurrect the credential.
+        await this.discardNewGrant(tokens.refreshToken, account.id);
+        throw cancelled();
+      }
+      const previous = await this.options.store.load();
+      if (previous && previous.accountId !== account.id) {
+        // A different Google account replaces the old one: end the old grant first.
+        await this.revokeToken(previous.refreshToken);
+      }
+      if (previous) await this.options.store.clear();
+      this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt };
       await this.options.store.save({
-        refreshToken,
-        accountEmail,
+        refreshToken: tokens.refreshToken,
+        accountId: account.id,
+        accountEmail: account.email,
         scope: GOOGLE_DRIVE_FILE_SCOPE,
         savedAt: new Date(this.now()).toISOString(),
       });
+      return account;
     } finally {
-      flow.cancel();
-      if (this.flow === flow) this.flow = null;
+      flow?.cancel();
+      this.flow = null;
+      this.connectInFlight = false;
+      this.flowId = null;
     }
   }
 
-  cancelConnect(): void {
+  /**
+   * Cancels the sign-in in progress. With a flow id, only that sign-in is
+   * cancelled: a stale request (for a flow that already ended) returns false
+   * and cannot cancel a newer one.
+   */
+  cancelConnect(flowId?: string): boolean {
+    if (!this.connectInFlight) return false;
+    if (flowId !== undefined && flowId !== this.flowId) return false;
+    this.generation += 1;
     this.flow?.cancel();
+    return true;
   }
 
-  /** Validates a token response; a grant without drive.file is refused and revoked. */
-  private async requestTokens(form: Record<string, string>): Promise<TokenResponse> {
+  /** Validates a token response: Bearer type, expiry, and a drive.file grant (else refused and revoked). */
+  private async postToken(form: Record<string, string>): Promise<ValidatedTokens> {
     const { body } = await this.options.transport.request<TokenResponse>(this.options.endpoints.token, {
       method: "POST",
       headers: FORM_HEADERS,
       body: formBody(form),
     });
-    if (typeof body?.access_token !== "string" || !body.access_token || typeof body.expires_in !== "number") {
+    if (
+      typeof body?.access_token !== "string" || !body.access_token ||
+      typeof body.expires_in !== "number" ||
+      typeof body.token_type !== "string" || body.token_type.toLowerCase() !== "bearer"
+    ) {
       throw new DriveError("invalid_response", "Google returned an unexpected sign-in response.");
     }
+    const refreshToken = typeof body.refresh_token === "string" && body.refresh_token ? body.refresh_token : null;
     const scopes = grantedScopes(body.scope);
     if ((form.grant_type === "authorization_code" || body.scope !== undefined) && !scopes.includes(GOOGLE_DRIVE_FILE_SCOPE)) {
-      await this.revokeToken(typeof body.refresh_token === "string" ? body.refresh_token : body.access_token);
+      await this.revokeToken(refreshToken ?? body.access_token);
       throw new DriveError(
         "insufficient_scope",
         "Google did not grant access to files Job Ranger creates. Connect again and leave that permission selected.",
       );
     }
-    this.access = { token: body.access_token, expiresAt: this.now() + body.expires_in * 1000 };
-    return body;
+    return { accessToken: body.access_token, expiresAt: this.now() + body.expires_in * 1000, refreshToken };
   }
 
-  private async fetchAccountEmail(): Promise<string | null> {
-    try {
-      const token = await this.getAccessToken();
-      const { body } = await this.options.transport.request<{ user?: { emailAddress?: unknown } }>(
-        `${this.options.endpoints.driveApi}/about?fields=${encodeURIComponent("user(emailAddress,displayName)")}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      const email = body?.user?.emailAddress;
-      return typeof email === "string" && email.length <= 320 ? email : null;
-    } catch {
-      return null;
+  private async fetchAccount(accessToken: string): Promise<DriveAccount> {
+    const { body } = await this.options.transport.request<{ user?: { emailAddress?: unknown; permissionId?: unknown } }>(
+      `${this.options.endpoints.driveApi}/about?fields=${encodeURIComponent("user(emailAddress,displayName,permissionId)")}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    const id = body?.user?.permissionId;
+    const email = body?.user?.emailAddress;
+    if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+      throw new DriveError("invalid_response", "Google did not identify the connected account. Try connecting again.");
     }
+    return { id, email: typeof email === "string" && email.length <= 320 ? email : null };
   }
 
   async isConnected(): Promise<boolean> {
     return (await this.options.store.load()) !== null;
   }
 
+  async account(): Promise<DriveAccount | null> {
+    const credential = await this.options.store.load();
+    return credential ? { id: credential.accountId, email: credential.accountEmail } : null;
+  }
+
   async accountEmail(): Promise<string | null> {
-    return (await this.options.store.load())?.accountEmail ?? null;
+    return (await this.account())?.email ?? null;
   }
 
   /** Returns a valid access token, refreshing it when needed. */
@@ -214,8 +285,10 @@ export class GoogleDesktopAuth {
       this.access = null;
       throw new DriveError("not_connected", "Connect Google Drive in Settings first.");
     }
+    const generation = this.generation;
+    let tokens: ValidatedTokens;
     try {
-      await this.requestTokens({
+      tokens = await this.postToken({
         client_id: client.clientId,
         client_secret: client.clientSecret,
         refresh_token: credential.refreshToken,
@@ -233,12 +306,28 @@ export class GoogleDesktopAuth {
       }
       throw driveError;
     }
-    return this.access!.token;
+    if (generation !== this.generation) throw new DriveError("not_connected", "Google Drive was disconnected.");
+    if (tokens.refreshToken && tokens.refreshToken !== credential.refreshToken) {
+      // Google rotated the refresh token; the old one may stop working.
+      await this.options.store.save({ ...credential, refreshToken: tokens.refreshToken, savedAt: new Date(this.now()).toISOString() });
+    }
+    this.access = { token: tokens.accessToken, expiresAt: tokens.expiresAt };
+    return tokens.accessToken;
   }
 
   /** Drops the cached access token (after a 401) so the next call refreshes. */
   invalidateAccessToken(): void {
     this.access = null;
+  }
+
+  /**
+   * Revokes a grant obtained by an abandoned sign-in, unless it may belong to
+   * the account already stored: Google revokes a whole grant (all its tokens)
+   * at once, so revoking would also end the still-valid stored connection.
+   */
+  private async discardNewGrant(token: string, accountId: string | null): Promise<void> {
+    const previous = await this.options.store.load();
+    if (!previous || (accountId !== null && previous.accountId !== accountId)) await this.revokeToken(token);
   }
 
   private async revokeToken(token: string): Promise<boolean> {
@@ -257,10 +346,11 @@ export class GoogleDesktopAuth {
   /** Revokes the grant at Google (best effort) and always deletes the stored credential. */
   async disconnect(): Promise<{ revoked: boolean }> {
     this.cancelConnect();
+    this.generation += 1;
     const credential = await this.options.store.load();
     const token = credential?.refreshToken ?? this.access?.token ?? null;
-    const revoked = token && this.options.client ? await this.revokeToken(token) : false;
     this.access = null;
+    const revoked = token && this.options.client ? await this.revokeToken(token) : false;
     await this.options.store.clear();
     return { revoked };
   }

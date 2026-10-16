@@ -103,12 +103,11 @@ export async function startLoopbackReceiver(expectedState: string, timeoutMs: nu
     const state = url.searchParams.get("state");
     const oauthError = url.searchParams.get("error");
     const authorizationCode = url.searchParams.get("code");
-    // Requests without a state (probes, other local software) are refused but do not end the flow.
-    if (state === null) return respond(400, PAGES.failed);
-    if (!constantTimeEqual(state, expectedState)) {
-      respond(400, PAGES.failed);
-      return finish(new DriveError("auth_failed", "The Google sign-in response did not match this request, so it was rejected. Try connecting again."));
-    }
+    // Only a callback carrying the exact state plus a code or an error decides the flow.
+    // Anything else (probes, other local software, forged or stale callbacks) is
+    // refused without ending it, so a stray request cannot cancel a real sign-in.
+    if (state === null || !constantTimeEqual(state, expectedState)) return respond(400, PAGES.failed);
+    if (oauthError === null && !authorizationCode) return respond(400, PAGES.failed);
     if (oauthError !== null) {
       respond(200, PAGES.cancelled);
       return finish(
@@ -117,12 +116,8 @@ export async function startLoopbackReceiver(expectedState: string, timeoutMs: nu
           : new DriveError("auth_failed", "Google could not complete the sign-in. Try connecting again."),
       );
     }
-    if (!authorizationCode) {
-      respond(400, PAGES.failed);
-      return finish(new DriveError("auth_failed", "Google returned no authorization code. Try connecting again."));
-    }
     respond(200, PAGES.success);
-    finish(null, authorizationCode);
+    finish(null, authorizationCode ?? "");
   });
 
   await new Promise<void>((resolve, reject) => {

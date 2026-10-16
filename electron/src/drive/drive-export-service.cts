@@ -7,6 +7,7 @@ import {
   type DriveExportProposal,
   type DriveExportReceipt,
   type DriveExportRecord,
+  type DriveExportState,
   type DriveStatus,
   type DriveUnavailableReason,
 } from "../../../src/shared/google-drive.js";
@@ -14,10 +15,11 @@ import type { ResumeArtifactRecord } from "../../../src/shared/resume-contracts.
 import { assertManagedArtifactPath } from "../managed-path-policy.cjs";
 import { ResumeRepository } from "../resume-repository.cjs";
 import { sql, type SqliteClient } from "../sqlite.cjs";
-import { DriveError, isAmbiguousUploadFailure, toDriveError } from "./drive-errors.cjs";
-import { DriveExportJournal } from "./drive-export-journal.cjs";
-import { verifyRemoteFile, type DriveFileMetadata, type DriveTransport } from "./drive-transport.cjs";
-import type { GoogleDesktopAuth } from "./google-desktop-auth.cjs";
+import { DriveError } from "./drive-errors.cjs";
+import { DriveExportJournal, type DriveJournalRecord } from "./drive-export-journal.cjs";
+import type { DriveTransport } from "./drive-transport.cjs";
+import type { DriveAccount, GoogleDesktopAuth } from "./google-desktop-auth.cjs";
+import { DriveUploadRunner, receiptFor } from "./drive-upload-runner.cjs";
 import type { DriveCredentialStore } from "./drive-credential-store.cjs";
 
 /** Drive's multipart upload is documented for files of 5 MB or less. */
@@ -67,11 +69,13 @@ const CONTEXT_LABELS: Record<string, string> = {
 export class DriveExportService {
   private readonly journal: DriveExportJournal;
   private readonly repository: ResumeRepository;
+  private readonly runner: DriveUploadRunner;
   private readonly busyArtifacts = new Set<string>();
 
   constructor(private readonly options: DriveExportServiceOptions) {
     this.journal = new DriveExportJournal(options.sqlite);
     this.repository = new ResumeRepository(options.sqlite);
+    this.runner = new DriveUploadRunner(this.journal, options.drive);
   }
 
   async initialize(): Promise<void> {
@@ -91,17 +95,27 @@ export class DriveExportService {
       ...(accountEmail ? { accountEmail } : {}),
       credentialStorage: store.storage(),
       connecting: auth.connecting,
+      ...(auth.connectFlowId ? { connectFlowId: auth.connectFlowId } : {}),
       ...(store.encryptionAvailable() ? {} : { encryptionUnavailable: true }),
+      ...(store.credentialUnavailable() ? { credentialUnavailable: true } : {}),
     };
   }
 
-  private async requireReady(): Promise<void> {
+  /** The connected account every export, receipt and retry is scoped to. */
+  private async requireAccount(): Promise<DriveAccount> {
     if (this.options.unavailableReason) {
       throw new DriveError("not_configured", "Google Drive is not set up in this build of Job Ranger.");
     }
-    if (!(await this.options.auth.isConnected())) {
-      throw new DriveError("not_connected", "Connect Google Drive in Settings first.");
+    const account = await this.options.auth.account();
+    if (!account) {
+      throw new DriveError(
+        "not_connected",
+        this.options.store.credentialUnavailable()
+          ? "Job Ranger could not unlock the stored Google sign-in. Try again in a moment, or reconnect Google Drive in Settings."
+          : "Connect Google Drive in Settings first.",
+      );
     }
+    return account;
   }
 
   private async loadLocal(artifactId: string): Promise<LocalArtifact> {
@@ -137,9 +151,6 @@ export class DriveExportService {
     }
   }
 
-  private static pending(records: DriveExportRecord[]): DriveExportRecord | null {
-    return records.find((record) => record.state === "approved" || record.state === "uploading" || record.state === "unknown_remote_outcome") ?? null;
-  }
 
   /** Names the target job (when the draft was tailored) or the general draft's template and format. */
   private async generatedFor(artifact: ResumeArtifactRecord): Promise<string> {
@@ -159,9 +170,11 @@ export class DriveExportService {
   }
 
   async prepare(artifactId: string): Promise<DriveExportProposal> {
-    await this.requireReady();
+    const account = await this.requireAccount();
     const local = await this.loadLocal(artifactId);
     const records = await this.journal.listForArtifact(artifactId);
+    const mine = records.filter((record) => record.accountId === account.id);
+    const others = records.filter((record) => record.accountId !== account.id);
     return {
       artifactId,
       fileName: local.fileName,
@@ -173,28 +186,40 @@ export class DriveExportService {
       sizeBytes: local.bytes.length,
       sha256: local.sha256,
       destination: GOOGLE_DRIVE_DESTINATION_LABEL,
-      accountEmail: await this.options.auth.accountEmail(),
-      verifiedExports: records.filter((record) => record.state === "verified"),
-      pendingExport: DriveExportService.pending(records),
+      accountId: account.id,
+      accountEmail: account.email,
+      verifiedExports: mine.filter((record) => record.state === "verified").map(publicRecord),
+      mismatchedCopies: mine.filter(isMismatchedCopy).map(publicRecord),
+      pendingExport: maybePublic(mine.find(isPending)),
+      otherAccountExports: others.filter((record) => record.state === "verified" || isPending(record)).map(publicRecord),
     };
   }
 
   async approve(request: DriveApproveRequest): Promise<DriveExportReceipt> {
     return this.withArtifactLock(request.artifactId, async () => {
-      await this.requireReady();
+      const account = await this.requireAccount();
+      if (request.expectedAccountId !== undefined && request.expectedAccountId !== account.id) {
+        // A stale approval from a review made while another account was connected.
+        throw new DriveError("account_mismatch", "The connected Google account changed since you reviewed this upload, so nothing was uploaded. Review it again.");
+      }
       const local = await this.loadLocal(request.artifactId);
       if (local.sha256 !== request.expectedSha256.toLowerCase()) {
         throw new DriveError("file_changed", "The PDF changed after you reviewed it, so it was not uploaded. Review it again.");
       }
-      const records = await this.journal.listForArtifact(request.artifactId);
-      const pending = DriveExportService.pending(records);
+      const mine = (await this.journal.listForArtifact(request.artifactId)).filter((record) => record.accountId === account.id);
+      const pending = mine.find(isPending);
       if (pending) {
-        const error = new DriveError("export_in_progress", "An earlier upload of this PDF was not confirmed. Use Retry so Job Ranger checks Drive before uploading again.");
+        const error = new DriveError("export_in_progress", "An earlier upload of this PDF was not confirmed. Retry it, which checks Drive for that exact file first, or abandon it.");
         error.operationId = pending.operationId;
         throw error;
       }
-      if (records.some((record) => record.state === "verified") && request.saveAnotherCopy !== true) {
-        throw new DriveError("already_exported", "This PDF is already saved in Google Drive. Choose Save another copy to upload it again.");
+      if (request.saveAnotherCopy !== true) {
+        if (mine.some((record) => record.state === "verified")) {
+          throw new DriveError("already_exported", "This PDF is already saved in this Google Drive. Choose Save another copy to upload it again.");
+        }
+        if (mine.some(isMismatchedCopy)) {
+          throw new DriveError("already_exported", "An earlier upload left a non-matching copy in this Google Drive. Choose Upload a new copy to upload again.");
+        }
       }
       const record = await this.journal.insertApproved({
         operationId: randomUUID(),
@@ -202,8 +227,10 @@ export class DriveExportService {
         contentSha256: local.sha256,
         fileName: local.fileName,
         sizeBytes: local.bytes.length,
+        accountId: account.id,
+        accountEmail: account.email,
       });
-      return this.upload(record, local);
+      return this.runner.run(record, local, account);
     });
   }
 
@@ -212,90 +239,67 @@ export class DriveExportService {
     if (!record) throw new DriveError("invalid_request", "That Drive export record no longer exists.");
     return this.withArtifactLock(record.artifactId, async () => {
       const current = (await this.journal.get(operationId))!;
-      if (current.state === "verified" && current.driveFileId) return this.receipt(current);
-      await this.requireReady();
+      const account = await this.requireAccount();
+      if (current.accountId !== account.id) {
+        throw new DriveError(
+          "account_mismatch",
+          `This upload was approved for ${current.accountEmail ?? "another Google account"}. Connect that account to retry it, or abandon the attempt.`,
+        );
+      }
+      if (current.state === "verified" && current.driveFileId) return receiptFor(current);
+      if (current.state === "abandoned") throw new DriveError("invalid_request", "This upload attempt was abandoned. Start a new upload instead.");
+      if (isMismatchedCopy(current)) {
+        throw new DriveError("verification_failed", current.errorMessage ?? "A non-matching copy exists in Google Drive. Upload a new copy instead.");
+      }
       const local = await this.loadLocal(current.artifactId);
       if (local.sha256 !== current.contentSha256) {
         throw new DriveError("file_changed", "The PDF changed since this upload was approved, so it was not retried.");
       }
-      return this.upload(current, local);
+      return this.runner.run(current, local, account);
     });
-  }
-
-  listExports(artifactId: string): Promise<DriveExportRecord[]> {
-    return this.journal.listForArtifact(artifactId);
   }
 
   /**
-   * Upload state machine. A fresh operation is known to be absent remotely; any
-   * earlier attempt is looked up by operation id first, so a retry never
-   * creates a second file. Failures after the POST started that may have
-   * reached Drive are recorded as unknown_remote_outcome.
+   * Gives up on an unresolved attempt so the PDF can be uploaded again. The
+   * record is kept (state abandoned); a copy may still exist in Drive.
    */
-  private async upload(record: DriveExportRecord, local: LocalArtifact): Promise<DriveExportReceipt> {
-    const { drive } = this.options;
-    const operationId = record.operationId;
-    let remoteKnownAbsent = record.state === "approved";
-    let posted = false;
-    let createdId: string | null = null;
-    try {
-      await this.journal.update(operationId, { state: "uploading" });
-      if (!remoteKnownAbsent) {
-        const existing = await drive.findByOperationId(operationId);
-        if (existing) return await this.verifyAndRecord(operationId, existing, local);
-        remoteKnownAbsent = true;
+  async abandon(operationId: string): Promise<DriveExportRecord> {
+    const record = await this.journal.get(operationId);
+    if (!record) throw new DriveError("invalid_request", "That Drive export record no longer exists.");
+    return this.withArtifactLock(record.artifactId, async () => {
+      const current = (await this.journal.get(operationId))!;
+      if (current.state === "verified" || current.state === "abandoned") {
+        throw new DriveError("invalid_request", "Only an unfinished upload attempt can be abandoned.");
       }
-      const folderId = await drive.ensureFolder();
-      posted = true;
-      const created = await drive.uploadPdf({
-        name: record.fileName,
-        bytes: local.bytes,
-        folderId,
-        operationId,
-        artifactId: record.artifactId,
-        sha256: local.sha256,
-      });
-      createdId = created.id;
-      return await this.verifyAndRecord(operationId, await drive.getFile(created.id), local);
-    } catch (caught) {
-      const error = toDriveError(caught);
-      const ambiguous = posted ? isAmbiguousUploadFailure(error) || createdId !== null : !remoteKnownAbsent;
-      const state = error.code === "verification_failed" ? "failed" : ambiguous ? "unknown_remote_outcome" : "failed";
-      await this.journal.update(operationId, {
-        state,
-        driveFileId: createdId,
-        errorCode: error.code,
-        errorMessage: error.message,
-      });
-      error.operationId = operationId;
-      throw error;
-    }
-  }
-
-  private async verifyAndRecord(operationId: string, remote: DriveFileMetadata, local: LocalArtifact): Promise<DriveExportReceipt> {
-    if (remote.appProperties.jobRangerOperationId !== operationId) {
-      throw new DriveError("verification_failed", "Google Drive returned a different file than the one Job Ranger uploaded.");
-    }
-    verifyRemoteFile(remote, { sizeBytes: local.bytes.length, sha256: local.sha256, md5: local.md5 });
-    const verified = await this.journal.update(operationId, {
-      state: "verified",
-      driveFileId: remote.id,
-      webViewLink: remote.webViewLink,
+      return publicRecord(await this.journal.update(operationId, {
+        state: "abandoned",
+        errorCode: current.errorCode,
+        errorMessage: current.errorMessage,
+      }));
     });
-    return this.receipt(verified);
   }
 
-  private receipt(record: DriveExportRecord): DriveExportReceipt {
-    return {
-      operationId: record.operationId,
-      artifactId: record.artifactId,
-      fileName: record.fileName,
-      sizeBytes: record.sizeBytes,
-      sha256: record.contentSha256,
-      driveFileId: record.driveFileId ?? "",
-      webViewLink: record.webViewLink,
-      verifiedAt: record.updatedAt,
-      destination: GOOGLE_DRIVE_DESTINATION_LABEL,
-    };
+  async listExports(artifactId: string): Promise<DriveExportRecord[]> {
+    return (await this.journal.listForArtifact(artifactId)).map(publicRecord);
   }
+}
+
+const PENDING_STATES: ReadonlySet<DriveExportState> = new Set<DriveExportState>(["approved", "uploading", "unknown_remote_outcome"]);
+
+function isPending(record: DriveExportRecord): boolean {
+  return PENDING_STATES.has(record.state);
+}
+
+function isMismatchedCopy(record: DriveExportRecord): boolean {
+  return record.state === "failed" && record.errorCode === "verification_failed" && record.driveFileId !== null;
+}
+
+/** Strips journal-internal fields (the reserved id) before a record leaves the main process. */
+function publicRecord(record: DriveJournalRecord): DriveExportRecord {
+  const { reservedFileId: _reserved, ...rest } = record;
+  return rest;
+}
+
+function maybePublic(record: DriveJournalRecord | undefined): DriveExportRecord | null {
+  return record ? publicRecord(record) : null;
 }

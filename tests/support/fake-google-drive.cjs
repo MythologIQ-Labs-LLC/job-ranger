@@ -1,8 +1,15 @@
 // Deterministic in-process fake of the Google endpoints Job Ranger uses for
 // Drive export (#314): OAuth authorize/token/revoke, Drive about, files.list,
-// files.create (folder), multipart upload and files.get. Used as an injected
-// fetch by unit tests and as a loopback HTTP server by the Electron E2E. It
-// never talks to the real Google network.
+// files.generateIds, files.create (folder), multipart upload and files.get.
+// Used as an injected fetch by unit tests and as a loopback HTTP server by the
+// Electron E2E. It never talks to the real Google network.
+//
+// Modelled Google behaviour that matters for duplicate safety:
+// - files.list is eventually consistent: with `listLag` set, a new file stays
+//   invisible to searches for that many list calls; files.get is immediate.
+// - a create with an id that already exists fails with 409.
+// - revoking any token of a grant revokes the whole grant (all its tokens).
+// - files and grants belong to the account that signed in.
 const http = require("node:http");
 const { createHash, randomBytes } = require("node:crypto");
 
@@ -40,19 +47,29 @@ function createFakeGoogle(options = {}) {
   const state = {
     clientId: options.clientId ?? null,
     grantedScope: options.grantedScope ?? DRIVE_FILE_SCOPE,
+    /** The account the next sign-in completes as. */
+    account: { email: options.email ?? "drive-tester@example.test", permissionId: options.permissionId ?? "01234567890123456789" },
     codes: new Map(),
-    accessTokens: new Set(),
-    refreshTokens: new Set(),
+    /** token -> permissionId */
+    accessTokens: new Map(),
+    refreshTokens: new Map(),
     revoked: [],
     files: new Map(),
+    reservedIds: new Set(),
+    lateCommits: [],
     requests: [],
-    counts: { uploadPosts: 0, folderCreates: 0, tokenExchanges: 0, refreshes: 0, lists: 0, gets: 0 },
+    /** files.list calls that miss a newly created file (eventual consistency). */
+    listLag: 0,
+    counts: { uploadPosts: 0, folderCreates: 0, tokenExchanges: 0, refreshes: 0, lists: 0, gets: 0, generateIds: 0, conflicts: 0 },
     faults: {
       nextUpload: null,
       omitSha256: false,
       corruptNextUploadSize: false,
       corruptNextUploadSha256: false,
       refresh: null,
+      rotateRefreshToken: false,
+      omitRefreshToken: false,
+      tokenType: null,
       denyAuthorization: false,
       authorizeError: null,
       tamperChallenge: false,
@@ -60,19 +77,24 @@ function createFakeGoogle(options = {}) {
       token: null,
       lastAuthorizeParams: null,
     },
-    email: options.email ?? "drive-tester@example.test",
   };
   let nextId = 1;
 
-  function issueAccessToken() {
+  function issueAccessToken(permissionId) {
     const token = `fake-access-${base64Url(randomBytes(9))}`;
-    state.accessTokens.add(token);
+    state.accessTokens.set(token, permissionId);
     return token;
   }
 
-  function authorized(headers) {
+  function issueRefreshToken(permissionId) {
+    const token = `fake-refresh-${base64Url(randomBytes(9))}`;
+    state.refreshTokens.set(token, permissionId);
+    return token;
+  }
+
+  function caller(headers) {
     const header = headers.authorization ?? headers.Authorization ?? "";
-    return state.accessTokens.has(header.replace(/^Bearer /, ""));
+    return state.accessTokens.get(header.replace(/^Bearer /, "")) ?? null;
   }
 
   function publicFile(file, fields) {
@@ -85,6 +107,7 @@ function createFakeGoogle(options = {}) {
       sha256Checksum: state.faults.omitSha256 ? undefined : file.sha256,
       webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
       appProperties: file.appProperties,
+      trashed: file.trashed,
     };
     if (!fields) return view;
     const wanted = fields.replace(/^files\(|\)$/g, "").split(",");
@@ -100,10 +123,11 @@ function createFakeGoogle(options = {}) {
     return !mime || file.mimeType === mime[1];
   }
 
-  function createFile(metadata, bytes) {
-    const id = `fakefile${String(nextId++).padStart(4, "0")}`;
+  function createFile(metadata, bytes, owner) {
+    const id = metadata.id ?? `fakefile${String(nextId++).padStart(4, "0")}`;
     const file = {
       id,
+      owner,
       name: metadata.name,
       mimeType: metadata.mimeType,
       parents: metadata.parents ?? [],
@@ -113,9 +137,17 @@ function createFakeGoogle(options = {}) {
       md5: bytes ? createHash("md5").update(bytes).digest("hex") : undefined,
       sha256: bytes ? createHash("sha256").update(bytes).digest("hex") : undefined,
       trashed: false,
+      visibleAtList: state.counts.lists + state.listLag,
     };
     state.files.set(id, file);
     return file;
+  }
+
+  /** Commits uploads that Google accepted after the client had already given up. */
+  function commitLate() {
+    for (const pending of state.lateCommits.splice(0)) {
+      if (!state.files.has(pending.metadata.id)) createFile(pending.metadata, pending.bytes, pending.owner);
+    }
   }
 
   /** Returns { status, headers, body } or { fault: 'hang' | 'drop', ... } for the transport to act on. */
@@ -140,6 +172,7 @@ function createFakeGoogle(options = {}) {
           challenge: state.faults.tamperChallenge ? base64Url(createHash("sha256").update("other-verifier").digest()) : params.code_challenge,
           redirectUri: state.faults.redirectMismatch ? "http://127.0.0.1:1" : params.redirect_uri,
           clientId: params.client_id,
+          permissionId: state.account.permissionId,
         });
         redirect.searchParams.set("code", code);
         redirect.searchParams.set("scope", state.grantedScope);
@@ -155,6 +188,7 @@ function createFakeGoogle(options = {}) {
       if (tokenFault === "malformed") return { status: 200, headers: { "Content-Type": "application/json" }, body: Buffer.from("{not json") };
       if (tokenFault && tokenFault.startsWith("status:")) return json(Number(tokenFault.slice(7)), { error: "server_error" });
       if (state.clientId && values.get("client_id") !== state.clientId) return json(401, { error: "invalid_client" });
+      const tokenType = state.faults.tokenType ?? "Bearer";
       if (values.get("grant_type") === "authorization_code") {
         state.counts.tokenExchanges += 1;
         const entry = state.codes.get(values.get("code"));
@@ -164,16 +198,26 @@ function createFakeGoogle(options = {}) {
         if (!entry || entry.challenge !== challenge || entry.redirectUri !== values.get("redirect_uri")) {
           return json(400, { error: "invalid_grant", error_description: "Bad code or verifier" });
         }
-        const refreshToken = `fake-refresh-${base64Url(randomBytes(9))}`;
-        state.refreshTokens.add(refreshToken);
-        return json(200, { access_token: issueAccessToken(), expires_in: 3599, refresh_token: refreshToken, scope: state.grantedScope, token_type: "Bearer" });
+        return json(200, {
+          access_token: issueAccessToken(entry.permissionId),
+          expires_in: 3599,
+          ...(state.faults.omitRefreshToken ? {} : { refresh_token: issueRefreshToken(entry.permissionId) }),
+          scope: state.grantedScope,
+          token_type: tokenType,
+        });
       }
       if (values.get("grant_type") === "refresh_token") {
         state.counts.refreshes += 1;
-        if (state.faults.refresh === "invalid_grant" || !state.refreshTokens.has(values.get("refresh_token"))) {
+        const owner = state.refreshTokens.get(values.get("refresh_token"));
+        if (state.faults.refresh === "invalid_grant" || !owner) {
           return json(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." });
         }
-        return json(200, { access_token: issueAccessToken(), expires_in: 3599, scope: state.grantedScope, token_type: "Bearer" });
+        const rotated = state.faults.rotateRefreshToken ? { refresh_token: issueRefreshToken(owner) } : {};
+        if (state.faults.rotateRefreshToken) {
+          state.faults.rotateRefreshToken = false;
+          state.refreshTokens.delete(values.get("refresh_token"));
+        }
+        return json(200, { access_token: issueAccessToken(owner), expires_in: 3599, scope: state.grantedScope, token_type: tokenType, ...rotated });
       }
       return json(400, { error: "unsupported_grant_type" });
     }
@@ -181,33 +225,49 @@ function createFakeGoogle(options = {}) {
     if (method === "POST" && url.pathname === "/revoke") {
       const token = form().get("token");
       state.revoked.push(token);
-      state.refreshTokens.delete(token);
-      state.accessTokens.delete(token);
+      // Revoking any token ends the whole grant for that account.
+      const owner = state.refreshTokens.get(token) ?? state.accessTokens.get(token);
+      for (const map of [state.refreshTokens, state.accessTokens]) {
+        for (const [key, value] of map) if (key === token || (owner && value === owner)) map.delete(key);
+      }
       return { status: 200, headers: {}, body: Buffer.alloc(0) };
     }
 
+    let owner = null;
     if (url.pathname.startsWith("/drive/v3") || url.pathname.startsWith("/upload/drive/v3")) {
-      if (!authorized(headers)) return googleError(401, "authError", "Invalid Credentials");
+      owner = caller(headers);
+      if (!owner) return googleError(401, "authError", "Invalid Credentials");
     }
 
     if (method === "GET" && url.pathname === "/drive/v3/about") {
-      return json(200, { user: { emailAddress: state.email, displayName: "Drive Tester" } });
+      const email = owner === state.account.permissionId ? state.account.email : `${owner}@example.test`;
+      return json(200, { user: { emailAddress: email, displayName: "Drive Tester", permissionId: owner } });
+    }
+
+    if (method === "GET" && url.pathname === "/drive/v3/files/generateIds") {
+      state.counts.generateIds += 1;
+      const id = `reserved${base64Url(randomBytes(12))}`;
+      state.reservedIds.add(id);
+      return json(200, { kind: "drive#generatedIds", space: "drive", ids: [id] });
     }
 
     if (method === "GET" && url.pathname === "/drive/v3/files") {
       state.counts.lists += 1;
       const q = url.searchParams.get("q") ?? "";
-      const files = [...state.files.values()].filter((file) => matchesQuery(file, q));
+      const files = [...state.files.values()].filter(
+        (file) => file.owner === owner && state.counts.lists > file.visibleAtList && matchesQuery(file, q),
+      );
       return json(200, { files: files.map((file) => publicFile(file, url.searchParams.get("fields"))) });
     }
 
     if (method === "POST" && url.pathname === "/drive/v3/files") {
       state.counts.folderCreates += 1;
-      return json(200, publicFile(createFile(JSON.parse(body.toString("utf8")), null), "id"));
+      return json(200, publicFile(createFile(JSON.parse(body.toString("utf8")), null, owner), "id"));
     }
 
     if (method === "POST" && url.pathname === "/upload/drive/v3/files") {
       state.counts.uploadPosts += 1;
+      commitLate();
       const fault = state.faults.nextUpload;
       state.faults.nextUpload = null;
       if (fault && fault.startsWith("status:")) {
@@ -216,7 +276,19 @@ function createFakeGoogle(options = {}) {
       }
       if (fault === "reset-before-store") return { fault: "drop" };
       const { metadata, bytes } = parseMultipart(headers["content-type"] ?? headers["Content-Type"], body);
-      const file = createFile(metadata, bytes);
+      if (metadata.id && state.files.has(metadata.id)) {
+        state.counts.conflicts += 1;
+        return googleError(409, "duplicate", "A file already exists with the provided ID.");
+      }
+      if (metadata.id && !state.reservedIds.has(metadata.id)) return googleError(400, "invalid", "The provided file ID is not usable.");
+      const parent = metadata.parents?.[0];
+      if (parent && !state.files.has(parent)) return googleError(404, "notFound", "File not found: parent.");
+      if (fault === "commit-late") {
+        // Google accepts the request but commits it only after the client gave up.
+        state.lateCommits.push({ metadata, bytes, owner });
+        return { fault: "hang" };
+      }
+      const file = createFile(metadata, bytes, owner);
       if (state.faults.corruptNextUploadSize) {
         state.faults.corruptNextUploadSize = false;
         file.size += 1;
@@ -226,6 +298,8 @@ function createFakeGoogle(options = {}) {
         file.sha256 = "0".repeat(64);
       }
       if (fault === "hang" || fault === "drop") return { fault, file };
+      // Drive committed the file but the response reported a server error.
+      if (fault === "5xx-after-commit") return googleError(503, "backendError");
       if (fault === "malformed") return { status: 200, headers: { "Content-Type": "application/json" }, body: Buffer.from("{\"id\": ") };
       if (fault === "missing-id") return json(200, { name: file.name });
       return json(200, publicFile(file, url.searchParams.get("fields")));
@@ -235,7 +309,7 @@ function createFakeGoogle(options = {}) {
     if (method === "GET" && fileMatch) {
       state.counts.gets += 1;
       const file = state.files.get(fileMatch[1]);
-      return file ? json(200, publicFile(file, url.searchParams.get("fields"))) : googleError(404, "notFound");
+      return file && file.owner === owner ? json(200, publicFile(file, url.searchParams.get("fields"))) : googleError(404, "notFound");
     }
 
     return json(404, { error: "not_found" });
@@ -295,7 +369,19 @@ function createFakeGoogle(options = {}) {
     };
   }
 
-  return { state, handle, fetch: fakeFetch, listen, uploadedFiles: () => [...state.files.values()].filter((file) => file.bytes) };
+  /** Switches which Google account the next sign-in completes as. */
+  function signInAs(email, permissionId) {
+    state.account = { email, permissionId };
+  }
+
+  return {
+    state,
+    handle,
+    fetch: fakeFetch,
+    listen,
+    signInAs,
+    uploadedFiles: () => [...state.files.values()].filter((file) => file.bytes),
+  };
 }
 
 module.exports = { createFakeGoogle, DRIVE_FILE_SCOPE };
