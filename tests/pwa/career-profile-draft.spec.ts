@@ -55,3 +55,34 @@ test("an unedited form follows a profile saved elsewhere", async ({ page }) => {
   await refreshAndSettle(page);
   await expect(payBasis).toHaveValue(next);
 });
+
+test("a choice made the moment the form enables survives the first seed and keeps the stored profile", async ({ page }) => {
+  await openProfile(page);
+  await page.evaluate(async () => {
+    const api = window.electronAPI.career;
+    const current = await api.getProfile();
+    if (!current) throw new Error("Expected a stored profile");
+    await api.saveProfile({ ...current, fullName: "Avery Stored", homeLocation: "Columbus, OH", payBasis: "hourly" });
+  });
+  // Choose "per year" in the same task that enables the controls, before any
+  // effect that runs after paint. Seeding must neither drop that choice nor
+  // replace the stored name and area with an empty form that Save would persist.
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      const select = document.querySelector<HTMLSelectElement>('select[aria-label="Pay basis"]');
+      if (!select || select.disabled) return;
+      observer.disconnect();
+      const setValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!;
+      setValue.call(select, "annual");
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    observer.observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ["disabled"] });
+  });
+  await page.reload();
+  await waitForRuntime(page);
+  const payBasis = page.getByRole("combobox", { name: "Pay basis", exact: true });
+  await expect(payBasis).toBeEnabled();
+  await expect(payBasis).toHaveValue("annual");
+  await expect(page.getByLabel("Your name")).toHaveValue("Avery Stored");
+  await expect(page.getByPlaceholder("City, state, or region")).toHaveValue("Columbus, OH");
+});
