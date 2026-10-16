@@ -77,7 +77,9 @@ jobs:
           done
           node -e "const a=require('./site/build-info.json'), b=require('./artifact/web-build-info.json'); if (a.buildId !== b.buildId) { throw new Error('build identity mismatch'); } console.log('Deploying build', a.buildId, 'from commit', a.commit)"
           # The production web origin holds real workspaces: only the standard flavor may be deployed here.
-          node -e "const a=require('./site/build-info.json'), b=require('./artifact/web-build-info.json'); if (a.flavor !== 'standard' || b.flavor !== 'standard') { throw new Error('refusing to deploy a non-standard (' + a.flavor + '/' + b.flavor + ') PWA flavor to the production web origin'); }"
+          # A release built before flavors existed has no flavor field; it counts as standard only when its
+          # build ID has no .demo suffix (the same legacy rule as scripts/verify-studio-handoff.mjs).
+          node -e "const a=require('./site/build-info.json'), b=require('./artifact/web-build-info.json'); const standard = (x) => x.flavor === 'standard' || (x.flavor === undefined && typeof x.buildId === 'string' && !x.buildId.endsWith('.demo')); if (!standard(a) || !standard(b)) { throw new Error('refusing to deploy a non-standard (' + a.flavor + '/' + b.flavor + ') PWA flavor to the production web origin'); }"
           expected=$(node -p "require('./site/build-info.json').buildId")
           node scripts/verify-studio-handoff.mjs --site site --build-id "$expected" --flavor standard
 

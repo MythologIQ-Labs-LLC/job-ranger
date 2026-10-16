@@ -140,6 +140,27 @@ assert.deepEqual(await decide(demoWorkspace({ seeded: false })), { action: "rese
   assert.deepEqual(await decide(fs, SESSION_A, T0 + 4 * HOUR), { action: "reset", reason: "new-session" });
 }
 
+// --- an interrupted wipe never strands the demo: the claim is written first and the sentinel is
+// never removed, so whatever survives is still recognised as the demo's own and reset next time.
+for (let failAt = 1; failAt <= 2; failAt += 1) {
+  const fs = demoWorkspace();
+  fs.store.set(`${USER}/data/jobscout.sqlite3`, new Uint8Array([1]));
+  fs.store.set(`${USER}/data/artifacts/resume.pdf`, new Uint8Array([2]));
+  fs.store.set(`${IO}/inbox/x/file.pdf`, new Uint8Array([3]));
+  const rm = fs.rm.bind(fs);
+  let calls = 0;
+  fs.rm = async (target, options) => {
+    calls += 1;
+    if (calls === failAt) throw Object.assign(new Error("interrupted"), { code: "EIO" });
+    return rm(target, options);
+  };
+  const decision = await decide(fs, SESSION_B, T0 + HOUR);
+  await assert.rejects(resetDemoWorkspace(fs, { userDataDirectory: USER, ioDirectory: IO, sessionId: SESSION_B, now: T0 + HOUR }, decision));
+  fs.rm = rm;
+  assert.ok(fs.store.has(`${USER}/${DEMO_SENTINEL_FILE}`), `sentinel survives an interruption at rm #${failAt}`);
+  assert.deepEqual(await decide(fs, SESSION_B, T0 + 2 * HOUR), { action: "reset", reason: "incomplete-seed" });
+}
+
 // --- activity refreshes lastActiveAt at a modest cadence
 assert.equal(shouldRecordDemoActivity(T0, T0 + DEMO_ACTIVITY_WRITE_INTERVAL_MS - 1), false);
 assert.equal(shouldRecordDemoActivity(T0, T0 + DEMO_ACTIVITY_WRITE_INTERVAL_MS), true);

@@ -58,8 +58,9 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
         <p className="text-sm leading-6" data-testid="pwa-boot-error">{state.message}</p>
         <p className="text-sm leading-6">
           This browser already has a Job Ranger workspace for this address that was not created by the demo, so the demo
-          has not opened, changed or erased it. The demo must be served from its own address. Open the full Job Ranger
-          app at this address to use that workspace.
+          has not opened, changed or erased it. The demo must be served from its own address. If that workspace is
+          yours, open the full Job Ranger app at the address where you created it; if it is left over from an earlier
+          demo, clear this site&apos;s data in your browser settings and reload.
         </p>
       </BootScreen>
     );

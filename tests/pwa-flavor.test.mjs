@@ -203,7 +203,18 @@ const deploy = (await readFile(path.join(root, ".github/workflows/deploy-pwa.yml
 const release = (await readFile(path.join(root, ".github/workflows/release-build.yml"), "utf8")).replace(/\r\n/g, "\n");
 assert.doesNotMatch(deploy, /job-ranger-web-\*/);
 assert.equal((deploy.match(/job-ranger-web-v\*\.zip/g) ?? []).length, 3);
-assert.match(deploy, /a\.flavor !== 'standard' \|\| b\.flavor !== 'standard'/, "production deploy asserts the standard flavor");
+assert.match(deploy, /const standard = \(x\) => x\.flavor === 'standard' \|\| \(x\.flavor === undefined && typeof x\.buildId === 'string' && !x\.buildId\.endsWith\('\.demo'\)\); if \(!standard\(a\) \|\| !standard\(b\)\)/, "production deploy asserts the standard flavor (legacy builds without a flavor only when not .demo)");
+{
+  // Exercise the exact deploy guard expression against standard, legacy, demo and forged inputs.
+  const expression = deploy.match(/const standard = (\(x\) => [^;]+);/)[1];
+  const standard = eval(expression);
+  assert.equal(standard({ flavor: "standard", buildId: "1.3.0+abc" }), true);
+  assert.equal(standard({ buildId: "1.2.0+abc" }), true, "legacy pre-flavor release can be redeployed");
+  assert.equal(standard({ flavor: "demo", buildId: "1.3.0+abc.demo" }), false);
+  assert.equal(standard({ buildId: "1.3.0+abc.demo" }), false, "a legacy-looking demo build is refused");
+  assert.equal(standard({ flavor: "standard ", buildId: "1.3.0+abc" }), false);
+  assert.equal(standard({}), false);
+}
 assert.match(deploy, /verify-studio-handoff\.mjs --site site --build-id "\$expected" --flavor standard/);
 assert.match(deploy, /--build-info-sha256 "\$approved_digest" \\\n\s+--flavor standard/);
 assert.doesNotMatch(release, /job-ranger-web-\*|build\/trust\/web-\*/);

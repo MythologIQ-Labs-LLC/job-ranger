@@ -50,7 +50,7 @@ A separate **demo** build of the web app exists for trying Job Ranger without en
 - A banner on every page says it is a demo. Every sample listing carries a **Demo listing — fictional, not a real opening** label; opening or applying to one shows an explanation instead of a website.
 - What you enter stays in this browser on the demo site, even after you close the tab, until a new demo session starts (opening the demo in a new tab or window, or after a browser restart that does not restore your tabs) or the demo sits unused for 8 hours. Then it is replaced with fresh sample data. Reloading the page keeps your changes. To remove them right away, use **Reset demo** or clear the site's data.
 - Exported resume PDFs and JSON Resume files contain the fictional sample data and have no demo marker. Do not submit them as a real application.
-- If the demo's address already holds a real (non-demo) Job Ranger workspace, the demo refuses to start and leaves it untouched.
+- If the demo's address already holds a real (non-demo) Job Ranger workspace, the demo refuses to start and leaves it untouched. If you tried a pre-release demo build locally before this protection existed, its leftover sample data is also refused once: clear the site's data for http://localhost:4175 and reload.
 - Public job-board sources you add yourself are real openings, read directly by your browser like in the full web app.
 - Not included: monitoring or notifications while the browser is closed, AI inference and MCP connections, desktop-only features, Google Drive, sync and accounts. Do not keep real career records in the demo.
 

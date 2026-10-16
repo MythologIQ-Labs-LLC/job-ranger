@@ -186,11 +186,16 @@ export async function resetDemoWorkspace(
   decision: DemoStartupDecision,
 ): Promise<DemoWorkspaceSentinel> {
   if (decision.action !== "reset") throw new Error("Refusing to erase a workspace without a reset decision");
-  for (const directory of [options.userDataDirectory, options.ioDirectory]) {
-    await fs.rm(directory, { recursive: true, force: true });
-  }
+  // Claim first, erase second, and never remove the sentinel itself: OPFS recursive removal is not
+  // atomic, so an interrupted wipe must still leave a demo sentinel (seeded:false) behind. The next
+  // start then resets the half-erased workspace instead of refusing it as "not a demo".
   const claim = createDemoSentinel({ sessionId: options.sessionId, now: options.now, seeded: false });
   await writeDemoSentinel(fs, options.userDataDirectory, claim);
+  for (const name of await fs.readdir(options.userDataDirectory)) {
+    if (name === DEMO_SENTINEL_FILE) continue;
+    await fs.rm(joinPath(options.userDataDirectory, name), { recursive: true, force: true });
+  }
+  await fs.rm(options.ioDirectory, { recursive: true, force: true });
   return claim;
 }
 
