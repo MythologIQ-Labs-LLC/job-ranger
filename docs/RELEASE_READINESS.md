@@ -209,6 +209,16 @@ macOS evidence must include:
 
 Use `docs/CLEAN_MACHINE_TRUST_VALIDATION.md` and the platform verifier scripts. Do not globally weaken platform security to force a passing result.
 
+### Build-only candidates (unpublished, before publication)
+
+A candidate can be built and smoke-tested on the release runner without creating or changing a GitHub release:
+
+```bash
+gh workflow run release-build.yml -f tag=<branch, tag or commit SHA> -f platform=windows -f publish=false
+```
+
+With `publish=false` (the default for manual runs) the workflow runs the same build, packaged SQLite check, packaged smoke, trust verification and manifest steps, but skips release creation, asset upload, provenance attestation and the Store/web publish jobs. Signing and notarization credentials are withheld, so a build-only candidate is always unsigned and its manifest is always `testerOnly`; checkout does not persist the job token. The installer and its evidence are kept as a workflow artifact for 7 days and stay `testerOnly`. This is not private in an absolute sense: in this public repository any signed-in GitHub user can download a run's artifacts. It is not announced, listed as a release or attested; for a strictly local candidate, build on a Windows machine with `npm run electron:build:win` and run the same smoke and trust scripts. Do not push a `v*` tag for a build-only candidate: a tag push always publishes.
+
 ### 11. Release publication
 
 - [ ] Release title and notes describe only behavior present in the tag.
