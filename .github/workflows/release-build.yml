@@ -468,7 +468,7 @@ jobs:
       - name: Attest build provenance (web build)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: web/release/job-ranger-web-*.zip
+          subject-path: web/release/job-ranger-web-v*.zip
 
       - name: Upload web build and evidence
         shell: bash
@@ -480,4 +480,4 @@ jobs:
           set -euo pipefail
           tag="$RELEASE_TAG"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Job Ranger $tag" --generate-notes --prerelease
-          gh release upload "$tag" web/release/job-ranger-web-*.zip web/build/trust/web-* --clobber
+          gh release upload "$tag" web/release/job-ranger-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber

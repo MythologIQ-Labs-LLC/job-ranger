@@ -4,6 +4,7 @@ import type { RuntimeInfo } from "../shared/runtime";
 import type { LegacyInstallStatus } from "../shared/legacy-install";
 import { getDesktopApi } from "../services/api";
 import { repairAppShell } from "../pwa/shell-repair";
+import { IS_DEMO_FLAVOR } from "../demo/flavor";
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "unknown";
@@ -138,7 +139,7 @@ export function RuntimePanel() {
             >
               Repair app shell (keeps your data)
             </button>
-            {info.storage.persisted !== true && (
+            {info.storage.persisted !== true && !IS_DEMO_FLAVOR && (
               <button type="button" className="secondary-button" onClick={() => void requestPersistence()}>
                 <HardDrive className="h-4 w-4" />
                 Request persistent storage

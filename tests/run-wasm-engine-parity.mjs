@@ -26,6 +26,7 @@ const suites = [
   "v1-1-2-upgrade-smoke-test",
   "sql-text-readback.test",
   "nul-text.test",
+  "demo-seed-smoke-test",
 ];
 
 let failed = 0;

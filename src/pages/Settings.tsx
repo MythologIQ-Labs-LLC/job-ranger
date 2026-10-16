@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Database, Save, Settings2, SwatchBook } from "lucide-react";
 import { BackupRestorePanel } from "../components/BackupRestorePanel";
+import { DemoLimitations } from "../components/DemoLimitations";
 import { RuntimePanel } from "../components/RuntimePanel";
 import { useRuntimeInfo } from "../services/runtime";
 import { JsonResumePanel } from "../components/JsonResumePanel";
@@ -88,6 +89,7 @@ export function Settings() {
           Themes are functional, not cosmetic flourishes. Pick the one that makes your review rhythm calmer, then tune the runtime so scrapes behave the way you expect.
         </p>
       </section>
+      <DemoLimitations />
 
       <div className="mt-8 space-y-8">
         <section className="grid grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.1fr]">

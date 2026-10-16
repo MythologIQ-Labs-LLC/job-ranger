@@ -4,7 +4,9 @@
  */
 import type { RuntimeInfo } from "../../shared/runtime";
 import { validateExternalUrl } from "../../../electron/src/validators/common.cjs";
+import { isDemoListing } from "../../shared/demo-listing";
 import type {
+  DemoWorkspaceStartup,
   DialogPayload,
   DownloadPayload,
   PageToWorkerMessage,
@@ -15,7 +17,7 @@ import type {
 export type RuntimeBootState =
   | { status: "starting" }
   | { status: "waiting-for-lock" }
-  | { status: "ready"; info: RuntimeInfo }
+  | { status: "ready"; info: RuntimeInfo; demo?: DemoWorkspaceStartup }
   | { status: "failed"; code: WorkerFailureCode; message: string };
 
 interface PendingCall {
@@ -128,7 +130,9 @@ export class WebRuntimeClient {
         this.setState({ status: "waiting-for-lock" });
         return;
       case "ready":
-        this.setState({ status: "ready", info: message.info });
+        this.setState(
+          message.demo ? { status: "ready", info: message.info, demo: message.demo } : { status: "ready", info: message.info },
+        );
         return;
       case "fatal":
         this.setState({ status: "failed", code: message.code, message: message.message });
@@ -161,6 +165,9 @@ export class WebRuntimeClient {
       case "open-external": {
         // Validated again on the page side: defense in depth for navigation.
         const url = validateExternalUrl(message.url);
+        // Fictional demo listings live on a reserved, non-resolving host; the UI explains
+        // that instead of navigating, and this boundary never opens one either.
+        if (isDemoListing(url)) return;
         window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
