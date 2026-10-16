@@ -81,3 +81,6 @@ playwright-report/
 # qor:seed -- do not edit between markers
 .qor/session/
 # qor:seed/end
+
+# Generated Google Drive Desktop OAuth client config (#314); never commit
+/build/google-oauth/

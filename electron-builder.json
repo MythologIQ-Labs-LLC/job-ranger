@@ -30,6 +30,11 @@
                                       {
                                         "from": "build/sqlite/sqlite3.exe",
                                         "to": "sqlite3.exe"
+                                      },
+                                      {
+                                        "from": "build/google-oauth",
+                                        "to": "google-oauth",
+                                        "filter": ["google-desktop-client.json"]
                                       }
                                   ]
             },
@@ -51,6 +56,13 @@
                                }
                            ],
                 "category":  "public.app-category.productivity",
+                "extraResources": [
+                                      {
+                                        "from": "build/google-oauth",
+                                        "to": "google-oauth",
+                                        "filter": ["google-desktop-client.json"]
+                                      }
+                                  ],
                 "icon":  "build/icon.icns",
                 "artifactName":  "${productName}-v${version}-macos-${arch}.${ext}",
                 "hardenedRuntime":  true,
