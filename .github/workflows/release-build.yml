@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to build and upload, for example v1.2.0-rc.4"
+        description: "Ref to build. With publish on: an existing release tag such as v1.3.0-rc.1. With publish off: any branch, tag or commit SHA"
         required: true
         type: string
+      publish:
+        description: "Create or update the public GitHub release and upload the assets. Off builds a private, tester-only candidate kept as a workflow artifact"
+        required: true
+        default: false
+        type: boolean
       platform:
         description: "Which release assets to build (macOS native builds are historical/manual only)"
         required: true
@@ -24,6 +29,12 @@ on:
 
 permissions:
   contents: write
+
+env:
+  # A pushed v* tag always publishes. A manual run publishes only when the
+  # dispatcher turns publish on; otherwise nothing reaches a GitHub release,
+  # the attestation log or the Store, and the build stays a workflow artifact.
+  PUBLISH_RELEASE: ${{ (github.event_name == 'push' || inputs.publish) && 'true' || 'false' }}
 
 # Distribution architecture (docs/design/DISTRIBUTION_ARCHITECTURE.md):
 # - supported channels are the Microsoft Store package and the web/PWA build;
@@ -161,11 +172,13 @@ jobs:
             --smoke-evidence windows-package-smoke.json
 
       - name: Attest build provenance (direct-download installer)
+        if: env.PUBLISH_RELEASE == 'true'
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: release/Job*windows*.exe
 
       - name: Ensure GitHub release exists
+        if: env.PUBLISH_RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -187,6 +200,7 @@ jobs:
           fi
 
       - name: Upload release assets and validation evidence
+        if: env.PUBLISH_RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -200,6 +214,21 @@ jobs:
             build/trust/windows-SHA256SUMS.txt \
             build/trust/windows-release-manifest.json \
             --clobber
+
+      - name: Keep build-only candidate as a workflow artifact
+        if: env.PUBLISH_RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-ranger-windows-build-only-${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/Job*windows*.exe
+            release/Job*windows*.exe.blockmap
+            build/trust/windows-signing.json
+            build/trust/windows-package-smoke.json
+            build/trust/windows-SHA256SUMS.txt
+            build/trust/windows-release-manifest.json
 
   build-macos:
     # Historical/manual only: native macOS distribution is not part of the
@@ -316,6 +345,7 @@ jobs:
             --smoke-evidence macos-package-smoke.json
 
       - name: Ensure GitHub release exists
+        if: env.PUBLISH_RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -337,6 +367,7 @@ jobs:
           fi
 
       - name: Upload release assets and validation evidence
+        if: env.PUBLISH_RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -350,6 +381,21 @@ jobs:
             build/trust/macos-release-manifest.json \
             --clobber
 
+      - name: Keep build-only candidate as a workflow artifact
+        if: env.PUBLISH_RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-ranger-macos-build-only-${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/Job*macos*.dmg
+            release/Job*macos*.zip
+            build/trust/macos-signing.txt
+            build/trust/macos-package-smoke.json
+            build/trust/macos-SHA256SUMS.txt
+            build/trust/macos-release-manifest.json
+
   store-package:
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows-store'
     uses: ./.github/workflows/windows-store-package.yml
@@ -359,6 +405,7 @@ jobs:
 
   publish-store-package:
     needs: store-package
+    if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -396,6 +443,7 @@ jobs:
 
   publish-web:
     needs: web
+    if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write

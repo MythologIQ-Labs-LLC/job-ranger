@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -90,6 +91,25 @@ async function run() {
     restore("APPLE_ID_PASSWORD", saved.legacyPassword);
     restore("APPLE_TEAM_ID", saved.team);
   }
+
+  // A manual release build publishes nothing unless the dispatcher turns publish on: every step that
+  // creates or uploads to a GitHub release, or writes a public provenance attestation, is gated.
+  const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/release-build.yml"), "utf8").replace(/\r\n/g, "\n");
+  assert.match(workflow, /\n      publish:\n(?:        .*\n)*?        default: false\n/);
+  assert.match(workflow, /\n  PUBLISH_RELEASE: \$\{\{ \(github\.event_name == 'push' \|\| inputs\.publish\) && 'true' \|\| 'false' \}\}\n/);
+  const jobs = workflow.split(/\n(?=  [a-z][\w-]*:\n)/);
+  let gatedSteps = 0;
+  for (const job of jobs) {
+    const jobGated = /^  [\w-]+:\n    needs: [\w-]+\n    if: github\.event_name == 'push' \|\| inputs\.publish\n/.test(job);
+    for (const step of job.split(/\n(?=      - name: )/).slice(1)) {
+      if (/gh release (create|upload)|attest-build-provenance/.test(step)) {
+        assert.ok(jobGated || step.includes("\n        if: env.PUBLISH_RELEASE == 'true'\n"), `ungated publishing step:\n${step.slice(0, 200)}`);
+        gatedSteps += 1;
+      }
+    }
+  }
+  assert.ok(gatedSteps >= 9, `expected to find every publishing step, found ${gatedSteps}`);
+  assert.equal((workflow.match(/name: Keep build-only candidate as a workflow artifact\n        if: env\.PUBLISH_RELEASE != 'true'\n/g) || []).length, 2);
 
   console.log("Distribution trust configuration tests passed!");
 }
