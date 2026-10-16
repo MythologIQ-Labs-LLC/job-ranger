@@ -49,7 +49,15 @@ export async function initializeDriveIpc(options: DriveIpcOptions): Promise<Driv
     allowedOrigins: endpoints.allowedOrigins,
     defaultTimeoutMs: testTimeoutMs ?? 30_000,
   });
-  const store = new DriveCredentialStore(options.userDataDirectory, safeStorage);
+  const store = new DriveCredentialStore(options.userDataDirectory, {
+    // On Linux without a keyring, safeStorage falls back to a hard-coded key
+    // ("basic_text"); treat that as no encryption and keep the token in memory.
+    isEncryptionAvailable: () =>
+      safeStorage.isEncryptionAvailable() &&
+      !(process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text"),
+    encryptString: (plainText) => safeStorage.encryptString(plainText),
+    decryptString: (encrypted) => safeStorage.decryptString(encrypted),
+  });
   const auth = new GoogleDesktopAuth({
     client: clientConfig.configured ? clientConfig.client : null,
     endpoints,
