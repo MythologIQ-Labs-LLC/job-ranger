@@ -1,4 +1,7 @@
-# Job Ranger v1.3.0 Release Candidate Evidence
+# Job Ranger v1.3.0 Release Candidate Evidence (historical native candidate)
+
+> **SUPERSEDED release scope (2026-10-16).** This October 6 candidate and its native Store/installer checklists reflect an obsolete product distribution decision. See [Canonical Architecture Index](../ARCHITECTURE_INDEX.md), ARCH-001–003. Future product distribution is PWA-only; this document is historical validation evidence, **not** an active native v1.3.0 release gate. Do not rename historical findings as completed web acceptance.
+
 
 **Status:** candidate preparation; no packaged candidate tag yet
 **Target version:** v1.3.0

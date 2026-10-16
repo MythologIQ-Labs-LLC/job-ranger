@@ -2,7 +2,7 @@
 
 Job Ranger is a local-first application for discovering, evaluating, preparing for, and tracking job opportunities.
 
-This guide describes the **stable published release (v1.2.0)**. It also explains how the newer Microsoft Store app and web app behave. Both are implemented in the repository but are **not yet published**: the Store app awaits certification, and the web app has no public site yet but can be self-hosted on your own computer (see below).
+This guide includes historical instructions for the **published v1.2.0 native installer** and newer web runtime notes. **Current delivery architecture is PWA-only**, governed by [the canonical architecture index](./docs/ARCHITECTURE_INDEX.md). Electron/Store packaging is retained for engineering testing and historical compatibility, **not** an upcoming supported user-facing release. No hosted PWA is yet verified as published.
 
 ## Which version am I using?
 
@@ -14,13 +14,13 @@ The latest stable public release is **v1.2.0**, available as direct-download ins
 
 v1.2.0 installers are unsigned. See the trust notes in the README and [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md).
 
-### Newer ways to run Job Ranger (not yet published)
+### Runtime availability and historical test paths
 
 | Way | Status | Where your data lives |
 | --- | --- | --- |
-| **Microsoft Store app** (Windows) | Package built and validated; Store certification pending | In the Store app's private storage on this PC |
+| **Microsoft Store package** (engineering/historical only) | Package tests may exist; no Store release is planned | In the Store app's private storage on this PC |
 | **Web app** (Chrome or Edge on Windows, macOS, or Linux; Firefox and Safari are not yet validated) | No public site yet. You can self-host it locally at `http://localhost:4174`; see *Running the web app locally* below | In this browser profile's private storage for that exact address. Nothing is uploaded |
-| Direct-download installers | Advanced/test use going forward | In your user profile's Job Ranger folder |
+| Previously published installers | Historical v1.2.0 artifacts; future native distribution discontinued | In your user profile's Job Ranger folder |
 
 Each installation keeps its own data. Move data between them with a portable `.jobranger` backup (see *Backup and restore*). Settings → **This installation** shows which one you are using, its version and build, and where its data lives.
 

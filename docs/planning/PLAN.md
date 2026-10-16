@@ -1,5 +1,8 @@
 # Job Ranger Roadmap
 
+> **ARCHITECTURE SUPERSESSION (2026-10-16):** [Canonical Architecture Index](../ARCHITECTURE_INDEX.md) is authoritative. This roadmap is a dated 2026-10-10 snapshot; its Store-native mainstream, signing/installer and localhost-only rollout plans are **superseded**. Current delivery is PWA-only, including the bounded Studio-linked web demo. Electron remains a test harness. Historical checklists below do not create release obligations.
+
+
 **Current as of:** 2026-10-10 (source checkpoint `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 This is the active roadmap. Historical phase/remediation plans remain implementation provenance only.
