@@ -9,6 +9,8 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { ResumeTailoringPanel } from "../components/ResumeTailoringPanel";
+import { DriveExportAction } from "../components/DriveExportAction";
+import { useDriveStatus } from "../services/drive";
 import { useCareerProfile } from "../career/storage";
 import { getDesktopApi } from "../services/api";
 import { useRuntimeInfo } from "../services/runtime";
@@ -70,6 +72,7 @@ export function Resume() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [diff, setDiff] = useState<ResumeVersionDiff | null>(null);
+  const drive = useDriveStatus();
 
   const confirmedEvidence = useMemo(() => evidence.filter(confirmed), [evidence]);
   const application = useMemo(
@@ -353,7 +356,7 @@ export function Resume() {
               </div>
 
               {active.artifacts.length > 0 && <div className="mt-6"><h3 className="font-semibold">Exported versions</h3><div className="mt-3 space-y-2">{active.artifacts.map((artifact) => (
-                <div key={artifact.id} className="panel panel-muted flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 text-sm"><div><strong>PDF v{artifact.version}</strong><span className="ml-2 text-[var(--color-text-muted)]">{artifact.pageCount ?? "?"} page{artifact.pageCount === 1 ? "" : "s"} · {artifactGateLabel(artifact)}</span></div><button type="button" className="surface-link-button font-semibold text-[var(--color-primary)]" onClick={() => void getDesktopApi().showItemInFolder(artifact.managedPath)}>{revealLabel}</button></div>
+                <div key={artifact.id} data-testid={`resume-artifact-v${artifact.version}`} className="panel panel-muted flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 text-sm"><div><strong>PDF v{artifact.version}</strong><span className="ml-2 text-[var(--color-text-muted)]">{artifact.pageCount ?? "?"} page{artifact.pageCount === 1 ? "" : "s"} · {artifactGateLabel(artifact)}</span></div><div className="flex flex-wrap items-center gap-4"><button type="button" className="surface-link-button font-semibold text-[var(--color-primary)]" onClick={() => void getDesktopApi().showItemInFolder(artifact.managedPath)}>{revealLabel}</button>{drive.status && <DriveExportAction artifact={artifact} status={drive.status} onStatusChange={drive.refresh} />}</div></div>
               ))}</div></div>}
 
               {diff && <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]"><p className="font-semibold text-[var(--color-text-primary)]">Latest version difference</p><p className="mt-2">{diff.addedStatements.length} added · {diff.removedStatements.length} removed · {diff.unchangedStatements.length} unchanged</p></div>}
