@@ -158,13 +158,14 @@ export class FsBytes extends Uint8Array {
 }
 
 type ChunkSource = Iterable<Uint8Array> | AsyncIterable<Uint8Array>;
-type WriteData = string | Uint8Array | ArrayBuffer | ChunkSource;
+type WriteData = string | ArrayBufferView | ArrayBuffer | ChunkSource;
 
-/** Like Node, writeFile also takes an (async) iterable of byte chunks. */
+/** Like Node, writeFile also takes an (async) iterable of byte chunks. Typed arrays are bytes. */
 function isChunkSource(data: WriteData): data is ChunkSource {
   return (
+    data !== null &&
     typeof data === "object" &&
-    !(data instanceof Uint8Array) &&
+    !ArrayBuffer.isView(data) &&
     !(data instanceof ArrayBuffer) &&
     (Symbol.asyncIterator in data || Symbol.iterator in data)
   );
@@ -183,9 +184,10 @@ async function* sourceChunks(data: ChunkSource): AsyncGenerator<Uint8Array> {
   }
 }
 
-function toBytes(data: string | Uint8Array | ArrayBuffer): Uint8Array {
+function toBytes(data: string | ArrayBufferView | ArrayBuffer): Uint8Array {
   if (typeof data === "string") return new TextEncoder().encode(data);
   if (data instanceof Uint8Array) return data;
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return new Uint8Array(data);
 }
 
@@ -314,9 +316,15 @@ async function rm(target: string, options?: { recursive?: boolean; force?: boole
   }
 }
 
+/**
+ * Streams the source, so copies (and rename, which copies) never hold a whole file in memory.
+ * The source is checked first so a missing source creates nothing at the destination.
+ */
 async function copyFile(source: string, destination: string): Promise<void> {
-  const bytes = (await readFile(source)) as Uint8Array;
-  await writeFile(destination, bytes);
+  const entry = await lookup(source);
+  if (!entry) throw fsError("ENOENT", `no such file or directory, copyfile '${source}'`);
+  if (entry.kind !== "file") throw fsError("EISDIR", `illegal operation on a directory, copyfile '${source}'`);
+  await writeFile(destination, createReadStream(source));
 }
 
 async function copyTree(source: string, destination: string): Promise<void> {

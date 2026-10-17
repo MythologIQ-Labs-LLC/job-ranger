@@ -6,6 +6,7 @@
 // Reports the peak rise in process.memoryUsage().arrayBuffers (Buffer/ArrayBuffer memory, where
 // file and archive bytes live) and in RSS above the level measured just before packing. This is
 // the shared core running on Node (the desktop harness); it is not a browser heap measurement.
+const { createHash } = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
@@ -24,19 +25,23 @@ async function makeBundle(root) {
     files.push([`artifacts/synthetic-${index}.bin`, Math.min(16, left)]);
   }
   const block = Buffer.alloc(MiB);
+  const records = [];
   for (const [relative, sizeMiB] of files) {
     const target = path.join(bundle, ...relative.split('/'));
     await fs.mkdir(path.dirname(target), { recursive: true });
     const handle = await fs.open(target, 'w');
+    const hash = createHash('sha256');
     for (let index = 0; index < sizeMiB; index += 1) {
       block.fill(index + relative.length);
+      hash.update(block);
       await handle.write(block);
     }
     await handle.close();
+    records.push({ path: relative, bytes: sizeMiB * MiB, sha256: hash.digest('hex') });
   }
   await fs.writeFile(path.join(bundle, 'manifest.json'), JSON.stringify({
-    database: { path: files[0][0] },
-    artifactFiles: files.slice(1).map(([relative]) => ({ path: relative })),
+    database: records[0],
+    artifactFiles: records.slice(1),
   }));
   return bundle;
 }

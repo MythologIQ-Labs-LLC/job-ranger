@@ -20,13 +20,14 @@ function notFound() {
 }
 
 // The adapter caches the OPFS root, so one fake root is shared and its state reset per test.
-const state = { committed: new Map(), log: { writes: [], closed: 0, aborted: 0 }, failWriteAt: 0 };
+const state = { committed: new Map(), log: { writes: [], closed: 0, aborted: 0 }, failWriteAt: 0, refuseWholeReads: false };
 
 /** Resets the fake OPFS root: writables commit on close and discard on abort. */
-function fakeOpfs({ failWriteAt = 0 } = {}) {
+function fakeOpfs({ failWriteAt = 0, refuseWholeReads = false } = {}) {
   state.committed = new Map();
   state.log = { writes: [], closed: 0, aborted: 0 };
   state.failWriteAt = failWriteAt;
+  state.refuseWholeReads = refuseWholeReads;
   return state;
 }
 
@@ -53,13 +54,24 @@ const fileHandle = (name) => ({
   },
   async getFile() {
     const bytes = state.committed.get(name) ?? Buffer.alloc(0);
-    return { size: bytes.byteLength, lastModified: 0, arrayBuffer: async () => bytes.buffer };
+    return {
+      size: bytes.byteLength,
+      lastModified: 0,
+      async arrayBuffer() {
+        if (state.refuseWholeReads) throw new Error(`whole-file read of ${name}`);
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      },
+      stream: () => new Blob([bytes]).stream(),
+    };
   },
 });
 
 const root = {
   kind: "directory",
   async getDirectoryHandle() { throw notFound(); },
+  async removeEntry(name) {
+    if (!state.committed.delete(name)) throw notFound();
+  },
   async getFileHandle(name, options) {
     if (!state.committed.has(name)) {
       if (!options?.create) throw notFound();
@@ -138,4 +150,33 @@ test("quota exhaustion mid-stream aborts, stops reading the source and reports s
   assert.equal(log.closed, 0);
   assert.equal(committed.get("archive.jobranger.partial"), undefined);
   assert.equal(storageFailures.length, before + 1);
+});
+
+test("other typed arrays are written as their bytes, not iterated as numbers", async () => {
+  const { committed, log } = fakeOpfs();
+  const words = new Uint16Array([0x0102, 0x0304]);
+  await fs.writeFile("/words.bin", words);
+  assert.deepEqual(log.writes, [4]);
+  assert.deepEqual(new Uint8Array(committed.get("words.bin")), new Uint8Array(words.buffer));
+});
+
+test("rename (a copy on OPFS) streams the file instead of reading it whole", async () => {
+  const { OPFS_READ_CHUNK_BYTES } = await import("../src/pwa/adapters/opfs-chunks.ts");
+  const { committed, log } = fakeOpfs();
+  const bytes = new Uint8Array(OPFS_READ_CHUNK_BYTES * 2 + 9);
+  for (let index = 0; index < bytes.length; index += 1) bytes[index] = index % 251;
+  await fs.writeFile("/backup.jobranger.partial", bytes);
+  state.refuseWholeReads = true;
+  log.writes = [];
+  await fs.rename("/backup.jobranger.partial", "/backup.jobranger");
+  assert.ok(log.writes.length > 1, "copied in more than one write");
+  assert.ok(Math.max(...log.writes) <= OPFS_READ_CHUNK_BYTES);
+  assert.deepEqual(new Uint8Array(committed.get("backup.jobranger")), bytes);
+  assert.equal(committed.has("backup.jobranger.partial"), false);
+});
+
+test("copying a missing file fails without creating the destination", async () => {
+  const { committed } = fakeOpfs();
+  await assert.rejects(fs.copyFile("/missing.bin", "/copy.bin"), (error) => error.code === "ENOENT");
+  assert.equal(committed.has("copy.bin"), false);
 });

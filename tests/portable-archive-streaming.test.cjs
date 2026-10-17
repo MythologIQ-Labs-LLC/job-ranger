@@ -37,9 +37,10 @@ async function makeBundle(files) {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, bytes);
   }
+  const record = (relative) => ({ path: relative, bytes: files[relative].length, sha256: sha256(files[relative]) });
   const manifest = Buffer.from(`${JSON.stringify({
-    database: { path: database },
-    artifactFiles: artifacts.map((relative) => ({ path: relative })),
+    database: record(database),
+    artifactFiles: artifacts.map(record),
   }, null, 2)}\n`);
   await fs.writeFile(path.join(bundle, 'manifest.json'), manifest);
   return { root, bundle, manifest, archivePath: path.join(root, 'out', 'backup.jobranger') };
@@ -158,8 +159,9 @@ test('truncated or corrupted streamed archives are rejected before anything is e
   }
 });
 
-for (const change of ['content', 'length']) {
-  test(`a file whose ${change} changes between the two reads fails the pack and leaves no file`, async () => {
+for (const change of ['content', 'shrunk', 'grown']) {
+  const label = { content: 'changes content', shrunk: 'shrinks', grown: 'grows' }[change];
+  test(`a file that ${label} between the two reads fails the pack and leaves no file`, async () => {
     const { root, bundle, archivePath } = await makeBundle(sampleFiles());
     const target = path.join(bundle, 'artifacts', 'resumes', 'morgan-rivera.pdf');
     let reads = 0;
@@ -168,7 +170,8 @@ for (const change of ['content', 'length']) {
         // The second (writing) pass sees different bytes than the CRC pass measured.
         const bytes = nodeFs.readFileSync(target);
         if (change === 'content') bytes[10] ^= 0xff;
-        return (async function* () { yield change === 'content' ? bytes : bytes.subarray(1); })();
+        const changed = change === 'shrunk' ? bytes.subarray(1) : change === 'grown' ? Buffer.concat([bytes, Buffer.from([7])]) : bytes;
+        return (async function* () { yield changed; })();
       }
       return original(file, ...rest);
     });
@@ -193,7 +196,7 @@ test('a storage failure mid-write removes the partial archive and keeps the erro
     original(target, (async function* () {
       let count = 0;
       for await (const chunk of data) {
-        if (++count === 4) throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
+        if (++count === 7) throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
         yield chunk;
       }
     })(), ...rest));
@@ -237,21 +240,69 @@ test('an oversized bundle is refused from file sizes before any file is read', a
 });
 
 test('unsafe or repeated paths in the backup manifest are refused before writing', async () => {
-  for (const [label, artifactPath] of [['traversal', '../outside.txt'], ['repeat', 'DATABASE/job-ranger.sqlite']]) {
+  for (const [label, artifactPath, message] of [
+    ['traversal', '../outside.txt', /unsafe path/],
+    ['repeat', 'DATABASE/job-ranger.sqlite', /repeats/],
+  ]) {
     const { root, bundle, archivePath } = await makeBundle(sampleFiles());
     try {
       const manifestPath = path.join(bundle, 'manifest.json');
       const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-      manifest.artifactFiles.push({ path: artifactPath });
+      manifest.artifactFiles.push({ path: artifactPath, bytes: 1, sha256: 'a'.repeat(64) });
       await fs.writeFile(manifestPath, JSON.stringify(manifest));
       await assert.rejects(
         archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt }),
-        archive.PortableArchiveError,
+        message,
         label,
       );
       assert.equal(await exists(path.dirname(archivePath)) && await exists(`${archivePath}.partial`), false, label);
     } finally {
       await fs.rm(root, { recursive: true, force: true });
     }
+  }
+});
+
+test('a file that no longer matches its backup manifest hash is refused before writing', async () => {
+  const { root, bundle, archivePath } = await makeBundle(sampleFiles());
+  try {
+    // Same length, different bytes: the CRC pass alone would accept it.
+    const target = path.join(bundle, 'artifacts', 'resumes', 'morgan-rivera.pdf');
+    const bytes = await fs.readFile(target);
+    bytes[0] ^= 0xff;
+    await fs.writeFile(target, bytes);
+    await assert.rejects(
+      archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt }),
+      /morgan-rivera\.pdf does not match the hash recorded in its backup manifest/,
+    );
+    assert.equal(await exists(archivePath), false);
+    assert.equal(await exists(`${archivePath}.partial`), false);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('a manifest file without a hash, or a directory in place of a file, is refused', async () => {
+  const { root, bundle, archivePath } = await makeBundle(sampleFiles());
+  try {
+    const manifestPath = path.join(bundle, 'manifest.json');
+    const original = await fs.readFile(manifestPath, 'utf8');
+    const unhashed = JSON.parse(original);
+    delete unhashed.artifactFiles[0].sha256;
+    await fs.writeFile(manifestPath, JSON.stringify(unhashed));
+    await assert.rejects(
+      archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt }),
+      /missing a file hash/,
+    );
+    await fs.writeFile(manifestPath, original);
+    const target = path.join(bundle, 'artifacts', 'evidence', 'empty.txt');
+    await fs.rm(target);
+    await fs.mkdir(target);
+    await assert.rejects(
+      archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt }),
+      /not a regular file: artifacts\/evidence\/empty\.txt/,
+    );
+    assert.equal(await exists(`${archivePath}.partial`), false);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
   }
 });
