@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
   CheckCircle2,
@@ -20,8 +20,11 @@ import type { CareerTargetTrack } from "../shared/contracts";
 import { trackJob } from "../career/storage";
 
 export function Jobs() {
-  const { jobs, companies, markJobAsSeen, loading } = useAppContext();
+  const { jobs, companies, markJobAsSeen, loading, loaded, error } = useAppContext();
   const navigate = useNavigate();
+  // Listings are known only after a successful workspace read; a failed read is not an empty workspace.
+  const listingsUnavailable = !loading && !loaded;
+  const keywordsInput = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -72,8 +75,6 @@ export function Jobs() {
     [selectedTargetTrackId, targetTracks],
   );
 
-  const hasActiveListingFilters = Boolean(searchTerm.trim() || locationTerm.trim() || companyFilter !== "all");
-
   const filteredJobs = useMemo(() => {
     return jobs
       .filter((job) => {
@@ -94,6 +95,14 @@ export function Jobs() {
           new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
       );
   }, [jobs, searchTerm, locationTerm, companyFilter]);
+
+  const clearListingFilters = () => {
+    setSearchTerm("");
+    setLocationTerm("");
+    setCompanyFilter("all");
+    // The button disappears once listings return, so keep keyboard focus in the filters.
+    keywordsInput.current?.focus();
+  };
 
   const handleTrackJob = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
@@ -162,6 +171,7 @@ export function Jobs() {
             <span className="relative block">
               <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
+                ref={keywordsInput}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search title or description"
@@ -227,7 +237,11 @@ export function Jobs() {
       <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p role="status" className="text-sm text-[var(--color-text-secondary)]">
-            Showing {filteredJobs.length} of {jobs.length} captured listings
+            {loaded
+              ? `Showing ${filteredJobs.length} of ${jobs.length} captured listings`
+              : listingsUnavailable
+                ? "Captured listings could not be loaded"
+                : "Loading captured listings"}
           </p>
           {searchTerm.trim() && listingView === "compact" && (
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -257,22 +271,34 @@ export function Jobs() {
 
       <div className="mt-4 space-y-3">
         {filteredJobs.length === 0 && (
-          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]" role="status">
-            <p>{loading
-              ? "Loading jobs..."
-              : jobs.length === 0
-                ? "No captured listings yet. Add a company source and run a scan to discover opportunities."
-                : hasActiveListingFilters
-                  ? "No listings match these filters. Clear filters to see all captured opportunities."
-                  : "No captured listings are available."}</p>
-            {!loading && jobs.length > 0 && hasActiveListingFilters && (
-              <button
-                type="button"
-                className="secondary-button mt-4"
-                onClick={() => { setSearchTerm(""); setLocationTerm(""); setCompanyFilter("all"); }}
-              >
-                Clear listing filters
-              </button>
+          <div data-testid="jobs-empty-state" className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
+            {!loaded ? (
+              listingsUnavailable ? (
+                <>
+                  <p>Your captured listings could not be loaded, so an empty list here does not mean you have none.</p>
+                  {error && <p className="mt-2 text-xs">{error}</p>}
+                </>
+              ) : (
+                <p>Loading jobs...</p>
+              )
+            ) : jobs.length > 0 ? (
+              // With no filter set every listing is shown, so an empty result here always comes from filters.
+              <>
+                <p>No listings match these filters. Clear them to see your {jobs.length} captured {jobs.length === 1 ? "listing" : "listings"}.</p>
+                <button type="button" className="secondary-button mt-4" onClick={clearListingFilters}>
+                  Clear listing filters
+                </button>
+              </>
+            ) : companies.length === 0 ? (
+              <>
+                <p>No job sources yet. Add a company careers page, then scan it to capture listings here.</p>
+                <Link to="/companies" className="primary-button mt-4">Add a job source</Link>
+              </>
+            ) : (
+              <>
+                <p>No listings captured yet. Scan one of your sources on the Companies page to bring its listings here.</p>
+                <Link to="/companies" className="secondary-button mt-4">Open Companies</Link>
+              </>
             )}
           </div>
         )}
