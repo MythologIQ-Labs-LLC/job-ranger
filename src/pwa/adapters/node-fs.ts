@@ -157,9 +157,37 @@ export class FsBytes extends Uint8Array {
   }
 }
 
-function toBytes(data: string | Uint8Array | ArrayBuffer): Uint8Array {
+type ChunkSource = Iterable<Uint8Array> | AsyncIterable<Uint8Array>;
+type WriteData = string | ArrayBufferView | ArrayBuffer | ChunkSource;
+
+/** Like Node, writeFile also takes an (async) iterable of byte chunks. Typed arrays are bytes. */
+function isChunkSource(data: WriteData): data is ChunkSource {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    !ArrayBuffer.isView(data) &&
+    !(data instanceof ArrayBuffer) &&
+    (Symbol.asyncIterator in data || Symbol.iterator in data)
+  );
+}
+
+/** Marks a failure of the data being written, which is not a storage failure. */
+class ChunkSourceError {
+  constructor(readonly error: unknown) {}
+}
+
+async function* sourceChunks(data: ChunkSource): AsyncGenerator<Uint8Array> {
+  try {
+    for await (const chunk of data) yield chunk;
+  } catch (error) {
+    throw new ChunkSourceError(error);
+  }
+}
+
+function toBytes(data: string | ArrayBufferView | ArrayBuffer): Uint8Array {
   if (typeof data === "string") return new TextEncoder().encode(data);
   if (data instanceof Uint8Array) return data;
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return new Uint8Array(data);
 }
 
@@ -212,7 +240,7 @@ async function readFile(target: string, options?: string | { encoding?: string |
 
 async function writeFile(
   target: string,
-  data: string | Uint8Array | ArrayBuffer,
+  data: WriteData,
   _options?: unknown,
 ): Promise<void> {
   const parentEntry = await lookup(dirname(resolve(target)));
@@ -220,19 +248,34 @@ async function writeFile(
     throw fsError("ENOENT", `no such file or directory, open '${target}'`);
   }
   const { parent, name } = await parentAndName(target);
+  // A file this call creates is removed again if the write fails, so a failed write (or a copy
+  // whose source fails mid-read) never leaves an empty file behind.
+  const existed = await parent.getFileHandle(name).then(
+    () => true,
+    // Only "not found" means this call creates it; anything else (a folder of that name) is kept.
+    (error: unknown) => (error as { name?: string })?.name !== "NotFoundError",
+  );
   try {
     const handle = await parent.getFileHandle(name, { create: true });
     const writable = await (handle as FileSystemFileHandle & {
       createWritable(options?: { keepExistingData?: boolean }): Promise<FileSystemWritableFileStream>;
     }).createWritable({ keepExistingData: false });
     try {
-      await writable.write(toBytes(data) as BufferSource);
+      if (isChunkSource(data)) {
+        for await (const chunk of sourceChunks(data)) await writable.write(chunk as BufferSource);
+      } else {
+        await writable.write(toBytes(data) as BufferSource);
+      }
       await writable.close();
     } catch (error) {
       await writable.abort().catch(() => undefined);
       throw error;
     }
   } catch (error) {
+    if (!existed) await parent.removeEntry(name).catch(() => undefined);
+    // The data's own failure (for example a file that changed while being archived) is rethrown
+    // as is; the uncommitted write was already discarded.
+    if (error instanceof ChunkSourceError) throw error.error;
     wrapStorageError(error, `save ${name}`);
   }
 }
@@ -281,9 +324,15 @@ async function rm(target: string, options?: { recursive?: boolean; force?: boole
   }
 }
 
+/**
+ * Streams the source, so copies (and rename, which copies) never hold a whole file in memory.
+ * The source is checked first so a missing source creates nothing at the destination.
+ */
 async function copyFile(source: string, destination: string): Promise<void> {
-  const bytes = (await readFile(source)) as Uint8Array;
-  await writeFile(destination, bytes);
+  const entry = await lookup(source);
+  if (!entry) throw fsError("ENOENT", `no such file or directory, copyfile '${source}'`);
+  if (entry.kind !== "file") throw fsError("EISDIR", `illegal operation on a directory, copyfile '${source}'`);
+  await writeFile(destination, createReadStream(source));
 }
 
 async function copyTree(source: string, destination: string): Promise<void> {
