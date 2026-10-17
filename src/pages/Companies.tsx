@@ -23,7 +23,7 @@ import { Modal } from "../components/Modal";
 import { openListingUrl } from "../components/DemoListingNotice";
 import { useAppContext } from "../context/AppContext";
 import { getDesktopApi } from "../services/api";
-import { useRuntimeInfo } from "../services/runtime";
+import { useRuntimeInfoStatus } from "../services/runtime";
 import { isRunnableInRuntime } from "../shared/runtime";
 import { DEMO_SOURCE_BADGE_TEXT, DEMO_SOURCE_LINK_MESSAGE, isDemoListing } from "../shared/demo-listing";
 import type {
@@ -48,7 +48,13 @@ const SUPPORT_BADGE_CLASSES: Record<string, string> = {
 };
 
 export function Companies() {
-  const runtimeKind = useRuntimeInfo()?.kind;
+  const runtime = useRuntimeInfoStatus();
+  const runtimeKind = runtime.info?.kind;
+  // Readable here: a reader exists and this runtime can use it (the web app reads fewer types).
+  // Until the runtime is known nothing is offered as runnable; if it cannot be read, Run is
+  // allowed and reports its own result.
+  const readableHere = (sourceType: Parameters<typeof isRunnableInRuntime>[1]) =>
+    runtime.info ? isRunnableInRuntime(runtimeKind, sourceType) : runtime.failed;
   const { companies, addCompany, updateCompany, deleteCompany, runScraper, refreshing } = useAppContext();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -109,14 +115,9 @@ export function Companies() {
     [discovery, dismissedCandidateIds],
   );
 
-  // Readable here: a reader exists and this runtime can use it (the web app reads fewer types).
-  const runnableCount = useMemo(
-    () =>
-      companies.filter(
-        (company) => canRunSourceType(company.sourceType) && isRunnableInRuntime(runtimeKind, company.sourceType),
-      ).length,
-    [companies, runtimeKind],
-  );
+  const runnableCount = companies.filter(
+    (company) => canRunSourceType(company.sourceType) && readableHere(company.sourceType),
+  ).length;
   const browserRequiredCount = useMemo(
     () => companies.filter((company) => company.sourceType === "browser-required").length,
     [companies],
@@ -431,7 +432,7 @@ export function Companies() {
         </article>
         <article className="metric-card">
           <p className="metric-label">Runnable now</p>
-          <p className="metric-value">{runnableCount}</p>
+          <p className="metric-value">{runtime.info || runtime.failed ? runnableCount : "\u2026"}</p>
           <p className="metric-detail">Sources with a working acquisition path</p>
         </article>
         <article className="metric-card">
@@ -463,7 +464,8 @@ export function Companies() {
             {companies.map((company) => {
               const profile = getSourceProfile(company.sourceType);
               const canRun = canRunSourceType(company.sourceType);
-              const runnableHere = isRunnableInRuntime(runtimeKind, company.sourceType);
+              const runnableHere = readableHere(company.sourceType);
+              const webLimited = canRun && runtime.info !== null && !isRunnableInRuntime(runtimeKind, company.sourceType);
               const badgeClass = SUPPORT_BADGE_CLASSES[profile.supportLevel] ?? "soft-badge-danger";
 
               return (
@@ -508,8 +510,8 @@ export function Companies() {
                           ? "Browser-backed extraction required"
                           : "No reliable acquisition path yet"}
                     </p>
-                    {canRun && !runnableHere && (
-                      <p className="mt-1 text-sm text-[var(--color-warning)]" data-testid="web-source-limit">
+                    {webLimited && (
+                      <p id={`web-limit-${company.id}`} className="mt-1 text-sm text-[var(--color-warning)]" data-testid="web-source-limit">
                         Not available in the web app: this site cannot be read from a browser tab.
                       </p>
                     )}
@@ -547,6 +549,7 @@ export function Companies() {
                       <button
                         type="button"
                         disabled={!canRun || !runnableHere || runningId === company.id || refreshing}
+                        aria-describedby={webLimited ? `web-limit-${company.id}` : undefined}
                         onClick={() => void handleRun(company.id)}
                         className="secondary-button disabled:cursor-not-allowed disabled:opacity-50"
                       >

@@ -187,7 +187,34 @@ test("an active source the web app cannot read is not counted as scannable", asy
   await expect(page.locator(".metric-card").filter({ hasText: "Runnable now" })).toContainText("0");
   const row = page.getByRole("row").filter({ hasText: "Harbor Workday" });
   await expect(row.getByTestId("web-source-limit")).toBeVisible();
-  await expect(row.getByRole("button", { name: "Run", exact: true })).toBeDisabled();
+  const run = row.getByRole("button", { name: "Run", exact: true });
+  await expect(run).toBeDisabled();
+  // The reason is reachable from the button itself, not only from a different table cell.
+  await expect(run).toHaveAccessibleDescription(/Not available in the web app/);
+});
+
+test("an active unreadable source plus a paused readable one is not called 'all paused'", async ({ page }) => {
+  await page.route("**/*myworkdayjobs.com/**", (route) => route.abort());
+  await openHome(page);
+  await createTrack(page);
+  await page.evaluate(async () => {
+    await window.electronAPI.companies.create({
+      name: "Harbor Workday",
+      url: "https://harbor.wd5.myworkdayjobs.com/en-US/careers",
+      frequencyMinutes: 1440,
+      isActive: true,
+    });
+    await window.electronAPI.companies.create({
+      name: "Paused Clinic",
+      url: "https://boards.greenhouse.io/paused-clinic",
+      frequencyMinutes: 1440,
+      isActive: false,
+    });
+  });
+  await reloadHome(page);
+  await expectSinglePrimary(page);
+  await expect(primary(page).getByRole("heading", { name: "Your active sources cannot be read here" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your job sources are paused" })).toHaveCount(0);
 });
 
 test("when every readable source is paused, Home says so and points to the sources", async ({ page }) => {
