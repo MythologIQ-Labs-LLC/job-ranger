@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
   CheckCircle2,
@@ -20,8 +20,11 @@ import type { CareerTargetTrack } from "../shared/contracts";
 import { trackJob } from "../career/storage";
 
 export function Jobs() {
-  const { jobs, companies, markJobAsSeen, loading } = useAppContext();
+  const { jobs, companies, markJobAsSeen, loading, loaded, error, refresh, refreshing } = useAppContext();
   const navigate = useNavigate();
+  // Listings are known only after a successful workspace read; a failed read is not an empty workspace.
+  const listingsUnavailable = !loading && !loaded;
+  const listingCount = useRef<HTMLParagraphElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -92,6 +95,15 @@ export function Jobs() {
           new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
       );
   }, [jobs, searchTerm, locationTerm, companyFilter]);
+
+  const clearListingFilters = () => {
+    setSearchTerm("");
+    setLocationTerm("");
+    setCompanyFilter("all");
+    // The button disappears once listings return. Focus the listing count rather than a text
+    // field, so phones do not open the keyboard over the restored list.
+    listingCount.current?.focus();
+  };
 
   const handleTrackJob = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
@@ -224,10 +236,16 @@ export function Jobs() {
 
       <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
-            Showing {filteredJobs.length} of {jobs.length} captured listings
+          <p ref={listingCount} tabIndex={-1} role="status" className="rounded-md text-sm text-[var(--color-text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+            {loaded
+              ? `Showing ${filteredJobs.length} of ${jobs.length} captured listings${
+                  filteredJobs.length === 0 && jobs.length > 0 ? ". Your filters hide all of them." : ""
+                }`
+              : listingsUnavailable
+                ? "Captured listings could not be loaded"
+                : "Loading captured listings"}
           </p>
-          {searchTerm.trim() && listingView === "compact" && (
+          {searchTerm.trim() && listingView === "compact" && filteredJobs.length > 0 && (
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               Search terms may appear inside a collapsed listing description.
             </p>
@@ -255,10 +273,38 @@ export function Jobs() {
 
       <div className="mt-4 space-y-3">
         {filteredJobs.length === 0 && (
-          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-            {loading
-              ? "Loading jobs..."
-              : "No jobs match the current filters. Try widening the search or run another company scan."}
+          <div data-testid="jobs-empty-state" className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
+            {!loaded ? (
+              listingsUnavailable ? (
+                <>
+                  <p>Your captured listings could not be loaded, so an empty list here does not mean you have none.</p>
+                  {error && <p className="mt-2 break-words text-xs">{error}</p>}
+                  <button type="button" className="secondary-button mt-4" disabled={refreshing} onClick={() => void refresh()}>
+                    {refreshing ? "Trying again..." : "Try again"}
+                  </button>
+                </>
+              ) : (
+                <p>Loading captured listings...</p>
+              )
+            ) : jobs.length > 0 ? (
+              // With no filter set every listing is shown, so an empty result here always comes from filters.
+              <>
+                <p>No listings match these filters. Clear them to see your {jobs.length} captured {jobs.length === 1 ? "listing" : "listings"}.</p>
+                <button type="button" className="secondary-button mt-4" onClick={clearListingFilters}>
+                  Clear listing filters
+                </button>
+              </>
+            ) : companies.length === 0 ? (
+              <>
+                <p>No job sources yet. Add a company careers page, then scan it to capture listings here.</p>
+                <Link to="/companies" className="primary-button mt-4">Add a job source</Link>
+              </>
+            ) : (
+              <>
+                <p>No listings captured yet. Scan one of your sources on the Companies page to bring its listings here.</p>
+                <Link to="/companies" className="secondary-button mt-4">Open Companies</Link>
+              </>
+            )}
           </div>
         )}
 
