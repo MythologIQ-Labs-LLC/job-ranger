@@ -157,6 +157,32 @@ export class FsBytes extends Uint8Array {
   }
 }
 
+type ChunkSource = Iterable<Uint8Array> | AsyncIterable<Uint8Array>;
+type WriteData = string | Uint8Array | ArrayBuffer | ChunkSource;
+
+/** Like Node, writeFile also takes an (async) iterable of byte chunks. */
+function isChunkSource(data: WriteData): data is ChunkSource {
+  return (
+    typeof data === "object" &&
+    !(data instanceof Uint8Array) &&
+    !(data instanceof ArrayBuffer) &&
+    (Symbol.asyncIterator in data || Symbol.iterator in data)
+  );
+}
+
+/** Marks a failure of the data being written, which is not a storage failure. */
+class ChunkSourceError {
+  constructor(readonly error: unknown) {}
+}
+
+async function* sourceChunks(data: ChunkSource): AsyncGenerator<Uint8Array> {
+  try {
+    for await (const chunk of data) yield chunk;
+  } catch (error) {
+    throw new ChunkSourceError(error);
+  }
+}
+
 function toBytes(data: string | Uint8Array | ArrayBuffer): Uint8Array {
   if (typeof data === "string") return new TextEncoder().encode(data);
   if (data instanceof Uint8Array) return data;
@@ -212,7 +238,7 @@ async function readFile(target: string, options?: string | { encoding?: string |
 
 async function writeFile(
   target: string,
-  data: string | Uint8Array | ArrayBuffer,
+  data: WriteData,
   _options?: unknown,
 ): Promise<void> {
   const parentEntry = await lookup(dirname(resolve(target)));
@@ -226,13 +252,20 @@ async function writeFile(
       createWritable(options?: { keepExistingData?: boolean }): Promise<FileSystemWritableFileStream>;
     }).createWritable({ keepExistingData: false });
     try {
-      await writable.write(toBytes(data) as BufferSource);
+      if (isChunkSource(data)) {
+        for await (const chunk of sourceChunks(data)) await writable.write(chunk as BufferSource);
+      } else {
+        await writable.write(toBytes(data) as BufferSource);
+      }
       await writable.close();
     } catch (error) {
       await writable.abort().catch(() => undefined);
       throw error;
     }
   } catch (error) {
+    // The data's own failure (for example a file that changed while being archived) is rethrown
+    // as is; the uncommitted write was already discarded.
+    if (error instanceof ChunkSourceError) throw error.error;
     wrapStorageError(error, `save ${name}`);
   }
 }

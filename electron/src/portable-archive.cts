@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
+import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import type {
   JobRangerArchiveManifest,
@@ -62,12 +62,22 @@ const crcTable = (() => {
   return table;
 })();
 
-export function crc32(bytes: Uint8Array): number {
-  let crc = 0xffffffff;
+const CRC32_INITIAL = 0xffffffff;
+
+function crc32Update(crc: number, bytes: Uint8Array): number {
+  let next = crc;
   for (let index = 0; index < bytes.length; index += 1) {
-    crc = crcTable[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+    next = crcTable[(next ^ bytes[index]) & 0xff] ^ (next >>> 8);
   }
+  return next;
+}
+
+function crc32Final(crc: number): number {
   return (crc ^ 0xffffffff) >>> 0;
+}
+
+export function crc32(bytes: Uint8Array): number {
+  return crc32Final(crc32Update(CRC32_INITIAL, bytes));
 }
 
 function sha256Hex(bytes: Uint8Array): string {
@@ -363,20 +373,178 @@ export function parseArchiveManifest(value: unknown): JobRangerArchiveManifest {
   };
 }
 
-async function collectBundleFiles(bundleDirectory: string): Promise<ArchiveEntryInput[]> {
+/** An archive entry whose bytes are either small and in memory or streamed from a file. */
+interface StreamedEntry {
+  name: string;
+  encodedName: Uint8Array;
+  size: number;
+  crc: number;
+  bytes?: Uint8Array;
+  sourcePath?: string;
+}
+
+async function* entryChunks(entry: StreamedEntry): AsyncGenerator<Uint8Array> {
+  if (entry.bytes) {
+    yield entry.bytes;
+    return;
+  }
+  for await (const chunk of createReadStream(entry.sourcePath as string)) yield chunk as Uint8Array;
+}
+
+/** CRC-32 and length of a file, read in bounded chunks. */
+async function measureFile(sourcePath: string): Promise<{ crc: number; size: number }> {
+  let crc = CRC32_INITIAL;
+  let size = 0;
+  for await (const chunk of createReadStream(sourcePath)) {
+    crc = crc32Update(crc, chunk as Uint8Array);
+    size += (chunk as Uint8Array).length;
+  }
+  return { crc: crc32Final(crc), size };
+}
+
+function entryArchiveBytes(entry: { encodedName: Uint8Array }, size: number): number {
+  return 30 + 46 + 2 * entry.encodedName.length + size;
+}
+
+// Same layout as encodeStoreZip (kept as the in-memory reference), one header at a time.
+function localHeader(entry: StreamedEntry): Uint8Array {
+  const header = new Uint8Array(30 + entry.encodedName.length);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, LOCAL_HEADER_SIGNATURE, true);
+  view.setUint16(4, 20, true);
+  view.setUint16(6, UTF8_NAME_FLAG, true);
+  view.setUint16(8, 0, true);
+  view.setUint16(10, DOS_TIME, true);
+  view.setUint16(12, DOS_DATE, true);
+  view.setUint32(14, entry.crc, true);
+  view.setUint32(18, entry.size, true);
+  view.setUint32(22, entry.size, true);
+  view.setUint16(26, entry.encodedName.length, true);
+  view.setUint16(28, 0, true);
+  header.set(entry.encodedName, 30);
+  return header;
+}
+
+function centralDirectory(
+  entries: readonly StreamedEntry[],
+  localOffsets: readonly number[],
+  centralOffset: number,
+): Uint8Array {
+  let centralSize = 0;
+  for (const entry of entries) centralSize += 46 + entry.encodedName.length;
+  const output = new Uint8Array(centralSize + 22);
+  const view = new DataView(output.buffer);
+  let offset = 0;
+  entries.forEach((entry, index) => {
+    view.setUint32(offset, CENTRAL_HEADER_SIGNATURE, true);
+    view.setUint16(offset + 4, 20, true);
+    view.setUint16(offset + 6, 20, true);
+    view.setUint16(offset + 8, UTF8_NAME_FLAG, true);
+    view.setUint16(offset + 10, 0, true);
+    view.setUint16(offset + 12, DOS_TIME, true);
+    view.setUint16(offset + 14, DOS_DATE, true);
+    view.setUint32(offset + 16, entry.crc, true);
+    view.setUint32(offset + 20, entry.size, true);
+    view.setUint32(offset + 24, entry.size, true);
+    view.setUint16(offset + 28, entry.encodedName.length, true);
+    view.setUint16(offset + 30, 0, true);
+    view.setUint16(offset + 32, 0, true);
+    view.setUint16(offset + 34, 0, true);
+    view.setUint16(offset + 36, 0, true);
+    view.setUint32(offset + 38, 0, true);
+    view.setUint32(offset + 42, localOffsets[index], true);
+    output.set(entry.encodedName, offset + 46);
+    offset += 46 + entry.encodedName.length;
+  });
+  view.setUint32(offset, END_OF_CENTRAL_DIRECTORY_SIGNATURE, true);
+  view.setUint16(offset + 4, 0, true);
+  view.setUint16(offset + 6, 0, true);
+  view.setUint16(offset + 8, entries.length, true);
+  view.setUint16(offset + 10, entries.length, true);
+  view.setUint32(offset + 12, centralSize, true);
+  view.setUint32(offset + 16, centralOffset, true);
+  view.setUint16(offset + 20, 0, true);
+  return output;
+}
+
+/**
+ * Yields the bytes encodeStoreZip would produce for these entries, reading each file again in
+ * bounded chunks. A file whose length or CRC-32 differs from the first pass fails the archive.
+ */
+async function* storeZipChunks(entries: readonly StreamedEntry[]): AsyncGenerator<Uint8Array> {
+  const localOffsets: number[] = [];
+  let offset = 0;
+  for (const entry of entries) {
+    localOffsets.push(offset);
+    const header = localHeader(entry);
+    yield header;
+    let crc = CRC32_INITIAL;
+    let size = 0;
+    for await (const chunk of entryChunks(entry)) {
+      crc = crc32Update(crc, chunk);
+      size += chunk.length;
+      if (size > entry.size) break;
+      yield chunk;
+    }
+    if (size !== entry.size || crc32Final(crc) !== entry.crc) {
+      throw new PortableArchiveError(`${entry.name} changed while the backup archive was being written`);
+    }
+    offset += header.length + entry.size;
+  }
+  yield centralDirectory(entries, localOffsets, offset);
+}
+
+/**
+ * Lists the archive entries for a bundle: the two manifests in memory, every other file by path
+ * with its length and CRC-32 (first pass). Applies the same name, count and size rules as
+ * encodeStoreZip before anything is written.
+ */
+async function prepareBundleEntries(
+  bundleDirectory: string,
+  archiveManifestFor: (backupManifestBytes: Uint8Array) => Uint8Array,
+): Promise<StreamedEntry[]> {
   const manifestBytes = await fs.readFile(path.join(bundleDirectory, BACKUP_MANIFEST_FILE));
   const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as {
     database: { path: string };
     artifactFiles: Array<{ path: string }>;
   };
-  const entries: ArchiveEntryInput[] = [{ name: BACKUP_MANIFEST_FILE, bytes: manifestBytes }];
   const relativePaths = [manifest.database.path, ...manifest.artifactFiles.map((file) => file.path)];
+  if (relativePaths.length + 2 > MAX_ARCHIVE_ENTRIES) {
+    throw new PortableArchiveError("Too many files for a Job Ranger archive");
+  }
+  const encoder = new TextEncoder();
+  const seen = new Set<string>();
+  const named = (name: string) => {
+    const safe = normalizeArchivePath(name);
+    if (seen.has(archiveNameKey(safe))) throw new PortableArchiveError(`Archive repeats ${safe}`);
+    seen.add(archiveNameKey(safe));
+    return { name: safe, encodedName: encoder.encode(safe) };
+  };
+  const inMemory = (name: string, bytes: Uint8Array): StreamedEntry => ({
+    ...named(name),
+    bytes,
+    size: bytes.length,
+    crc: crc32(bytes),
+  });
+  const entries = [
+    inMemory(ARCHIVE_MANIFEST_FILE, archiveManifestFor(manifestBytes)),
+    inMemory(BACKUP_MANIFEST_FILE, manifestBytes),
+  ];
+  const tooLarge = () => new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+  let totalSize = 22 + entries.reduce((sum, entry) => sum + entryArchiveBytes(entry, entry.size), 0);
   for (const relativePath of relativePaths) {
-    const safe = normalizeArchivePath(relativePath);
-    entries.push({
-      name: safe,
-      bytes: await fs.readFile(path.join(bundleDirectory, ...safe.split("/"))),
-    });
+    const entry = named(relativePath);
+    const sourcePath = path.join(bundleDirectory, ...entry.name.split("/"));
+    const stat = await fs.lstat(sourcePath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw new PortableArchiveError(`Backup file is not a regular file: ${entry.name}`);
+    }
+    // Refuse before reading a byte when the files alone are already too large.
+    if (totalSize + entryArchiveBytes(entry, stat.size) > MAX_ARCHIVE_BYTES) throw tooLarge();
+    const measured = await measureFile(sourcePath);
+    totalSize += entryArchiveBytes(entry, measured.size);
+    if (totalSize > MAX_ARCHIVE_BYTES) throw tooLarge();
+    entries.push({ ...entry, sourcePath, ...measured });
   }
   return entries;
 }
@@ -384,6 +552,10 @@ async function collectBundleFiles(bundleDirectory: string): Promise<ArchiveEntry
 /**
  * Packs a backup bundle directory (already integrity-validated by
  * BackupService) into a single `.jobranger` archive file.
+ *
+ * The archive is streamed to disk: each file is read twice in bounded chunks
+ * (once for its CRC-32, once to write it) instead of holding every file plus a
+ * full archive copy in memory. The bytes are identical to encodeStoreZip's.
  */
 export async function packBackupBundle(input: {
   bundleDirectory: string;
@@ -391,32 +563,42 @@ export async function packBackupBundle(input: {
   producer: JobRangerArchiveProducer;
   createdAt?: string;
 }): Promise<{ manifest: JobRangerArchiveManifest; bytes: number; sha256: string }> {
-  const files = await collectBundleFiles(input.bundleDirectory);
-  const backupManifestBytes = files[0].bytes;
-  const manifest: JobRangerArchiveManifest = {
-    format: JOB_RANGER_ARCHIVE_FORMAT,
-    archiveVersion: JOB_RANGER_ARCHIVE_VERSION,
-    createdAt: input.createdAt ?? new Date().toISOString(),
-    producer: input.producer,
-    content: { format: JOB_RANGER_BACKUP_FORMAT, version: JOB_RANGER_BACKUP_VERSION },
-    backupManifest: {
-      path: BACKUP_MANIFEST_FILE,
-      sha256: sha256Hex(backupManifestBytes),
-      bytes: backupManifestBytes.length,
-    },
-  };
-  const archive = encodeStoreZip([
-    {
-      name: ARCHIVE_MANIFEST_FILE,
-      bytes: new TextEncoder().encode(`${JSON.stringify(manifest, null, 2)}\n`),
-    },
-    ...files,
-  ]);
+  let manifest: JobRangerArchiveManifest | undefined;
+  const entries = await prepareBundleEntries(input.bundleDirectory, (backupManifestBytes) => {
+    manifest = {
+      format: JOB_RANGER_ARCHIVE_FORMAT,
+      archiveVersion: JOB_RANGER_ARCHIVE_VERSION,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      producer: input.producer,
+      content: { format: JOB_RANGER_BACKUP_FORMAT, version: JOB_RANGER_BACKUP_VERSION },
+      backupManifest: {
+        path: BACKUP_MANIFEST_FILE,
+        sha256: sha256Hex(backupManifestBytes),
+        bytes: backupManifestBytes.length,
+      },
+    };
+    return new TextEncoder().encode(`${JSON.stringify(manifest, null, 2)}\n`);
+  });
+  const hash = createHash("sha256");
+  let bytes = 0;
+  async function* hashedChunks(): AsyncGenerator<Uint8Array> {
+    for await (const chunk of storeZipChunks(entries)) {
+      hash.update(chunk);
+      bytes += chunk.length;
+      yield chunk;
+    }
+  }
   const temporaryPath = `${input.archivePath}.partial`;
   await fs.mkdir(path.dirname(input.archivePath), { recursive: true });
-  await fs.writeFile(temporaryPath, archive);
-  await fs.rename(temporaryPath, input.archivePath);
-  return { manifest, bytes: archive.length, sha256: sha256Hex(archive) };
+  try {
+    await fs.writeFile(temporaryPath, hashedChunks());
+    await fs.rename(temporaryPath, input.archivePath);
+  } catch (error) {
+    // Never leave a partial archive behind, whether a file changed, storage filled up or a write failed.
+    await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+  return { manifest: manifest as JobRangerArchiveManifest, bytes, sha256: hash.digest("hex") };
 }
 
 /**
