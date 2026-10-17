@@ -21,6 +21,8 @@ import { useCareerEvidence } from "../career/evidence";
 import { useTargetTracks } from "../career/target-tracks";
 import { useApplications } from "../career/storage";
 import { canRunSourceType, getSourceProfile } from "../types";
+import { useRuntimeInfoStatus } from "../services/runtime";
+import { isRunnableInRuntime, WEB_RUNNABLE_SOURCE_TYPES } from "../shared/runtime";
 
 function formatSourceCoverageMessage(
   browserRequired: number,
@@ -49,7 +51,14 @@ export function Dashboard() {
 
   const activeJobs = jobs.filter((job) => job.isActive).length;
   const newJobs = jobs.filter((job) => job.isNew).length;
-  const runnableCompanies = companies.filter((company) => canRunSourceType(company.sourceType));
+  // Which source types can run depends on the runtime, which is known shortly after mount.
+  const runtime = useRuntimeInfoStatus();
+  const runtimeKind = runtime.info?.kind;
+  // Settled once the runtime is known or could not be read; source steps never wait forever.
+  const runtimeSettled = runtime.info !== null || runtime.failed;
+  const readableHere = (sourceType: (typeof companies)[number]["sourceType"]) =>
+    runtime.info !== null && canRunSourceType(sourceType) && isRunnableInRuntime(runtimeKind, sourceType);
+  const runnableCompanies = companies.filter((company) => readableHere(company.sourceType));
   const browserRequiredCompanies = companies.filter(
     (company) => company.sourceType === "browser-required",
   ).length;
@@ -61,8 +70,14 @@ export function Dashboard() {
   const failingActiveSources = companies.filter(
     (company) => company.isActive && company.lastRunStatus === "failure",
   ).length;
-  const scannableSources = companies.filter(
-    (company) => company.isActive && canRunSourceType(company.sourceType),
+  // Scannable here: active and readable in this runtime (the web app reads fewer source types
+  // than the desktop harness). Paused sources can still be run once by hand.
+  const scannableSources = companies.filter((company) => company.isActive && readableHere(company.sourceType)).length;
+  const pausedReadableSources = companies.filter(
+    (company) => !company.isActive && readableHere(company.sourceType),
+  ).length;
+  const activeUnreadableSources = companies.filter(
+    (company) => company.isActive && !readableHere(company.sourceType),
   ).length;
   const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
   const pendingFacts = evidence.pending.length;
@@ -122,24 +137,48 @@ export function Dashboard() {
   }
 
   // With sources and nothing unseen, the useful step is a fresh scan (or fixing the sources
-  // when none can be scanned), not "nothing to do".
-  if (loaded && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
+  // when none can be scanned), not "nothing to do". Scans run from the Companies page; Find Jobs
+  // only shows what scans captured.
+  if (loaded && runtimeSettled && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
+    const webReadable = WEB_RUNNABLE_SOURCE_TYPES.map((type) => getSourceProfile(type).label).join(", ");
     nextActions.push(
-      scannableSources > 0
+      runtime.info === null
         ? {
-            title: "No unseen opportunities right now",
-            copy: "Scan your sources from Find Jobs, or add another careers page you care about.",
-            href: "/jobs",
-            action: "Open Find Jobs",
-            icon: Search,
-          }
-        : {
-            title: "None of your sources can be scanned right now",
-            copy: "They are paused or need a reader this app does not have. Resume one or add another careers page.",
+            title: "Check your job sources",
+            copy: "Open the Companies page and run a source to look for new listings.",
             href: "/companies",
             action: "Review job sources",
             icon: Building2,
-          },
+          }
+        : scannableSources > 0
+        ? {
+            title: "No unseen opportunities right now",
+            copy: "Run a source on the Companies page to look for new listings. Listings you have already seen stay in Find Jobs.",
+            href: "/companies",
+            action: "Run a job source",
+            icon: Search,
+          }
+        : pausedReadableSources > 0
+          ? {
+              title: activeUnreadableSources > 0 ? "Your active sources cannot be read here" : "Your job sources are paused",
+              copy:
+                activeUnreadableSources > 0
+                  ? "Resume a paused source this app can read, or run it once on the Companies page."
+                  : "Resume a source to have it checked on its schedule, or run it once on the Companies page.",
+              href: "/companies",
+              action: "Review job sources",
+              icon: Building2,
+            }
+          : {
+              title: "None of your sources can be read here",
+              copy:
+                runtimeKind === "web"
+                  ? `The web app reads careers pages hosted on ${webReadable}. Add one of those to look for listings.`
+                  : "They need a reader this app does not have. Add another careers page to look for listings.",
+              href: "/companies",
+              action: "Review job sources",
+              icon: Building2,
+            },
     );
   }
 
@@ -163,7 +202,7 @@ export function Dashboard() {
   // Places to work, in the order most people use them. Never a progress or completion state.
   const workflow = [
     { title: "Set your direction", copy: "Target Tracks describe the roles and conditions you want.", href: "/target-tracks", icon: Compass },
-    { title: "Find opportunities", copy: "Scan the sources you chose and assess each listing on its evidence.", href: "/jobs", icon: Search },
+    { title: "Find opportunities", copy: "Review captured listings against your target track and confirmed evidence.", href: "/jobs", icon: Search },
     { title: "Back it with evidence", copy: "Confirmed Career Evidence is what truthful resumes are built from.", href: "/career-evidence/new", icon: BookOpenText },
     { title: "Track applications", copy: "Record where you applied and what actually happened.", href: "/applications", icon: ClipboardList },
   ];
@@ -184,6 +223,8 @@ export function Dashboard() {
           ? workspaceUnavailable ? "Job sources could not be loaded" : "Loading your job sources"
           : companies.length === 0
           ? "Add your first careers page"
+          : runtime.info === null
+          ? runtime.failed ? "Could not check which sources can run here" : "Checking which sources can run here"
           : `${runnableCompanies.length} source${runnableCompanies.length === 1 ? "" : "s"} can run right now`,
       copy:
         !loaded
@@ -223,7 +264,7 @@ export function Dashboard() {
     {
       name: "Tracked companies",
       stat: companies.length,
-      detail: `${runnableCompanies.length} runnable`,
+      detail: runtime.info === null ? "Runnable sources not checked yet" : `${runnableCompanies.length} runnable`,
       icon: Building2,
     },
     {
@@ -276,7 +317,7 @@ export function Dashboard() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Based on saved records, not predictions or activity quotas.
           </p>
-          {(loading && !loaded) || careerLoading ? (
+          {(loading && !loaded) || careerLoading || (loaded && !runtimeSettled && nextActions.length === 0) ? (
             <p role="status" className="mt-5 text-sm text-[var(--color-text-secondary)]">
               Loading your next steps...
             </p>
