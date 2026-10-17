@@ -113,7 +113,7 @@ test("the places to work never show progress and stay above diagnostics", async 
   expect(workflowBox!.y).toBeLessThan(diagnosticsBox!.y);
 });
 
-test("scannable sources with nothing unseen point to Find Jobs instead of an empty queue", async ({ page }) => {
+test("scannable sources with nothing unseen point to scanning them, where scans actually run", async ({ page }) => {
   await routeGreenhouse(page, { failing: false });
   await openHome(page);
   await createTrack(page);
@@ -125,7 +125,27 @@ test("scannable sources with nothing unseen point to Find Jobs instead of an emp
   await reloadHome(page);
   await expectSinglePrimary(page);
   await expect(primary(page).getByRole("heading", { name: "No unseen opportunities right now" })).toBeVisible();
-  await expect(primary(page).getByRole("link", { name: "Open Find Jobs" })).toHaveAttribute("href", "#/jobs");
+  // Find Jobs has no scan control; scans run from the Companies page.
+  await expect(primary(page).getByRole("link", { name: "Scan job sources" })).toHaveAttribute("href", "#/companies");
+  await expect(primary(page)).toContainText("Companies page");
+});
+
+test("an active source the web app cannot read is not counted as scannable", async ({ page }) => {
+  // Workday has a desktop reader but none in the web app; never let it reach the network here.
+  await page.route("**/*myworkdayjobs.com/**", (route) => route.abort());
+  await openHome(page);
+  await createTrack(page);
+  const created = await page.evaluate(() => window.electronAPI.companies.create({
+    name: "Harbor Workday",
+    url: "https://harbor.wd5.myworkdayjobs.com/en-US/careers",
+    frequencyMinutes: 1440,
+    isActive: true,
+  }));
+  expect(created.sourceType).toBe("workday");
+  await reloadHome(page);
+  await expectSinglePrimary(page);
+  await expect(primary(page).getByRole("heading", { name: "None of your sources can be scanned right now" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No unseen opportunities right now" })).toHaveCount(0);
 });
 
 test("when no source can be scanned, Home points to the sources instead of a scan", async ({ page }) => {

@@ -21,6 +21,8 @@ import { useCareerEvidence } from "../career/evidence";
 import { useTargetTracks } from "../career/target-tracks";
 import { useApplications } from "../career/storage";
 import { canRunSourceType, getSourceProfile } from "../types";
+import { useRuntimeInfo } from "../services/runtime";
+import { isRunnableInRuntime } from "../shared/runtime";
 
 function formatSourceCoverageMessage(
   browserRequired: number,
@@ -42,6 +44,9 @@ export function Dashboard() {
   // Source and job facts exist only once the workspace has been read; a failed or pending read
   // must never look like an empty workspace.
   const workspaceUnavailable = !loading && !loaded;
+  // Which source types can run depends on the runtime, which is known shortly after mount.
+  const runtimeInfo = useRuntimeInfo();
+  const runtimeKind = runtimeInfo?.kind;
   // This pilot only reads existing canonical data. Every domain retains its current owner.
   const evidence = useCareerEvidence();
   const targetTracks = useTargetTracks();
@@ -61,8 +66,13 @@ export function Dashboard() {
   const failingActiveSources = companies.filter(
     (company) => company.isActive && company.lastRunStatus === "failure",
   ).length;
+  // Scannable here: active, with a reader, and runnable in this runtime (the web app reads fewer
+  // source types than the desktop harness).
   const scannableSources = companies.filter(
-    (company) => company.isActive && canRunSourceType(company.sourceType),
+    (company) =>
+      company.isActive &&
+      canRunSourceType(company.sourceType) &&
+      isRunnableInRuntime(runtimeKind, company.sourceType),
   ).length;
   const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
   const pendingFacts = evidence.pending.length;
@@ -123,19 +133,20 @@ export function Dashboard() {
 
   // With sources and nothing unseen, the useful step is a fresh scan (or fixing the sources
   // when none can be scanned), not "nothing to do".
-  if (loaded && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
+  if (loaded && runtimeInfo && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
     nextActions.push(
       scannableSources > 0
         ? {
             title: "No unseen opportunities right now",
-            copy: "Scan your sources from Find Jobs, or add another careers page you care about.",
-            href: "/jobs",
-            action: "Open Find Jobs",
+            // Scans run from the Companies page; Find Jobs only shows what scans captured.
+            copy: "Scan a source on the Companies page to look for new listings. Listings you have already seen stay in Find Jobs.",
+            href: "/companies",
+            action: "Scan job sources",
             icon: Search,
           }
         : {
             title: "None of your sources can be scanned right now",
-            copy: "They are paused or need a reader this app does not have. Resume one or add another careers page.",
+            copy: "They are paused or need a reader this version of the app does not have. Resume one or add another careers page.",
             href: "/companies",
             action: "Review job sources",
             icon: Building2,
@@ -163,7 +174,7 @@ export function Dashboard() {
   // Places to work, in the order most people use them. Never a progress or completion state.
   const workflow = [
     { title: "Set your direction", copy: "Target Tracks describe the roles and conditions you want.", href: "/target-tracks", icon: Compass },
-    { title: "Find opportunities", copy: "Scan the sources you chose and assess each listing on its evidence.", href: "/jobs", icon: Search },
+    { title: "Find opportunities", copy: "Review captured listings against your target track and confirmed evidence.", href: "/jobs", icon: Search },
     { title: "Back it with evidence", copy: "Confirmed Career Evidence is what truthful resumes are built from.", href: "/career-evidence/new", icon: BookOpenText },
     { title: "Track applications", copy: "Record where you applied and what actually happened.", href: "/applications", icon: ClipboardList },
   ];
