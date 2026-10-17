@@ -72,6 +72,8 @@ export function Jobs() {
     [selectedTargetTrackId, targetTracks],
   );
 
+  const hasActiveListingFilters = Boolean(searchTerm.trim() || locationTerm.trim() || companyFilter !== "all");
+
   const filteredJobs = useMemo(() => {
     return jobs
       .filter((job) => {
@@ -255,10 +257,23 @@ export function Jobs() {
 
       <div className="mt-4 space-y-3">
         {filteredJobs.length === 0 && (
-          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-            {loading
+          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]" role="status">
+            <p>{loading
               ? "Loading jobs..."
-              : "No jobs match the current filters. Try widening the search or run another company scan."}
+              : jobs.length === 0
+                ? "No captured listings yet. Add a company source and run a scan to discover opportunities."
+                : hasActiveListingFilters
+                  ? "No listings match these filters. Clear filters to see all captured opportunities."
+                  : "No captured listings are available."}</p>
+            {!loading && jobs.length > 0 && hasActiveListingFilters && (
+              <button
+                type="button"
+                className="secondary-button mt-4"
+                onClick={() => { setSearchTerm(""); setLocationTerm(""); setCompanyFilter("all"); }}
+              >
+                Clear listing filters
+              </button>
+            )}
           </div>
         )}
 
