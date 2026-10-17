@@ -20,11 +20,11 @@ import type { CareerTargetTrack } from "../shared/contracts";
 import { trackJob } from "../career/storage";
 
 export function Jobs() {
-  const { jobs, companies, markJobAsSeen, loading, loaded, error } = useAppContext();
+  const { jobs, companies, markJobAsSeen, loading, loaded, error, refresh, refreshing } = useAppContext();
   const navigate = useNavigate();
   // Listings are known only after a successful workspace read; a failed read is not an empty workspace.
   const listingsUnavailable = !loading && !loaded;
-  const keywordsInput = useRef<HTMLInputElement>(null);
+  const listingCount = useRef<HTMLParagraphElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -100,8 +100,9 @@ export function Jobs() {
     setSearchTerm("");
     setLocationTerm("");
     setCompanyFilter("all");
-    // The button disappears once listings return, so keep keyboard focus in the filters.
-    keywordsInput.current?.focus();
+    // The button disappears once listings return. Focus the listing count rather than a text
+    // field, so phones do not open the keyboard over the restored list.
+    listingCount.current?.focus();
   };
 
   const handleTrackJob = async (job: (typeof jobs)[number]) => {
@@ -171,7 +172,6 @@ export function Jobs() {
             <span className="relative block">
               <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
-                ref={keywordsInput}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search title or description"
@@ -236,14 +236,16 @@ export function Jobs() {
 
       <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+          <p ref={listingCount} tabIndex={-1} role="status" className="rounded-md text-sm text-[var(--color-text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
             {loaded
-              ? `Showing ${filteredJobs.length} of ${jobs.length} captured listings`
+              ? `Showing ${filteredJobs.length} of ${jobs.length} captured listings${
+                  filteredJobs.length === 0 && jobs.length > 0 ? ". Your filters hide all of them." : ""
+                }`
               : listingsUnavailable
                 ? "Captured listings could not be loaded"
                 : "Loading captured listings"}
           </p>
-          {searchTerm.trim() && listingView === "compact" && (
+          {searchTerm.trim() && listingView === "compact" && filteredJobs.length > 0 && (
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               Search terms may appear inside a collapsed listing description.
             </p>
@@ -276,10 +278,13 @@ export function Jobs() {
               listingsUnavailable ? (
                 <>
                   <p>Your captured listings could not be loaded, so an empty list here does not mean you have none.</p>
-                  {error && <p className="mt-2 text-xs">{error}</p>}
+                  {error && <p className="mt-2 break-words text-xs">{error}</p>}
+                  <button type="button" className="secondary-button mt-4" disabled={refreshing} onClick={() => void refresh()}>
+                    {refreshing ? "Trying again..." : "Try again"}
+                  </button>
                 </>
               ) : (
-                <p>Loading jobs...</p>
+                <p>Loading captured listings...</p>
               )
             ) : jobs.length > 0 ? (
               // With no filter set every listing is shown, so an empty result here always comes from filters.

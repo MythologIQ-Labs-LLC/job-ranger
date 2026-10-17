@@ -104,8 +104,13 @@ test("sources without captured listings point to scanning them", async ({ page }
 test("filters that hide every listing are named, and clearing them by keyboard restores the list", async ({ page }) => {
   await seedListings(page);
   const direction = page.getByRole("combobox", { name: "Assessment direction", exact: true });
-  await direction.selectOption({ label: "Patient access" });
-  const chosenTrack = await direction.inputValue();
+  // Choose the track that is not the default, so a reset to the first track would be caught.
+  const initialTrack = await direction.inputValue();
+  const values = await direction.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+  const chosenTrack = values.find((value) => value && value !== initialTrack)!;
+  expect(chosenTrack).toBeTruthy();
+  await direction.selectOption(chosenTrack);
+  await expect(direction).toHaveValue(chosenTrack);
 
   const keywords = page.getByLabel("Keywords");
   const location = page.getByLabel("Location");
@@ -114,7 +119,9 @@ test("filters that hide every listing are named, and clearing them by keyboard r
   await location.fill("Baltimore");
   await keywords.fill("astronaut");
 
-  await expect(listingCount(page)).toHaveText("Showing 0 of 1 captured listings");
+  await expect(listingCount(page)).toHaveText("Showing 0 of 1 captured listings. Your filters hide all of them.");
+  // No listing is visible, so the collapsed-description search note has nothing to explain.
+  await expect(page.getByText("Search terms may appear inside a collapsed listing description.")).toHaveCount(0);
   await expect(emptyState(page)).toContainText("No listings match these filters. Clear them to see your 1 captured listing.");
   await expect(emptyState(page)).not.toContainText("No job sources yet");
   await expect(page.getByRole("button", { name: "Medical Office Coordinator", exact: true })).toHaveCount(0);
@@ -131,8 +138,9 @@ test("filters that hide every listing are named, and clearing them by keyboard r
   await expect(company).toHaveValue("all");
   // Filters are for listings; the assessment direction is a separate choice and stays put.
   await expect(direction).toHaveValue(chosenTrack);
-  // The button is gone, so focus lands in the filters instead of falling back to the page.
-  await expect(keywords).toBeFocused();
+  // The button is gone, so focus moves to the listing count (not a text field, which would open a
+  // phone keyboard) instead of falling back to the page.
+  await expect(listingCount(page)).toBeFocused();
 });
 
 test("whitespace-only filters are not active filters", async ({ page }) => {
@@ -163,24 +171,41 @@ for (const width of [320, 390]) {
   });
 }
 
-test("a failed workspace read is not presented as an empty workspace", async ({ page }) => {
-  // Wrap the bridge before the app's first read; every read fails so a retry cannot recover mid-test.
+test("a failed workspace read is not presented as an empty workspace and can be retried", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  // Wrap the bridge before the app's first read. Reads fail until the test lets them through, so
+  // the 30 s background refresh cannot recover mid-test.
   await page.context().addInitScript(() => {
+    const state = window as unknown as { __failReads: boolean };
+    state.__failReads = true;
     const define = Object.defineProperty;
     Object.defineProperty = function (target: object, key: PropertyKey, descriptor: PropertyDescriptor) {
       if (target === window && key === "electronAPI" && descriptor.value?.jobs) {
-        (descriptor.value.jobs as { list: () => Promise<unknown> }).list = async () => {
-          throw new Error("Synthetic workspace read failure");
+        const jobs = descriptor.value.jobs as { list: (...args: unknown[]) => Promise<unknown> };
+        const actual = jobs.list;
+        jobs.list = async (...args: unknown[]) => {
+          // One long unbroken token: the message must wrap instead of widening a narrow screen.
+          if (state.__failReads) throw new Error(`Synthetic-workspace-read-failure-${"x".repeat(160)}`);
+          return actual(...args);
         };
       }
       return define(target, key, descriptor);
     } as typeof Object.defineProperty;
   });
   await openJobs(page);
-  await expect(page.getByText("Synthetic workspace read failure")).toBeVisible();
+  await expect(page.getByText(/Synthetic-workspace-read-failure-x+/)).toBeVisible();
   await expect(listingCount(page)).toHaveText("Captured listings could not be loaded");
   await expect(emptyState(page)).toContainText("could not be loaded");
   await expect(emptyState(page)).not.toContainText(/No job sources yet|No listings captured yet|match these filters/);
   await expect(emptyState(page).getByRole("link")).toHaveCount(0);
   await expect(page.getByText(/Showing 0 of 0/)).toHaveCount(0);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  // Once the workspace can be read again, "Try again" shows what is really there.
+  await page.evaluate(() => { (window as unknown as { __failReads: boolean }).__failReads = false; });
+  await emptyState(page).getByRole("button", { name: "Try again" }).click();
+  await expect(listingCount(page)).toHaveText("Showing 0 of 0 captured listings");
+  await expect(emptyState(page)).toContainText("No job sources yet");
+  await expect(page.getByText(/Synthetic-workspace-read-failure/)).toHaveCount(0);
 });
