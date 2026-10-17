@@ -22,7 +22,7 @@ import { useTargetTracks } from "../career/target-tracks";
 import { useApplications } from "../career/storage";
 import { canRunSourceType, getSourceProfile } from "../types";
 import { useRuntimeInfo } from "../services/runtime";
-import { isRunnableInRuntime } from "../shared/runtime";
+import { isRunnableInRuntime, WEB_RUNNABLE_SOURCE_TYPES } from "../shared/runtime";
 
 function formatSourceCoverageMessage(
   browserRequired: number,
@@ -44,9 +44,6 @@ export function Dashboard() {
   // Source and job facts exist only once the workspace has been read; a failed or pending read
   // must never look like an empty workspace.
   const workspaceUnavailable = !loading && !loaded;
-  // Which source types can run depends on the runtime, which is known shortly after mount.
-  const runtimeInfo = useRuntimeInfo();
-  const runtimeKind = runtimeInfo?.kind;
   // This pilot only reads existing canonical data. Every domain retains its current owner.
   const evidence = useCareerEvidence();
   const targetTracks = useTargetTracks();
@@ -54,7 +51,12 @@ export function Dashboard() {
 
   const activeJobs = jobs.filter((job) => job.isActive).length;
   const newJobs = jobs.filter((job) => job.isNew).length;
-  const runnableCompanies = companies.filter((company) => canRunSourceType(company.sourceType));
+  // Which source types can run depends on the runtime, which is known shortly after mount.
+  const runtimeInfo = useRuntimeInfo();
+  const runtimeKind = runtimeInfo?.kind;
+  const readableHere = (sourceType: (typeof companies)[number]["sourceType"]) =>
+    canRunSourceType(sourceType) && isRunnableInRuntime(runtimeKind, sourceType);
+  const runnableCompanies = companies.filter((company) => readableHere(company.sourceType));
   const browserRequiredCompanies = companies.filter(
     (company) => company.sourceType === "browser-required",
   ).length;
@@ -66,13 +68,11 @@ export function Dashboard() {
   const failingActiveSources = companies.filter(
     (company) => company.isActive && company.lastRunStatus === "failure",
   ).length;
-  // Scannable here: active, with a reader, and runnable in this runtime (the web app reads fewer
-  // source types than the desktop harness).
-  const scannableSources = companies.filter(
-    (company) =>
-      company.isActive &&
-      canRunSourceType(company.sourceType) &&
-      isRunnableInRuntime(runtimeKind, company.sourceType),
+  // Scannable here: active and readable in this runtime (the web app reads fewer source types
+  // than the desktop harness). Paused sources can still be run once by hand.
+  const scannableSources = companies.filter((company) => company.isActive && readableHere(company.sourceType)).length;
+  const pausedReadableSources = companies.filter(
+    (company) => !company.isActive && readableHere(company.sourceType),
   ).length;
   const activeTracks = targetTracks.tracks.filter((track) => track.isActive);
   const pendingFacts = evidence.pending.length;
@@ -132,25 +132,37 @@ export function Dashboard() {
   }
 
   // With sources and nothing unseen, the useful step is a fresh scan (or fixing the sources
-  // when none can be scanned), not "nothing to do".
+  // when none can be scanned), not "nothing to do". Scans run from the Companies page; Find Jobs
+  // only shows what scans captured.
   if (loaded && runtimeInfo && companies.length > 0 && newJobs === 0 && failingActiveSources === 0) {
+    const webReadable = WEB_RUNNABLE_SOURCE_TYPES.map((type) => getSourceProfile(type).label).join(", ");
     nextActions.push(
       scannableSources > 0
         ? {
             title: "No unseen opportunities right now",
-            // Scans run from the Companies page; Find Jobs only shows what scans captured.
-            copy: "Scan a source on the Companies page to look for new listings. Listings you have already seen stay in Find Jobs.",
+            copy: "Run a source on the Companies page to look for new listings. Listings you have already seen stay in Find Jobs.",
             href: "/companies",
-            action: "Scan job sources",
+            action: "Run a job source",
             icon: Search,
           }
-        : {
-            title: "None of your sources can be scanned right now",
-            copy: "They are paused or need a reader this version of the app does not have. Resume one or add another careers page.",
-            href: "/companies",
-            action: "Review job sources",
-            icon: Building2,
-          },
+        : pausedReadableSources > 0
+          ? {
+              title: "Your job sources are paused",
+              copy: "Resume a source to have it checked on its schedule, or run it once on the Companies page.",
+              href: "/companies",
+              action: "Review job sources",
+              icon: Building2,
+            }
+          : {
+              title: "None of your sources can be read here",
+              copy:
+                runtimeKind === "web"
+                  ? `The web app reads careers pages hosted on ${webReadable}. Add one of those to look for listings.`
+                  : "They need a reader this app does not have. Add another careers page to look for listings.",
+              href: "/companies",
+              action: "Review job sources",
+              icon: Building2,
+            },
     );
   }
 
@@ -287,7 +299,7 @@ export function Dashboard() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Based on saved records, not predictions or activity quotas.
           </p>
-          {(loading && !loaded) || careerLoading ? (
+          {(loading && !loaded) || careerLoading || (loaded && !runtimeInfo) ? (
             <p role="status" className="mt-5 text-sm text-[var(--color-text-secondary)]">
               Loading your next steps...
             </p>

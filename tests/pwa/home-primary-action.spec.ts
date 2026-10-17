@@ -126,8 +126,43 @@ test("scannable sources with nothing unseen point to scanning them, where scans 
   await expectSinglePrimary(page);
   await expect(primary(page).getByRole("heading", { name: "No unseen opportunities right now" })).toBeVisible();
   // Find Jobs has no scan control; scans run from the Companies page.
-  await expect(primary(page).getByRole("link", { name: "Scan job sources" })).toHaveAttribute("href", "#/companies");
+  await expect(primary(page).getByRole("link", { name: "Run a job source" })).toHaveAttribute("href", "#/companies");
   await expect(primary(page)).toContainText("Companies page");
+});
+
+test("until the runtime is known, Home shows loading rather than a wrong or missing step", async ({ page }) => {
+  // Hold getRuntimeInfo on the next load only (the bridge is defined once, before React mounts).
+  await page.context().addInitScript(() => {
+    if (sessionStorage.getItem("jr.test.holdRuntime") !== "1") return;
+    const define = Object.defineProperty;
+    Object.defineProperty = function (target: object, key: PropertyKey, descriptor: PropertyDescriptor) {
+      if (target === window && key === "electronAPI" && descriptor.value?.getRuntimeInfo) {
+        const api = descriptor.value as { getRuntimeInfo: (...args: unknown[]) => Promise<unknown> };
+        let release: () => void = () => {};
+        const gate = new Promise<void>((resolve) => { release = resolve; });
+        (window as unknown as { __releaseRuntime: () => void }).__releaseRuntime = release;
+        const held = async (...args: unknown[]) => { await gate; return api.getRuntimeInfo(...args); };
+        descriptor = { ...descriptor, value: Object.freeze({ ...api, getRuntimeInfo: held }) };
+      }
+      return define(target, key, descriptor);
+    } as typeof Object.defineProperty;
+  });
+  await routeGreenhouse(page, { failing: false });
+  await openHome(page);
+  await createTrack(page);
+  const source = await addScannedSource(page);
+  expect(source.status).toBe("success");
+  await page.evaluate(async () => {
+    for (const job of await window.electronAPI.jobs.list()) await window.electronAPI.jobs.markSeen(job.id);
+    sessionStorage.setItem("jr.test.holdRuntime", "1");
+  });
+  await page.reload();
+  await waitForRuntime(page);
+  await expect(page.getByText("Loading your next steps...")).toBeVisible();
+  await expect(page.getByText(/cannot be fully determined/)).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { __releaseRuntime: () => void }).__releaseRuntime());
+  await expectSinglePrimary(page);
+  await expect(primary(page).getByRole("heading", { name: "No unseen opportunities right now" })).toBeVisible();
 });
 
 test("an active source the web app cannot read is not counted as scannable", async ({ page }) => {
@@ -144,11 +179,18 @@ test("an active source the web app cannot read is not counted as scannable", asy
   expect(created.sourceType).toBe("workday");
   await reloadHome(page);
   await expectSinglePrimary(page);
-  await expect(primary(page).getByRole("heading", { name: "None of your sources can be scanned right now" })).toBeVisible();
+  await expect(primary(page).getByRole("heading", { name: "None of your sources can be read here" })).toBeVisible();
+  await expect(primary(page)).toContainText("Greenhouse, Lever, Ashby, SmartRecruiters");
   await expect(page.getByRole("heading", { name: "No unseen opportunities right now" })).toHaveCount(0);
+  // The Companies page agrees: nothing is counted as runnable, and Run is not offered for it.
+  await page.goto(`${server.url}#/companies`);
+  await expect(page.locator(".metric-card").filter({ hasText: "Runnable now" })).toContainText("0");
+  const row = page.getByRole("row").filter({ hasText: "Harbor Workday" });
+  await expect(row.getByTestId("web-source-limit")).toBeVisible();
+  await expect(row.getByRole("button", { name: "Run", exact: true })).toBeDisabled();
 });
 
-test("when no source can be scanned, Home points to the sources instead of a scan", async ({ page }) => {
+test("when every readable source is paused, Home says so and points to the sources", async ({ page }) => {
   await routeGreenhouse(page, { failing: false });
   await openHome(page);
   await createTrack(page);
@@ -160,7 +202,7 @@ test("when no source can be scanned, Home points to the sources instead of a sca
   }));
   await reloadHome(page);
   await expectSinglePrimary(page);
-  await expect(primary(page).getByRole("heading", { name: "None of your sources can be scanned right now" })).toBeVisible();
+  await expect(primary(page).getByRole("heading", { name: "Your job sources are paused" })).toBeVisible();
   await expect(primary(page).getByRole("link", { name: "Review job sources" })).toHaveAttribute("href", "#/companies");
   await expect(page.getByRole("heading", { name: "No unseen opportunities right now" })).toHaveCount(0);
 });

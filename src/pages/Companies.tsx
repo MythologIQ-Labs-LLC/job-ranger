@@ -109,9 +109,13 @@ export function Companies() {
     [discovery, dismissedCandidateIds],
   );
 
+  // Readable here: a reader exists and this runtime can use it (the web app reads fewer types).
   const runnableCount = useMemo(
-    () => companies.filter((company) => canRunSourceType(company.sourceType)).length,
-    [companies],
+    () =>
+      companies.filter(
+        (company) => canRunSourceType(company.sourceType) && isRunnableInRuntime(runtimeKind, company.sourceType),
+      ).length,
+    [companies, runtimeKind],
   );
   const browserRequiredCount = useMemo(
     () => companies.filter((company) => company.sourceType === "browser-required").length,
@@ -542,7 +546,7 @@ export function Companies() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
-                        disabled={!canRun || runningId === company.id || refreshing}
+                        disabled={!canRun || !runnableHere || runningId === company.id || refreshing}
                         onClick={() => void handleRun(company.id)}
                         className="secondary-button disabled:cursor-not-allowed disabled:opacity-50"
                       >
