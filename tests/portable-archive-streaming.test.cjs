@@ -262,7 +262,7 @@ test('unsafe or repeated paths in the backup manifest are refused before writing
   }
 });
 
-test('a file that no longer matches its backup manifest hash is refused before writing', async () => {
+test('a file that no longer matches its backup manifest hash fails the pack and leaves no file', async () => {
   const { root, bundle, archivePath } = await makeBundle(sampleFiles());
   try {
     // Same length, different bytes: the CRC pass alone would accept it.
@@ -291,7 +291,7 @@ test('a manifest file without a hash, or a directory in place of a file, is refu
     await fs.writeFile(manifestPath, JSON.stringify(unhashed));
     await assert.rejects(
       archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt }),
-      /missing a file hash/,
+      /no valid hash for artifacts\/resumes\/morgan-rivera\.pdf/,
     );
     await fs.writeFile(manifestPath, original);
     const target = path.join(bundle, 'artifacts', 'evidence', 'empty.txt');

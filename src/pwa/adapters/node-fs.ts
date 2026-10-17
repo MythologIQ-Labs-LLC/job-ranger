@@ -248,6 +248,13 @@ async function writeFile(
     throw fsError("ENOENT", `no such file or directory, open '${target}'`);
   }
   const { parent, name } = await parentAndName(target);
+  // A file this call creates is removed again if the write fails, so a failed write (or a copy
+  // whose source fails mid-read) never leaves an empty file behind.
+  const existed = await parent.getFileHandle(name).then(
+    () => true,
+    // Only "not found" means this call creates it; anything else (a folder of that name) is kept.
+    (error: unknown) => (error as { name?: string })?.name !== "NotFoundError",
+  );
   try {
     const handle = await parent.getFileHandle(name, { create: true });
     const writable = await (handle as FileSystemFileHandle & {
@@ -265,6 +272,7 @@ async function writeFile(
       throw error;
     }
   } catch (error) {
+    if (!existed) await parent.removeEntry(name).catch(() => undefined);
     // The data's own failure (for example a file that changed while being archived) is rethrown
     // as is; the uncommitted write was already discarded.
     if (error instanceof ChunkSourceError) throw error.error;

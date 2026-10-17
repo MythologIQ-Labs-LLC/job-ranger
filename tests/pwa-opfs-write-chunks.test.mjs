@@ -20,7 +20,7 @@ function notFound() {
 }
 
 // The adapter caches the OPFS root, so one fake root is shared and its state reset per test.
-const state = { committed: new Map(), log: { writes: [], closed: 0, aborted: 0 }, failWriteAt: 0, refuseWholeReads: false };
+const state = { committed: new Map(), log: { writes: [], closed: 0, aborted: 0 }, failWriteAt: 0, refuseWholeReads: false, failStreamOf: null };
 
 /** Resets the fake OPFS root: writables commit on close and discard on abort. */
 function fakeOpfs({ failWriteAt = 0, refuseWholeReads = false } = {}) {
@@ -28,6 +28,7 @@ function fakeOpfs({ failWriteAt = 0, refuseWholeReads = false } = {}) {
   state.log = { writes: [], closed: 0, aborted: 0 };
   state.failWriteAt = failWriteAt;
   state.refuseWholeReads = refuseWholeReads;
+  state.failStreamOf = null;
   return state;
 }
 
@@ -61,7 +62,17 @@ const fileHandle = (name) => ({
         if (state.refuseWholeReads) throw new Error(`whole-file read of ${name}`);
         return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
       },
-      stream: () => new Blob([bytes]).stream(),
+      stream() {
+        if (state.failStreamOf !== name) return new Blob([bytes]).stream();
+        // One chunk, then the browser reports the file unreadable.
+        let sent = false;
+        return new ReadableStream({
+          pull(controller) {
+            if (sent) controller.error(new DOMException("unreadable", "NotReadableError"));
+            else { sent = true; controller.enqueue(bytes.subarray(0, 16)); }
+          },
+        });
+      },
     };
   },
 });
@@ -122,7 +133,7 @@ test("a failure of the data aborts the write and is rethrown unchanged, not as a
   );
   assert.equal(log.aborted, 1);
   assert.equal(log.closed, 0);
-  assert.equal(committed.get("archive.jobranger.partial"), undefined, "nothing committed");
+  assert.equal(committed.has("archive.jobranger.partial"), false, "the file this call created is removed");
   assert.equal(storageFailures.length, before);
 });
 
@@ -148,7 +159,7 @@ test("quota exhaustion mid-stream aborts, stops reading the source and reports s
   assert.equal(sourceClosed, true, "source iterator released");
   assert.equal(log.aborted, 1);
   assert.equal(log.closed, 0);
-  assert.equal(committed.get("archive.jobranger.partial"), undefined);
+  assert.equal(committed.has("archive.jobranger.partial"), false);
   assert.equal(storageFailures.length, before + 1);
 });
 
@@ -179,4 +190,24 @@ test("copying a missing file fails without creating the destination", async () =
   const { committed } = fakeOpfs();
   await assert.rejects(fs.copyFile("/missing.bin", "/copy.bin"), (error) => error.code === "ENOENT");
   assert.equal(committed.has("copy.bin"), false);
+});
+
+test("a copy whose source fails mid-read leaves no new file and reports storage once", async () => {
+  const { committed } = fakeOpfs();
+  await fs.writeFile("/source.bin", new Uint8Array(64).fill(3));
+  state.failStreamOf = "source.bin";
+  const before = storageFailures.length;
+  await assert.rejects(fs.copyFile("/source.bin", "/copy.bin"), (error) => error instanceof JobRangerStorageError && error.code === "EIO");
+  assert.equal(committed.has("copy.bin"), false);
+  assert.equal(storageFailures.length, before + 1);
+});
+
+test("a failed write over an existing file keeps the file and its previous contents", async () => {
+  const { committed } = fakeOpfs();
+  await fs.writeFile("/marker.json", "old");
+  await assert.rejects(fs.writeFile("/marker.json", (async function* () {
+    yield new Uint8Array([1]);
+    throw new Error("source failed");
+  })()), /source failed/);
+  assert.equal(committed.get("marker.json").toString(), "old");
 });

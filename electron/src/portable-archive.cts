@@ -381,6 +381,8 @@ interface StreamedEntry {
   crc: number;
   bytes?: Uint8Array;
   sourcePath?: string;
+  /** Hash the backup manifest declares for a bundle file; checked on the bytes actually written. */
+  sha256?: string;
 }
 
 async function* entryChunks(entry: StreamedEntry): AsyncGenerator<Uint8Array> {
@@ -391,29 +393,15 @@ async function* entryChunks(entry: StreamedEntry): AsyncGenerator<Uint8Array> {
   for await (const chunk of createReadStream(entry.sourcePath as string)) yield chunk as Uint8Array;
 }
 
-/**
- * CRC-32 and length of a file, read in bounded chunks. Its SHA-256 must equal the hash the backup
- * manifest declares, so the archive carries exactly the bytes the backup validated. Reading stops
- * once the file passes `maxBytes`.
- */
-async function measureFile(
-  name: string,
-  sourcePath: string,
-  declaredSha256: string,
-  maxBytes: number,
-): Promise<{ crc: number; size: number }> {
+/** CRC-32 and length of a file, read in bounded chunks; reading stops once it passes `maxBytes`. */
+async function measureFile(sourcePath: string, maxBytes: number): Promise<{ crc: number; size: number }> {
   let crc = CRC32_INITIAL;
   let size = 0;
-  const hash = createHash("sha256");
   for await (const chunk of createReadStream(sourcePath)) {
     const bytes = chunk as Uint8Array;
     size += bytes.length;
     if (size > maxBytes) throw new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
     crc = crc32Update(crc, bytes);
-    hash.update(bytes);
-  }
-  if (hash.digest("hex") !== declaredSha256) {
-    throw new PortableArchiveError(`${name} does not match the hash recorded in its backup manifest`);
   }
   return { crc: crc32Final(crc), size };
 }
@@ -485,7 +473,8 @@ function centralDirectory(
 
 /**
  * Yields the bytes encodeStoreZip would produce for these entries, reading each file again in
- * bounded chunks. A file whose length or CRC-32 differs from the first pass fails the archive.
+ * bounded chunks. A file whose length or CRC-32 differs from the first pass, or whose written
+ * bytes do not have the SHA-256 its backup manifest declares, fails the archive.
  */
 async function* storeZipChunks(entries: readonly StreamedEntry[]): AsyncGenerator<Uint8Array> {
   const localOffsets: number[] = [];
@@ -496,14 +485,19 @@ async function* storeZipChunks(entries: readonly StreamedEntry[]): AsyncGenerato
     yield header;
     let crc = CRC32_INITIAL;
     let size = 0;
+    const hash = entry.sha256 ? createHash("sha256") : null;
     for await (const chunk of entryChunks(entry)) {
       crc = crc32Update(crc, chunk);
       size += chunk.length;
       if (size > entry.size) break;
+      hash?.update(chunk);
       yield chunk;
     }
     if (size !== entry.size || crc32Final(crc) !== entry.crc) {
       throw new PortableArchiveError(`${entry.name} changed while the backup archive was being written`);
+    }
+    if (hash && hash.digest("hex") !== entry.sha256) {
+      throw new PortableArchiveError(`${entry.name} does not match the hash recorded in its backup manifest`);
     }
     offset += header.length + entry.size;
   }
@@ -512,7 +506,7 @@ async function* storeZipChunks(entries: readonly StreamedEntry[]): AsyncGenerato
 
 /**
  * Lists the archive entries for a bundle: the two manifests in memory, every other file by path
- * with its length and CRC-32 (first pass, which also checks the manifest's SHA-256). Applies the same name, count and size rules as
+ * with its length and CRC-32 (first pass) and the SHA-256 its manifest declares. Applies the same name, count and size rules as
  * encodeStoreZip before anything is written.
  */
 async function prepareBundleEntries(
@@ -521,9 +515,12 @@ async function prepareBundleEntries(
 ): Promise<StreamedEntry[]> {
   const manifestBytes = await fs.readFile(path.join(bundleDirectory, BACKUP_MANIFEST_FILE));
   const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as {
-    database: { path: string; sha256: string };
-    artifactFiles: Array<{ path: string; sha256: string }>;
+    database?: { path: string; sha256: string };
+    artifactFiles?: Array<{ path: string; sha256: string }>;
   };
+  if (!manifest.database || !Array.isArray(manifest.artifactFiles)) {
+    throw new PortableArchiveError("Backup manifest is invalid");
+  }
   const files = [manifest.database, ...manifest.artifactFiles];
   if (files.length + 2 > MAX_ARCHIVE_ENTRIES) {
     throw new PortableArchiveError("Too many files for a Job Ranger archive");
@@ -549,10 +546,10 @@ async function prepareBundleEntries(
   const tooLarge = () => new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
   let totalSize = 22 + entries.reduce((sum, entry) => sum + entryArchiveBytes(entry, entry.size), 0);
   for (const file of files) {
-    if (typeof file.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(file.sha256)) {
-      throw new PortableArchiveError("Backup manifest is missing a file hash");
-    }
     const entry = named(file.path);
+    if (typeof file.sha256 !== "string" || !/^[a-f0-9]{64}$/i.test(file.sha256)) {
+      throw new PortableArchiveError(`Backup manifest has no valid hash for ${entry.name}`);
+    }
     const sourcePath = path.join(bundleDirectory, ...entry.name.split("/"));
     const stat = await fs.lstat(sourcePath);
     if (!stat.isFile() || stat.isSymbolicLink()) {
@@ -560,10 +557,10 @@ async function prepareBundleEntries(
     }
     // Refuse before reading a byte when the files alone are already too large.
     if (totalSize + entryArchiveBytes(entry, stat.size) > MAX_ARCHIVE_BYTES) throw tooLarge();
-    const measured = await measureFile(entry.name, sourcePath, file.sha256, MAX_ARCHIVE_BYTES - totalSize);
+    const measured = await measureFile(sourcePath, MAX_ARCHIVE_BYTES - totalSize - entryArchiveBytes(entry, 0));
     totalSize += entryArchiveBytes(entry, measured.size);
     if (totalSize > MAX_ARCHIVE_BYTES) throw tooLarge();
-    entries.push({ ...entry, sourcePath, ...measured });
+    entries.push({ ...entry, sourcePath, sha256: file.sha256.toLowerCase(), ...measured });
   }
   return entries;
 }
