@@ -145,7 +145,7 @@ export function Dashboard() {
       runtime.info === null
         ? {
             title: "Check your job sources",
-            copy: "Open the Companies page to see which sources can run here, and run one to look for new listings.",
+            copy: "Open the Companies page and run a source to look for new listings.",
             href: "/companies",
             action: "Review job sources",
             icon: Building2,
