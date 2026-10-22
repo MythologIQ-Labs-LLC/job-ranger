@@ -107,7 +107,7 @@ function transport(adapter, capturedAt) {
           } catch (cause) {
             // Don't leak OS paths, SQL, stack traces or filesystem errors to an LLM.
             const m = cause instanceof Error ? cause.message : "";
-            const allow = /^(Permission denied|Invalid tool arguments|limit must|Unknown tool|Post not found|Draft not found|postId is required|draftId is required|Unsupported)/.test(m);
+            const allow = /^(Permission denied|Invalid tool arguments|limit must|Unknown tool|Post not found|Draft not found|postId is required|draftId is required|Stale draft revision|No content change|Unsupported)/.test(m);
             result = { content: [{ type: "text", text: allow ? m : "Tool could not complete a permitted read." }], isError: true };
           }
           break;

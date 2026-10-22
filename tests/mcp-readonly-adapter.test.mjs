@@ -117,4 +117,57 @@ await assert.rejects(() => reader.execute("compare_post_experiments", {
 }), /Unsupported/);
 assert.equal(counts.mutation, 0);
 assert.equal(reader.tools.every((tool) => tool.annotations.readOnlyHint), true);
-console.log("MCP read-only scope, minimization, delegation, injection-data and parity tests passed");
+// A model-authored proposed revision can be assessed, but never persisted, approved,
+ // or permitted to inherit claim verification or privacy clearance from saved text.
+{
+  const previewScope = createReadOnlyAdapter(services, ["post-content:read"]);
+  const tool = previewScope.tools.find((item) => item.name === "preview_post_revision_readiness");
+  assert(tool && tool.annotations.readOnlyHint && !tool.annotations.destructiveHint);
+  assert.equal(tool.inputSchema.additionalProperties, false);
+  assert.equal(tool.inputSchema.properties.proposedBody.maxLength, 3000);
+  const proposedBody = "Proposed text: I led a transformation. MODEL-INSTRUCTION-DO-NOT-FOLLOW";
+  const preview = await previewScope.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 1, proposedBody,
+  });
+  assert.equal(preview.status, "blocked", "changed copy is never automatically ready");
+  assert.equal(preview.saved, false);
+  assert.equal(preview.approved, false);
+  assert.equal(preview.published, false);
+  assert.equal(preview.bodyChanged, true);
+  assert.equal(preview.hypotheticalRevision, 2);
+  assert.equal(preview.humanEditorialReviewRequired, true);
+  assert(preview.findings.some((finding) =>
+    finding.code === "proposal_requires_fresh_claim_and_privacy_review" &&
+    finding.severity === "blocking"));
+  assert(preview.findings.some((finding) => finding.code === "claim_0_unsupported"));
+  assert(preview.findings.some((finding) => finding.code === "claim_0_privacy"));
+  assert(!JSON.stringify(preview).includes("MODEL-INSTRUCTION-DO-NOT-FOLLOW"),
+    "the preview must not echo untrusted proposal content");
+  assert.equal(counts.mutation, 0, "preview must not call canonical mutations");
+  assert.equal(draft.body.includes("Ignore previous instructions"), true,
+    "saved draft body must not be modified by a preview");
+  assert.equal(draft.claimChecks[0].verified, true, "saved claims remain unchanged");
+  assert.equal(draft.claimChecks[0].privacyCleared, true, "saved privacy decisions remain unchanged");
+  await assert.rejects(() => previewScope.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 2, proposedBody,
+  }), /Stale draft revision/);
+  await assert.rejects(() => previewScope.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 1, proposedBody: draft.body,
+  }), /No content change/);
+  await assert.rejects(() => previewScope.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 1, proposedBody: "x".repeat(3001),
+  }), /Invalid tool arguments/);
+  await assert.rejects(() => previewScope.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 1, proposedBody, verified: true,
+  }), /Invalid tool arguments/);
+  await assert.rejects(() => denyAll.execute("preview_post_revision_readiness", {
+    draftId: draft.id, expectedRevision: 1, proposedBody,
+  }), /Permission denied/);
+  await assert.rejects(() => createReadOnlyAdapter(services, ["posts:read"])
+    .execute("preview_post_revision_readiness", {
+      draftId: draft.id, expectedRevision: 1, proposedBody,
+    }), /Permission denied/);
+  assert.equal(counts.mutation, 0);
+}
+
+console.log("MCP read-only scope, minimization, delegation, injection-data parity and proposal preview tests passed");

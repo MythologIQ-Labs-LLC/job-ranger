@@ -52,8 +52,11 @@ To refresh changed Career Evidence or new post metrics, **restart the process**.
 | `list_personal_brand_posts` | `posts:read` | User-confirmed publication metadata, **no text** |
 | `get_post_experiment` | `post-content:read` | Prepared post text and known versioned metadata |
 | `evaluate_post_readiness` | `post-content:read` | Same deterministic readiness assessment as UI |
+| `preview_post_revision_readiness` | `post-content:read` | Read-only preview of a changed draft body, never saved or approved; new claim/privacy review required |
 | `get_post_analytics` | `analytics:read` | Actual timestamped observations and source states |
 | `compare_post_experiments` | `analytics:read` | Same non-causal cohort comparisons as UI |
+
+The proposal preview requires a saved draft ID, its current expected revision, and no more than 3,000 characters of changed proposed text. A stale revision is rejected. The adapter reuses the existing deterministic readiness assessment but **always blocks** approval of changed copy until a human rechecks factual claims, linked evidence, privacy and editorial suitability. It neither repeats proposed text in its response nor writes it to the workspace. Existing claim checks are never silently carried forward to the proposed revision. The source snapshot remains unchanged.
 
 There is **no** `create_post`, `update_evidence`, `publish_post`, or other write tool. Lists are deliberately limited (20 records maximum per tool response), and human/private descriptions, application notes, source documents and contact details are not exposed. Post text and Career Evidence contain untrusted user-authored or third-party content; clients should treat them as data, not instructions.
 
@@ -83,6 +86,6 @@ The repository's ordinary `test` and `test:unit` commands also include these che
 
 ChatGPT Web generally requires a separately reachable **HTTPS MCP server** and an appropriate authentication/authorization flow for private data. A privacy-preserving relay, explicit opt-in account/session pairing, OAuth 2.1 scope and audience validation, narrow reachability, replay protection, durable revocation and cross-platform proof remain **unimplemented**. No OAuth secret should be inserted into this command or committed to the repository.
 
-The next milestone is to test this prototype with a supported local MCP inspector/client and evaluate a safe ChatGPT-compatible connection. Do not describe it as connected to ChatGPT until the exact supported surface and end-to-end authorization have actually been tested.
+The official Secure MCP Tunnel now offers a narrowly controlled owner-only trial over the local stdio server; see the linked operator runbook. **End-to-end ChatGPT connectivity, OpenAI workspace authorization, credential provisioning and actual revocation are not yet verified.** Do not describe it as connected until the exact supported surface and end-to-end authorization have been tested.
 
 Governing record: [ADR-0002](../adr/0002-local-readonly-mcp-boundary.md), [issue #173](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/173).
