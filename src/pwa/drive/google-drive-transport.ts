@@ -243,7 +243,8 @@ export async function verifyRecoveredDriveFile(
       !ID.test(expected.remoteId) || !ID.test(expected.destinationId) ||
       !HASH.test(expected.approvedSha256) || expected.mimeType !== "application/pdf" ||
       expected.name.length < 4 || expected.name.length > 180 ||
-      !expected.name.endsWith(".pdf")) return false;
+      !expected.name.toLowerCase().endsWith(".pdf") ||
+      /[\\/\x00-\x1f\x7f]/.test(expected.name) || expected.name.trim() !== expected.name) return false;
   const auth = { Authorization: `Bearer ${accessToken}` };
   try {
     let destinationId = expected.destinationId;
