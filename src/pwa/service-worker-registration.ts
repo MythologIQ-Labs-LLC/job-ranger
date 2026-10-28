@@ -1,5 +1,5 @@
 /**
- * Service worker lifecycle for the Job Ranger web runtime.
+ * Service worker lifecycle for the Sojourner web runtime.
  *
  * Safety rules:
  * - the service worker caches only the versioned application shell; it never
