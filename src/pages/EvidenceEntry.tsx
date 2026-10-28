@@ -215,7 +215,7 @@ export function EvidenceEntry() {
                 placeholder="Example: Coordinated weekly scheduling for six field technicians across three service areas."
               />
               <span className="mt-2 block text-xs text-[var(--color-text-muted)]">
-                Write one factual statement. Job Ranger will not inflate it into something you did not say.
+                Write one factual statement. Sojourner will not inflate it into something you did not say.
               </span>
             </label>
 
@@ -265,7 +265,7 @@ export function EvidenceEntry() {
               <div>
                 <h2 className="text-lg font-semibold">Credential details</h2>
                 <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
-                  Add only what you know. Status and expiration can affect whether a credential actually establishes current eligibility; Job Ranger will not assume an old license is active.
+                  Add only what you know. Status and expiration can affect whether a credential actually establishes current eligibility; Sojourner will not assume an old license is active.
                 </p>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -302,7 +302,7 @@ export function EvidenceEntry() {
           <section className="border-divider mt-7 border-t pt-6">
             <h2 className="text-lg font-semibold">Work samples and references</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
-              Optional. Web links must use http or https. Local references are stored as inert text; Job Ranger will not open or execute them automatically.
+              Optional. Web links must use http or https. Local references are stored as inert text; Sojourner will not open or execute them automatically.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <label>
@@ -360,7 +360,7 @@ export function EvidenceEntry() {
             <p className="story-kicker">Corrections preserve history</p>
             <h2 className="story-title">Replace a fact instead of erasing it.</h2>
             <p className="story-copy">
-              When a confirmed fact needs correction, Job Ranger keeps the old record, retires it from matching, and links it to the replacement.
+              When a confirmed fact needs correction, Sojourner keeps the old record, retires it from matching, and links it to the replacement.
             </p>
           </div>
 
