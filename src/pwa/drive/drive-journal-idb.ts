@@ -6,6 +6,7 @@
  */
 import { blocksFreshArtifactExport, validateJournalRecord } from "../../shared/artifact-export-journal.ts";
 import type { DurableExportJournalStore, ExportJournalRecord } from "../../shared/artifact-export-journal.ts";
+import { advanceExportReceipt } from "../../shared/artifact-export-approval.ts";
 import type { ExportStatus } from "../../shared/artifact-export-approval.ts";
 
 const DB_NAME = "job-ranger.drive-artifact-export-journal.v1";
@@ -150,6 +151,24 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
         const previous = request.result as ExportJournalRecord | undefined;
         if (!previous || previous.status !== expected || !sameIdentity(previous, next) ||
             Date.parse(next.updatedAt) < Date.parse(previous.updatedAt)) {
+          done(false);
+          return;
+        }
+        // Storage must independently reject forged status jumps, not just rely
+        // on callers using advanceDurableExport. Never allow remote uncertainty
+        // to be erased by a direct compareAndSwap invocation.
+        try {
+          const checked = advanceExportReceipt({
+            operationId: previous.operationId, proposalId: previous.approvalId,
+            status: previous.status, bytesSha256: previous.bytesSha256,
+            remoteId: previous.remoteId, verifiedSha256: previous.verifiedSha256,
+          }, next.status, next.remoteId, next.verifiedSha256);
+          if (checked.remoteId !== next.remoteId ||
+              checked.verifiedSha256 !== next.verifiedSha256) {
+            done(false);
+            return;
+          }
+        } catch {
           done(false);
           return;
         }
