@@ -35,7 +35,7 @@ export const DEMO_IDLE_RESET_MS = DEMO_IDLE_RESET_HOURS * 60 * 60 * 1000;
 export const DEMO_ACTIVITY_WRITE_INTERVAL_MS = 5 * 60 * 1000;
 
 export const DEMO_REFUSAL_MESSAGE =
-  "This site holds a Job Ranger workspace that is not a demo; the demo will not erase it.";
+  "This site holds a Sojourner workspace that is not a demo; the demo will not erase it.";
 
 export interface DemoWorkspaceSentinel {
   schemaVersion: 1;
