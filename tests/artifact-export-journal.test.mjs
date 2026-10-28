@@ -74,9 +74,12 @@ describe("durable artifact export journal contract", () => {
         "2026-10-15T15:00:02.000Z"), /Concurrent/,
     );
     assert.equal((await db.findOperation(record.operationId)).status, "uploading");
+    assert.throws(() => receipt(uploading, "cancelled"), /Invalid export transition/);
     await assert.rejects(
-      advanceDurableExport(db, uploading, receipt(uploading, "cancelled"),
-        "2026-10-15T15:00:02.000Z"), /Invalid export transition/,
+      advanceDurableExport(db, uploading, {
+        operationId: uploading.operationId, proposalId: "prop:1", status: "cancelled",
+        bytesSha256: uploading.bytesSha256, remoteId: null, verifiedSha256: null,
+      }, "2026-10-15T15:00:02.000Z"), /Invalid export transition/,
     );
     const unused = { ...record, operationId: "unused:2", approvalId: "approval:2" };
     await reserveExport(db, unused);
