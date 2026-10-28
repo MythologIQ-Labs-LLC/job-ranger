@@ -19,9 +19,11 @@ const MIME = new Map([
 export const DRIVE_OPERATION_PROPERTY = "sojournerExportOperation";
 
 export class DriveTransportError extends Error {
-  constructor(readonly category: "invalid" | "action_needed" | "quota" | "denied", message: string) {
+  readonly category: "invalid" | "action_needed" | "quota" | "denied";
+  constructor(category: "invalid" | "action_needed" | "quota" | "denied", message: string) {
     super(message);
     this.name = "DriveTransportError";
+    this.category = category;
   }
 }
 
