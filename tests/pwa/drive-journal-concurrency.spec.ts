@@ -118,3 +118,66 @@ test("pending status persists after navigation/reload and terminal verification 
     pending: true, moved: true, done: true, noLongerPending: false, newApproval: true,
   });
 });
+
+test("unused receipt cancellation is atomic and cannot erase an upload begun in another tab", async ({ page }) => {
+  await install(page);
+  const result = await page.evaluate(async () => {
+    const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+    const a = new Journal();
+    const b = new Journal();
+    const prepared = {
+      schemaVersion: 1, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      accountId: "cancelAccount", destinationId: "root", artifactId: "cancelArtifact",
+      artifactRevision: "1", bytesSha256: "c".repeat(64), fileName: "resume.pdf",
+      mimeType: "application/pdf", status: "prepared", remoteId: null,
+      verifiedSha256: null, updatedAt: new Date().toISOString(),
+    };
+    const reserved = await a.insertIfAbsent(prepared);
+    const uploading = { ...prepared, status: "uploading", updatedAt: new Date().toISOString() };
+    const promoted = await b.compareAndSwap(prepared.operationId, "prepared", uploading);
+    const cancelled = await a.compareAndSwap(prepared.operationId, "prepared",
+      { ...prepared, status: "cancelled", updatedAt: new Date().toISOString() });
+    const stored = await a.findOperation(prepared.operationId);
+    const pending = await a.unresolvedForArtifact(prepared.accountId, prepared.artifactId);
+    return { reserved, promoted, cancelled, storedStatus: stored?.status,
+      pendingStatuses: pending.map((entry: { status: string }) => entry.status) };
+  });
+  expect(result).toEqual({
+    reserved: true, promoted: true, cancelled: false, storedStatus: "uploading",
+    pendingStatuses: ["uploading"],
+  });
+});
+test("cancelled unused receipt survives reload and releases its artifact reservation", async ({ page }) => {
+  await install(page);
+  const setup = await page.evaluate(async () => {
+    const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+    const journal = new Journal();
+    const record = {
+      schemaVersion: 1, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      accountId: "cancelAccount2", destinationId: "root", artifactId: "cancelArtifact2",
+      artifactRevision: "1", bytesSha256: "d".repeat(64), fileName: "resume.pdf",
+      mimeType: "application/pdf", status: "prepared", remoteId: null,
+      verifiedSha256: null, updatedAt: new Date().toISOString(),
+    };
+    const reserved = await journal.insertIfAbsent(record);
+    const cancelled = await journal.compareAndSwap(record.operationId, "prepared",
+      { ...record, status: "cancelled", updatedAt: new Date().toISOString() });
+    return { record, reserved, cancelled };
+  });
+  expect(setup.reserved).toBe(true);
+  expect(setup.cancelled).toBe(true);
+  await page.reload();
+  await install(page);
+  const recovered = await page.evaluate(async (record) => {
+    const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+    const journal = new Journal();
+    const stored = await journal.findOperation(record.operationId);
+    const blocked = await journal.hasUnresolvedForArtifact(record.accountId, record.artifactId);
+    const fresh = await journal.insertIfAbsent({
+      ...record, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      updatedAt: new Date().toISOString(),
+    });
+    return { status: stored?.status, blocked, fresh };
+  }, setup.record);
+  expect(recovered).toEqual({ status: "cancelled", blocked: false, fresh: true });
+});
