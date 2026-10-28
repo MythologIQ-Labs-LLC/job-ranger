@@ -29,13 +29,14 @@ test.beforeAll(async () => {
         formats: ["iife"],
       },
     },
-  }) as unknown as { output: Array<{ type: string; code?: string }> };
-  const script = compiled.output.find(item => item.type === "chunk")?.code;
+  }) as unknown as { output: Array<{ type: string; code?: string }> } | Array<{ output: Array<{ type: string; code?: string }> }>;
+  const outputs = Array.isArray(compiled) ? compiled : [compiled];
+  const script = outputs.flatMap(item => item.output).find(item => item.type === "chunk")?.code;
   if (!script) throw new Error("Drive journal browser bundle was not produced");
   bundled = script;
   server = await startPwaServer(distPwa);
 });
-test.afterAll(async () => { await server.close(); });
+test.afterAll(async () => { if (server) await server.close(); });
 
 async function install(page: import("@playwright/test").Page) {
   await page.route("**" + scriptPath, route => route.fulfill({
