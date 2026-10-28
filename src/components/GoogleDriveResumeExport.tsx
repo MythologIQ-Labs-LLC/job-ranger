@@ -78,6 +78,15 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
     try {
       if (!session.current) throw new Error("Authorize Google Drive first.");
       const account = await session.current.withTokenForUserAction(token => verifyDriveAccount(token));
+      journal.current ??= new BrowserDriveExportJournal();
+      // A prior POST may have succeeded even when its response was lost. A new
+      // approval must not silently create a second Drive copy after reload.
+      if (await journal.current.hasUnresolvedForArtifact(account.accountId, artifactId)) {
+        throw new Error(
+          "An earlier Drive export for this resume is still unresolved. Check Google Drive before " +
+          "creating another copy. A new upload is blocked until the previous result is reconciled.",
+        );
+      }
       const artifact = await getDesktopApi().resume.readVerifiedArtifactForExport(artifactId);
       if (artifact.artifactId !== artifactId || artifact.revision !== String(version) ||
           artifact.mimeType !== "application/pdf") {
