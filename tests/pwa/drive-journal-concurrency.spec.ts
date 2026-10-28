@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { build } from "esbuild";
+import { build } from "vite";
 import path from "node:path";
 import { startPwaServer, type PwaServer } from "./support/server";
 import { distPwa, projectRoot } from "./support/fixtures";
@@ -14,12 +14,25 @@ let bundled: string;
 const scriptPath = "/__test_drive_journal_contract.js";
 
 test.beforeAll(async () => {
+  // Vite is already a direct project dependency. Do not add an extra
+  // bundler just to run this focused test; keep the normal npm ci contract.
   const compiled = await build({
-    entryPoints: [path.join(projectRoot, "src/pwa/drive/drive-journal-idb.ts")],
-    platform: "browser", format: "iife", globalName: "__sojournerDriveJournal",
-    bundle: true, target: "es2022", write: false,
-  });
-  bundled = compiled.outputFiles[0].text;
+    configFile: false,
+    root: projectRoot,
+    build: {
+      write: false,
+      minify: false,
+      target: "es2022",
+      lib: {
+        entry: path.join(projectRoot, "src/pwa/drive/drive-journal-idb.ts"),
+        name: "__sojournerDriveJournal",
+        formats: ["iife"],
+      },
+    },
+  }) as unknown as { output: Array<{ type: string; code?: string }> };
+  const script = compiled.output.find(item => item.type === "chunk")?.code;
+  if (!script) throw new Error("Drive journal browser bundle was not produced");
+  bundled = script;
   server = await startPwaServer(distPwa);
 });
 test.afterAll(async () => { await server.close(); });
