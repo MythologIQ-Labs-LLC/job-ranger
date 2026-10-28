@@ -28,6 +28,10 @@ export interface ResumeDesktopApi {
       request: ResumeTailoringApplyRequest,
     ) => Promise<ResumeProjectionDetail>;
     exportPdf: (request: ResumeExportRequest) => Promise<ResumeExportResult>;
+    readVerifiedArtifactForExport: (artifactId: string) => Promise<{
+      artifactId: string; projectionId: string; revision: string; fileName: string;
+      mimeType: "application/pdf"; contentHash: string; bytes: Uint8Array;
+    }>;
     compareVersions: (
       fromArtifactId: string,
       toArtifactId: string,
