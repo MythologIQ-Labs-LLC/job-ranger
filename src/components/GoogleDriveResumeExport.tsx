@@ -5,7 +5,7 @@ import { IS_DEMO_FLAVOR } from "../demo/flavor";
 import { loadGoogleDriveSdk } from "../pwa/drive/gis-sdk";
 import { DriveWebAuthorization, type DriveAuthView, type GoogleOAuthTokenApi } from "../pwa/drive/google-web-auth";
 import { verifyDriveAccount } from "../pwa/drive/google-drive-account";
-import { uploadApprovedDriveFile, type DriveUploadOutcome } from "../pwa/drive/google-drive-transport";
+import { uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, type DriveUploadOutcome } from "../pwa/drive/google-drive-transport";
 import { BrowserDriveExportJournal } from "../pwa/drive/drive-journal-idb";
 import { validateExportProposal, validateApprovedArtifactExport, ExportApprovalLedger } from "../shared/artifact-export-approval";
 import type { ExportProposal, HumanExportApproval, ExportReceipt } from "../shared/artifact-export-approval";
@@ -35,6 +35,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<{ name: string; label: string; size: number; digest: string } | null>(null);
   const [result, setResult] = useState<DriveUploadOutcome | null>(null);
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const session = useRef<DriveWebAuthorization | null>(null);
   const prepared = useRef<PreparedExport | null>(null);
   const journal = useRef<BrowserDriveExportJournal | null>(null);
@@ -110,6 +111,58 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
         size: proposal.byteLength, digest: proposal.bytesSha256 });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The resume could not be prepared for Drive.");
+    } finally { setBusy(false); }
+  };
+
+  const reconcile = async () => {
+    if (!session.current || busy) return;
+    setBusy(true);
+    setError(null);
+    setRecoveryMessage(null);
+    resetReview();
+    try {
+      await session.current.withTokenForUserAction(async token => {
+        const account = await verifyDriveAccount(token);
+        journal.current ??= new BrowserDriveExportJournal();
+        const pending = await journal.current.unresolvedForArtifact(account.accountId, artifactId);
+        if (pending.length === 0) {
+          setRecoveryMessage("No unresolved exports for this resume in the authorized Google account.");
+          return;
+        }
+        let recovered = 0;
+        for (const original of pending) {
+          // Never clear an ambiguous POST from an empty search result.
+          if (original.status === "prepared") continue;
+          const found = await findCreatedDriveFile(token, original.operationId);
+          if (found.status !== "found" ||
+              (original.remoteId && original.remoteId !== found.remoteId)) continue;
+          const verified = await verifyRecoveredDriveFile(token, {
+            operationId: original.operationId, remoteId: found.remoteId,
+            name: original.fileName, mimeType: original.mimeType,
+            destinationId: original.destinationId, approvedSha256: original.bytesSha256,
+          });
+          if (!verified) continue;
+          let current = original;
+          const move = async (status: ExportReceipt["status"], remoteId: string, digest: string | null) => {
+            const receipt: ExportReceipt = {
+              operationId: original.operationId, proposalId: original.approvalId,
+              status, bytesSha256: original.bytesSha256,
+              remoteId, verifiedSha256: digest,
+            };
+            current = await advanceDurableExport(journal.current!, current, receipt, new Date().toISOString());
+          };
+          if (current.status === "uploading" || current.status === "unknown_remote_outcome") {
+            await move("accepted_unverified", found.remoteId, null);
+          }
+          await move("verified", found.remoteId, original.bytesSha256);
+          recovered++;
+        }
+        setRecoveryMessage(recovered > 0
+          ? `Verified ${recovered} prior Drive export(s). Remaining ambiguous operations stay blocked.`
+          : "No prior upload could be verified. The duplicate-upload protection remains active. Check the Google account and Drive before further action.");
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not safely reconcile the previous Drive export.");
     } finally { setBusy(false); }
   };
 
@@ -212,6 +265,11 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
             Review PDF for Drive
           </button>
         )}
+        {view.phase === "authorized_unverified" && (
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void reconcile()}>
+            Check prior Drive exports
+          </button>
+        )}
         {sdk && view.phase !== "not_connected" && (
           <button type="button" className="surface-link-button" disabled={busy} onClick={() => {
             session.current?.forgetSession(); resetReview();
@@ -243,6 +301,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       {result && result.status !== "verified" && (
         <p role="alert" className="mt-3">The upload is not verified. {result.reason} Your local resume is unchanged.</p>
       )}
+      {recoveryMessage && <p role="status" className="mt-3">{recoveryMessage}</p>}
       {error && <p role="alert" className="mt-3 text-[var(--color-error)]">{error}</p>}
     </div>
   );
