@@ -1,6 +1,6 @@
 /**
  * Recovery path for a broken or stale application shell: unregister the
- * service worker and delete *only* Job Ranger shell and on-demand asset caches, then reload from
+ * service worker and delete *only* Sojourner shell and on-demand asset caches, then reload from
  * the network. Career data in the origin-private file system is untouched.
  */
 export async function repairAppShell(): Promise<void> {
