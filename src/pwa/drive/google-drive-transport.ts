@@ -224,7 +224,9 @@ export async function findCreatedDriveFile(
   if (!Array.isArray(result?.files) || result.nextPageToken || result.incompleteSearch) {
     return { status: "ambiguous" };
   }
-  const matches = result.files.filter(x => x.appProperties?.[DRIVE_OPERATION_PROPERTY] === operationId && typeof x.id === "string" && ID.test(x.id));
+  const matches = result.files.filter(x => x && typeof x === "object" &&
+    x.appProperties?.[DRIVE_OPERATION_PROPERTY] === operationId &&
+    typeof x.id === "string" && ID.test(x.id));
   return matches.length === 1 && result.files.length === 1
     ? { status: "found", remoteId: matches[0].id as string }
     : matches.length > 1 || result.files.length !== matches.length
