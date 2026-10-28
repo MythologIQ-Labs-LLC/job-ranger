@@ -1,4 +1,4 @@
-// Job Ranger public demo: one story, Canopy theme, deterministic fictional data,
+// Sojourner public demo: one story, Canopy theme, deterministic fictional data,
 // recorded from the production web build. Outputs land in build/demo/.
 // Run with `npm run demo:record`.
 import { chromium, expect, test, type Page } from "@playwright/test";
@@ -200,7 +200,7 @@ async function recordStory(server: PwaServer, profile: string, problems: string[
   const started = Date.now();
   const mark: Mark = (beat) => (beats[beat] = (Date.now() - started) / 1000);
   await prepareDemoContext(context);
-  await installTitleCard(context, "Find the opportunities actually worth pursuing.", "Job Ranger · local-first Career Ops");
+  await installTitleCard(context, "Find the opportunities actually worth pursuing.", "Sojourner · local-first Career Ops");
   await installCursor(context);
   const page = context.pages()[0] ?? (await context.newPage());
   watchProblems(page, problems);
@@ -226,7 +226,7 @@ function reviewVideo(beats: Record<string, number>): void {
   expect(review.report.filter((frame: { nearBlank: boolean }) => frame.nearBlank)).toEqual([]);
 }
 
-test("job ranger public demo", async () => {
+test("sojourner public demo", async () => {
   rmSync(out, { recursive: true, force: true });
   mkdirSync(shots, { recursive: true });
   const server = await startPwaServer(distPwa);
