@@ -239,10 +239,13 @@ export async function verifyRecoveredDriveFile(
     destinationId: string; approvedSha256: string },
   http: Fetch = fetch,
 ): Promise<boolean> {
-  if (!accessToken || /[\r\n]/.test(accessToken) || !OPERATION.test(expected.operationId) ||
+  if (typeof accessToken !== "string" || !accessToken || accessToken.length > 8192 ||
+      /[\r\n]/.test(accessToken) || typeof expected.operationId !== "string" ||
+      !OPERATION.test(expected.operationId) ||
       typeof expected.remoteId !== "string" || !ID.test(expected.remoteId) ||
       typeof expected.destinationId !== "string" || !ID.test(expected.destinationId) ||
-      !HASH.test(expected.approvedSha256) || expected.mimeType !== "application/pdf" ||
+      typeof expected.approvedSha256 !== "string" || !HASH.test(expected.approvedSha256) ||
+      expected.mimeType !== "application/pdf" || typeof expected.name !== "string" ||
       expected.name.length < 4 || expected.name.length > 180 ||
       !expected.name.toLowerCase().endsWith(".pdf") ||
       /[\\/\x00-\x1f\x7f]/.test(expected.name) || expected.name.trim() !== expected.name) return false;
