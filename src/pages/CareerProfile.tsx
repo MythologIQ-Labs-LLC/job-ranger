@@ -167,7 +167,7 @@ export function CareerProfile() {
           <Sparkles className="h-3.5 w-3.5" />
           Start here
         </span>
-        <h1 className="page-title mt-4">Tell Job Ranger what good work looks like for you.</h1>
+        <h1 className="page-title mt-4">Tell Sojourner what good work looks like for you.</h1>
         <p className="page-copy">
           Add the work you want, where you can work, what you already know, and what matters to you. You can also import an existing resume to build a reusable record of career evidence without turning the document itself into the source of truth.
         </p>
@@ -202,9 +202,9 @@ export function CareerProfile() {
               <h2 className="text-xl font-semibold">What stays yours</h2>
             </div>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
-              <li>Your career profile and imported evidence stay in Job Ranger&apos;s local data store.</li>
+              <li>Your career profile and imported evidence stay in Sojourner&apos;s local data store.</li>
               <li>Imported statements do not become confirmed facts until you approve them.</li>
-              <li>Job Ranger never invents credentials, skills, experience, or results for you.</li>
+              <li>Sojourner never invents credentials, skills, experience, or results for you.</li>
             </ul>
           </div>
         </aside>
@@ -395,7 +395,7 @@ export function CareerProfile() {
             <span className="metric-label">Career evidence</span>
             <h2 id="career-evidence-heading" className="mt-2 text-2xl font-semibold">Build from work you can prove.</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-              Import a DOCX, text-bearing PDF, or plain-text resume. Job Ranger preserves the original, extracts locally, and asks you to review each statement before it can support a future resume.
+              Import a DOCX, text-bearing PDF, or plain-text resume. Sojourner preserves the original, extracts locally, and asks you to review each statement before it can support a future resume.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -505,7 +505,7 @@ export function CareerProfile() {
             <div>
               <h3 className="text-lg font-semibold">Review imported evidence</h3>
               <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                Imported statements are proposals. Confirm, correct, merge, or reject them before Job Ranger treats them as facts.
+                Imported statements are proposals. Confirm, correct, merge, or reject them before Sojourner treats them as facts.
               </p>
             </div>
           </div>
@@ -661,7 +661,7 @@ export function CareerProfile() {
       <section className="support-note mt-6 flex items-start gap-3 px-5 py-4 text-sm text-[var(--color-text-secondary)]">
         <BriefcaseBusiness className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
         <p>
-          Next, open Find Jobs. Listings will show plain-language fit guidance based on information you saved here and job data Job Ranger actually collected. Confirmed career evidence will also become available to later resume and interview workflows.
+          Next, open Find Jobs. Listings will show plain-language fit guidance based on information you saved here and job data Sojourner actually collected. Confirmed career evidence will also become available to later resume and interview workflows.
         </p>
       </section>
     </Layout>
