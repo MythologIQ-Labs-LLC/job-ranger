@@ -3,8 +3,8 @@
  * Offline domain-only code: the host must supply durable atomic storage.
  * No OAuth, Drive API call, upload, or persistence backend is introduced.
  */
-import { advanceExportReceipt } from "./artifact-export-approval.ts";
-import type { ExportReceipt, ExportStatus } from "./artifact-export-approval.ts";
+import { advanceExportReceipt } from "./artifact-export-approval.js";
+import type { ExportReceipt, ExportStatus } from "./artifact-export-approval.js";
 
 export type RecoveryDecision =
   | { action: "no_upload"; reason: string }
