@@ -200,6 +200,49 @@ export class ResumeService {
     await fs.mkdir(this.resumeDirectory, { recursive: true });
   }
 
+  /**
+   * Read only a previously truth/parseability-verified, managed PDF artifact.
+   * No arbitrary filesystem path is accepted from the web page or an agent.
+   * Source hash is checked again immediately before bytes enter a Drive consent preview.
+   */
+  async readVerifiedArtifactForExport(artifactId: string): Promise<{
+    artifactId: string; projectionId: string; revision: string; fileName: string;
+    mimeType: "application/pdf"; contentHash: string; bytes: Uint8Array;
+  }> {
+    const artifact = await this.repository.getArtifact(artifactId);
+    if (!artifact || artifact.format !== "pdf" ||
+        typeof artifact.contentHash !== "string" || !/^[0-9a-f]{64}$/.test(artifact.contentHash)) {
+      throw new Error("Only an existing verified resume PDF can be exported.");
+    }
+    let truth: { passed?: unknown }, parseability: { passed?: unknown };
+    try {
+      truth = JSON.parse(artifact.truthGateResult ?? "null");
+      parseability = JSON.parse(artifact.parseabilityResult ?? "null");
+    } catch {
+      throw new Error("Resume artifact verification record is invalid.");
+    }
+    if (!truth || truth.passed !== true || !parseability || parseability.passed !== true) {
+      throw new Error("The saved resume did not pass both export gates.");
+    }
+    const resolved = path.resolve(artifact.managedPath);
+    const root = path.resolve(this.resumeDirectory);
+    if (!resolved.startsWith(root + path.sep) || path.extname(resolved).toLowerCase() !== ".pdf") {
+      throw new Error("Resume artifact is outside Sojourner's managed PDF directory.");
+    }
+    const stat = await fs.lstat(resolved);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 5 * 1024 * 1024) {
+      throw new Error("This verified resume exceeds the supported 5 MB Drive export limit or is not a regular PDF.");
+    }
+    const bytes = await fs.readFile(resolved);
+    if (createHash("sha256").update(bytes).digest("hex") !== artifact.contentHash) {
+      throw new Error("Saved resume PDF bytes do not match the verified artifact digest.");
+    }
+    return { artifactId: artifact.id, projectionId: artifact.projectionId,
+      revision: String(artifact.version), fileName: path.basename(resolved),
+      mimeType: "application/pdf", contentHash: artifact.contentHash,
+      bytes: Uint8Array.from(bytes) };
+  }
+
   async createProjection(
     input: ResumeCreateInput,
   ): Promise<ResumeProjectionDetail> {
