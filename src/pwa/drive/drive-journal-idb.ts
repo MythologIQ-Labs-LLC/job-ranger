@@ -98,15 +98,29 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
       throw new Error("Only an unused prepared export can be journaled.");
     }
     return this.transaction<boolean>("readwrite", (store, done) => {
-      const request = store.add(record);
-      request.onsuccess = () => done(true);
-      request.onerror = (event) => {
-        if (request.error?.name === "ConstraintError") {
-          // Duplicate operation or approval ID. Keep the transaction alive and return false.
-          event.preventDefault();
-          event.stopPropagation();
-          done(false);
+      // Read and reserve in ONE IndexedDB readwrite transaction. Such transactions
+      // serialize across tabs, unlike an earlier UI-only pending-status check.
+      const scan = store.getAll(undefined, 10_001);
+      scan.onsuccess = () => {
+        if (scan.result.length > 10_000) {
+          store.transaction.abort(); // Fail closed if the journal is too large.
+          return;
         }
+        if (scan.result.some((prior: ExportJournalRecord) =>
+          blocksFreshArtifactExport(prior, record.accountId, record.artifactId))) {
+          done(false);
+          return;
+        }
+        const request = store.add(record);
+        request.onsuccess = () => done(true);
+        request.onerror = (event) => {
+          if (request.error?.name === "ConstraintError") {
+            // Duplicate operation/approval. Keep the transaction alive.
+            event.preventDefault();
+            event.stopPropagation();
+            done(false);
+          }
+        };
       };
     });
   }
