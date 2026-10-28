@@ -224,7 +224,7 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
     idMatch: true, revisionMatch: true, contentMatchesRecord: true,
     mimeType: "application/pdf", pdfSignature: "%PDF-",
   });
-  expect(preparedForDrive.fileName).toMatch(/\\.pdf$/i);
+  expect(preparedForDrive.fileName).toMatch(/\.pdf$/i);
 
 
   // Read-only canonical observations, not a parallel mutation path.
