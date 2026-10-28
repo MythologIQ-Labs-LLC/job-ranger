@@ -240,7 +240,8 @@ export async function verifyRecoveredDriveFile(
   http: Fetch = fetch,
 ): Promise<boolean> {
   if (!accessToken || /[\r\n]/.test(accessToken) || !OPERATION.test(expected.operationId) ||
-      !ID.test(expected.remoteId) || !ID.test(expected.destinationId) ||
+      typeof expected.remoteId !== "string" || !ID.test(expected.remoteId) ||
+      typeof expected.destinationId !== "string" || !ID.test(expected.destinationId) ||
       !HASH.test(expected.approvedSha256) || expected.mimeType !== "application/pdf" ||
       expected.name.length < 4 || expected.name.length > 180 ||
       !expected.name.toLowerCase().endsWith(".pdf") ||
@@ -254,7 +255,7 @@ export async function verifyRecoveredDriveFile(
       });
       if (!root.ok) return false;
       const rootData = await root.json();
-      if (!rootData || !ID.test(rootData.id) ||
+      if (!rootData || typeof rootData.id !== "string" || !ID.test(rootData.id) ||
           rootData.mimeType !== "application/vnd.google-apps.folder") return false;
       destinationId = rootData.id;
     }
