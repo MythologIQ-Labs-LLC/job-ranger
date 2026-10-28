@@ -127,7 +127,7 @@ test("first visit opens a labeled, seeded demo workspace that runs the real flow
   context.on("page", (popup) => opened.push(popup.url()));
   await openDemo(page);
 
-  await expect(page).toHaveTitle("Job Ranger Demo");
+  await expect(page).toHaveTitle("Sojourner Demo");
   const banner = page.getByTestId("demo-banner");
   await expect(banner).toContainText("fictional sample data");
   await expect(banner).toContainText("stays in this browser on this site");
@@ -274,7 +274,7 @@ test("a tab never opens a demo workspace another session took over while it wait
     const tabB = await context.newPage();
     await tabB.goto(demoServer.url);
     const waiting = tabB.getByTestId("pwa-boot-screen");
-    await expect(waiting).toContainText("The Job Ranger demo is open in another tab or window");
+    await expect(waiting).toContainText("The Sojourner demo is open in another tab or window");
     await expect(waiting).toContainText("discards that tab's demo changes");
 
     // A reloads: B (queued first) takes the workspace and starts its own fresh session.
@@ -357,11 +357,11 @@ test("the demo refuses to erase a non-demo workspace on its origin, which stays 
     shared.setRoot(distPwaDemo);
     const demo = await context.newPage();
     await demo.goto(shared.url);
-    await expect(demo).toHaveTitle("Job Ranger Demo");
+    await expect(demo).toHaveTitle("Sojourner Demo");
     await expect(demo.getByTestId("pwa-boot-error")).toHaveText(
-      "This site holds a Job Ranger workspace that is not a demo; the demo will not erase it.",
+      "This site holds a Sojourner workspace that is not a demo; the demo will not erase it.",
     );
-    await expect(demo.getByRole("heading", { name: "The Job Ranger demo cannot start on this site" })).toBeVisible();
+    await expect(demo.getByRole("heading", { name: "The Sojourner demo cannot start on this site" })).toBeVisible();
     await expect(demo.getByTestId("demo-banner")).toHaveCount(0);
     // Reloading (same session) or a new tab (new session) refuses the same way.
     await demo.reload();
@@ -434,7 +434,7 @@ test("the standard build has no demo banner, seeds nothing and never resets betw
     const first = await context.newPage();
     await first.goto(standardServer.url);
     await waitForRuntime(first);
-    await expect(first).toHaveTitle("Job Ranger");
+    await expect(first).toHaveTitle("Sojourner");
     await expect(first.getByTestId("demo-banner")).toHaveCount(0);
     await expect(first.getByText("Demo workspace", { exact: false })).toHaveCount(0);
     const empty = await workspaceSummary(first);
