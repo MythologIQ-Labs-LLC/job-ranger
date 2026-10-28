@@ -265,3 +265,22 @@ test("recovery rejects missing remote IDs and malformed My Drive root metadata",
     assert.equal(calls, 0);
   }
 });
+
+test("recovered receipts with missing typed fields fail closed before network access", async () => {
+  const input = await good();
+  const valid = { operationId: input.operationId, remoteId: remote.id,
+    name: input.name, mimeType: input.mimeType, destinationId: input.destinationId,
+    approvedSha256: input.approvedSha256 };
+  const cases = [
+    { name: undefined }, { name: null }, { name: 42 },
+    { approvedSha256: undefined }, { operationId: undefined },
+    { remoteId: null }, { destinationId: null },
+  ];
+  for (const invalid of cases) {
+    let calls = 0;
+    assert.equal(await verifyRecoveredDriveFile(secret, { ...valid, ...invalid },
+      async () => { calls++; throw new Error("unexpected network call"); }), false,
+      JSON.stringify(invalid));
+    assert.equal(calls, 0);
+  }
+});
