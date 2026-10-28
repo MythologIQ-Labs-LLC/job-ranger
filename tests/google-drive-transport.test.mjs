@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { uploadApprovedDriveFile, findCreatedDriveFile, DRIVE_OPERATION_PROPERTY, DriveTransportError } from "../src/pwa/drive/google-drive-transport.ts";
+import { uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, DRIVE_OPERATION_PROPERTY, DriveTransportError } from "../src/pwa/drive/google-drive-transport.ts";
 
 const secret = "NEVER_LOG_A_PROVIDER_TOKEN";
 const document = new Blob(["Sojourner verified PDF test bytes"], { type: "application/pdf" });
@@ -173,4 +173,50 @@ test("appProperties reconciliation is exact, scoped and never launches upload", 
     assert.ok(new URL(requests[0].url).searchParams.get("q").includes(DRIVE_OPERATION_PROPERTY));
     assert.equal(requests[0].url.includes(secret), false);
   }
+});
+
+test("recovery verifies existing file with metadata and readback, never issuing POST", async () => {
+  const input = await good();
+  const { requests, fetchMock } = driver([json(remote), new Response(document)]);
+  const verified = await verifyRecoveredDriveFile(secret, {
+    operationId: input.operationId, remoteId: remote.id, name: input.name,
+    mimeType: input.mimeType, destinationId: input.destinationId,
+    approvedSha256: input.approvedSha256,
+  }, fetchMock);
+  assert.equal(verified, true);
+  assert.deepEqual(requests.map(x => x.options.method ?? "GET"), ["GET", "GET"]);
+});
+
+test("recovery refuses mismatching parent, marker, file size and bytes without creating files", async () => {
+  const input = await good();
+  const expected = { operationId: input.operationId, remoteId: remote.id,
+    name: input.name, mimeType: input.mimeType, destinationId: input.destinationId,
+    approvedSha256: input.approvedSha256 };
+  for (const responses of [
+    [json({ ...remote, parents: ["different"] })],
+    [json({ ...remote, appProperties: {} })],
+    [json({ ...remote, size: "0" })],
+    [json(remote), new Response("incorrect bytes")],
+    [new Response("", { status: 403 })],
+  ]) {
+    const { requests, fetchMock } = driver(responses);
+    assert.equal(await verifyRecoveredDriveFile(secret, expected, fetchMock), false);
+    assert.equal(requests.some(x => x.options.method === "POST"), false);
+  }
+});
+
+test("recovery resolves My Drive root and does not POST or trust the literal root alias", async () => {
+  const input = await good();
+  const rootId = "opaque_root_456";
+  const { requests, fetchMock } = driver([
+    json({ id: rootId, mimeType: "application/vnd.google-apps.folder" }),
+    json({ ...remote, parents: [rootId] }),
+    new Response(document),
+  ]);
+  assert.equal(await verifyRecoveredDriveFile(secret, {
+    operationId: input.operationId, remoteId: remote.id, name: input.name,
+    mimeType: input.mimeType, destinationId: "root",
+    approvedSha256: input.approvedSha256,
+  }, fetchMock), true);
+  assert.deepEqual(requests.map(x => x.options.method ?? "GET"), ["GET", "GET", "GET"]);
 });
