@@ -120,7 +120,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       approvedDestinationId: selected.proposal.approvedDestinationId,
     };
     const operationId = crypto.randomUUID();
-    let state: ExportJournalRecord | null = null;
+    const journalRecord: { current: ExportJournalRecord | null } = { current: null };
     try {
       ledger.current.consume(approval);
       const output = await session.current.withTokenForUserAction(async token => {
@@ -136,7 +136,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
         }
         await validateApprovedArtifactExport(selected.proposal, approval, freshBytes, Date.now(), hash);
         journal.current ??= new BrowserDriveExportJournal();
-        state = {
+        journalRecord.current = {
           schemaVersion: 1, operationId, approvalId: approval.approvalId,
           accountId: currentAccount.accountId,
           destinationId: selected.proposal.approvedDestinationId,
@@ -145,36 +145,36 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
           mimeType: selected.proposal.mimeType, status: "prepared",
           remoteId: null, verifiedSha256: null, updatedAt: new Date().toISOString(),
         };
-        await reserveExport(journal.current, state);
+        await reserveExport(journal.current, journalRecord.current);
         const uploading: ExportReceipt = {
           operationId, proposalId: selected.proposal.proposalId, status: "uploading",
           bytesSha256: selected.proposal.bytesSha256, remoteId: null, verifiedSha256: null,
         };
-        state = await advanceDurableExport(journal.current, state, uploading, new Date().toISOString());
+        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current, uploading, new Date().toISOString());
         return uploadApprovedDriveFile({
           accessToken: token, operationId, name: selected.proposal.fileName,
           mimeType: selected.proposal.mimeType, destinationId: selected.proposal.approvedDestinationId,
           bytes: freshBytes, approvedSha256: selected.proposal.bytesSha256,
         });
       });
-      if (!state || !journal.current) throw new Error("The export receipt was not saved.");
+      if (!journalRecord.current || !journal.current) throw new Error("The export receipt was not saved.");
       const receipt = (status: ExportReceipt["status"], remoteId: string | null, sha256: string | null): ExportReceipt =>
         ({ operationId, proposalId: selected.proposal.proposalId, status,
           bytesSha256: selected.proposal.bytesSha256, remoteId, verifiedSha256: sha256 });
       if (output.status === "unknown_remote_outcome") {
-        state = await advanceDurableExport(journal.current, state,
+        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current,
           receipt("unknown_remote_outcome", output.remoteId, null), new Date().toISOString());
       } else {
-        state = await advanceDurableExport(journal.current, state,
+        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current,
           receipt("accepted_unverified", output.remoteId, null), new Date().toISOString());
-        state = await advanceDurableExport(journal.current, state,
+        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current,
           receipt(output.status === "verified" ? "verified" : "verification_failed",
             output.remoteId, output.status === "verified" ? output.sha256 : null), new Date().toISOString());
       }
       setResult(output);
     } catch (cause) {
       // Any failure after a remote POST might have created a file. Never offer an automatic retry.
-      setError(state?.status === "uploading" || state?.status === "accepted_unverified"
+      setError(journalRecord.current?.status === "uploading" || journalRecord.current?.status === "accepted_unverified"
         ? "The Drive export may already exist. Check Google Drive before approving a new upload."
         : cause instanceof Error ? cause.message : "Drive export could not be completed. Your local resume is unchanged.");
     } finally { setBusy(false); }
