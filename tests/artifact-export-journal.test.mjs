@@ -64,6 +64,31 @@ describe("durable artifact export journal contract", () => {
     const verified = await advanceDurableExport(db, accepted, receipt(accepted, "verified", "file:1", sha), "2026-10-15T15:00:04.000Z");
     assert.equal(recoveryDecision(verified).action, "complete");
   });
+  it("cancels only a prepared reservation and refuses racing upload transitions", async () => {
+    const db = store();
+    await reserveExport(db, record);
+    const uploading = await advanceDurableExport(db, record, receipt(record, "uploading"),
+      "2026-10-15T15:00:01.000Z");
+    await assert.rejects(
+      advanceDurableExport(db, record, receipt(record, "cancelled"),
+        "2026-10-15T15:00:02.000Z"), /Concurrent/,
+    );
+    assert.equal((await db.findOperation(record.operationId)).status, "uploading");
+    await assert.rejects(
+      advanceDurableExport(db, uploading, receipt(uploading, "cancelled"),
+        "2026-10-15T15:00:02.000Z"), /Invalid export transition/,
+    );
+    const unused = { ...record, operationId: "unused:2", approvalId: "approval:2" };
+    await reserveExport(db, unused);
+    const cancelled = await advanceDurableExport(db, unused, receipt(unused, "cancelled"),
+      "2026-10-15T15:00:01.000Z");
+    assert.equal(cancelled.status, "cancelled");
+    assert.equal(blocksFreshArtifactExport(cancelled, unused.accountId, unused.artifactId), false);
+    await assert.rejects(
+      advanceDurableExport(db, unused, receipt(unused, "uploading"),
+        "2026-10-15T15:00:02.000Z"), /Concurrent/,
+    );
+  });
   it("never retries blindly after an ambiguous upload", async () => {
     const db = store();
     await reserveExport(db, record);
