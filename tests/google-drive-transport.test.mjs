@@ -8,7 +8,7 @@ const digest = async (blob) => Array.from(new Uint8Array(await crypto.subtle.dig
 const good = async () => ({
   accessToken: secret,
   operationId: "op_314_verified_1",
-  destinationId: "root",
+  destinationId: "folder_123",
   name: "Sojourner-Resume.pdf",
   mimeType: "application/pdf",
   bytes: document,
@@ -16,7 +16,7 @@ const good = async () => ({
 });
 const remote = {
   id: "driveFile_123", name: "Sojourner-Resume.pdf",
-  mimeType: "application/pdf", parents: ["root"],
+  mimeType: "application/pdf", parents: ["folder_123"],
   size: String(document.size),
   appProperties: { [DRIVE_OPERATION_PROPERTY]: "op_314_verified_1" },
 };
@@ -54,10 +54,33 @@ test("only one authorized POST creates the approved app-owned file, followed by 
     assert.equal(req.url.includes(secret), false);
   }
   const multipart = await requests[0].options.body.text();
-  assert.match(multipart, /"parents":\["root"\]/);
+  assert.match(multipart, /"parents":\["folder_123"\]/);
   assert.match(multipart, /"sojournerExportOperation":"op_314_verified_1"/);
   assert.match(multipart, /Sojourner verified PDF test bytes/);
   assert.equal(JSON.stringify(result).includes(secret), false);
+});
+
+test("My Drive root alias resolves to an opaque folder ID before the first POST", async () => {
+  const root = { id: "opaque_root_456", mimeType: "application/vnd.google-apps.folder" };
+  const created = { ...remote, parents: [root.id] };
+  const { requests, fetchMock } = driver([
+    json(root), json({ id: remote.id }), json(created), new Response(document),
+  ]);
+  const result = await uploadApprovedDriveFile({ ...await good(), destinationId: "root" }, fetchMock);
+  assert.equal(result.status, "verified");
+  assert.equal(requests[0].url, "https://www.googleapis.com/drive/v3/files/root?fields=id,mimeType");
+  assert.deepEqual(requests.map(x => x.options.method ?? "GET"), ["GET", "POST", "GET", "GET"]);
+  assert.match(await requests[1].options.body.text(), /"parents":\["opaque_root_456"\]/);
+});
+
+test("if My Drive root cannot be verified, do not upload a single byte", async () => {
+  const { requests, fetchMock } = driver([new Response("", { status: 403 })]);
+  await assert.rejects(
+    uploadApprovedDriveFile({ ...await good(), destinationId: "root" }, fetchMock),
+    DriveTransportError,
+  );
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].options.method ?? "GET", "GET");
 });
 
 test("reject invalid filename, destination, MIME and changed document before any fetch", async () => {
