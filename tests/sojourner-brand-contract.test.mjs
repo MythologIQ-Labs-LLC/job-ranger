@@ -36,4 +36,12 @@ assert.match(read("src/pwa/PwaShell.tsx"), /Sojourner is open in another tab or 
 assert.match(packaging, /job-ranger-web-v\$\{version\}\.zip/);
 assert.match(read("src/demo/session.ts"), /job-ranger\.\*/);
 assert.match(read("src/components/BackupRestorePanel.tsx"), /\.jobranger/);
+// User-created artifacts, core onboarding and the demo must not carry the old
+// public-facing product name, even though legacy data formats remain named.
+const pdf = read("src/pwa/runtime/resume-pdf.ts");
+assert.match(pdf, /document\.setCreator\("Sojourner"\)/);
+assert.match(pdf, /document\.setProducer\("Sojourner web runtime \(pdf-lib\)"\)/);
+assert.match(read("src/pages/CareerProfile.tsx"), /Tell Sojourner what good work looks like/);
+assert.match(read("scripts/studio-handoff.mjs"), /Try Sojourner in your browser/);
+assert.match(read("tests/pwa/demo-flavor.spec.ts"), /Sojourner Demo/);
 console.log("Sojourner display identity and legacy workspace/archive identity contracts passed");
