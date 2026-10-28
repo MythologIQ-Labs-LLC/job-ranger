@@ -4,7 +4,7 @@
  * IndexedDB enforces unique operation and approval IDs transactionally.
  * Compatibility name is intentionally stable across the Job Ranger rebrand.
  */
-import { validateJournalRecord } from "../../shared/artifact-export-journal.ts";
+import { blocksFreshArtifactExport, validateJournalRecord } from "../../shared/artifact-export-journal.ts";
 import type { DurableExportJournalStore, ExportJournalRecord } from "../../shared/artifact-export-journal.ts";
 import type { ExportStatus } from "../../shared/artifact-export-approval.ts";
 
@@ -65,6 +65,30 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
       tx.onabort = () => reject(new Error(ERROR));
       try { action(tx.objectStore(STORE), done); }
       catch { try { tx.abort(); } catch { /* already aborted */ } reject(new Error(ERROR)); }
+    });
+  }
+
+  /**
+   * Fail closed before a new explicit upload if an earlier operation for this
+   * account and artifact may already have produced a remote file. Do not infer
+   * nonexistence from a different new approval/operation ID.
+   * A bounded scan avoids unbounded memory consumption in a corrupted journal.
+   */
+  async hasUnresolvedForArtifact(accountId: string, artifactId: string): Promise<boolean> {
+    if (!/^[A-Za-z0-9_:-]{1,160}$/.test(accountId) ||
+        !/^[A-Za-z0-9_:-]{1,160}$/.test(artifactId)) {
+      throw new Error("Invalid Drive journal lookup.");
+    }
+    return this.transaction<boolean>("readonly", (store, done) => {
+      const request = store.getAll(undefined, 10_001);
+      request.onsuccess = () => {
+        if (request.result.length > 10_000) {
+          store.transaction.abort();
+          return;
+        }
+        done(request.result.some((entry: ExportJournalRecord) =>
+          blocksFreshArtifactExport(entry, accountId, artifactId)));
+      };
     });
   }
 
