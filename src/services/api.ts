@@ -42,7 +42,7 @@ export function hasDesktopApi(): boolean {
 export function getDesktopApi(): JobRangerDesktopApi {
   if (!hasDesktopApi()) {
     throw new DesktopApiError(
-      "Job Ranger requires the Electron desktop shell. Use `npm run electron:dev` for local development.",
+      "Sojourner requires the Electron desktop shell. Use `npm run electron:dev` for local development.",
     );
   }
 

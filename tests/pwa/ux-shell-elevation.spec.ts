@@ -127,7 +127,7 @@ test("a short desktop window shows every collapsed sidebar entry without scrolli
       const fit = await nav.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
       expect(fit.scroll, `${theme} sidebar overflows at 1280x${height}`).toBeLessThanOrEqual(fit.client + 1);
       await expect(page.locator(".sidebar-section-label").first()).toBeHidden();
-      await expect(page.getByRole("heading", { name: "Job Ranger", level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Sojourner", level: 1 })).toBeVisible();
     }
   }
 });

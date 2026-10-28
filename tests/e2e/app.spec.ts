@@ -33,11 +33,11 @@ async function navigateTo(
   await page.getByRole("link", { name: destination, exact: true }).click();
 }
 
-test.describe("Job Ranger E2E Tests", () => {
+test.describe("Sojourner E2E Tests", () => {
   test("app launches and shows dashboard", async () => {
     const { page } = fixture;
 
-    await expect(page.getByRole("heading", { name: "Job Ranger", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sojourner", exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", {
         name: "Your next steps",
@@ -56,7 +56,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await sourceAction.click();
     await expect(
       page.getByRole("heading", {
-        name: "Find places to look, then choose what Job Ranger should monitor.",
+        name: "Find places to look, then choose what Sojourner should monitor.",
         exact: true,
       }),
     ).toBeVisible();
@@ -155,7 +155,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Companies");
     await expect(
       page.getByRole("heading", {
-        name: "Find places to look, then choose what Job Ranger should monitor.",
+        name: "Find places to look, then choose what Sojourner should monitor.",
         exact: true,
       }),
     ).toBeVisible();
@@ -179,7 +179,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Career Profile");
     await expect(
       page.getByRole("heading", {
-        name: "Tell Job Ranger what good work looks like for you.",
+        name: "Tell Sojourner what good work looks like for you.",
         exact: true,
       }),
     ).toBeVisible();

@@ -18,12 +18,12 @@ export function DemoLimitations() {
       </div>
       <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--color-text-secondary)]">
         <li>
-          This is the real Job Ranger application running a fictional sample workspace. Morgan Rivera, Harbor Health
+          This is the real Sojourner application running a fictional sample workspace. Morgan Rivera, Harbor Health
           and every listing marked as a demo listing are made up; demo listings are not real openings and cannot be
           opened or applied to.
         </li>
         <li>
-          Everything stays in this browser on this demo site. Nothing you enter is sent to Job Ranger or anyone else,
+          Everything stays in this browser on this demo site. Nothing you enter is sent to Sojourner or anyone else,
           and there is no account, sync or analytics.
         </li>
         <li>

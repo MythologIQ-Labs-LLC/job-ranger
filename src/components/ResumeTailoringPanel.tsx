@@ -235,7 +235,7 @@ export function ResumeTailoringPanel({
             <div className="support-note px-4 py-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
                 <AlertTriangle className="h-4 w-4 text-[var(--color-warning)]" />
-                Requirements Job Ranger will not claim
+                Requirements Sojourner will not claim
               </div>
               <div className="mt-3 space-y-3">
                 {plan.gaps.map((gap) => (

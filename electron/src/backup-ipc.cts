@@ -20,10 +20,10 @@ export function initializeBackupIpc(options: {
 
   ipcMain.handle("backups:create", async () => {
     const selection = await dialog.showSaveDialog({
-      title: "Save a portable Job Ranger backup",
+      title: "Save a portable Sojourner backup",
       defaultPath: archiveFileName(),
       filters: [
-        { name: "Job Ranger backup", extensions: [JOB_RANGER_ARCHIVE_FILE_EXTENSION.slice(1)] },
+        { name: "Sojourner backup", extensions: [JOB_RANGER_ARCHIVE_FILE_EXTENSION.slice(1)] },
       ],
     });
     if (selection.canceled || !selection.filePath) return null;
@@ -32,11 +32,11 @@ export function initializeBackupIpc(options: {
 
   ipcMain.handle("backups:select-restore", async () => {
     const selection = await dialog.showOpenDialog({
-      title: "Select a Job Ranger backup (.jobranger file, or manifest.json inside an older backup folder)",
+      title: "Select a Sojourner backup (.jobranger file, or manifest.json inside an older backup folder)",
       properties: ["openFile"],
       filters: [
         {
-          name: "Job Ranger backup",
+          name: "Sojourner backup",
           extensions: [JOB_RANGER_ARCHIVE_FILE_EXTENSION.slice(1), "json"],
         },
       ],

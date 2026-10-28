@@ -331,7 +331,7 @@ export class JobScoutBackend {
       // both runtimes (and across PWA service-worker rollbacks) that could
       // silently corrupt Career Evidence. Fail closed and explain.
       throw new Error(
-        `This Job Ranger data was upgraded by a newer version (database schema ${Math.max(...unknown)}). Update Job Ranger to open it; your data has not been changed.`,
+        `This Sojourner workspace was upgraded by a newer version (database schema ${Math.max(...unknown)}). Update Sojourner to open it; your data has not been changed.`,
       );
     }
 

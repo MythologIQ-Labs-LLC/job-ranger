@@ -50,7 +50,7 @@ export function JsonResumePanel() {
           <h2 className="text-2xl font-semibold">JSON Resume interoperability</h2>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          Exchange a standard structured resume without changing what Job Ranger treats as career truth. Imports become reviewable candidate evidence. Exports use only confirmed or user-authored Career Evidence.
+          Exchange a standard structured resume without changing what Sojourner treats as career truth. Imports become reviewable candidate evidence. Exports use only confirmed or user-authored Career Evidence.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export function JsonResumePanel() {
         </div>
 
         <div className="rounded-2xl bg-[var(--color-surface-muted)] p-4 text-sm leading-6 text-[var(--color-text-secondary)]">
-          JSON Resume is an interchange format, not Job Ranger's canonical career store. Unsupported source fields remain preserved in the imported source artifact, and Job Ranger-specific provenance is not invented into unrelated standard fields during export.
+          JSON Resume is an interchange format, not Sojourner's canonical career store. Unsupported source fields remain preserved in the imported source artifact, and Sojourner-specific provenance is not invented into unrelated standard fields during export.
         </div>
 
         {importResult && (
@@ -90,7 +90,7 @@ export function JsonResumePanel() {
             </p>
             {importResult.profileNameProposal && (
               <p className="mt-2">
-                The source also names <strong>{importResult.profileNameProposal}</strong>. Job Ranger did not silently overwrite the Career Profile name.
+                The source also names <strong>{importResult.profileNameProposal}</strong>. Sojourner did not silently overwrite the Career Profile name.
               </p>
             )}
             {importResult.warnings.map((warning) => (

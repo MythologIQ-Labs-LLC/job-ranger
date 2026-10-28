@@ -16,7 +16,7 @@ export const DEMO_LISTING_LINK_MESSAGE =
 
 export const DEMO_SOURCE_BADGE_TEXT = "Demo employer — fictional, never scanned";
 export const DEMO_SOURCE_LINK_MESSAGE =
-  "This is a fictional demo employer, so there is no real careers page to open, and Job Ranger never scans it.";
+  "This is a fictional demo employer, so there is no real careers page to open, and Sojourner never scans it.";
 
 /** True only for http(s) URLs on the reserved demo host (or a subdomain of it). */
 export function isDemoListing(url: string | null | undefined): boolean {

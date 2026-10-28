@@ -43,8 +43,8 @@ const DEMO_ONLY = [
   "demo-listing.invalid/harbor-health",
   "job-ranger-demo-workspace",
   ".demo-workspace.json",
-  "This site holds a Job Ranger workspace that is not a demo",
-  "The Job Ranger demo is open in another tab or window",
+  "This site holds a Sojourner workspace that is not a demo",
+  "The Sojourner demo is open in another tab or window",
   "temporary demo workspace",
 ];
 
@@ -64,10 +64,10 @@ assert.equal(demo.handoff.runtime.canonicalCareerData, "none-session-scoped-demo
 assert.equal(demo.handoff.demo.requiresDedicatedOrigin, true);
 
 // The demo flavor names itself; the standard document and install manifest are unchanged.
-assert.match(standard.html, /<title>Job Ranger<\/title>/);
-assert.match(demo.html, /<title>Job Ranger Demo<\/title>/);
-assert.equal(standard.manifest.name, "Job Ranger");
-assert.equal(demo.manifest.name, "Job Ranger Demo");
+assert.match(standard.html, /<title>Sojourner: Employment Toolkit<\/title>/);
+assert.match(demo.html, /<title>Sojourner Demo<\/title>/);
+assert.equal(standard.manifest.name, "Sojourner: Employment Toolkit");
+assert.equal(demo.manifest.name, "Sojourner Demo");
 assert.equal(demo.manifest.start_url, standard.manifest.start_url);
 
 // Same security policy: the demo adds no network destinations (no analytics, no fetches).

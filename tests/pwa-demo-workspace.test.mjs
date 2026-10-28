@@ -70,7 +70,7 @@ const decide = (fs, sessionId = SESSION_A, now = T0 + HOUR) =>
 assert.equal(DEMO_IDLE_RESET_HOURS, 8);
 assert.equal(DEMO_IDLE_RESET_MS, 8 * HOUR);
 assert.equal(DEMO_SENTINEL_FILE, ".demo-workspace.json");
-assert.equal(DEMO_REFUSAL_MESSAGE, "This site holds a Job Ranger workspace that is not a demo; the demo will not erase it.");
+assert.equal(DEMO_REFUSAL_MESSAGE, "This site holds a Sojourner workspace that is not a demo; the demo will not erase it.");
 assert.ok(isValidDemoSessionId(SESSION_A));
 assert.ok(!isValidDemoSessionId("short"));
 assert.ok(!isValidDemoSessionId("../../job-ranger/escape-attempt"));

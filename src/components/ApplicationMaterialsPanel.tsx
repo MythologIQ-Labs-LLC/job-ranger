@@ -22,7 +22,7 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const selectedMaterial = materials.find((material) => material.id === deleteMaterialId) ?? null;
 
-  // Job Ranger never sends applications; copying is the manual handoff. Evidence state is
+  // Sojourner never sends applications; copying is the manual handoff. Evidence state is
   // re-read at copy time, so a cached list never lets a stale version be copied.
   const copy = async (material: ApplicationMaterialProjection) => {
     let current: ApplicationMaterialProjection | undefined;
@@ -123,7 +123,7 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-2xl text-xs leading-5 text-[var(--color-text-muted)]">
-              Job Ranger keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
+              Sojourner keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
             </p>
             <button
               type="button"

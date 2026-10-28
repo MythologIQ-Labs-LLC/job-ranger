@@ -1,6 +1,6 @@
 /**
  * Browser runtime adapter for the subset of `node:fs` used by the shared
- * Job Ranger core, backed by the Origin Private File System (OPFS).
+ * Sojourner core, backed by the Origin Private File System (OPFS).
  *
  * Paths are POSIX paths in a virtual namespace whose root is the origin's
  * OPFS root directory. Files are written through `createWritable()`, whose
@@ -50,7 +50,7 @@ function wrapStorageError(error: unknown, action: string): never {
   let wrapped: JobRangerStorageError;
   if (name === "QuotaExceededError") {
     wrapped = new JobRangerStorageError(
-      `Browser storage is full, so Job Ranger could not ${action}. Your previous saved data is unchanged. Export a backup, free browser storage for this site, then retry.`,
+      `Browser storage is full, so Sojourner could not ${action}. Your previous saved data is unchanged. Export a backup, free browser storage for this site, then retry.`,
       "EQUOTA",
       { cause: error },
     );
@@ -60,7 +60,7 @@ function wrapStorageError(error: unknown, action: string): never {
     throw fsError("ENOTDIR", action);
   } else if (name === "NoModificationAllowedError" || name === "InvalidStateError") {
     wrapped = new JobRangerStorageError(
-      `Browser storage is locked or unavailable, so Job Ranger could not ${action}. Close other Job Ranger tabs and reload.`,
+      `Browser storage is locked or unavailable, so Sojourner could not ${action}. Close other Sojourner tabs and reload.`,
       "ELOCKED",
       { cause: error },
     );
@@ -68,7 +68,7 @@ function wrapStorageError(error: unknown, action: string): never {
     wrapped = error;
   } else {
     wrapped = new JobRangerStorageError(
-      `Browser storage failed while Job Ranger tried to ${action}: ${error instanceof Error ? error.message : String(error)}`,
+      `Browser storage failed while Sojourner tried to ${action}: ${error instanceof Error ? error.message : String(error)}`,
       "EIO",
       { cause: error },
     );
@@ -83,7 +83,7 @@ async function storageRoot(): Promise<DirectoryHandle> {
   if (!rootPromise) {
     if (typeof navigator === "undefined" || !navigator.storage?.getDirectory) {
       throw new JobRangerStorageError(
-        "This browser does not provide the Origin Private File System that Job Ranger needs for durable local storage.",
+        "This browser does not provide the Origin Private File System that Sojourner needs for durable local storage.",
         "EUNSUPPORTED",
       );
     }

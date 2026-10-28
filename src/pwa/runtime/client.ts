@@ -1,5 +1,5 @@
 /**
- * Page-side client for the Job Ranger web runtime worker. It plays the role
+ * Page-side client for the Sojourner web runtime worker. It plays the role
  * of Electron's `ipcRenderer` + native dialogs for the shared preload bridge.
  */
 import type { RuntimeInfo } from "../../shared/runtime";
@@ -45,7 +45,7 @@ export const OPEN_DIALOG_CHANNELS: Record<string, OpenDialogSpec> = {
     label: "resume or career document",
   },
   "json-resume:import": { accept: ".json,application/json", maxBytes: 10 * MiB, label: "JSON Resume file" },
-  "backups:select-restore": { accept: ".jobranger", maxBytes: 1024 * MiB, label: "Job Ranger backup" },
+  "backups:select-restore": { accept: ".jobranger", maxBytes: 1024 * MiB, label: "Sojourner backup" },
 };
 
 export const STORAGE_FAILURE_EVENT = "job-ranger:storage-failure";
@@ -100,7 +100,7 @@ export class WebRuntimeClient {
       this.setState({
         status: "failed",
         code: "startup-failed",
-        message: event.message || "The Job Ranger runtime worker failed to start.",
+        message: event.message || "The Sojourner runtime worker failed to start.",
       });
     });
   }
@@ -213,6 +213,6 @@ export function setActiveWebRuntimeClient(client: WebRuntimeClient): void {
 }
 
 export function requireWebRuntimeClient(): WebRuntimeClient {
-  if (!activeClient) throw new Error("The Job Ranger web runtime has not started");
+  if (!activeClient) throw new Error("The Sojourner web runtime has not started");
   return activeClient;
 }

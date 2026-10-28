@@ -179,8 +179,8 @@ export function Sidebar() {
           </span>
           <div className="min-w-0">
             <p className="sidebar-brand-eyebrow">MythologIQ Labs</p>
-            <h1 className="truncate text-lg font-bold leading-tight !text-white">Job Ranger</h1>
-            <p className="sidebar-brand-subtitle">Your career workspace</p>
+            <h1 className="truncate text-lg font-bold leading-tight !text-white">Sojourner</h1>
+            <p className="sidebar-brand-subtitle">Employment Toolkit</p>
           </div>
           <button
             type="button"

@@ -1,6 +1,6 @@
 /**
- * Job Ranger web runtime worker — the browser counterpart of Electron's main
- * process. It owns local persistence and runs the shared Job Ranger
+ * Sojourner web runtime worker — the browser counterpart of Electron's main
+ * process. It owns local persistence and runs the shared Sojourner
  * application core (the same modules Electron runs), registering the same IPC
  * channel table with the same boundary validators.
  *
@@ -107,11 +107,11 @@ async function storageStatus(): Promise<RuntimeInfo["storage"]> {
   } else {
     if (persisted !== true) {
       warnings.push(
-        "This browser has not granted persistent storage, so it may evict Job Ranger data under storage pressure. Install the app or allow persistent storage, and export backups regularly.",
+        "This browser has not granted persistent storage, so it may evict Sojourner data under storage pressure. Install the app or allow persistent storage, and export backups regularly.",
       );
     }
     if (nearlyFull) {
-      warnings.push("Browser storage for Job Ranger is more than 80% full. Export a backup and free space.");
+      warnings.push("Browser storage for Sojourner is more than 80% full. Export a backup and free space.");
     }
   }
   return {
@@ -242,7 +242,7 @@ async function acquireExclusiveLock(): Promise<void> {
   const locks = (scope.navigator as Navigator & { locks?: LockManager }).locks;
   if (!locks) {
     throw new JobRangerStorageError(
-      "This browser cannot guarantee that only one Job Ranger tab writes your data (Web Locks are unavailable).",
+      "This browser cannot guarantee that only one Sojourner tab writes your data (Web Locks are unavailable).",
       "EUNSUPPORTED",
     );
   }

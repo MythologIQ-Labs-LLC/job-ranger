@@ -320,7 +320,7 @@ export function TargetTracks() {
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="metric-label">Schedule availability</span>
-                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Select schedules you are willing to work. If a listing names several possible shifts and only some fit, Job Ranger leaves the result uncertain.</p>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Select schedules you are willing to work. If a listing names several possible shifts and only some fit, Sojourner leaves the result uncertain.</p>
               </div>
               <StrengthSelect
                 label="Schedule importance"

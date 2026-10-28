@@ -121,7 +121,7 @@ test("Find Jobs explains a selected-track opportunity assessment without a fit p
   await expect(assessment.getByText("Evidence · Partial", { exact: true })).toBeVisible();
   await expect(assessment.getByText("Supported", { exact: true }).first()).toBeVisible();
   await expect(assessment.getByText("Gap", { exact: true }).first()).toBeVisible();
-  await expect(assessment.getByText("What Job Ranger still does not know", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("What Sojourner still does not know", { exact: true })).toBeVisible();
   await expect(assessment.getByText(/not a hiring prediction/)).toBeVisible();
 
   await assessment.getByRole("button", { name: "Prepare resume", exact: true }).click();

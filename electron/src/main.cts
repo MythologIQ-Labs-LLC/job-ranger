@@ -38,7 +38,7 @@ if (
   app.setPath("userData", resolveStoreUserDataDirectory(app.getPath("appData")));
 }
 
-/** Path the OS file manager sees for a path inside Job Ranger's data root. */
+/** Path the OS file manager sees for a path inside Sojourner's data root. */
 function hostPath(target: string): string {
   if (distributionChannel !== "microsoft-store" || !process.env.LOCALAPPDATA) return target;
   return storeHostPath(target, {
@@ -157,7 +157,7 @@ function openHelpWindow(): void {
     minWidth: 860,
     minHeight: 620,
     backgroundColor: "#f5f3ef",
-    title: "Job Ranger Help",
+    title: "Sojourner Help",
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
@@ -222,7 +222,7 @@ function createMenu(): void {
         },
         { type: "separator" },
         {
-          label: "Open Job Ranger Data Folder",
+          label: "Open Sojourner Data Folder",
           click: () => {
             void shell.openPath(hostPath(app.getPath("userData")));
           },
@@ -342,8 +342,8 @@ app.whenReady().then(async () => {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Unknown Job Ranger startup error";
-    dialog.showErrorBox("Job Ranger failed to start", message);
+      error instanceof Error ? error.message : "Unknown Sojourner startup error";
+    dialog.showErrorBox("Sojourner failed to start", message);
     app.quit();
   }
 });

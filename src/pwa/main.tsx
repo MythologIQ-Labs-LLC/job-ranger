@@ -1,5 +1,5 @@
 /**
- * Entry point of the Job Ranger web/PWA runtime.
+ * Entry point of the Sojourner web/PWA runtime.
  *
  * Boot order:
  * 1. start the runtime worker (local persistence + shared application core);

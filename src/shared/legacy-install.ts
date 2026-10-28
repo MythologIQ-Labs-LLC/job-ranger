@@ -1,6 +1,6 @@
 /**
  * Explicit, user-initiated import of data from a historical direct-download
- * (NSIS) Job Ranger installation into a Microsoft Store installation.
+ * (NSIS) legacy Job Ranger installation into a Microsoft Store installation.
  *
  * The legacy data directory is only read. Nothing is moved or deleted, so the
  * historical installation keeps working and the import can be repeated or

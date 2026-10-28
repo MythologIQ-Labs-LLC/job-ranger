@@ -133,7 +133,7 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                       <FileText className="h-4 w-4" /> Submitted files
                     </div>
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      Exact resume artifacts Job Ranger linked to this application.
+                      Exact resume artifacts Sojourner linked to this application.
                     </p>
                   </div>
                   <span className="soft-badge">{lifecycle.lifecycle.artifacts.length}</span>

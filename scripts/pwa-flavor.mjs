@@ -1,5 +1,5 @@
 /**
- * Build flavors of the Job Ranger web/PWA runtime.
+ * Build flavors of the Sojourner web/PWA runtime.
  *
  * - "standard": the real local-first workspace (default; unchanged behavior).
  * - "demo": the same application with a session-scoped, fictional, resettable
@@ -20,7 +20,7 @@ export function parsePwaFlavor(value) {
   const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (!normalized) return "standard";
   if (!PWA_FLAVORS.includes(normalized)) {
-    throw new Error(`Unknown Job Ranger PWA flavor "${value}". Expected one of: ${PWA_FLAVORS.join(", ")}.`);
+    throw new Error(`Unknown Sojourner PWA flavor "${value}". Expected one of: ${PWA_FLAVORS.join(", ")}.`);
   }
   return normalized;
 }
@@ -36,7 +36,7 @@ export function pwaBuildId({ version, commit, flavor, override }) {
   const base = explicit || `${version}+${String(commit).slice(0, 12)}`;
   if (parsed === "demo") return base.endsWith(DEMO_BUILD_SUFFIX) ? base : `${base}${DEMO_BUILD_SUFFIX}`;
   if (base.endsWith(DEMO_BUILD_SUFFIX)) {
-    throw new Error(`A standard Job Ranger PWA build cannot use the demo build ID "${base}".`);
+    throw new Error(`A standard Sojourner PWA build cannot use the demo build ID "${base}".`);
   }
   return base;
 }
@@ -61,7 +61,7 @@ export function assertDemoPortAllowed(port) {
   const value = Number(port);
   if (Object.values(STANDARD_LOCAL_PORTS).includes(value)) {
     throw new Error(
-      `Refusing to serve the Job Ranger demo on port ${value}: that is the standard web app's local address, where a real workspace may live. Use the demo's own port (${DEMO_LOCAL_PORTS.preview} for preview, ${DEMO_LOCAL_PORTS.dev} for dev).`,
+      `Refusing to serve the Sojourner demo on port ${value}: that is the standard web app's local address, where a real workspace may live. Use the demo's own port (${DEMO_LOCAL_PORTS.preview} for preview, ${DEMO_LOCAL_PORTS.dev} for dev).`,
     );
   }
   return value;

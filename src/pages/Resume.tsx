@@ -238,7 +238,7 @@ export function Resume() {
         </span>
         <h1 className="page-title mt-4">Build the document from facts you have actually confirmed.</h1>
         <p className="page-copy">
-          Job Ranger creates deterministic, ATS-safe resume drafts from Career Evidence. No AI provider is required, and unsupported claims block export.
+          Sojourner creates deterministic, ATS-safe resume drafts from Career Evidence. No AI provider is required, and unsupported claims block export.
         </p>
         {jobId && (
           <p className="mt-3 text-sm font-semibold text-[var(--color-primary)]">

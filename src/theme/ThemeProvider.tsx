@@ -45,7 +45,7 @@ export const THEMES: Record<ThemeName, ThemeDefinition> = {
   atelier: {
     id: "atelier",
     label: "Atelier",
-    story: "Warm ivory, Job Ranger navy, and trail-green teal drawn from the official mountain emblem.",
+    story: "Warm ivory, Sojourner navy, and trail-green teal drawn from the official mountain emblem.",
     colors: {
       // 60/30/10: warm ivory surfaces, logo navy structure, accessible trail-green actions.
       // Semantic warnings/dangers retain their independent meaning.
