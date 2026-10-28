@@ -36,6 +36,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
   const [review, setReview] = useState<{ name: string; label: string; size: number; digest: string } | null>(null);
   const [result, setResult] = useState<DriveUploadOutcome | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [preparedPending, setPreparedPending] = useState<ExportJournalRecord[]>([]);
   const session = useRef<DriveWebAuthorization | null>(null);
   const prepared = useRef<PreparedExport | null>(null);
   const journal = useRef<BrowserDriveExportJournal | null>(null);
@@ -119,12 +120,14 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
     setBusy(true);
     setError(null);
     setRecoveryMessage(null);
+    setPreparedPending([]);
     resetReview();
     try {
       await session.current.withTokenForUserAction(async token => {
         const account = await verifyDriveAccount(token);
         journal.current ??= new BrowserDriveExportJournal();
         const pending = await journal.current.unresolvedForArtifact(account.accountId, artifactId);
+        setPreparedPending(pending.filter(record => record.status === "prepared"));
         if (pending.length === 0) {
           setRecoveryMessage("No unresolved exports for this resume in the authorized Google account.");
           return;
@@ -163,6 +166,33 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not safely reconcile the previous Drive export.");
+    } finally { setBusy(false); }
+  };
+
+  // A prepared receipt has not crossed the durable uploading boundary. The
+  // compare-and-swap refuses cancellation if another tab already began upload.
+  const cancelPrepared = async (operationId: string) => {
+    if (!session.current || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await session.current.withTokenForUserAction(async token => {
+        const account = await verifyDriveAccount(token);
+        journal.current ??= new BrowserDriveExportJournal();
+        const existing = await journal.current.findOperation(operationId);
+        if (!existing || existing.accountId !== account.accountId ||
+            existing.artifactId !== artifactId || existing.status !== "prepared") {
+          throw new Error("This reservation is no longer cancellable. Recheck prior Drive exports.");
+        }
+        await advanceDurableExport(journal.current, existing, {
+          operationId, proposalId: existing.approvalId, status: "cancelled",
+          bytesSha256: existing.bytesSha256, remoteId: null, verifiedSha256: null,
+        }, new Date().toISOString());
+        setPreparedPending(prior => prior.filter(item => item.operationId !== operationId));
+        setRecoveryMessage("Unused reservation cancelled. Re-review the PDF before any new upload.");
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Reservation cannot be safely cancelled.");
     } finally { setBusy(false); }
   };
 
@@ -300,6 +330,18 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       )}
       {result && result.status !== "verified" && (
         <p role="alert" className="mt-3">The upload is not verified. {result.reason} Your local resume is unchanged.</p>
+      )}
+      {preparedPending.length > 0 && (
+        <div className="mt-3 rounded-lg border border-[var(--color-border)] p-3" data-testid="drive-prepared-recovery">
+          <p>These reserved exports have not entered the uploading state. You may cancel an unused reservation.</p>
+          {preparedPending.map(item => (
+            <div key={item.operationId} className="mt-2 flex items-center justify-between gap-3">
+              <span className="break-all">{item.fileName}</span>
+              <button type="button" className="secondary-button" disabled={busy}
+                onClick={() => void cancelPrepared(item.operationId)}>Cancel unused reservation</button>
+            </div>
+          ))}
+        </div>
       )}
       {recoveryMessage && <p role="status" className="mt-3">{recoveryMessage}</p>}
       {error && <p role="alert" className="mt-3 text-[var(--color-error)]">{error}</p>}
