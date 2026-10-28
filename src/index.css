@@ -646,7 +646,7 @@ textarea {
 
 
 /*
- * Job Ranger shell visual elevation (#248)
+ * Sojourner shell visual elevation (#248)
  * Presentation only. The established routes, local canonical data, focus
  * handoff, storage boundaries and accessibility contracts remain unchanged.
  * These surfaces inherit ALL colors from the active Atelier/Midnight/Canopy
@@ -1015,7 +1015,7 @@ textarea {
 /* Short desktop windows: the brand subtitle and section labels pushed the last
    sidebar entries under the pinned Preferences footer at 1280x600 and 1280x580.
    Drop the decorative text and tighten the brand header so every entry fits; the
-   logo and "Job Ranger" name stay and the navigation landmarks keep their names. */
+   logo and "Sojourner" name stay and the navigation landmarks keep their names. */
 @media (min-width: 768px) and (max-height: 700px) {
   .sidebar-brand-subtitle,
   .sidebar-section-label {

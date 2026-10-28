@@ -31,7 +31,7 @@ export interface RuntimeCapabilities {
 }
 
 export interface RuntimeStorageStatus {
-  /** Human-readable description of where Job Ranger data lives. */
+  /** Human-readable description of where Sojourner data lives. */
   location: string;
   engine: string;
   /** Browser persistent-storage grant; `null` when the concept does not apply. */

@@ -47,8 +47,8 @@ assert.equal(parsePwaFlavor("  "), "standard");
 assert.equal(parsePwaFlavor("standard"), "standard");
 assert.equal(parsePwaFlavor("demo"), "demo");
 assert.equal(parsePwaFlavor(" Demo "), "demo");
-assert.throws(() => parsePwaFlavor("staging"), /Unknown Job Ranger PWA flavor/);
-assert.throws(() => parsePwaFlavor("demo2"), /Unknown Job Ranger PWA flavor/);
+assert.throws(() => parsePwaFlavor("staging"), /Unknown Sojourner PWA flavor/);
+assert.throws(() => parsePwaFlavor("demo2"), /Unknown Sojourner PWA flavor/);
 
 // --- build identity: the standard ID is unchanged; the demo ID is always marked
 const commit = "058f34db445a38ed0dccda289b4787c205e2ce7b";
@@ -187,12 +187,12 @@ assert.equal(HANDOFF_IDLE_RESET_HOURS, DEMO_IDLE_RESET_HOURS);
 // --- B1: the demo is never served on the standard app's local address
 assert.deepEqual({ ...STANDARD_LOCAL_PORTS }, { preview: 4174, dev: 5174 });
 assert.deepEqual({ ...DEMO_LOCAL_PORTS }, { preview: 4175, dev: 5175 });
-for (const port of [4174, 5174, "4174"]) assert.throws(() => assertDemoPortAllowed(port), /Refusing to serve the Job Ranger demo/);
+for (const port of [4174, 5174, "4174"]) assert.throws(() => assertDemoPortAllowed(port), /Refusing to serve the Sojourner demo/);
 assert.equal(assertDemoPortAllowed(4175), 4175);
 for (const args of [["preview", "--port", "4174"], ["preview", "--port=4174"], ["preview", "--port", "5174"]]) {
   const result = spawnSync(process.execPath, [path.join(root, "scripts", "pwa-demo.mjs"), ...args], { encoding: "utf8", timeout: 30_000 });
   assert.equal(result.status, 2, `pwa-demo ${args.join(" ")} must refuse`);
-  assert.match(result.stderr, /Refusing to serve the Job Ranger demo/);
+  assert.match(result.stderr, /Refusing to serve the Sojourner demo/);
 }
 // The config itself refuses too (vite --port overrides config ports), and keeps the standard shape.
 assert.match(viteConfig, /demoPortGuardPlugin\(\)/);

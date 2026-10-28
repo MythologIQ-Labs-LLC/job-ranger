@@ -373,7 +373,7 @@ export function PersonalBrand() {
       setLinkedinSaved(await getDesktopApi().personalBrand.listLinkedInImports());
       setLinkedinImportMessage(result.alreadyPresent
         ? "This exact normalized export was already saved. No duplicate records were created."
-        : "LinkedIn analytics saved in the local Job Ranger database and included in backups.");
+        : "LinkedIn analytics saved in the local Sojourner database and included in backups.");
       setLinkedinReviewed(false);
     } catch (cause) {
       setLinkedinImportError(cause instanceof Error ? cause.message : "Could not save LinkedIn analytics.");
@@ -390,7 +390,7 @@ export function PersonalBrand() {
       setLinkedinSaved(await getDesktopApi().personalBrand.listLinkedInImports());
       setLinkedinDeleteId("");
       setLinkedinDeleteConfirmed(false);
-      setLinkedinImportMessage("Selected LinkedIn export removed from this Job Ranger database.");
+      setLinkedinImportMessage("Selected LinkedIn export removed from this Sojourner database.");
     } catch (cause) {
       setLinkedinImportError(cause instanceof Error ? cause.message : "Could not delete LinkedIn analytics.");
     } finally {
@@ -424,7 +424,7 @@ export function PersonalBrand() {
       <section className="panel panel-strong p-6 sm:p-8 space-y-3">
         <span className="alpha-pill"><BarChart3 className="h-3.5 w-3.5" /> Professional presence</span>
         <h1 className="page-title">Make the post useful. Then measure what happened.</h1>
-        <p className="page-copy">Job Ranger supports an intentional, manual LinkedIn workflow. It does not publish for you, invent career claims, or require AI or a social account connection.</p>
+        <p className="page-copy">Sojourner supports an intentional, manual LinkedIn workflow. It does not publish for you, invent career claims, or require AI or a social account connection.</p>
       </section>
       {error && <section role="alert" className="support-note mt-5 p-4 text-sm text-[var(--color-danger)]">{error}</section>}
       {notice && <section role="status" className="support-note mt-5 p-4 text-sm">{notice}</section>}
@@ -584,7 +584,7 @@ export function PersonalBrand() {
               <span>I personally reviewed the exact content, including all factual claims, supporting evidence, privacy, and wording. I understand that preparing a copy does not publish it.</span>
             </label>
             <div className="flex flex-wrap gap-3">
-              <button type="button" disabled={busy} className="secondary-button" onClick={() => void run(async () => { await save(); setNotice("Draft saved in the Job Ranger database."); })}><Save className="h-4 w-4" /> Save draft</button>
+              <button type="button" disabled={busy} className="secondary-button" onClick={() => void run(async () => { await save(); setNotice("Draft saved in the Sojourner database."); })}><Save className="h-4 w-4" /> Save draft</button>
               <button type="button" disabled={busy || !reviewed || readiness.status === "blocked" ||
                 (input.claimChecks.length > 0 && (evidenceLoading || Boolean(evidenceError) || staleEvidenceIds.length > 0))}
                 className="primary-button" onClick={copyPost}><ClipboardCopy className="h-4 w-4" /> Prepare and copy</button>
@@ -604,7 +604,7 @@ export function PersonalBrand() {
 
           <section className="panel panel-strong p-6 space-y-4">
             <h2 className="text-xl font-semibold">2. Record publication</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">After posting manually, record LinkedIn's actual permalink and publication time. Job Ranger labels this a user-confirmed receipt.</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">After posting manually, record LinkedIn's actual permalink and publication time. Sojourner labels this a user-confirmed receipt.</p>
             <label className="block text-sm font-semibold">LinkedIn post URL
               <input type="url" className="input-shell mt-2 w-full" value={publishedUrl} onChange={(e) => setPublishedUrl(e.target.value)} placeholder="https://www.linkedin.com/feed/update/..." />
             </label>
@@ -641,7 +641,7 @@ export function PersonalBrand() {
                   </a>
                 </p>
                 <p>LinkedIn can change its labels or navigation. Follow the linked official help article if the steps differ.</p>
-                <p><strong>Import preview available below:</strong> You can inspect an XLSX export locally. Previewed data is not yet saved to the Job Ranger database. Keep the original file unchanged. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
+                <p><strong>Import preview available below:</strong> You can inspect an XLSX export locally. Previewed data is not yet saved to the Sojourner database. Keep the original file unchanged. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
               </div>
             </details>
             <div className="rounded-xl border border-[var(--color-border)] p-4 space-y-3" data-testid="linkedin-xlsx-preview">
@@ -761,7 +761,7 @@ export function PersonalBrand() {
                 <h4 className="font-semibold">Ranked post content: confirmed matches only</h4>
                 <p className="text-xs text-[var(--color-text-secondary)]">
                   LinkedIn's XLSX lists URLs and metrics, not the text or comments.
-                  Job Ranger displays an original post copy only when a matching human-confirmed
+                  Sojourner displays an original post copy only when a matching human-confirmed
                   publication receipt and its fingerprint-checked reviewed package agree.
                   A copy match does not verify the live LinkedIn post, and post totals
                   are not comparable unless observation windows are equivalent.

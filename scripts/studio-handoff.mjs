@@ -1,5 +1,5 @@
 /**
- * Job Ranger -> MythologIQ Studio integration contract.
+ * Sojourner -> MythologIQ Studio integration contract.
  *
  * Produces metadata from the exact PWA build, never a deployment approval.
  * Studio links to a separately hosted, reviewed PWA rather than framing or
@@ -109,7 +109,7 @@ export function createStudioHandoff(buildInfo) {
       : {}),
     studio: {
       pagePath: "/side-projects/job-ranger",
-      ctaLabel: demo ? "Try the Job Ranger demo in your browser" : "Try Job Ranger in your browser",
+      ctaLabel: demo ? "Try the Sojourner demo in your browser" : "Try Sojourner in your browser",
       autoEnableCta: false,
       requiresOwnerApproval: true,
       requiresVerifiedHttpsOrigin: true,

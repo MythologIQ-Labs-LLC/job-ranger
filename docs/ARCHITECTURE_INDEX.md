@@ -1,6 +1,6 @@
 # Canonical Architecture Index
 
-**Authority:** canonical routing document for Job Ranger architecture decisions.  
+**Authority:** canonical routing document for Sojourner architecture decisions (legacy repository identifier: `job-ranger`).  
 **Effective decision:** 2026-10-16 (owner direction).  
 **Status:** active on `main` since PR #335 (2026-10-16).
 
@@ -20,7 +20,7 @@ Truth is still distinguished by type:
 
 | ID | Decision | Consequence |
 | --- | --- | --- |
-| ARCH-001 | **Progressive Web App is the sole intended product runtime and distribution channel.** Browser-accessible Job Ranger, including a bounded interactive demonstration linked from MythologIQ Studio, is the target. | No product roadmap commitment to a packaged Electron/NSIS/AppX/Microsoft Store/macOS desktop app. No native signing, notarization, Store certification, or installer release gate. |
+| ARCH-001 | **Progressive Web App is the sole intended product runtime and distribution channel.** Browser-accessible Sojourner: Employment Toolkit (historically Job Ranger), including a bounded interactive demonstration linked from MythologIQ Studio, is the target. | No product roadmap commitment to a packaged Electron/NSIS/AppX/Microsoft Store/macOS desktop app. No native signing, notarization, Store certification, or installer release gate. |
 | ARCH-002 | **Electron is an internal engineering harness**, retained when useful for local testing, simulation and regression qualification. | Keep working Electron tests and useful implementation components; do not label them supported end-user distribution. |
 | ARCH-003 | **Demo is a deliberately limited real PWA experience**, separate from claims of full product availability. | Studio is a marketing/link handoff, not a second application runtime. Demo data must be identified and isolated; features not supported in browser must not be promised. Hosting and Studio production edits require explicit owner approval. |
 | ARCH-004 | **Canonical career data stays user-owned and deterministic.** | Providers, agents, inference and external services cannot silently promote unverified facts, mutate canonical career truth, mass-apply or upload career data without specific human consent. |
@@ -55,9 +55,11 @@ Truth is still distinguished by type:
 | #334 native Drive CI green = web Drive feature delivered | **Invalid inference** | Browser Drive must be separately implemented and validated |
 | Existing v1.2.0 installer release | **Historical fact, not current roadmap** | A previously published artifact does not define supported future distribution |
 
-## Commercial brand decision boundary (2026-10-16)
+## Commercial brand decision boundary (owner update: 2026-10-28)
 
-The commercial product name is **not yet approved**. `Job Ranger` is retained as an internal working identifier while PWA engineering proceeds. The intended long-term name will change; `Pathwise` and `Trailmark` are rejected/removed from active consideration. See [brand decision issue #339](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/339) and its linked cumulative four-agent review for commercial decision evidence. This issue **does not amend runtime architecture**, does not authorize rename, domain/hosting change, trademark filings, or public release. Do not create a competing architectural authority from naming research.
+**The owner-selected product identity is Sojourner, displayed as `Sojourner: Employment Toolkit`.** This replaces the former public-facing name `Job Ranger`. The October 16 pending-name instruction and earlier Pathwise/Trailmark candidate research are superseded for **product naming** by [issue #339](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/339). MythologIQ Labs, LLC remains the corporate maintainer.
+
+**Implementation approval is not a trademark-clearance or production-deployment approval.** The existing repository slug, package/runtime identifiers, PWA storage namespace and origin, service-worker update identity, legacy `.jobranger` archives and historical release links remain unchanged until a separately qualified compatibility migration. Make user-visible Sojourner copy and cohesive replacement artwork in one bounded, reviewed rebrand candidate; do not ship a mixed Job Ranger/Sojourner UI, reset existing user data, or rename OAuth redirect origins or signing IDs as a cosmetic operation. New public hosting, Studio production changes, DNS, trademark representations and launch communication retain their separate approval gates. The PWA-first runtime decision and Google Drive delivery scope are unchanged.
 
 ## Change control
 

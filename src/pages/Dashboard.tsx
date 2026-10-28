@@ -189,7 +189,7 @@ export function Dashboard() {
         !loaded
           ? "Source coverage appears once your saved sources load."
           : companies.length === 0
-          ? "Job Ranger can detect broader ATS families and generic careers pages. Start with the sources you actually care about."
+          ? "Sojourner can detect broader ATS families and generic careers pages. Start with the sources you actually care about."
           : formatSourceCoverageMessage(browserRequiredCompanies, manualReviewCompanies),
       action: loaded && companies.length === 0 ? "Add a job source" : "Manage job sources",
       href: "/companies",
@@ -490,7 +490,7 @@ export function Dashboard() {
             </div>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
               <li>What you see here is persisted locally and survives restarts.</li>
-              <li>Job Ranger detects a wider range of ATS families and generic careers pages.</li>
+              <li>Sojourner detects a wider range of ATS families and generic careers pages.</li>
               <li>When a page still needs a dedicated or browser-backed adapter, it stays explicit.</li>
             </ul>
           </div>

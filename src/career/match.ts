@@ -188,7 +188,7 @@ export function evaluateJobFit(job: Job, profile: CareerProfile): JobFitEvaluati
   if (job.matchedFilterCount > 0) {
     availableWeight += 5;
     score += 5;
-    reasons.push(`It also matches ${job.matchedFilterCount} of your saved Job Ranger filter${job.matchedFilterCount === 1 ? "" : "s"}.`);
+    reasons.push(`It also matches ${job.matchedFilterCount} of your saved Sojourner filter${job.matchedFilterCount === 1 ? "" : "s"}.`);
   }
 
   const normalizedScore = availableWeight > 0 ? Math.round((score / availableWeight) * 100) : 0;

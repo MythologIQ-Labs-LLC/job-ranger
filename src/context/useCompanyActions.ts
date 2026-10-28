@@ -31,7 +31,7 @@ export function createCompanyActions(
         },
         {
           title: "Company saved",
-          message: "Job Ranger is now tracking the new source locally.",
+          message: "Sojourner is now tracking the new source locally.",
           type: "success",
         },
       );

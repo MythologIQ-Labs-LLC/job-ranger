@@ -44,7 +44,7 @@ assert.throws(() => assertStudioHandoff({ ...handoff, studio: { ...handoff.studi
 // Build flavor: the standard contract only gains the flavor field.
 assert.equal(handoff.flavor, "standard");
 assert.equal(handoff.runtime.canonicalCareerData, "browser-origin-private");
-assert.equal(handoff.studio.ctaLabel, "Try Job Ranger in your browser");
+assert.equal(handoff.studio.ctaLabel, "Try Sojourner in your browser");
 assert.equal("demo" in handoff, false);
 // Legacy builds (made before flavors existed) have no flavor: standard only, legacy shape.
 const { flavor: _omitted, ...legacyInfo } = info;
@@ -74,7 +74,7 @@ assert.deepEqual(demoHandoff.demo, {
   requiresDedicatedOrigin: true,
   sharesOriginWithRealWorkspace: false,
 });
-assert.equal(demoHandoff.studio.ctaLabel, "Try the Job Ranger demo in your browser");
+assert.equal(demoHandoff.studio.ctaLabel, "Try the Sojourner demo in your browser");
 assert.equal(demoHandoff.studio.autoEnableCta, false);
 assert.equal(demoHandoff.studio.requiresOwnerApproval, true);
 assert.equal(demoHandoff.entry.iframeAllowed, false);
@@ -105,7 +105,7 @@ try {
   await assert.rejects(inspectStudioPwaBuild(dir, buildId, "demo"), /unexpected build flavor/);
   assert.equal((await runVerifierCli(["--site", dir, "--flavor", "standard"])).flavor, "standard");
   await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "demo"]), /unexpected build flavor/);
-  await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "staging"]), /Unknown Job Ranger PWA flavor/);
+  await assert.rejects(runVerifierCli(["--site", dir, "--flavor", "staging"]), /Unknown Sojourner PWA flavor/);
   // --flavor is mandatory for the CLI and both verification functions.
   await assert.rejects(runVerifierCli(["--site", dir]), /--flavor standard\|demo is required/);
   await assert.rejects(runVerifierCli(["--origin", "https://jobs.example.org", "--build-id", buildId, "--build-info-sha256", "0".repeat(64)]), /--flavor standard\|demo is required/);

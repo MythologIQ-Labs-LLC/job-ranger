@@ -30,7 +30,7 @@ const workflow = [
   },
   {
     heading: "Track what actually happened",
-    description: "Record applications and next steps instead of guessing whether sending more resumes helped. Job Ranger does not submit applications on your behalf.",
+    description: "Record applications and next steps instead of guessing whether sending more resumes helped. Sojourner does not submit applications on your behalf.",
     route: "/applications",
     action: "Open Applications",
   },
@@ -52,7 +52,7 @@ export function Help() {
         </span>
         <h1 className="page-title mt-4">Find a better path, one decision at a time.</h1>
         <p className="page-copy">
-          Job Ranger is a local-first Career Ops workspace. You can start with your work history,
+          Sojourner is a local-first Career Ops workspace. You can start with your work history,
           career goals, or a job that interests you. You do not need a subscription to an AI model,
           a connected social account, or a finished resume to begin.
         </p>
@@ -96,7 +96,7 @@ export function Help() {
         <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
           Your workspace is stored locally. The desktop and browser versions use separate local storage.
           In the web app, your saved information belongs to this browser profile and the exact address
-          where you opened Job Ranger. Clearing browser site data can erase the workspace.
+          where you opened Sojourner. Clearing browser site data can erase the workspace.
         </p>
         <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
           Export a portable backup before moving devices, changing installations, or clearing browser
@@ -110,7 +110,7 @@ export function Help() {
 
       <section className="support-note mt-6 px-6 py-5" aria-labelledby="help-boundaries">
         <h2 id="help-boundaries" className="font-semibold text-[var(--color-text-primary)]">
-          What Job Ranger will not decide for you
+          What Sojourner will not decide for you
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
           An imported resume is not automatically verified evidence. A matching job is not a promise

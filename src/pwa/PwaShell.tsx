@@ -26,14 +26,14 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
   if (state.status === "ready") return <>{children}</>;
   if (state.status === "starting") {
     return (
-      <BootScreen title="Opening your local Job Ranger workspace…">
+      <BootScreen title="Opening your local Sojourner workspace…">
         <p className="text-sm">Loading the local database stored in this browser.</p>
       </BootScreen>
     );
   }
   if (state.status === "waiting-for-lock" && IS_DEMO_FLAVOR) {
     return (
-      <BootScreen title="The Job Ranger demo is open in another tab or window">
+      <BootScreen title="The Sojourner demo is open in another tab or window">
         <p className="text-sm leading-6">
           Only one tab can use the demo workspace at a time. Close the other demo tab or window to continue here.
           Closing it discards that tab's demo changes: unless this tab is a copy of it, this tab then starts with fresh
@@ -44,35 +44,35 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
   }
   if (state.status === "waiting-for-lock") {
     return (
-      <BootScreen title="Job Ranger is open in another tab or window">
+      <BootScreen title="Sojourner is open in another tab or window">
         <p className="text-sm leading-6">
-          To protect your data, only one Job Ranger tab can use this browser's local workspace at a time. Close the other
-          Job Ranger tab or window; this tab will continue automatically.
+          To protect your data, only one Sojourner tab can use this browser's local workspace at a time. Close the other
+          Sojourner tab or window; this tab will continue automatically.
         </p>
       </BootScreen>
     );
   }
   if (state.code === "demo-workspace-refused") {
     return (
-      <BootScreen title="The Job Ranger demo cannot start on this site" tone="error">
+      <BootScreen title="The Sojourner demo cannot start on this site" tone="error">
         <p className="text-sm leading-6" data-testid="pwa-boot-error">{state.message}</p>
         <p className="text-sm leading-6">
-          This browser already has a Job Ranger workspace for this address that was not created by the demo, so the demo
+          This browser already has a Sojourner workspace for this address that was not created by the demo, so the demo
           has not opened, changed or erased it. The demo must be served from its own address. If that workspace is
-          yours, open the full Job Ranger app at the address where you created it; if it is left over from an earlier
+          yours, open the full Sojourner app at the address where you created it; if it is left over from an earlier
           demo, clear this site&apos;s data in your browser settings and reload.
         </p>
       </BootScreen>
     );
   }
   return (
-    <BootScreen title="Job Ranger could not open its local workspace" tone="error">
+    <BootScreen title="Sojourner could not open its local workspace" tone="error">
       <p className="text-sm leading-6" data-testid="pwa-boot-error">{state.message}</p>
       {state.code === "storage-unsupported" ? (
         <p className="text-sm leading-6">
-          This browser does not provide the durable private storage Job Ranger needs (for example, some private-browsing
+          This browser does not provide the durable private storage Sojourner needs (for example, some private-browsing
           modes). Use a current version of Chrome, Edge, Firefox, or Safari in a normal window.
-          Job Ranger will not silently fall back to temporary storage that could lose your career data.
+          Sojourner will not silently fall back to temporary storage that could lose your career data.
         </p>
       ) : IS_DEMO_FLAVOR ? (
         <p className="text-sm leading-6">
@@ -131,7 +131,7 @@ export function PwaRuntimeBanners() {
       )}
       {updateReady && (
         <div data-testid="pwa-update-ready" className="panel panel-strong flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
-          <span>A new version of Job Ranger is ready. Your data stays in place.</span>
+          <span>A new version of Sojourner is ready. Your data stays in place.</span>
           <button type="button" className="primary-button" onClick={applyWaitingUpdate}>
             Reload to update
           </button>

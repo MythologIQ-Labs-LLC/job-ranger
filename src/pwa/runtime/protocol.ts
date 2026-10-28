@@ -1,5 +1,5 @@
 /**
- * Message protocol between the Job Ranger web page (renderer) and its
+ * Message protocol between the Sojourner web page (renderer) and its
  * dedicated runtime worker (the browser counterpart of Electron's main
  * process). Only structured-cloneable data crosses this boundary.
  */

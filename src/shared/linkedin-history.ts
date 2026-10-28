@@ -1,6 +1,6 @@
 /**
  * Historical LinkedIn content is USER-ATTESTED text, not an approved
- * Job Ranger publishing package or verified live provider content.
+ * Sojourner publishing package or verified live provider content.
  * Analytics XLSX contains neither post body nor comment text.
  */
 import type { LinkedInReconciliationReport } from "./linkedin-reconciliation.js";

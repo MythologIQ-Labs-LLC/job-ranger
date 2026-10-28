@@ -1,5 +1,5 @@
 /**
- * Build for the Job Ranger web/PWA runtime (output: dist-pwa/).
+ * Build for the Sojourner web/PWA runtime (output: dist-pwa/).
  *
  * The web runtime runs the *same* shared application core as Electron
  * (electron/src/*.cts: repositories, migrations, domain services, IPC channel
@@ -123,14 +123,14 @@ function headersFile(): string {
 
 /** The demo flavor names itself as a demo in the document and the install manifest. */
 function demoIndexHtml(html: string): string {
-  const title = "<title>Job Ranger</title>";
+  const title = "<title>Sojourner: Employment Toolkit</title>";
   const description = /<meta name="description" content="[^"]*" \/>/;
   if (!html.includes(title) || !description.test(html)) throw new Error("demo flavor: index.html title/description markers changed");
   return html
-    .replace(title, "<title>Job Ranger Demo</title>")
+    .replace(title, "<title>Sojourner Demo</title>")
     .replace(
       description,
-      '<meta name="description" content="Job Ranger demo: the real app with fictional sample data. Everything stays in this browser and resets when the browser session ends." />',
+      '<meta name="description" content="Sojourner demo: the real app with fictional sample data. Everything stays in this browser and resets when the browser session ends." />',
     );
 }
 
@@ -142,10 +142,10 @@ function writeDemoManifest(): void {
     `${JSON.stringify(
       {
         ...manifest,
-        name: "Job Ranger Demo",
-        short_name: "JR Demo",
+        name: "Sojourner Demo",
+        short_name: "Sojourner Demo",
         description:
-          "Demonstration of the Job Ranger Career Ops workspace with fictional sample data. Everything stays in this browser and resets when the browser session ends.",
+          "Demonstration of the Sojourner Career Ops workspace with fictional sample data. Everything stays in this browser and resets when the browser session ends.",
       },
       null,
       2,

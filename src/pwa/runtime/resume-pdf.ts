@@ -1,5 +1,5 @@
 /**
- * Deterministic, text-based ATS resume PDF writer for the Job Ranger web
+ * Deterministic, text-based ATS resume PDF writer for the Sojourner web
  * runtime (pdf-lib; no embedded scripts or images).
  *
  * Input is the same prepared, Truth-Gate-approved projection the Electron
@@ -496,8 +496,8 @@ export async function renderResumePdfBytes(
   document.setTitle(`${fullName} - Resume`, { showInWindowTitleBar: false });
   document.setAuthor(fullName);
   document.setSubject("Resume");
-  document.setCreator("Job Ranger");
-  document.setProducer("Job Ranger web runtime (pdf-lib)");
+  document.setCreator("Sojourner");
+  document.setProducer("Sojourner web runtime (pdf-lib)");
   document.setCreationDate(fixedDate);
   document.setModificationDate(fixedDate);
   return document.save({ useObjectStreams: false });

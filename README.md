@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/assets/branding/job-ranger-banner.png" alt="Job Ranger - Find Your Next Opportunity" width="100%" />
+  <img src="public/ICON.png" alt="Sojourner emblem" width="96" height="96" />
 </p>
 
-# Job Ranger
+# Sojourner: Employment Toolkit
+
+*Formerly Job Ranger. The GitHub repository, compatibility identifiers, and previously published release artifacts retain their historic names.*
 
 > **Architecture authority:** [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). The supported future product is the browser/PWA; Electron is retained for engineering validation, not native product distribution.
 
@@ -24,23 +26,23 @@
   Maintained by <strong>MythologIQ Labs, LLC</strong>.
 </p>
 
-## What Job Ranger can do for you
+## What Sojourner can do for you
 
-Job Ranger is for people who want help making a **better job-search decision**, not merely sending more applications.
+Sojourner is for people who want help making a **better job-search decision**, not merely sending more applications.
 
 It can help you:
 
 - define the roles, environments, locations, compensation, schedules, and constraints that actually fit what you want next;
 - turn a resume, pasted history, or direct entry into a factual **Career Evidence** record you can review and correct;
-- discover opportunities and keep the original job evidence that Job Ranger used;
+- discover opportunities and keep the original job evidence that Sojourner used;
 - evaluate a role using separate signals for eligibility, evidence coverage, career-track alignment, preferences, blockers, and unknowns;
 - build evidence-backed resumes and application materials without inventing qualifications;
 - track applications, contacts, milestones, reminders, interviews, offers, and the exact materials you submitted;
 - prepare for interviews using your real experience and the actual requirements of the role;
 - learn from recurring gaps and search outcomes without treating application count as progress;
-- keep the core workflow on your own machine and useful without an AI subscription or Job Ranger account.
+- keep the core workflow on your own machine and useful without an AI subscription or Sojourner account.
 
-Job Ranger deliberately does **not** mass-apply, fabricate qualifications or relationships, silently upload your career history, or turn one opaque score into hiring truth.
+Sojourner deliberately does **not** mass-apply, fabricate qualifications or relationships, silently upload your career history, or turn one opaque score into hiring truth.
 
 ### A typical workflow
 
@@ -52,7 +54,7 @@ You can enter anywhere in that flow. A resume is evidence about work you have do
 
 These screenshots and the walkthrough video come from the production web build with fictional sample data (Morgan Rivera, Harbor Health). No real person's career data is shown.
 
-**[Watch or download the 85-second walkthrough (WebM)](./docs/assets/demo/job-ranger-demo.webm)**: choosing a direction, assessing a listing, checking Career Evidence, preparing a truthful resume, and tracking the application.
+**[Watch the earlier Job Ranger walkthrough (WebM, recorded before the Sojourner rename)](./docs/assets/demo/job-ranger-demo.webm)**: choosing a direction, assessing a listing, checking Career Evidence, preparing a truthful resume, and tracking the application.
 
 **Choose a direction.** Target tracks keep your current path and the one you are moving toward separate, each with its own roles and constraints.
 
@@ -70,19 +72,19 @@ To record the walkthrough again locally, run `npm run demo:record`; regenerate t
 
 ## Optional local MCP read-only prototype (development)
 
-Job Ranger now has a **development-only, opt-in local MCP stdio adapter** for a human-authorized local agent client. It can query bounded Career Evidence, active professional objectives, opportunities, publication receipts, deterministic post readiness and same-age analytics through Job Ranger's **existing services**. It starts with **zero data scopes**, requires explicit local workspace path and scopes, and cannot edit records, approve posts, publish externally or send messages.
+Sojourner now has a **development-only, opt-in local MCP stdio adapter** for a human-authorized local agent client. It can query bounded Career Evidence, active professional objectives, opportunities, publication receipts, deterministic post readiness and same-age analytics through Sojourner's **existing services**. It starts with **zero data scopes**, requires explicit local workspace path and scopes, and cannot edit records, approve posts, publish externally or send messages.
 
 This **is not yet a verified live ChatGPT plugin**. The read-only stdio adapter can now be launched through OpenAI's official Secure MCP Tunnel in a narrowly scoped single-user development trial, but the live tunnel association, ChatGPT connection and account authorization must still be demonstrated. It does not provide a public OAuth/HTTPS service. The app remains standalone and needs none of those services. See the [official Secure MCP Tunnel trial runbook](./docs/integrations/JOB_RANGER_SECURE_TUNNEL.md), [precise local adapter setup](./docs/integrations/JOB_RANGER_MCP_READONLY.md), [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md), and [tracking issue #173](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/173). Do not share a live database or enable a public tunnel to work around the missing authenticated transport.
 
 ## Start here
 
-Job Ranger's **forward distribution model is the PWA plus the Microsoft Store**. The native installers published with v1.2.0 remain immutable historical release artifacts; they are not the product's long-term ordinary-user installation strategy.
+Sojourner's **forward distribution model is the PWA plus the Microsoft Store**. The native installers published with v1.2.0 remain immutable historical release artifacts; they are not the product's long-term ordinary-user installation strategy.
 
 | What you want to do | Best current path | Status |
 | --- | --- | --- |
 | **Evaluate the current product today** | Run the current PWA locally | Implemented and tested in Chromium. Self-hosting currently requires Node.js/npm and a few terminal commands. |
-| **Use Job Ranger as an ordinary Windows user** | Microsoft Store package | Implemented and validated in CI; Partner Center submission/certification is still pending. |
-| **Use Job Ranger cross-platform without developer setup** | Production PWA/web origin | Implemented; public deployment and broader browser/device validation are still pending. |
+| **Use Sojourner as an ordinary Windows user** | Microsoft Store package | Implemented and validated in CI; Partner Center submission/certification is still pending. |
+| **Use Sojourner cross-platform without developer setup** | Production PWA/web origin | Implemented; public deployment and broader browser/device validation are still pending. |
 | **Inspect the last published desktop release** | v1.2.0 GitHub Release | Historical Windows/macOS binaries remain available and immutable, but they are unsigned/unnotarized and are not the forward mainstream channel. |
 
 For current local evaluation, use the [Self-hosting guide](./docs/SELF_HOSTING.md). For exact distribution architecture and trust boundaries, see [Distribution Architecture](./docs/design/DISTRIBUTION_ARCHITECTURE.md) and [Distribution Trust](./docs/DISTRIBUTION_TRUST.md).
@@ -91,7 +93,7 @@ For current local evaluation, use the [Self-hosting guide](./docs/SELF_HOSTING.m
 
 The latest published GitHub release is **v1.2.0**, published October 5, 2026. It is preserved as immutable release history.
 
-The active development line is **v1.3.0 candidate preparation**. It contains the current PWA runtime, Microsoft Store packaging, portable Job Ranger archives between runtimes, Windows portability fixes, the corrected web layout, and the public demo/readme work. Those capabilities are implemented in the repository but are not a stable public release until the release gates are satisfied.
+The active development line is **v1.3.0 candidate preparation**. It contains the current PWA runtime, Microsoft Store packaging, portable Sojourner archives between runtimes, Windows portability fixes, the corrected web layout, and the public demo/readme work. Those capabilities are implemented in the repository but are not a stable public release until the release gates are satisfied.
 
 ### Forward distribution
 
@@ -105,7 +107,7 @@ The active development line is **v1.3.0 candidate preparation**. It contains the
 
 A future production PWA may be delivered from a normal HTTPS website. That does not change the local-first authority model: browser delivery is not permission to make the server authoritative for Career Evidence or other personal career data.
 
-Job Ranger uses status terms deliberately:
+Sojourner uses status terms deliberately:
 
 | Status | Meaning |
 | --- | --- |
@@ -122,7 +124,7 @@ For the reconciled factual state, see [System State](./docs/SYSTEM_STATE.md), [C
 
 The current development line can run as a persistent local PWA in a Chromium desktop browser. This is the best way to evaluate the current product before a production web origin or Microsoft Store listing is promoted.
 
-It does **not** require a Job Ranger account, a separate database server, Docker, an AI subscription, or the historical unsigned desktop installer. Local self-hosting does currently require Node.js 22.12.0 or newer, npm, and either Git or a downloaded source archive.
+It does **not** require a Sojourner account, a separate database server, Docker, an AI subscription, or the historical unsigned desktop installer. Local self-hosting does currently require Node.js 22.12.0 or newer, npm, and either Git or a downloaded source archive.
 
 The complete beginner-friendly steps are in [SELF_HOSTING.md](./docs/SELF_HOSTING.md).
 
@@ -137,10 +139,10 @@ Then open **http://localhost:4174** and install the PWA from Chrome or Edge if d
 
 Important persistence rules:
 
-- Keep using the exact http://localhost:4174 origin. Job Ranger deliberately refuses silent port fallback because browser storage is origin-bound.
+- Keep using the exact http://localhost:4174 origin. Sojourner deliberately refuses silent port fallback because browser storage is origin-bound.
 - Application updates replace the application shell, not your Career Ops data. The PWA stores its SQLite database and managed artifacts in browser-local OPFS.
-- Before meaningful upgrades or experiments, export a portable .jobranger backup from Job Ranger. The archive is the supported recovery and later localhost-to-production-origin migration path.
-- Do not clear this site's browser storage unless you intend to remove the local Job Ranger profile.
+- Before meaningful upgrades or experiments, export a portable .jobranger backup from Sojourner. The archive is the supported recovery and later localhost-to-production-origin migration path.
+- Do not clear this site's browser storage unless you intend to remove the local Sojourner profile.
 - Firefox, Safari, and broader real-device installability remain validation work before the PWA is promoted as the mainstream public channel.
 
 The implementation and persistence guarantees are documented in [PWA_RUNTIME.md](./docs/design/PWA_RUNTIME.md).
@@ -149,15 +151,15 @@ The implementation and persistence guarantees are documented in [PWA_RUNTIME.md]
 
 The [v1.2.0 GitHub Release](https://github.com/MythologIQ-Labs-LLC/job-ranger/releases/tag/v1.2.0) remains available as immutable release history. It contains Windows x64 and macOS x64/arm64 desktop packages promoted byte-for-byte from the validated rc.5 artifacts.
 
-Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the pending Microsoft Store channel or the current PWA work. Job Ranger does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
+Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the pending Microsoft Store channel or the current PWA work. Sojourner does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
 
 Historical package evidence and bounded tester guidance remain in [TESTER_INSTALLATION.md](./docs/TESTER_INSTALLATION.md), [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md), and [CLEAN_MACHINE_TRUST_VALIDATION.md](./docs/CLEAN_MACHINE_TRUST_VALIDATION.md).
 
-## What Job Ranger is
+## What Sojourner is
 
 Job searching contains an absurd amount of clerical work. People repeatedly check the same sources, lose track of opportunities, rewrite the same career facts, forget which resume they submitted, and maintain increasingly haunted collections of tabs, notes, spreadsheets, and half-finished documents.
 
-Job Ranger is designed around **quality over quantity**: understanding the person behind the resume, identifying career directions worth pursuing, finding companies and opportunities that fit those directions, and helping the user choose a useful path to employment rather than maximizing application throughput.
+Sojourner is designed around **quality over quantity**: understanding the person behind the resume, identifying career directions worth pursuing, finding companies and opportunities that fit those directions, and helping the user choose a useful path to employment rather than maximizing application throughput.
 
 The guiding progression is:
 
@@ -165,7 +167,7 @@ The guiding progression is:
 
 A user may enter anywhere in that chain. The resume is useful evidence about prior work, not a command to keep repeating it and not the sole definition of who the user is.
 
-Job Ranger is designed to make the workflow coherent while preserving user authority:
+Sojourner is designed to make the workflow coherent while preserving user authority:
 
 1. describe what kind of work, environment, constraints, and direction you actually want;
 2. build a factual Career Evidence record from a resume or direct entry;
@@ -178,7 +180,7 @@ Job Ranger is designed to make the workflow coherent while preserving user autho
 
 Broader Career Ops company-targeting and relationship-path behavior has a completed bounded design contract under #121, but it is **not implemented on the current development line**.
 
-Job Ranger does **not** autonomously mass-apply, invent qualifications or relationships, silently transmit career data to an inference provider, optimize for raw application volume, or treat one opaque score as hiring truth.
+Sojourner does **not** autonomously mass-apply, invent qualifications or relationships, silently transmit career data to an inference provider, optimize for raw application volume, or treat one opaque score as hiring truth.
 
 ## Current capabilities
 
@@ -224,24 +226,24 @@ Remote preference, compensation target, commute, schedule, employment arrangemen
 
 ### Explain uncertainty instead of scoring around it
 
-Job Ranger separates eligibility, evidence coverage, career-track alignment, preference alignment, blockers, and unknowns. Missing job data stays missing instead of becoming fake precision.
+Sojourner separates eligibility, evidence coverage, career-track alignment, preference alignment, blockers, and unknowns. Missing job data stays missing instead of becoming fake precision.
 
 ### Local first, useful before AI
 
-The core workflow works without an AI account or hosted Job Ranger account. Optional external capabilities must be narrow adapters with explicit disclosure and may not become authorities over career truth.
+The core workflow works without an AI account or hosted Sojourner account. Optional external capabilities must be narrow adapters with explicit disclosure and may not become authorities over career truth.
 
 ### User authority
 
-Job Ranger can discover, organize, explain, prepare, remind, preserve, and analyze. Consequential external actions remain with the user.
+Sojourner can discover, organize, explain, prepare, remind, preserve, and analyze. Consequential external actions remain with the user.
 
 ## Source support and acquisition trust
 
-Job Ranger does not pretend every careers site is equally automatable.
+Sojourner does not pretend every careers site is equally automatable.
 
 | Support level | Meaning |
 | --- | --- |
 | `supported` | A structured adapter exists and is the preferred path. |
-| `detected` | Job Ranger recognizes a known provider/vendor portal and can attempt its governed extraction path. |
+| `detected` | Sojourner recognizes a known provider/vendor portal and can attempt its governed extraction path. |
 | `browser-required` | A recognized portal requires a constrained rendered-browser path. |
 | `manual-review` | No reliable or sufficiently bounded automated path is claimed. |
 
@@ -253,7 +255,7 @@ Source discovery remains separate from source acquisition. A discovered opportun
 
 ## Current architecture
 
-Job Ranger now has one Career Ops product core with two runtime surfaces rather than two independent products.
+Sojourner now has one Career Ops product core with two runtime surfaces rather than two independent products.
 
 ~~~text
 React product UI
@@ -283,7 +285,7 @@ electron/src/** remains the checked-in privileged desktop implementation authori
 
 ## Privacy and security posture
 
-Job Ranger is local-first across both runtimes.
+Sojourner is local-first across both runtimes.
 
 The Windows desktop runtime keeps structured career/search state in local SQLite and uses typed IPC boundaries rather than exposing Node.js directly to the renderer. The PWA keeps its database and managed artifacts in browser-local storage using SQLite WASM + OPFS. Delivering the PWA from an HTTPS origin does not make that server authoritative for personal career data.
 
@@ -311,7 +313,7 @@ Examples still suitable for future evidence-backed consideration include:
 - calendar mirroring;
 - native Linux packaging only if real demand justifies a separate packaging, update, QA, and support surface.
 
-Native macOS distribution is not part of the forward architecture. macOS and Linux are expected to use the cross-platform PWA rather than requiring Job Ranger to maintain separate native installers merely because packaging is technically possible.
+Native macOS distribution is not part of the forward architecture. macOS and Linux are expected to use the cross-platform PWA rather than requiring Sojourner to maintain separate native installers merely because packaging is technically possible.
 
 ## Development
 
@@ -375,9 +377,9 @@ Start with [`docs/README.md`](./docs/README.md). The [October 10 documentation r
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow.
 - [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community expectations.
 - [`docs/BRANDING.md`](./docs/BRANDING.md) — canonical visual assets and usage.
-- [`TRADEMARKS.md`](./TRADEMARKS.md) — Job Ranger name/mark usage and official-distribution identity.
+- [`TRADEMARKS.md`](./TRADEMARKS.md) — Sojourner name/mark usage and official-distribution identity.
 - [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) — third-party attribution and provenance.
 
 ## License
 
-Job Ranger's current development line is open source under the [GNU Affero General Public License v3.0 only (AGPL-3.0-only)](./LICENSE). Commercial use and paid distribution are permitted, while covered modified versions remain subject to AGPL source-sharing requirements. Historical versions already released under MIT, including v1.2.0, retain their prior MIT grants; see [`LICENSE_HISTORY.md`](./LICENSE_HISTORY.md). The Job Ranger name and official-distribution identity remain governed separately by [`TRADEMARKS.md`](./TRADEMARKS.md). Third-party dependencies and adapted components retain their own obligations as recorded in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+Sojourner's current development line is open source under the [GNU Affero General Public License v3.0 only (AGPL-3.0-only)](./LICENSE). Commercial use and paid distribution are permitted, while covered modified versions remain subject to AGPL source-sharing requirements. Historical versions already released under MIT, including v1.2.0, retain their prior MIT grants; see [`LICENSE_HISTORY.md`](./LICENSE_HISTORY.md). The Sojourner name and official-distribution identity remain governed separately by [`TRADEMARKS.md`](./TRADEMARKS.md). Third-party dependencies and adapted components retain their own obligations as recorded in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).

@@ -194,7 +194,7 @@ export function Companies() {
               Opportunity sources
             </span>
             <h1 className="page-title mt-4">
-              Find places to look, then choose what Job Ranger should monitor.
+              Find places to look, then choose what Sojourner should monitor.
             </h1>
             <p className="page-copy">
               Start from a target track instead of hunting down career-page URLs yourself. Discovery can surface opportunities and, when a reliable employer source is available, let you approve it for local monitoring. Nothing becomes a monitored source without your approval.
@@ -258,7 +258,7 @@ export function Companies() {
 
         {activeTracks.length === 0 && !targetTracks.loading && (
           <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-            Create or activate a Target Track with at least one role title before running discovery. Job Ranger needs to know what kind of work to look for, which is apparently an unreasonable demand to place on a search box.
+            Create or activate a Target Track with at least one role title before running discovery. Sojourner needs to know what kind of work to look for, which is apparently an unreasonable demand to place on a search box.
           </div>
         )}
 
@@ -361,7 +361,7 @@ export function Companies() {
                               Monitorable employer source found
                             </div>
                             <div className="mt-1">
-                              Job Ranger can monitor this employer through an existing supported source path. Approval is still required.
+                              Sojourner can monitor this employer through an existing supported source path. Approval is still required.
                             </div>
                             {candidate.sourceLabel && (
                               <div className="mt-1 text-[var(--color-text-muted)]">
@@ -375,7 +375,7 @@ export function Companies() {
                               Opportunity only
                             </div>
                             <div className="mt-1">
-                              The discovery provider did not expose a reliable employer source that Job Ranger can monitor yet.
+                              The discovery provider did not expose a reliable employer source that Sojourner can monitor yet.
                             </div>
                           </>
                         )}
@@ -581,7 +581,7 @@ export function Companies() {
         <div className="flex items-start gap-3">
           <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
           <p>
-            Discovery and monitoring are separate on purpose. A provider can show you an opportunity without Job Ranger trusting that provider or silently adding anything to your monitored sources.
+            Discovery and monitoring are separate on purpose. A provider can show you an opportunity without Sojourner trusting that provider or silently adding anything to your monitored sources.
           </p>
         </div>
       </div>
