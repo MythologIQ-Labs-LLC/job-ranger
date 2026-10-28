@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { describe, it } from "node:test";
 import { advanceExportReceipt } from "../src/shared/artifact-export-approval.ts";
-import { advanceDurableExport, recoveryDecision, reserveExport, validateJournalRecord } from "../electron-runtime/src/shared/artifact-export-journal.js";
+import { advanceDurableExport, blocksFreshArtifactExport, recoveryDecision, reserveExport, validateJournalRecord } from "../electron-runtime/src/shared/artifact-export-journal.js";
 
 const sha = createHash("sha256").update("resume").digest("hex");
 const instant = "2026-10-15T15:00:00.000Z";
@@ -74,6 +74,36 @@ describe("durable artifact export journal contract", () => {
       ...receipt(record, "uploading"), status: "uploading",
     }, "2026-10-15T15:00:03.000Z"), /Invalid export transition/);
   });
+  it("blocks new same-artifact approvals after a crash, but not unrelated exports", () => {
+    for (const status of ["prepared", "uploading", "accepted_unverified",
+      "unknown_remote_outcome", "verification_failed"]) {
+      const remoteId = status === "accepted_unverified" || status === "verification_failed"
+        ? "googleFile:1" : null;
+      const pending = { ...record, status, remoteId };
+      assert.equal(blocksFreshArtifactExport(pending, record.accountId, record.artifactId),
+        true, status);
+      assert.equal(blocksFreshArtifactExport(pending, "account:other", record.artifactId),
+        false, "another Google account must not be blocked");
+      assert.equal(blocksFreshArtifactExport(pending, record.accountId, "resume:other"),
+        false, "another saved resume must not be blocked");
+      assert.equal(blocksFreshArtifactExport(
+        { ...pending, artifactRevision: "rev:2" }, record.accountId, record.artifactId,
+      ), true, "a changed revision does not erase remote uncertainty");
+    }
+    for (const status of ["cancelled", "failed"]) {
+      assert.equal(blocksFreshArtifactExport(
+        { ...record, status }, record.accountId, record.artifactId,
+      ), false, "definitive local terminal result does not block a fresh consent");
+    }
+    assert.equal(blocksFreshArtifactExport(
+      { ...record, status: "verified", remoteId: "googleFile:1", verifiedSha256: sha },
+      record.accountId, record.artifactId,
+    ), false, "a verified past upload allows a separately approved new copy");
+    assert.throws(() => blocksFreshArtifactExport(
+      { ...record, status: "garbage" }, record.accountId, record.artifactId,
+    ), /Invalid durable/, "corrupted journal must fail closed");
+  });
+
   it("rejects stale timestamps and missing persisted transactions", async () => {
     const db = store();
     await assert.rejects(advanceDurableExport(db, record, receipt(record, "uploading"), instant), /Concurrent/);
