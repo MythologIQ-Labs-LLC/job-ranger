@@ -243,3 +243,25 @@ test("recovery accepts an approved uppercase PDF extension while rejecting unsaf
     assert.equal(calls, 0);
   }
 });
+
+test("recovery rejects missing remote IDs and malformed My Drive root metadata", async () => {
+  const input = await good();
+  const base = { operationId: input.operationId, remoteId: remote.id,
+    name: input.name, mimeType: input.mimeType,
+    destinationId: "root", approvedSha256: input.approvedSha256 };
+  for (const root of [
+    {}, { mimeType: "application/vnd.google-apps.folder" },
+    { id: null, mimeType: "application/vnd.google-apps.folder" },
+  ]) {
+    const { requests, fetchMock } = driver([json(root)]);
+    assert.equal(await verifyRecoveredDriveFile(secret, base, fetchMock), false);
+    assert.equal(requests.length, 1);
+    assert.equal(requests.some(x => x.options.method === "POST"), false);
+  }
+  for (const invalid of [{ remoteId: undefined }, { destinationId: undefined }]) {
+    let calls = 0;
+    assert.equal(await verifyRecoveredDriveFile(secret, { ...base, ...invalid },
+      async () => { calls++; throw new Error("unexpected"); }), false);
+    assert.equal(calls, 0);
+  }
+});
