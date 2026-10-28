@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { describe, it } from "node:test";
 import { advanceExportReceipt } from "../src/shared/artifact-export-approval.ts";
-import { advanceDurableExport, recoveryDecision, reserveExport, validateJournalRecord } from "../src/shared/artifact-export-journal.ts";
+import { advanceDurableExport, recoveryDecision, reserveExport, validateJournalRecord } from "../electron-runtime/src/shared/artifact-export-journal.js";
 
 const sha = createHash("sha256").update("resume").digest("hex");
 const instant = "2026-10-15T15:00:00.000Z";
