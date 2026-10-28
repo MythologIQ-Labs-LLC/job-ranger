@@ -111,7 +111,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
     } catch (refreshError) {
       const message =
-        refreshError instanceof Error ? refreshError.message : "Failed to load Job Ranger data.";
+        refreshError instanceof Error ? refreshError.message : "Failed to load Sojourner data.";
       setError(message);
       setLoading(false);
     } finally {
