@@ -263,7 +263,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
                   {assessment.eligibility.blockers.length === 0 &&
                     assessment.eligibility.potentialBlockers.length === 0 && (
                       <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                        No hard blocker is established by the listing data Job Ranger currently has.
+                        No hard blocker is established by the listing data Sojourner currently has.
                       </p>
                     )}
                   <div className="mt-3 space-y-3">
@@ -334,7 +334,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
 
                 {coverage.totalCount === 0 ? (
                   <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
-                    Job Ranger could not identify an explicit requirement in the listing text it currently has. That stays unknown rather than becoming a fake penalty or bonus.
+                    Sojourner could not identify an explicit requirement in the listing text it currently has. That stays unknown rather than becoming a fake penalty or bonus.
                   </p>
                 ) : (
                   <ul className="mt-3 space-y-3">
@@ -371,7 +371,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
               {assessment.unknowns.length > 0 && (
                 <div className="support-note px-4 py-3">
                   <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                    What Job Ranger still does not know
+                    What Sojourner still does not know
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-text-secondary)]">
                     {assessment.unknowns.map((item) => (
