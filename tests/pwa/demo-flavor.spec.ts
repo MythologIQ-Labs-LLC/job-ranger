@@ -434,7 +434,7 @@ test("the standard build has no demo banner, seeds nothing and never resets betw
     const first = await context.newPage();
     await first.goto(standardServer.url);
     await waitForRuntime(first);
-    await expect(first).toHaveTitle("Sojourner");
+    await expect(first).toHaveTitle("Sojourner: Employment Toolkit");
     await expect(first.getByTestId("demo-banner")).toHaveCount(0);
     await expect(first.getByText("Demo workspace", { exact: false })).toHaveCount(0);
     const empty = await workspaceSummary(first);
