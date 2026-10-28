@@ -1,3 +1,15 @@
+# Sojourner Google Drive career artifact export (#314)
+
+**Implementation candidate updated 2026-10-28. Not released or live-provider qualified.** This branch now includes a real, behind-configuration **PWA** path for exported truth-gated resume PDFs: `resume:read-verified-artifact-for-export` reads only previously verified managed PDFs and checks the stored SHA-256; browser-only GIS authorization requests `drive.file`; Drive `about.get` verifies account binding; the user reviews file, digest, Google account and My Drive root destination before one-click approval; IndexedDB journals operation and approval IDs before POST; Drive v3 multipart upload uses app-private operation metadata; `files.get` metadata and binary readback must match before the UI claims verified. A failed/ambiguous upload never silently retries. Default unconfigured and fictional-demo PWA builds do not enable this capability or the Google network CSP. Individual PDF multipart uploads are intentionally capped at **5 MB**; larger/resumable documents are outside this candidate.
+
+Existing `src/shared/artifact-export-approval.ts` and `artifact-export-journal.ts` remain the authority and state-machine boundary, not merely comments or an isolated document design. Credential tokens remain private in the browser authorization controller. Root-folder alias resolution is performed before upload for exact parent readback.
+
+**Qualification outstanding:** exact-branch automated tests, adversarial review of IPC/artifact authentication and journal recovery, real Google Web OAuth client configuration (#252), actual PWA browser OAuth+Drive file creation/readback on an approved HTTPS origin, and post-merge main acceptance. No public deployment or Studio publication is authorized here. Do not mark #314 closed without a real account and file proof.
+
+---
+
+## Original proposed contract (retained for architectural history)
+
 # Google Drive career artifact export contract (#314)
 
 **Status:** Proposed design, not an accepted ADR, implemented export, or release claim. Owner approval, implementation, adversarial review and live Google test-account evidence remain outstanding. This document lives separately from the Drive snapshot prototype (#262/#257) and must not bypass existing governance.
