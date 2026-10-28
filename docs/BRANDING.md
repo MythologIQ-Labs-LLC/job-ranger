@@ -1,6 +1,8 @@
-# Job Ranger Brand Guide
+# Sojourner Brand Transition: Legacy Job Ranger Asset Inventory
 
-This directory contains Job Ranger's public-facing brand assets. The goal is consistency, not an expanding collection of almost-the-same PNGs wandering around the repository unsupervised.
+**Owner-selected identity (2026-10-28): Sojourner: Employment Toolkit.** See [the canonical architecture index](./ARCHITECTURE_INDEX.md) and [brand migration issue #339](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/339). The assets catalogued below still represent the **historical Job Ranger presentation**. They are not automatically approved as Sojourner brand art and must be reviewed or replaced coherently before a public rebrand. Keep legacy names for compatibility, history and accurate reference until migration is qualified.
+
+The goal is one coherent source of brand assets, not competing ad-hoc variants. A visual change must not silently change runtime identifiers, browser storage origin, archive compatibility, application signing or OAuth configuration.
 
 ## Canonical Assets
 
@@ -84,9 +86,9 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 - Do not use generated mock UI as evidence that a feature is already shipped.
 - Do not replace the runtime icon merely to match a temporary campaign graphic.
 
-## Source of Truth
+## Legacy Job Ranger Asset Source of Truth
 
-The brand asset hierarchy is:
+Until a complete Sojourner visual identity is reviewed and implemented, the existing app and historic assets use this hierarchy:
 
 1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-job-ranger-icon.sh`.
 2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
