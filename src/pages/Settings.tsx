@@ -221,7 +221,7 @@ export function Settings() {
               <h2 className="text-2xl font-semibold">Notifications</h2>
             </div>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Control when Job Ranger alerts you about new opportunities.
+              Control when Sojourner alerts you about new opportunities.
             </p>
           </div>
           <div className="panel panel-strong p-6 space-y-4">
