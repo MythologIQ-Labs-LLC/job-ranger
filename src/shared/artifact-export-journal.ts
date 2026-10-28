@@ -78,6 +78,23 @@ export function validateJournalRecord(record: ExportJournalRecord): void {
   }
 }
 
+/**
+ * A fresh approval ID is not sufficient to protect against duplicate uploads.
+ * Block a new POST for the same verified Drive account and saved artifact
+ * while an earlier operation could still have created a remote file.
+ * The guard deliberately spans revisions, and survives page reloads via the journal.
+ */
+export function blocksFreshArtifactExport(
+  record: ExportJournalRecord, accountId: string, artifactId: string,
+): boolean {
+  validateJournalRecord(record);
+  return record.accountId === accountId && record.artifactId === artifactId &&
+    (record.status === "uploading" ||
+     record.status === "accepted_unverified" ||
+     record.status === "unknown_remote_outcome" ||
+     record.status === "verification_failed");
+}
+
 export function recoveryDecision(record: ExportJournalRecord): RecoveryDecision {
   validateJournalRecord(record);
   switch (record.status) {
