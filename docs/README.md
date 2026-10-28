@@ -1,5 +1,7 @@
 # Documentation Index
 
+> **Architecture authority:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md). All architecture choices, supersessions and canonical domain routing start there. Older priority hierarchies below govern evidence/status only and cannot override the architecture index.
+
 Job Ranger documentation is intentionally divided into **current product truth**, **active design/roadmap**, **validation evidence**, **research**, **release evidence**, and **historical provenance**.
 
 This hierarchy exists because the repository has accumulated multiple generations of planning documents. A reader should never have to guess whether an old phase plan still describes the product.
@@ -14,13 +16,19 @@ When documents disagree, use this order:
 2. **Current source and tests on `main`** for what is actually implemented in the repository.
 3. **`SYSTEM_STATE.md`** for the reconciled factual snapshot of `main` versus the published release.
 4. **Root `README.md` and `HELP.md`** for public/user-facing product behavior.
-5. **`ARCHITECTURE_PLAN.md`** for current architecture and accepted trust boundaries.
+5. **`ARCHITECTURE_INDEX.md`** for architecture decisions, supersessions, and designated canonical domain documents.
 6. **`planning/PLAN.md`** for genuine next work.
 7. **Current design documents** for normative contracts and accepted architectural decisions.
 8. **Validation/research documents** for evidence and alternatives.
 9. **Historical plans / internal provenance** for how the project got here, not what it is now.
 
 A stale plan does not outrank merged code merely because it contains more checkboxes.
+
+## Latest documentation reconciliation
+
+The [October 10, 2026 source-backed reconciliation](./validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) compares the actual development-line code and tests to the current roadmap, System State, feature inventory, and governance index at a pinned `main` commit. Its 2026-10-15 refresh moves the baseline to `main` at `5c749dc` and records what merged in between. It distinguishes **implemented on main**, **published**, **unqualified drafts**, and **legal/terms holds**. It is a dated documentation review, not a runtime verification report or an authorization to merge active plans.
+
+**Branch authority:** Draft pull requests, proposed governance plans, independently VETOed remediations, and test-only branches do not change this index's main-branch product truth. Follow the relevant PR and its exact gate/ledger evidence for their current status; only update main-line governance entries when those artifacts legitimately enter main.
 
 ## Current sources of truth
 
@@ -33,7 +41,7 @@ A stale plan does not outrank merged code merely because it contains more checkb
 | [`SYSTEM_STATE.md`](./SYSTEM_STATE.md) | Factual current repository/product snapshot. |
 | [`ARCHITECTURE_PLAN.md`](./ARCHITECTURE_PLAN.md) | Current architecture, authority model, trust boundaries, and accepted evolution. |
 | [`adr/README.md`](./adr/README.md) | Architecture decision log and accepted durable product/technical boundaries. |
-| [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md) | Accepted post-v1.2 dual-channel distribution architecture: cross-platform PWA plus Microsoft Store Windows native app. |
+| [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md) | Historical 2026-10-05 dual-channel decision, superseded by ARCH-001/002 in the architecture index. |
 | [`design/PWA_RUNTIME.md`](./design/PWA_RUNTIME.md) | Web/PWA runtime implementation: shared core and adapters, persistence, security, service worker, capability parity, deployment. |
 | [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT_STORE_PACKAGING.md) | Microsoft Store (AppX) packaging, Store runtime behavior, NSIS coexistence/migration, validation, external steps. |
 | [`planning/PLAN.md`](./planning/PLAN.md) | Actual prioritized next work. |
@@ -101,7 +109,7 @@ Key current research:
 - [`research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md)
 - [`research/RESUME_PARSER_ADOPTION_2026-09-25.md`](./research/RESUME_PARSER_ADOPTION_2026-09-25.md)
 - [`research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md`](./research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md)
-- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **unmerged developer-tool candidate**, local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
+- [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **optional development-only tool, on main since #269** (`scripts/local_evidence_cli.py`), local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
 
 Research can recommend or reject a capability. It does not make that capability product truth until accepted and implemented.
 

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
   CheckCircle2,
@@ -13,14 +13,18 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { Layout } from "../components/Layout";
 import { JobEvidenceCoveragePanel } from "../components/JobEvidenceCoverage";
+import { DemoListingBadge, DemoListingLinkMessage, openListingUrl } from "../components/DemoListingNotice";
 import { useAppContext } from "../context/AppContext";
 import { getDesktopApi } from "../services/api";
 import type { CareerTargetTrack } from "../shared/contracts";
 import { trackJob } from "../career/storage";
 
 export function Jobs() {
-  const { jobs, companies, markJobAsSeen, loading } = useAppContext();
+  const { jobs, companies, markJobAsSeen, loading, loaded, error, refresh, refreshing } = useAppContext();
   const navigate = useNavigate();
+  // Listings are known only after a successful workspace read; a failed read is not an empty workspace.
+  const listingsUnavailable = !loading && !loaded;
+  const listingCount = useRef<HTMLParagraphElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -29,6 +33,10 @@ export function Jobs() {
   const [targetTracksLoading, setTargetTracksLoading] = useState(true);
   const [targetTrackError, setTargetTrackError] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
+  // Fictional demo listings have no real posting; opening one explains that instead.
+  const [demoLinkJobId, setDemoLinkJobId] = useState<string | null>(null);
+  // Presentation-only choice: neither filter/matching rules nor stored data changes.
+  const [listingView, setListingView] = useState<"compact" | "detailed">("compact");
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +96,15 @@ export function Jobs() {
       );
   }, [jobs, searchTerm, locationTerm, companyFilter]);
 
+  const clearListingFilters = () => {
+    setSearchTerm("");
+    setLocationTerm("");
+    setCompanyFilter("all");
+    // The button disappears once listings return. Focus the listing count rather than a text
+    // field, so phones do not open the keyboard over the restored list.
+    listingCount.current?.focus();
+  };
+
   const handleTrackJob = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
     try {
@@ -100,18 +117,11 @@ export function Jobs() {
     }
   };
 
+  // Errors propagate to the assessment drawer, which is the only visible layer while open.
   const handlePrepareResume = async (job: (typeof jobs)[number]) => {
     setTrackError(null);
-    try {
-      await trackJob(job);
-      navigate(`/resume?job=${encodeURIComponent(job.id)}`);
-    } catch (error) {
-      setTrackError(
-        error instanceof Error
-          ? error.message
-          : "Unable to start resume preparation",
-      );
-    }
+    await trackJob(job);
+    navigate(`/resume?job=${encodeURIComponent(job.id)}`);
   };
 
   return (
@@ -125,7 +135,7 @@ export function Jobs() {
           Spend your time on the jobs that look worth it.
         </h1>
         <p className="page-copy">
-          Job Ranger compares each listing with the target track you choose and the Career Evidence you have actually confirmed. Eligibility, evidence coverage, career direction, preferences, blockers, and unknowns stay separate instead of being collapsed into a pretend hiring probability.
+          Sojourner compares each listing with the target track you choose and the Career Evidence you have actually confirmed. Eligibility, evidence coverage, career direction, preferences, blockers, and unknowns stay separate instead of being collapsed into a pretend hiring probability.
         </p>
       </section>
 
@@ -224,12 +234,77 @@ export function Jobs() {
         </div>
       </section>
 
-      <div className="mt-8 space-y-4">
+      <section aria-label="Listing display preferences" className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p ref={listingCount} tabIndex={-1} role="status" className="rounded-md text-sm text-[var(--color-text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+            {loaded
+              ? `Showing ${filteredJobs.length} of ${jobs.length} captured listings${
+                  filteredJobs.length === 0 && jobs.length > 0 ? ". Your filters hide all of them." : ""
+                }`
+              : listingsUnavailable
+                ? "Captured listings could not be loaded"
+                : "Loading captured listings"}
+          </p>
+          {searchTerm.trim() && listingView === "compact" && filteredJobs.length > 0 && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Search terms may appear inside a collapsed listing description.
+            </p>
+          )}
+        </div>
+        <div role="group" aria-label="Listing layout" className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={listingView === "compact"}
+            onClick={() => setListingView("compact")}
+            className={listingView === "compact" ? "primary-button" : "secondary-button"}
+          >
+            Compact
+          </button>
+          <button
+            type="button"
+            aria-pressed={listingView === "detailed"}
+            onClick={() => setListingView("detailed")}
+            className={listingView === "detailed" ? "primary-button" : "secondary-button"}
+          >
+            Detailed
+          </button>
+        </div>
+      </section>
+
+      <div className="mt-4 space-y-3">
         {filteredJobs.length === 0 && (
-          <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-            {loading
-              ? "Loading jobs..."
-              : "No jobs match the current filters. Try widening the search or run another company scan."}
+          <div data-testid="jobs-empty-state" className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
+            {!loaded ? (
+              listingsUnavailable ? (
+                <>
+                  <p>Your captured listings could not be loaded, so an empty list here does not mean you have none.</p>
+                  {error && <p className="mt-2 break-words text-xs">{error}</p>}
+                  <button type="button" className="secondary-button mt-4" disabled={refreshing} onClick={() => void refresh()}>
+                    {refreshing ? "Trying again..." : "Try again"}
+                  </button>
+                </>
+              ) : (
+                <p>Loading captured listings...</p>
+              )
+            ) : jobs.length > 0 ? (
+              // With no filter set every listing is shown, so an empty result here always comes from filters.
+              <>
+                <p>No listings match these filters. Clear them to see your {jobs.length} captured {jobs.length === 1 ? "listing" : "listings"}.</p>
+                <button type="button" className="secondary-button mt-4" onClick={clearListingFilters}>
+                  Clear listing filters
+                </button>
+              </>
+            ) : companies.length === 0 ? (
+              <>
+                <p>No job sources yet. Add a company careers page, then scan it to capture listings here.</p>
+                <Link to="/companies" className="primary-button mt-4">Add a job source</Link>
+              </>
+            ) : (
+              <>
+                <p>No listings captured yet. Scan one of your sources on the Companies page to bring its listings here.</p>
+                <Link to="/companies" className="secondary-button mt-4">Open Companies</Link>
+              </>
+            )}
           </div>
         )}
 
@@ -242,11 +317,12 @@ export function Jobs() {
           return (
             <article
               key={job.id}
-              className="panel panel-strong p-6 transition hover:-translate-y-0.5"
+              className="panel panel-strong px-4 py-4 sm:px-6 sm:py-5"
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <DemoListingBadge url={job.url} />
                     {selectedTargetTrack && (
                       <span className="soft-badge">
                         <Target className="h-3.5 w-3.5" />
@@ -255,6 +331,11 @@ export function Jobs() {
                     )}
                     {job.isNew && (
                       <span className="soft-badge soft-badge-warning">New</span>
+                    )}
+                    {!job.isActive && (
+                      <span className="soft-badge soft-badge-danger" title="The most recent source check marked this listing inactive.">
+                        Inactive on source
+                      </span>
                     )}
                     <span
                       className={`soft-badge ${job.sourceCompleteness === "full" ? "soft-badge-success" : "soft-badge-warning"}`}
@@ -271,12 +352,13 @@ export function Jobs() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => void getDesktopApi().openExternal(job.url)}
+                    onClick={() => openListingUrl(job.url, () => setDemoLinkJobId(job.id))}
                     className="surface-link-button mt-3 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
                   >
                     {job.title}
                     <ExternalLink className="h-4 w-4" />
                   </button>
+                  {demoLinkJobId === job.id && <DemoListingLinkMessage />}
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)]">
                     <span className="inline-flex items-center gap-1.5">
                       <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
@@ -318,43 +400,51 @@ export function Jobs() {
                 </div>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-[var(--color-text-secondary)]">
-                {job.descriptionSnippet}
-              </p>
-
               {selectedTargetTrack && (
                 <JobEvidenceCoveragePanel
                   job={job}
                   targetTrack={selectedTargetTrack}
-                  onPrepareResume={() => void handlePrepareResume(job)}
+                  onPrepareResume={() => handlePrepareResume(job)}
                 />
               )}
 
-              <div className="border-divider mt-4 flex flex-wrap items-center gap-4 border-t pt-4 text-xs text-[var(--color-text-muted)]">
-                <span>
-                  First seen{" "}
-                  {formatDistanceToNow(new Date(job.createdAt), {
-                    addSuffix: true,
-                  })}
-                </span>
-                <span>
-                  Last seen{" "}
-                  {formatDistanceToNow(new Date(job.lastSeenAt), {
-                    addSuffix: true,
-                  })}
-                </span>
-                <span>
-                  {job.isActive
-                    ? "Still active on source"
-                    : "Marked inactive on source"}
-                </span>
-                {selectedTargetTrack && (
+              <details
+                key={`${job.id}:${listingView}`}
+                open={listingView === "detailed"}
+                className="border-divider mt-4 border-t pt-3"
+              >
+                <summary className="cursor-pointer rounded-md py-2 text-sm font-semibold text-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+                  Listing description and source history
+                </summary>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+                  {job.descriptionSnippet}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)]">
                   <span>
-                    Assessment uses {selectedTargetTrack.name} + confirmed Career Evidence
-                    {job.currentSourceSnapshotId ? " + preserved source snapshot" : ""}
+                    First seen{" "}
+                    {formatDistanceToNow(new Date(job.createdAt), {
+                      addSuffix: true,
+                    })}
                   </span>
-                )}
-              </div>
+                  <span>
+                    Last seen{" "}
+                    {formatDistanceToNow(new Date(job.lastSeenAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                  <span>
+                    {job.isActive
+                      ? "Still active on source"
+                      : "Marked inactive on source"}
+                  </span>
+                  {selectedTargetTrack && (
+                    <span>
+                      Assessment uses {selectedTargetTrack.name} + confirmed Career Evidence
+                      {job.currentSourceSnapshotId ? " + preserved source snapshot" : ""}
+                    </span>
+                  )}
+                </div>
+              </details>
             </article>
           );
         })}

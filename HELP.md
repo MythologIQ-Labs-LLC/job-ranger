@@ -1,8 +1,8 @@
-# Job Ranger Help
+# Sojourner Help
 
-Job Ranger is a local-first application for discovering, evaluating, preparing for, and tracking job opportunities.
+Sojourner is a local-first application for discovering, evaluating, preparing for, and tracking job opportunities.
 
-This guide describes the **stable published release (v1.2.0)**. It also explains how the newer Microsoft Store app and web app behave. Both are implemented in the repository but are **not yet published**: the Store app awaits certification, and the web app has no public site yet but can be self-hosted on your own computer (see below).
+This guide includes historical instructions for the **published v1.2.0 native installer** and newer web runtime notes. **Current delivery architecture is PWA-only**, governed by [the canonical architecture index](./docs/ARCHITECTURE_INDEX.md). Electron/Store packaging is retained for engineering testing and historical compatibility, **not** an upcoming supported user-facing release. No hosted PWA is yet verified as published.
 
 ## Which version am I using?
 
@@ -14,13 +14,13 @@ The latest stable public release is **v1.2.0**, available as direct-download ins
 
 v1.2.0 installers are unsigned. See the trust notes in the README and [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md).
 
-### Newer ways to run Job Ranger (not yet published)
+### Runtime availability and historical test paths
 
 | Way | Status | Where your data lives |
 | --- | --- | --- |
-| **Microsoft Store app** (Windows) | Package built and validated; Store certification pending | In the Store app's private storage on this PC |
+| **Microsoft Store package** (engineering/historical only) | Package tests may exist; no Store release is planned | In the Store app's private storage on this PC |
 | **Web app** (Chrome or Edge on Windows, macOS, or Linux; Firefox and Safari are not yet validated) | No public site yet. You can self-host it locally at `http://localhost:4174`; see *Running the web app locally* below | In this browser profile's private storage for that exact address. Nothing is uploaded |
-| Direct-download installers | Advanced/test use going forward | In your user profile's Job Ranger folder |
+| Previously published installers | Historical v1.2.0 artifacts; future native distribution discontinued | In your user profile's Sojourner folder |
 
 Each installation keeps its own data. Move data between them with a portable `.jobranger` backup (see *Backup and restore*). Settings → **This installation** shows which one you are using, its version and build, and where its data lives.
 
@@ -29,7 +29,7 @@ The web app supports the same Career Ops workflow, with a few browser limits:
 - It checks sources only while it is open.
 - It has no system tray or desktop notifications.
 - "Show file" becomes "Download file".
-- It cannot export resume PDFs that contain right-to-left (Arabic, Hebrew) or Indic (for example Devanagari) text; use the Windows app for those. Other scripts (accented Latin, Greek, Cyrillic, Thai, Chinese, Japanese, Korean) are supported.
+- It cannot export resume PDFs that contain right-to-left (Arabic, Hebrew) or Indic (for example Devanagari) text; the web app cannot export those yet, so remove or transliterate that text before exporting. Other scripts (accented Latin, Greek, Cyrillic, Thai, Chinese, Japanese, Korean) are supported.
 - The first export that uses a new script must be online so the matching font can be downloaded and verified. After that it works offline.
 
 #### Running the web app locally
@@ -41,7 +41,20 @@ npm ci
 npm run selfhost:pwa
 ```
 
-Then open **http://localhost:4174** in Chrome or Edge. Your data belongs to that exact address, so always use the same one. If the port is busy, Job Ranger stops with an error instead of quietly moving to another port, where your data would look missing. Before upgrading or experimenting, export a `.jobranger` backup. Do not clear this site's browser storage unless you mean to delete your local Job Ranger data.
+Then open **http://localhost:4174** in Chrome or Edge. Your data belongs to that exact address, so always use the same one. If the port is busy, Sojourner stops with an error instead of quietly moving to another port, where your data would look missing. Before upgrading or experimenting, export a `.jobranger` backup. Do not clear this site's browser storage unless you mean to delete your local Sojourner data.
+
+#### The web demo (fictional sample data)
+
+A separate **demo** build of the web app exists for trying Sojourner without entering anything about yourself. It is the same application, hosted on its own address (never the address of a real workspace), with a fictional workspace: Morgan Rivera, a Harbor Health employer, three Harbor Health listings, one Target Track, Career Evidence and one tracked application. Not published yet.
+
+- A banner on every page says it is a demo. Every sample listing carries a **Demo listing — fictional, not a real opening** label; opening or applying to one shows an explanation instead of a website.
+- What you enter stays in this browser on the demo site, even after you close the tab, until a new demo session starts (opening the demo in a new tab or window, or after a browser restart that does not restore your tabs) or the demo sits unused for 8 hours. Then it is replaced with fresh sample data. Reloading the page keeps your changes. To remove them right away, use **Reset demo** or clear the site's data.
+- Exported resume PDFs and JSON Resume files contain the fictional sample data and have no demo marker. Do not submit them as a real application.
+- If the demo's address already holds a real (non-demo) Sojourner workspace, the demo refuses to start and leaves it untouched. If you tried a pre-release demo build locally before this protection existed, its leftover sample data is also refused once: clear the site's data for http://localhost:4175 and reload.
+- Public job-board sources you add yourself are real openings, read directly by your browser like in the full web app.
+- Not included: monitoring or notifications while the browser is closed, AI inference and MCP connections, desktop-only features, Google Drive, sync and accounts. Do not keep real career records in the demo.
+
+To try it locally: `npm run build:pwa:demo` (output in `dist-pwa-demo/`, build ID ending in `.demo`), then `npm run preview:pwa:demo` and open **http://localhost:4175**. The demo deliberately uses a different address from the self-hosted web app (4174), and refuses to run on 4174 or 5174: it replaces its own address's workspace in every new demo session, so never serve it at the address of a real workspace.
 
 ## Workflow
 
@@ -67,7 +80,7 @@ Where supported, choices preserve their meaning as:
 
 ### 3. Career Evidence
 
-Career Evidence is Job Ranger's factual career record.
+Career Evidence is Sojourner's factual career record.
 
 Evidence can include employment, skills, education, projects, achievements, credentials/licenses, publications, volunteer/nontraditional work, and portfolio/work-sample references.
 
@@ -77,14 +90,14 @@ Evidence can be corrected, rejected, merged, or superseded without erasing histo
 
 ### 4. Resume import
 
-Job Ranger supports:
+Sojourner supports:
 
 - DOCX;
 - text-bearing PDF;
 - plain text;
 - pasted text.
 
-Original source artifacts are preserved before interpretation. Job Ranger records hashes, parser metadata, extraction history, and duplicate state.
+Original source artifacts are preserved before interpretation. Sojourner records hashes, parser metadata, extraction history, and duplicate state.
 
 Image-only/scanned documents surface **OCR required** rather than silently uploading them to a hosted OCR service.
 
@@ -122,7 +135,7 @@ This prevents “zero jobs” from pretending every source run succeeded normall
 
 ### 7. Opportunity assessment
 
-For a selected Target Track, Job Ranger separates:
+For a selected Target Track, Sojourner separates:
 
 - **Eligibility**;
 - **Evidence coverage**;
@@ -135,7 +148,7 @@ Unknown information remains unknown instead of being converted into fake precisi
 
 ### 8. Resume workspace
 
-Job Ranger can create a deterministic resume from confirmed Career Evidence with:
+Sojourner can create a deterministic resume from confirmed Career Evidence with:
 
 - ATS-oriented templates;
 - target-job evidence selection;
@@ -151,7 +164,7 @@ A tailored resume may emphasize supported evidence. It may not invent experience
 
 The **Truth Gate** blocks export when a statement lacks confirmed Career Evidence, or when you edited a statement to add words or numbers that its linked evidence does not contain. If it flags an edit, either reword the statement using what your evidence says or add the missing fact to your Career Evidence first. In builds after v1.2.0 this check also covers non-Latin text (for example Chinese, Japanese, Korean, Cyrillic, Arabic, or accented words) and single-digit numbers.
 
-The **Parseability Gate** re-reads the generated PDF the way an applicant-tracking system would and blocks export if your name, contact details, or statement text did not survive. In builds after v1.2.0 it checks non-Latin text too. Right-to-left and Indic text cannot be checked reliably by PDF parsers, so for those Job Ranger shows an advisory asking you to open the PDF and check it yourself before submitting.
+The **Parseability Gate** re-reads the generated PDF the way an applicant-tracking system would and blocks export if your name, contact details, or statement text did not survive. In builds after v1.2.0 it checks non-Latin text too. Right-to-left and Indic text cannot be checked reliably by PDF parsers, so for those Sojourner shows an advisory asking you to open the PDF and check it yourself before submitting.
 
 ### 9. Applications
 
@@ -168,11 +181,11 @@ Applications can preserve:
 - offer/negotiation state;
 - prepared application materials.
 
-Job Ranger does not submit applications for you.
+Sojourner does not submit applications for you.
 
 ### 10. Interview preparation
 
-Interview preparation is grounded in the tracked job, confirmed Career Evidence, requirement/evidence mappings, and the exact resume Job Ranger recorded as submitted.
+Interview preparation is grounded in the tracked job, confirmed Career Evidence, requirement/evidence mappings, and the exact resume Sojourner recorded as submitted.
 
 It distinguishes what the employer saw, additional confirmed evidence, later-corrected evidence, and real gaps.
 
@@ -182,9 +195,9 @@ Career Stories provide reusable evidence-linked narratives for interviews/applic
 
 ### 12. Application materials
 
-Job Ranger can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
+Sojourner can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
 
-Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Job Ranger says so, and you can select and copy the text manually.
+Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Sojourner says so, and you can select and copy the text manually.
 
 ### 13. Search Insights
 
@@ -194,7 +207,7 @@ These are observations, not causal hiring claims. Raw application count is not t
 
 ### 14. Backup and restore
 
-Job Ranger provides versioned local backup/restore with:
+Sojourner provides versioned local backup/restore with:
 
 - SQLite snapshot;
 - managed artifacts;
@@ -203,7 +216,7 @@ Job Ranger provides versioned local backup/restore with:
 - path rebasing when restored to another data root;
 - rollback preservation until the restored state is validated.
 
-Builds after v1.2.0 (including the Store app and the web app) save a backup as a single **`.jobranger` file**. The same file restores into the Windows app or the web app, which is how you move your data between installations. Restores check every file's integrity and refuse backups that are corrupted, were modified by another tool, or were created by a newer Job Ranger version.
+Builds after v1.2.0 (including the Store app and the web app) save a backup as a single **`.jobranger` file**. The same file restores into another installation, for example from an earlier desktop installation into the web app, which is how you move your data between installations. Restores check every file's integrity and refuse backups that are corrupted, were modified by another tool, or were created by a newer Sojourner version.
 
 v1.2.0 backups are folders. In the Windows app, restore one by selecting the `manifest.json` inside the folder.
 
@@ -213,9 +226,47 @@ v1.2.0 backups are folders. In the Windows app, restore one by selecting the `ma
 
 ### 15. JSON Resume interoperability
 
-JSON Resume import/export is a portability adapter, not Job Ranger's canonical data model.
+JSON Resume import/export is a portability adapter, not Sojourner's canonical data model.
 
 Imported JSON Resume facts still require user authority before becoming factual Career Evidence.
+
+## Newer development-line workflows (not in published v1.2.0)
+
+These features are implemented in the source development line but are **not claims about the downloadable v1.2.0 installers** or a promoted v1.3.0 release. Their exact menus and availability must be rechecked against the eventual packaged candidate.
+
+### Changes to existing pages (development line, October 2026)
+
+The v1.2.0 installers do not have these. Where earlier sections of this guide mention them (**Copy text**, **Pause**/**Resume**, filter **Edit**/**Disable**), they describe the development line.
+
+- **Navigation:** the sidebar groups career and search pages into sections you can expand, with Settings and Help pinned. **Skip to main content** is the first Tab stop, and Escape closes the mobile menu.
+- **Help page:** **Help** in the sidebar opens a short getting-started guide to the Career Ops workflow, with links to each step. It is bundled with the app and works offline.
+- **Home:** starts with decision cards for imported evidence, Target Tracks, unseen opportunities and applications. Scan and system details are in a collapsed section.
+- **Applications:** focus the list by recorded status (All, Interested, Applied, Interview, Offers, Closed). An application with unsaved changes stays visible until they are saved.
+- **Cover letters:** **Copy text** copies a current version (see *Application materials*).
+- **Companies:** **Pause**, **Resume** and a run-frequency menu on each source.
+- **Filters:** each card lists all of its rules; **Edit** changes them and **Disable** pauses the filter.
+- **Settings:** notifications have their own **Save notification settings** button and say whether changes are saved.
+- **Career Profile:** unsaved edits are no longer replaced when the profile refreshes in the background.
+
+### Personal Brand and LinkedIn (manual-first)
+
+The Personal Brand page lets you author post drafts and inspect deterministic readiness findings. After reviewing the exact copy, you can prepare a manual posting package, publish it yourself, then record a user-confirmed publication receipt. Sojourner does **not** log into LinkedIn or post on your behalf.
+
+You can also preview a LinkedIn-exported **XLSX analytics file locally** and choose whether to save its normalized evidence. Preview is not persistence. The saved-import ledger detects duplicate exports; reconciliation separates observed, missing and conflicting values instead of treating an export as complete authority. Historical post text and topic labels are **your attestations**, not verification from LinkedIn. Observed dashboards and cohorts are descriptive; they do not prove why a post performed well or caused an interview.
+
+Original published post permalinks and manually confirmed facts matter. LinkedIn exports do not automatically provide complete post text, comments, or employment outcomes. The current interface supports those limits explicitly. See [Personal Brand design](./docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md).
+
+### Economic pathway comparisons in Target Tracks
+
+The current Target Tracks page includes an exploratory comparison of user-authored employment, contract, self-employment, training and blended-income scenarios. Enter your own assumptions and examine the arithmetic. Outputs are **hypotheses**, not verified income forecasts or recommendations to change careers. No live labor-market feed or authoritative salary validation is implied.
+
+### Optional developer-only MCP reader
+
+There is a separate [local read-only MCP prototype](./docs/integrations/JOB_RANGER_MCP_READONLY.md) for technically proficient users developing a trusted agent integration. It is not built into the stable v1.2.0 installer, cannot submit applications or change Career Evidence through its read-only interface, and is not proof of a live ChatGPT integration.
+
+### Candidate providers and application handoff
+
+Himalayas discovery and We Work Remotely RSS are **draft-only**, not selectable main-line providers; WWR is held pending publisher-terms clarification. The candidate-controlled application handoff is also a separate unqualified draft. Neither should be followed as an instruction to connect, monitor or submit anything from the published product. Follow [System State](./docs/SYSTEM_STATE.md) for verified scope and the issue/PR evidence for current development disposition.
 
 ## Source-support labels
 
@@ -232,7 +283,7 @@ Current structured families:
 
 ### Detected
 
-Job Ranger recognizes a known provider/vendor portal and can attempt its governed extraction path. Reliability varies by site implementation.
+Sojourner recognizes a known provider/vendor portal and can attempt its governed extraction path. Reliability varies by site implementation.
 
 Examples include Workday, iCIMS, BambooHR, Taleo, Oracle Careers, and Microsoft Careers.
 
@@ -242,7 +293,7 @@ A recognized portal requires the constrained rendered-browser path.
 
 ### Manual review
 
-Job Ranger does not claim a reliable automated path. Arbitrary generic career-site hostnames remain manual review in v1.2.0.
+Sojourner does not claim a reliable automated path. Arbitrary generic career-site hostnames remain manual review in v1.2.0.
 
 ## Acquisition security
 
@@ -250,19 +301,19 @@ v1.2.0 uses connection-level anti-rebinding protection for governed automated ac
 
 Policy resolution produces the exact approved public address set. Direct sockets connect only to approved addresses while TLS continues to verify the original hostname. Redirects are independently approved/pinned, and isolated browser HTTP/HTTPS document/subresource requests are routed through the governed transport.
 
-Do not treat a source's ability to open in your normal browser as proof that Job Ranger should automatically retrieve it.
+Do not treat a source's ability to open in your normal browser as proof that Sojourner should automatically retrieve it.
 
 ## Privacy and data storage
 
-Job Ranger is local first.
+Sojourner is local first.
 
 The desktop app keeps structured career/search state behind the Electron/SQLite boundary, including Career Profile, Target Tracks, Applications, Career Evidence/provenance, job source snapshots, requirements/mappings, resumes, lifecycle records, Career Stories, application materials, and insights state.
 
-Managed source/resume artifacts are stored in Job Ranger's local data/artifact directory rather than uploaded to a hosted Job Ranger account.
+Managed source/resume artifacts are stored in Sojourner's local data/artifact directory rather than uploaded to a hosted Sojourner account.
 
 Core functionality does not require a remote inference provider.
 
-In the web app, the same data lives in the browser's private storage for the Job Ranger site (origin-private file system) on your device. The web app's security policy allows outbound requests only to the public job-board APIs it reads. Your resumes, Career Evidence, and applications never leave the device unless you download a file.
+In the web app, the same data lives in the browser's private storage for the Sojourner site (origin-private file system) on your device. The web app's security policy allows outbound requests only to the public job-board APIs it reads. Your resumes, Career Evidence, and applications never leave the device unless you download a file.
 
 ## Installing v1.2.0 safely
 
@@ -272,11 +323,11 @@ v1.2.0 direct-download installers are unsigned. Before running one, verify its p
 
 An unsigned build may be allowed through an OS-native SmartScreen per-file flow on some systems. If Smart App Control blocks the app or Windows provides no safe per-file/per-app override, stop. The unsigned installer is not supported on that configuration. The Microsoft Store app will be the supported path once it is certified.
 
-Do not disable Smart App Control, SmartScreen, or Defender globally merely to run Job Ranger.
+Do not disable Smart App Control, SmartScreen, or Defender globally merely to run Sojourner.
 
 ### macOS
 
-After verifying the checksum, attempt to open Job Ranger normally. If macOS blocks the unnotarized build and offers **System Settings → Privacy & Security → Open Anyway**, an informed user may use that bounded exception. Native macOS packages are not planned going forward; macOS users will be served by the web app.
+After verifying the checksum, attempt to open Sojourner normally. If macOS blocks the unnotarized build and offers **System Settings → Privacy & Security → Open Anyway**, an informed user may use that bounded exception. Native macOS packages are not planned going forward; macOS users will be served by the web app.
 
 Do not disable Gatekeeper globally or recursively strip quarantine metadata.
 
@@ -295,13 +346,13 @@ Check:
 5. filters are not excluding results. Each card on **Filters** lists the filter's include and exclude rules; use **Edit** to change them or **Disable** to pause a filter without deleting it;
 6. the third-party portal has not changed underneath its extraction path.
 
-### Job Ranger found no requirements for a job
+### Sojourner found no requirements for a job
 
 That does not prove the employer has no requirements. Review the preserved source snapshot and original posting; missing/partial source content remains an explicit uncertainty.
 
 ### Eligibility says Unclear
 
-Job Ranger is missing a required fact, sufficient confirmed Career Evidence, or a clear interpretation. Unknown is intentionally different from mismatch.
+Sojourner is missing a required fact, sufficient confirmed Career Evidence, or a clear interpretation. Unknown is intentionally different from mismatch.
 
 ### Imported resume evidence is not being used
 
@@ -321,27 +372,27 @@ That is an intentional reliability/security state. Review the user-facing diagno
 
 ### Notifications are not appearing
 
-Confirm notifications are enabled in Job Ranger and allowed by the operating system. In the web app, desktop notifications and the system tray are not available.
+Confirm notifications are enabled in Sojourner and allowed by the operating system. In the web app, desktop notifications and the system tray are not available.
 
-### Web app: "Job Ranger is open in another tab or window"
+### Web app: "Sojourner is open in another tab or window"
 
-Only one tab can use the browser's local Job Ranger workspace at a time, which protects your data from conflicting writes. Close the other tab; the waiting tab continues automatically.
+Only one tab can use the browser's local Sojourner workspace at a time, which protects your data from conflicting writes. Close the other tab; the waiting tab continues automatically.
 
 ### Web app: "A change could not be saved to browser storage"
 
 The browser refused to store the change, usually because storage is full. Your previous saved data is unchanged. Export a backup, free storage for the site (or for the browser), then retry.
 
-### Web app: "Job Ranger could not open its local workspace"
+### Web app: "Sojourner could not open its local workspace"
 
-This browser mode does not provide the durable private storage Job Ranger needs (for example some private-browsing windows). Job Ranger will not fall back to temporary storage that could lose your data. Use a normal window of a current browser. If the message appears after an update, choose **Repair app shell**; this keeps your data.
+This browser mode does not provide the durable private storage Sojourner needs (for example some private-browsing windows). Sojourner will not fall back to temporary storage that could lose your data. Use a normal window of a current browser. If the message appears after an update, choose **Repair app shell**; this keeps your data.
 
-### Web app: "A new version of Job Ranger is ready"
+### Web app: "A new version of Sojourner is ready"
 
-Choose **Reload to update** when convenient. Updates never change your data until the new version opens it, and Job Ranger refuses to open data written by a newer version rather than risk damaging it.
+Choose **Reload to update** when convenient. Updates never change your data until the new version opens it, and Sojourner refuses to open data written by a newer version rather than risk damaging it.
 
 ### Closing the window exits the app
 
-Enable **Minimize to system tray on close** in Settings if you want Job Ranger to remain available in the tray.
+Enable **Minimize to system tray on close** in Settings if you want Sojourner to remain available in the tray.
 
 ### Windows says SQLite is missing
 
@@ -353,33 +404,33 @@ v1.2.0 for macOS is unsigned/unnotarized under a documented exception. Follow on
 
 ## Frequently asked questions
 
-### Does Job Ranger auto-apply for me?
+### Does Sojourner auto-apply for me?
 
 No. Autonomous mass application submission is an explicit non-goal.
 
-### Does Job Ranger invent qualifications or networking relationships?
+### Does Sojourner invent qualifications or networking relationships?
 
 No. Career claims require confirmed/user-authored Career Evidence, and the product design prohibits invented relationships/referrals/familiarity.
 
-### Does Job Ranger upload my career/search history to a hosted account?
+### Does Sojourner upload my career/search history to a hosted account?
 
-No hosted Job Ranger account is required by the current product.
+No hosted Sojourner account is required by the current product.
 
-### Does Job Ranger use AI?
+### Does Sojourner use AI?
 
 Core functionality does not require remote inference. Any future optional external provider must be explicit and governed.
 
-### Can Job Ranger read scanned/image-only resumes?
+### Can Sojourner read scanned/image-only resumes?
 
 Not currently. Those imports surface an OCR-required state.
 
-### Can Job Ranger export DOCX resumes?
+### Can Sojourner export DOCX resumes?
 
 Not currently. PDF is the governed resume output.
 
 ### Is every recognized dynamic careers site guaranteed to work?
 
-No. Third-party portals vary and change. Job Ranger exposes support and reliability states specifically to avoid promising otherwise.
+No. Third-party portals vary and change. Sojourner exposes support and reliability states specifically to avoid promising otherwise.
 
 ### Why is a generic employer career page marked manual review?
 

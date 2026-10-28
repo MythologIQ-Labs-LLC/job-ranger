@@ -2,6 +2,8 @@
 
 Thanks for helping improve Job Ranger. The project is intentionally consumer-facing: contributions should make the job-search experience more reliable, understandable, private, and usable by people who do not have software-development expertise.
 
+Architecture decisions, supported distribution targets and explicit supersessions are governed by the [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). Electron and Store tests remain engineering validation, not obligations to ship a native application.
+
 ## Before you start
 
 The day-to-day [repository workflow](./docs/REPOSITORY_WORKFLOW.md) explains work-in-progress limits, status/area triage, review/merge standards, and closeout responsibilities. It applies to maintainers, contributors, and local coding agents. Run `npm run repo:hygiene` with the authenticated GitHub CLI before opening additional PRs.
@@ -61,6 +63,18 @@ For user-facing visual changes, include screenshots when they materially help re
 ## Validation and GitHub Actions budget
 
 The project deliberately preserves GitHub Actions budget. Hosted CI/CD is not required for every routine documentation change or every iteration of release preparation.
+
+### Hosted-run policy
+
+- **Keep work-in-progress PRs in Draft.** Draft PR pushes are not a reason to spend hosted runner minutes. Make related commits and review changes together, rather than pushing each small adjustment to a ready-for-review PR.
+- **Promote to Ready for review once a meaningful, reviewed candidate exists.** The promotion triggers the applicable hosted validation. New commits on a ready PR trigger those checks again, so batch remediation locally before pushing.
+- **Run local targeted checks first.** Prefer focused tests, typecheck, and relevant platform builds. Record commands and results accurately; never mark a release gate as satisfied by a skipped workflow.
+- **Preserve complete checks for ready PRs and releases.** CI, PWA, Electron E2E and Store suites still apply when their existing path filters permit, and release/manual workflows remain available. A skipped draft job is not proof of correctness.
+- **Use manual hosted runs sparingly.** Trigger only for a specific missing environment, failure reproduction, or release-candidate gate. No automatic rerun on success and no duplicate runs simply to refresh a status badge.
+- **Protect the actual billing owner.** Repository settings alone cannot establish available organization/account minutes or spending limits. Consult GitHub Billing & licensing / Actions usage for the billable owner before expensive platform sweeps. If the budget is near its limit, defer noncritical hosted runs and record blocked validation rather than claiming success.
+- **Avoid redundant full validations.** Review already successful exact-head evidence before rerunning. Do not run `repo:health`, PWA and Store packaging repeatedly for documentation or trivial follow-up edits.
+
+In the CI, Web / PWA, Electron E2E and Windows Store workflows, `pull_request` events on a draft yield skipped jobs, and the `ready_for_review` event runs the normal PR checks against the whole PR diff. `converted_to_draft` starts a skipped run that cancels any in-progress PR run, so a PR moved back to draft stops spending minutes; earlier results stay on the commit until it is marked ready again. `push` to `main`, manual `workflow_dispatch` runs (now also available for CI and Electron E2E, in their own concurrency group so they never cancel a push run), and the `workflow_call` release validation that `release-build.yml` makes into the Web / PWA and Windows Store workflows are **not** suppressed. GitHub refuses to merge a draft; that is the only merge guard this rule relies on, because `main` has no required status checks and a skipped job would count as passing.
 
 When appropriate, the maintainer may run validation manually in an isolated environment.
 

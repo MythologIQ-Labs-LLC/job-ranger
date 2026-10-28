@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Database, Save, Settings2, SwatchBook } from "lucide-react";
 import { BackupRestorePanel } from "../components/BackupRestorePanel";
+import { DemoLimitations } from "../components/DemoLimitations";
 import { RuntimePanel } from "../components/RuntimePanel";
 import { useRuntimeInfo } from "../services/runtime";
 import { JsonResumePanel } from "../components/JsonResumePanel";
@@ -88,6 +89,7 @@ export function Settings() {
           Themes are functional, not cosmetic flourishes. Pick the one that makes your review rhythm calmer, then tune the runtime so scrapes behave the way you expect.
         </p>
       </section>
+      <DemoLimitations />
 
       <div className="mt-8 space-y-8">
         <section className="grid grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -106,11 +108,17 @@ export function Settings() {
                 key={option.id}
                 type="button"
                 onClick={() => setTheme(option.id)}
+                aria-pressed={theme === option.id}
                 className={`theme-card text-left ${theme === option.id ? "theme-card-active" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{option.label}</h3>
                   {theme === option.id && <span className="soft-badge soft-badge-success">Active</span>}
+                </div>
+                <div className="theme-palette-preview mt-3 flex h-4 overflow-hidden rounded-md" aria-hidden="true">
+                  <span style={{ flex: 6, backgroundColor: option.colors.canvas }} />
+                  <span style={{ flex: 3, backgroundColor: option.colors.sidebar }} />
+                  <span style={{ flex: 1, backgroundColor: option.colors.primary }} />
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">{option.story}</p>
               </button>
@@ -213,14 +221,14 @@ export function Settings() {
               <h2 className="text-2xl font-semibold">Notifications</h2>
             </div>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Control when Job Ranger alerts you about new opportunities.
+              Control when Sojourner alerts you about new opportunities.
             </p>
           </div>
           <div className="panel panel-strong p-6 space-y-4">
             {webRuntime && (
               <p className="text-sm text-[var(--color-text-secondary)]" data-testid="web-notification-limit">
-                Desktop notifications and the system tray are part of the Windows app. In the web app these preferences are
-                saved with your data but have no effect here.
+                The web app does not show desktop notifications or a system tray icon. These preferences are saved with your
+                data but have no effect here.
               </p>
             )}
             <label className="flex items-center gap-3 cursor-pointer">

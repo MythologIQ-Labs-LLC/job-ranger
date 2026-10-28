@@ -39,7 +39,9 @@ async function seedTargetJob() {
       '${now}', '${now}', 1, 1, 0
     );
   `;
-  await execFileAsync(status.sqliteBinaryPath, [status.databasePath, sql]);
+  // The app may be writing at the same moment (opening a job rebuilds its
+  // coverage), so wait for its lock the way the app's own client does.
+  await execFileAsync(status.sqliteBinaryPath, ["-cmd", ".timeout 5000", status.databasePath, sql]);
 }
 
 test.beforeAll(async () => {
@@ -94,7 +96,7 @@ test("user previews, discards, and accepts a deterministic tailoring plan", asyn
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Preview tailoring", exact: true }).click();
-  await expect(page.getByText("Requirements Job Ranger will not claim", { exact: true })).toBeVisible();
+  await expect(page.getByText("Requirements Sojourner will not claim", { exact: true })).toBeVisible();
   await expect(page.getByText(/PMP certification required/i)).toBeVisible();
   await expect(page.getByRole("button", { name: "Create tailored draft", exact: true })).toBeVisible();
 

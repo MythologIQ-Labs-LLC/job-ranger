@@ -1,7 +1,7 @@
 /**
  * Web runtime security policy: the single source of truth for the production
  * Content-Security-Policy, security headers, and the explicit set of external
- * origins Job Ranger's web runtime may contact.
+ * origins Sojourner's web runtime may contact.
  *
  * Every external origin is a public, credential-less, read-only job-feed API.
  * Nothing in this list receives Career Evidence, resumes, applications, or any

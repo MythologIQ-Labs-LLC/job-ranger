@@ -36,9 +36,12 @@ async function run() {
     // must never appear raw in SQL text (CR would be dropped, Ctrl-Z would end the input).
     const { sql } = require('../electron-runtime/electron/src/sqlite.cjs');
     await db.exec('CREATE TABLE c (v TEXT);');
-    const tricky = 'a\r\nb\u001ac\u0000d\te\u007ff';
+    const tricky = 'a\r\nb\u001ac\u001bd\te\u007ff';
     await db.transaction([sql`INSERT INTO c VALUES (${tricky});`, sql`INSERT INTO c VALUES (${"it's \r fine"});`]);
     assert.deepEqual((await db.queryAll('SELECT hex(v) AS h FROM c ORDER BY rowid;')).map((r) => r.h), [Buffer.from(tricky).toString('hex').toUpperCase(), Buffer.from("it's \r fine").toString('hex').toUpperCase()]);
+    // NUL is stored as U+FFFD: the CLI would read it back cut off at the NUL (#297).
+    await db.transaction([sql`INSERT INTO c VALUES (${'nul \u0000 here'});`]);
+    assert.equal((await db.queryOne('SELECT v FROM c ORDER BY rowid DESC LIMIT 1;')).v, 'nul \uFFFD here');
     console.log('SQLite transaction atomicity test passed');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

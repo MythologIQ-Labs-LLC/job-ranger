@@ -42,7 +42,8 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await server.close();
-  await rm(path.dirname(roots.current), { recursive: true, force: true });
+  // Windows can briefly hold a served font open after the browser and server close (EBUSY).
+  await rm(path.dirname(roots.current), { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
 
 const buildMeta = (page: import("@playwright/test").Page) =>

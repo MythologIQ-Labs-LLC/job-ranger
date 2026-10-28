@@ -10,8 +10,9 @@ import { ApplicationStatusEditor } from "../components/ApplicationStatusEditor";
 import { InterviewPrepPanel } from "../components/InterviewPrepPanel";
 import { Layout } from "../components/Layout";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { DemoListingBadge, DemoListingLinkMessage, openListingUrl } from "../components/DemoListingNotice";
 import { useApplications } from "../career/storage";
-import { getDesktopApi } from "../services/api";
+import { isDemoListing } from "../shared/demo-listing";
 import type { ApplicationStatus } from "../shared/contracts";
 
 type StatusFocus = "all" | "interested" | "applied" | "interview" | "offer" | "closed";
@@ -39,6 +40,8 @@ export function Applications() {
   const [dirtyFields, setDirtyFields] = useState<Record<string, true>>({});
   const hasUnsavedChanges = Object.keys(dirtyFields).length > 0;
   const leavingRef = useRef(false);
+  // Fictional demo listings have no real posting; opening one explains that instead.
+  const [demoLinkApplicationId, setDemoLinkApplicationId] = useState<string | null>(null);
 
   // Never unmount an editor while its latest local intent has not been acknowledged.
   // A saved status change can move a record out of the selected category: it stays
@@ -156,14 +159,20 @@ export function Applications() {
           <article key={application.id} className="panel panel-strong p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
+                {isDemoListing(application.url) && (
+                  <div className="mb-2">
+                    <DemoListingBadge url={application.url} />
+                  </div>
+                )}
                 <button
                   type="button"
-                  onClick={() => void getDesktopApi().openExternal(application.url)}
+                  onClick={() => openListingUrl(application.url, () => setDemoLinkApplicationId(application.id))}
                   className="surface-link-button inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
                 >
                   {application.title}
                   <ExternalLink className="h-4 w-4" />
                 </button>
+                {demoLinkApplicationId === application.id && <DemoListingLinkMessage />}
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{application.companyName}</p>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   Added {formatDistanceToNow(new Date(application.createdAt), { addSuffix: true })}

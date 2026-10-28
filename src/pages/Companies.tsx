@@ -20,10 +20,12 @@ import { CompanyForm } from "../components/CompanyForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Layout } from "../components/Layout";
 import { Modal } from "../components/Modal";
+import { openListingUrl } from "../components/DemoListingNotice";
 import { useAppContext } from "../context/AppContext";
 import { getDesktopApi } from "../services/api";
-import { useRuntimeInfo } from "../services/runtime";
+import { useRuntimeInfoStatus } from "../services/runtime";
 import { isRunnableInRuntime } from "../shared/runtime";
+import { DEMO_SOURCE_BADGE_TEXT, DEMO_SOURCE_LINK_MESSAGE, isDemoListing } from "../shared/demo-listing";
 import type {
   SourceDiscoveryCandidate,
   SourceDiscoveryResult,
@@ -46,7 +48,13 @@ const SUPPORT_BADGE_CLASSES: Record<string, string> = {
 };
 
 export function Companies() {
-  const runtimeKind = useRuntimeInfo()?.kind;
+  const runtime = useRuntimeInfoStatus();
+  const runtimeKind = runtime.info?.kind;
+  // Readable here: a reader exists and this runtime can use it (the web app reads fewer types).
+  // Until the runtime is known nothing is offered as runnable; if it cannot be read, Run is
+  // allowed and reports its own result.
+  const readableHere = (sourceType: Parameters<typeof isRunnableInRuntime>[1]) =>
+    runtime.info ? isRunnableInRuntime(runtimeKind, sourceType) : runtime.failed;
   const { companies, addCompany, updateCompany, deleteCompany, runScraper, refreshing } = useAppContext();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -66,6 +74,8 @@ export function Companies() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const deleteTarget = companies.find((company) => company.id === deleteTargetId) ?? null;
   const [runningId, setRunningId] = useState<string | null>(null);
+  // The fictional demo employer has no real careers page; opening it explains that instead.
+  const [demoLinkCompanyId, setDemoLinkCompanyId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [discovery, setDiscovery] = useState<SourceDiscoveryResult | null>(null);
   const [discoveryBusy, setDiscoveryBusy] = useState(false);
@@ -105,10 +115,9 @@ export function Companies() {
     [discovery, dismissedCandidateIds],
   );
 
-  const runnableCount = useMemo(
-    () => companies.filter((company) => canRunSourceType(company.sourceType)).length,
-    [companies],
-  );
+  const runnableCount = companies.filter(
+    (company) => canRunSourceType(company.sourceType) && readableHere(company.sourceType),
+  ).length;
   const browserRequiredCount = useMemo(
     () => companies.filter((company) => company.sourceType === "browser-required").length,
     [companies],
@@ -190,7 +199,7 @@ export function Companies() {
               Opportunity sources
             </span>
             <h1 className="page-title mt-4">
-              Find places to look, then choose what Job Ranger should monitor.
+              Find places to look, then choose what Sojourner should monitor.
             </h1>
             <p className="page-copy">
               Start from a target track instead of hunting down career-page URLs yourself. Discovery can surface opportunities and, when a reliable employer source is available, let you approve it for local monitoring. Nothing becomes a monitored source without your approval.
@@ -254,7 +263,7 @@ export function Companies() {
 
         {activeTracks.length === 0 && !targetTracks.loading && (
           <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-            Create or activate a Target Track with at least one role title before running discovery. Job Ranger needs to know what kind of work to look for, which is apparently an unreasonable demand to place on a search box.
+            Create or activate a Target Track with at least one role title before running discovery. Sojourner needs to know what kind of work to look for, which is apparently an unreasonable demand to place on a search box.
           </div>
         )}
 
@@ -357,7 +366,7 @@ export function Companies() {
                               Monitorable employer source found
                             </div>
                             <div className="mt-1">
-                              Job Ranger can monitor this employer through an existing supported source path. Approval is still required.
+                              Sojourner can monitor this employer through an existing supported source path. Approval is still required.
                             </div>
                             {candidate.sourceLabel && (
                               <div className="mt-1 text-[var(--color-text-muted)]">
@@ -371,7 +380,7 @@ export function Companies() {
                               Opportunity only
                             </div>
                             <div className="mt-1">
-                              The discovery provider did not expose a reliable employer source that Job Ranger can monitor yet.
+                              The discovery provider did not expose a reliable employer source that Sojourner can monitor yet.
                             </div>
                           </>
                         )}
@@ -423,7 +432,7 @@ export function Companies() {
         </article>
         <article className="metric-card">
           <p className="metric-label">Runnable now</p>
-          <p className="metric-value">{runnableCount}</p>
+          <p className="metric-value">{runtime.info || runtime.failed ? runnableCount : "\u2026"}</p>
           <p className="metric-detail">Sources with a working acquisition path</p>
         </article>
         <article className="metric-card">
@@ -455,7 +464,8 @@ export function Companies() {
             {companies.map((company) => {
               const profile = getSourceProfile(company.sourceType);
               const canRun = canRunSourceType(company.sourceType);
-              const runnableHere = isRunnableInRuntime(runtimeKind, company.sourceType);
+              const runnableHere = readableHere(company.sourceType);
+              const webLimited = canRun && runtime.info !== null && !isRunnableInRuntime(runtimeKind, company.sourceType);
               const badgeClass = SUPPORT_BADGE_CLASSES[profile.supportLevel] ?? "soft-badge-danger";
 
               return (
@@ -469,11 +479,21 @@ export function Companies() {
                         <p className="font-semibold text-[var(--color-text-primary)]">{company.name}</p>
                         <button
                           type="button"
-                          onClick={() => void getDesktopApi().openExternal(company.url)}
+                          onClick={() => openListingUrl(company.url, () => setDemoLinkCompanyId(company.id))}
                           className="surface-link surface-link-button mt-1 block max-w-xs truncate text-left text-sm"
                         >
                           {company.url}
                         </button>
+                        {isDemoListing(company.url) && (
+                          <span className="soft-badge soft-badge-warning mt-2" data-testid="demo-source-badge">
+                            {DEMO_SOURCE_BADGE_TEXT}
+                          </span>
+                        )}
+                        {demoLinkCompanyId === company.id && (
+                          <p role="status" className="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">
+                            {DEMO_SOURCE_LINK_MESSAGE}
+                          </p>
+                        )}
                         <p className="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">{profile.summary}</p>
                         {company.lastErrorMessage && (
                           <p className="mt-2 max-w-md text-sm text-[var(--color-danger)]">{company.lastErrorMessage}</p>
@@ -490,9 +510,9 @@ export function Companies() {
                           ? "Browser-backed extraction required"
                           : "No reliable acquisition path yet"}
                     </p>
-                    {canRun && !runnableHere && (
-                      <p className="mt-1 text-sm text-[var(--color-warning)]" data-testid="web-source-limit">
-                        Needs the Windows app: this site cannot be read from a browser tab.
+                    {webLimited && (
+                      <p id={`web-limit-${company.id}`} className="mt-1 text-sm text-[var(--color-warning)]" data-testid="web-source-limit">
+                        Not available in the web app: this site cannot be read from a browser tab.
                       </p>
                     )}
                     <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
@@ -528,7 +548,8 @@ export function Companies() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
-                        disabled={!canRun || runningId === company.id || refreshing}
+                        disabled={!canRun || !runnableHere || runningId === company.id || refreshing}
+                        aria-describedby={webLimited ? `web-limit-${company.id}` : undefined}
                         onClick={() => void handleRun(company.id)}
                         className="secondary-button disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -567,7 +588,7 @@ export function Companies() {
         <div className="flex items-start gap-3">
           <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
           <p>
-            Discovery and monitoring are separate on purpose. A provider can show you an opportunity without Job Ranger trusting that provider or silently adding anything to your monitored sources.
+            Discovery and monitoring are separate on purpose. A provider can show you an opportunity without Sojourner trusting that provider or silently adding anything to your monitored sources.
           </p>
         </div>
       </div>

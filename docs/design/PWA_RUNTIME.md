@@ -1,8 +1,11 @@
 # Web / PWA Runtime
 
-**Status:** implemented (merged to `main` via #142; post-v1.2.0, not released). **Not publicly deployed.** A production origin does not exist yet, by design. The PWA is intended to be self-hosted on localhost for dogfooding and trusted testing before external demand justifies public hosting.
+> **Product authority:** [Canonical Architecture Index](../ARCHITECTURE_INDEX.md), ARCH-001–003. The PWA is the sole future user-facing distribution target. This document remains normative for PWA runtime mechanics, not for historical localhost-only rollout timing. Electron is retained for internal engineering validation, not user installation.
+
+
+**Status:** implemented (merged to `main` via #142; post-v1.2.0, not released). **Not publicly deployed.** A production origin was not present at the historical implementation checkpoint. A separately authorized HTTPS-hosted demo is now an active delivery objective; local self-hosting remains available for development.
 **Tracks:** #130
-**Architecture:** [`DISTRIBUTION_ARCHITECTURE.md`](./DISTRIBUTION_ARCHITECTURE.md)
+**Architecture:** [`../ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md) (the former dual-channel distribution document is historical).
 
 ## Summary
 
@@ -130,9 +133,9 @@ The PWA never reads the Electron SQLite database directly. It only accepts valid
 | JSON Resume import/export | ✅ Full | File picker / download |
 | Source discovery (public feeds) | ✅ When the feed allows CORS | RemoteOK and Arbeitnow allowlisted; CORS behavior still needs real-browser validation |
 | Monitoring Greenhouse, Lever, Ashby, SmartRecruiters | ✅ When the API allows CORS | Fixture-validated in CI; live CORS behavior still needs real-browser validation |
-| Monitoring Workday, iCIMS, Taleo, Oracle, BambooHR, Microsoft, generic HTML | ⛔ Windows app only | **Platform limitation:** cross-origin HTML cannot be read by a web page, and these sites need a full hidden browser window (Electron `BrowserWindow`). Shown in the UI as "Needs the Windows app" |
-| Scheduled checks while the app is closed | ⛔ Windows app only | **Platform limitation:** no reliable background execution for web apps. Checks run while the tab is open |
-| System tray and desktop notifications | ⛔ Windows app only | Settings say so. (Job-notification delivery is not wired to scrape completion in Electron either; this is pre-existing) |
+| Monitoring Workday, iCIMS, Taleo, Oracle, BambooHR, Microsoft, generic HTML | ⛔ Not available in the web app | **Platform limitation:** cross-origin HTML cannot be read by a web page, and these sites need a full hidden browser window (Electron `BrowserWindow`). Shown in the UI as "Not available in the web app" |
+| Scheduled checks while the app is closed | ⛔ Not available in the web app | **Platform limitation:** no reliable background execution for web apps. Checks run while the tab is open |
+| System tray and desktop notifications | ⛔ Not available in the web app | Settings say so. (Job-notification delivery is not wired to scrape completion in Electron either; this is pre-existing) |
 | Opportunity assessment, requirement ↔ evidence mapping | ✅ Full | Shared core |
 | Applications, lifecycle, contacts, reminders, offers | ✅ Full | Reminders are shown in-app, as in Electron |
 | Career Stories, interview prep, application materials, Search Insights | ✅ Full | Shared core |
@@ -157,7 +160,7 @@ The PWA never reads the Electron SQLite database directly. It only accepts valid
   - The service worker caches verified fonts in `job-ranger-on-demand-v1`, so a resume that rendered once renders again offline.
   - A resume in a new script needs one online export first; offline, export fails with an explanation.
 - **Parseability Gate.** The shared gate re-parses the exact produced bytes and enforces the same contact, statement-coverage, reading-order, and page-count rules. The parser differs: Electron uses Anydoc, the web runtime uses pdf.js. The gate records the parser ID and version in every artifact.
-- **Bounded limitation.** Right-to-left scripts (Arabic, Hebrew, …) and Indic scripts (Devanagari, Tamil, …) need bidirectional layout and complex shaping. pdf-lib does not perform these, and in testing the extracted text came back reordered or garbled. The web writer therefore fails export for these scripts with an explicit message pointing to the Windows app, whose Chromium renderer lays them out. Characters no bundled font covers (for example Armenian or Georgian) fail the same way, naming the characters, instead of being dropped.
+- **Bounded limitation.** Right-to-left scripts (Arabic, Hebrew, …) and Indic scripts (Devanagari, Tamil, …) need bidirectional layout and complex shaping. pdf-lib does not perform these, and in testing the extracted text came back reordered or garbled. The web writer therefore fails export for these scripts with an explicit message asking the person to remove or transliterate that text (the web app has no renderer that lays these scripts out yet). Characters no bundled font covers (for example Armenian or Georgian) fail the same way, naming the characters, instead of being dropped.
 
 ## Browser support
 

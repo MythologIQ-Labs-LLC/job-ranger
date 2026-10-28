@@ -6,27 +6,69 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const SQLITE_BUSY_TIMEOUT_MS = 5000;
 
-function runWithStdin(binary: string, args: string[], input: string): Promise<void> {
+/**
+ * Run the sqlite3 CLI with the SQL script on stdin and return its stdout.
+ *
+ * SQL never goes on the command line. Windows inspects every process launch
+ * with a command line it has not seen before (Defender / Smart App Control),
+ * which cost 0.5-2 s per statement because each statement carries unique ids
+ * and timestamps; an unchanged command line with the script on stdin costs
+ * about 10 ms. -bail stops at the first failing input line, so no later line
+ * runs after an error; statements that share a line with the failing one still
+ * behave as SQLite's own multi-statement execution does.
+ *
+ * The shell reads stdin in text mode, where Windows treats 0x1A as end of input
+ * and NUL ends a line, so raw NUL or 0x1A would silently drop the rest of the
+ * script. toSqlLiteral never emits them; reject any SQL that contains them.
+ */
+function runWithStdin(binary: string, args: string[], input: string): Promise<string> {
+  if (/[\x00\x1a]/.test(input)) {
+    return Promise.reject(new Error("SQL text must not contain raw NUL or 0x1A characters; use toSqlLiteral"));
+  }
   return new Promise((resolve, reject) => {
-    const child = spawn(binary, args, { stdio: ["pipe", "ignore", "pipe"], windowsHide: true });
+    const child = spawn(binary, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    let stdinError: Error | null = null;
+    const stdout: Buffer[] = [];
     let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       if (stderr.length < 64 * 1024) stderr += chunk;
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`sqlite3 exited with code ${code}: ${stderr.trim()}`));
+      if (code !== 0) reject(new Error(`sqlite3 exited with code ${code}: ${stderr.trim()}`));
+      else if (stdinError) reject(stdinError);
+      else resolve(Buffer.concat(stdout).toString("utf8"));
     });
-    child.stdin.on("error", reject);
+    // When sqlite3 bails before reading all of a large script, the write fails
+    // (EPIPE / EOF). Wait for the exit so the rejection carries SQLite's error.
+    child.stdin.on("error", (error: Error) => {
+      stdinError = error;
+    });
     child.stdin.end(input, "utf8");
   });
 }
 
 type ElectronProcess = NodeJS.Process & { resourcesPath?: string };
 
+// Whether a sqlite3 binary's -json output keeps control characters (3.48+; #321). Asked once per
+// binary with a constant command line.
+const exactJsonByBinary = new Map<string, Promise<boolean>>();
+
+function jsonReadbackIsExact(binary: string): Promise<boolean> {
+  let known = exactJsonByBinary.get(binary);
+  if (!known) {
+    known = execFileAsync(binary, ["-version"])
+      .then(({ stdout }) => jsonEscapesControlCharacters(stdout))
+      .catch(() => true);
+    exactJsonByBinary.set(binary, known);
+  }
+  return known;
+}
+
 import type { SqliteEngineClient } from "./sql-literal.cjs";
+import { jsonEscapesControlCharacters, parseQuoteOutput } from "./sqlite-quote-output.cjs";
 
 export { sql, toSqlLiteral } from "./sql-literal.cjs";
 export type { SqliteEngineClient } from "./sql-literal.cjs";
@@ -125,13 +167,13 @@ export class SqliteClient implements SqliteEngineClient {
 
   async exec(statement: string): Promise<void> {
     await this.ensureDatabaseDirectory();
-    await execFileAsync(this.sqliteBinaryPath, [
-      ...this.connectionArgs(),
-      "-cmd",
-      `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
-      this.databasePath,
-      `PRAGMA foreign_keys = ON; ${statement}`,
-    ]);
+    await runWithStdin(
+      this.sqliteBinaryPath,
+      [...this.connectionArgs(), "-bail", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, this.databasePath],
+      `PRAGMA foreign_keys = ON;
+${statement}
+`,
+    );
   }
 
   /**
@@ -170,14 +212,26 @@ export class SqliteClient implements SqliteEngineClient {
 
   async queryAll<T>(statement: string): Promise<T[]> {
     await this.ensureDatabaseDirectory();
-    const { stdout } = await execFileAsync(this.sqliteBinaryPath, [
-      ...this.connectionArgs(),
-      "-json",
-      "-cmd",
-      `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
-      this.databasePath,
-      `PRAGMA foreign_keys = ON; ${statement}`,
-    ]);
+    // Older sqlite3 CLIs alter control characters in -json output; read through quote mode there.
+    const exactJson = await jsonReadbackIsExact(this.sqliteBinaryPath);
+    const stdout = await runWithStdin(
+      this.sqliteBinaryPath,
+      [
+        ...this.connectionArgs(),
+        "-bail",
+        ...(exactJson ? ["-json"] : ["-header", "-quote"]),
+        "-cmd",
+        `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`,
+        this.databasePath,
+      ],
+      `PRAGMA foreign_keys = ON;
+${statement}
+`,
+    );
+
+    if (!exactJson) {
+      return parseQuoteOutput(stdout) as T[];
+    }
 
     const trimmed = stdout.trim();
     if (!trimmed) {

@@ -50,10 +50,14 @@ function formatMoney(value: number): string {
 
 function detectJobPayBasis(job: Job): PayBasis | null {
   const text = normalize(job.salaryText ?? "");
-  if (text.includes("hour") || text.includes("/hr") || text.includes("hourly")) {
+  // Same spellings as the opportunity assessment's detectPayBasis (#216).
+  if (text.includes("hour") || text.includes("/hr") || /\bhr\b/.test(text)) {
     return "hourly";
   }
-  if (text.includes("year") || text.includes("annual") || text.includes("salary")) {
+  if (
+    text.includes("year") || text.includes("annual") || text.includes("salary") ||
+    /\byr\b|\bannum\b/.test(text)
+  ) {
     return "annual";
   }
   if (job.salaryMin && job.salaryMin > 1000) {
@@ -184,7 +188,7 @@ export function evaluateJobFit(job: Job, profile: CareerProfile): JobFitEvaluati
   if (job.matchedFilterCount > 0) {
     availableWeight += 5;
     score += 5;
-    reasons.push(`It also matches ${job.matchedFilterCount} of your saved Job Ranger filter${job.matchedFilterCount === 1 ? "" : "s"}.`);
+    reasons.push(`It also matches ${job.matchedFilterCount} of your saved Sojourner filter${job.matchedFilterCount === 1 ? "" : "s"}.`);
   }
 
   const normalizedScore = availableWeight > 0 ? Math.round((score / availableWeight) * 100) : 0;

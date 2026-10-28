@@ -96,6 +96,18 @@ export async function extractResumeDocument(filePath: string): Promise<ResumePar
       }
       rawText = pdf.text;
     }
+    // Unmapped glyphs can surface as NUL, which the desktop database cannot read back (#297);
+    // show them as U+FFFD, as the desktop parser does.
+    let unreadable = 0;
+    rawText = rawText.replace(/\u0000/g, () => {
+      unreadable += 1;
+      return "\uFFFD";
+    });
+    if (unreadable > 0) {
+      warnings.push(
+        `${unreadable} character${unreadable === 1 ? "" : "s"} in this document could not be read and ${unreadable === 1 ? "is" : "are"} shown as \uFFFD; review imported evidence for missing content.`,
+      );
+    }
     if (!rawText.trim()) {
       throw new ResumeParserError("No meaningful text could be extracted from this document.", "malformed");
     }

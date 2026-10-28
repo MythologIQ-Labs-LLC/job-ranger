@@ -1,6 +1,6 @@
 /**
  * Browser runtime adapter for the subset of `node:crypto` used by the shared
- * Job Ranger core: synchronous SHA-256 content hashing (provenance hashes,
+ * Sojourner core: synchronous SHA-256 content hashing (provenance hashes,
  * backup integrity) and RFC 4122 random UUIDs.
  *
  * SubtleCrypto digests are asynchronous, while the shared core computes
@@ -128,7 +128,7 @@ export interface HashLike {
 
 export function createHash(algorithm: string): HashLike {
   if (algorithm.toLowerCase() !== "sha256") {
-    throw new Error(`The Job Ranger web runtime only supports sha256 hashing (requested ${algorithm})`);
+    throw new Error(`The Sojourner web runtime only supports sha256 hashing (requested ${algorithm})`);
   }
   const hash = new Sha256();
   const api: HashLike = {

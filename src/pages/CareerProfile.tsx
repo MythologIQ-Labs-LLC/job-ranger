@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { LineListTextarea } from "../components/LineListTextarea";
 import { useCareerEvidence } from "../career/evidence";
 import {
   emptyCareerProfile,
@@ -22,17 +23,6 @@ import {
   useCareerProfile,
 } from "../career/storage";
 import type { EvidenceSubjectType, SourceArtifact } from "../shared/contracts";
-
-function splitLines(value: string): string[] {
-  return value
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function joinLines(values: string[]): string {
-  return values.join("\n");
-}
 
 function artifactStateLabel(state: SourceArtifact["extractionState"]): string {
   switch (state) {
@@ -75,6 +65,7 @@ export function CareerProfile() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteLabel, setPasteLabel] = useState("Previous resume");
   const [pasteText, setPasteText] = useState("");
@@ -83,43 +74,48 @@ export function CareerProfile() {
   const [editingType, setEditingType] = useState<EvidenceSubjectType>("other");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
 
-  // A refresh (for example after a save elsewhere) produces a new profile object. Replace
-  // the form only when it has no unsaved edits relative to the last stored profile it
-  // showed, so a background refresh never discards what the person is typing (#278).
-  const shownProfile = useRef<CareerProfileValue | null>(null);
-  useEffect(() => {
-    if (loading) return;
-    const previous = shownProfile.current;
-    shownProfile.current = profile;
-    setDraft((current) =>
-      previous === null || JSON.stringify(current) === JSON.stringify(previous) ? profile : current,
-    );
+  // Every edit bumps editVersion synchronously; storedVersion is the newest edit known to be
+  // stored. A stored profile (first load, a refresh after a save elsewhere, or the result of a
+  // save) may replace the form only when the form holds no edit newer than what is stored, so
+  // neither a background refresh (#278) nor a save that completes after further typing (#288)
+  // discards what the person entered. A layout effect seeds the form in the same commit that
+  // enables its controls, so no choice can land between enabling and seeding.
+  const editVersion = useRef(0);
+  const storedVersion = useRef(0);
+  useLayoutEffect(() => {
+    if (!loading && editVersion.current === storedVersion.current) setDraft(profile);
   }, [loading, profile]);
 
-  const targetText = useMemo(() => joinLines(draft.targetTitles), [draft.targetTitles]);
-  const skillText = useMemo(() => joinLines(draft.skills), [draft.skills]);
-  const certificationText = useMemo(() => joinLines(draft.certifications), [draft.certifications]);
-  const sectorText = useMemo(() => joinLines(draft.sectors), [draft.sectors]);
-
   const update = <K extends keyof CareerProfileValue,>(key: K, value: CareerProfileValue[K]) => {
+    editVersion.current += 1;
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
     setSaveError(null);
   };
 
   const reset = () => {
+    editVersion.current += 1;
     setDraft(emptyCareerProfile);
     setSaved(false);
     setSaveError(null);
   };
 
   const handleSave = async () => {
+    const savedVersion = editVersion.current;
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
     try {
       const next = await save(draft);
-      setDraft(next);
-      setSaved(true);
+      // Only the snapshot that was submitted is stored; later edits stay in the form.
+      storedVersion.current = savedVersion;
+      if (editVersion.current === savedVersion) {
+        setDraft(next);
+        setSaved(true);
+      } else {
+        setSaved(false);
+        setSaveNotice("Changes made during saving are still here. Save again to keep them.");
+      }
     } catch (saveFailure) {
       setSaved(false);
       setSaveError(
@@ -171,7 +167,7 @@ export function CareerProfile() {
           <Sparkles className="h-3.5 w-3.5" />
           Start here
         </span>
-        <h1 className="page-title mt-4">Tell Job Ranger what good work looks like for you.</h1>
+        <h1 className="page-title mt-4">Tell Sojourner what good work looks like for you.</h1>
         <p className="page-copy">
           Add the work you want, where you can work, what you already know, and what matters to you. You can also import an existing resume to build a reusable record of career evidence without turning the document itself into the source of truth.
         </p>
@@ -206,9 +202,9 @@ export function CareerProfile() {
               <h2 className="text-xl font-semibold">What stays yours</h2>
             </div>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
-              <li>Your career profile and imported evidence stay in Job Ranger&apos;s local data store.</li>
+              <li>Your career profile and imported evidence stay in Sojourner&apos;s local data store.</li>
               <li>Imported statements do not become confirmed facts until you approve them.</li>
-              <li>Job Ranger never invents credentials, skills, experience, or results for you.</li>
+              <li>Sojourner never invents credentials, skills, experience, or results for you.</li>
             </ul>
           </div>
         </aside>
@@ -300,10 +296,10 @@ export function CareerProfile() {
           <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <label>
               <span className="metric-label">Roles you would consider</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-36 resize-y py-3"
-                value={targetText}
-                onChange={(event) => update("targetTitles", splitLines(event.target.value))}
+                values={draft.targetTitles}
+                onValuesChange={(values) => update("targetTitles", values)}
                 placeholder={"Current or preferred role\nAdjacent role\nStretch role"}
                 disabled={loading}
               />
@@ -314,37 +310,38 @@ export function CareerProfile() {
 
             <label>
               <span className="metric-label">Skills you already use</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-36 resize-y py-3"
-                value={skillText}
-                onChange={(event) => update("skills", splitLines(event.target.value))}
+                values={draft.skills}
+                onValuesChange={(values) => update("skills", values)}
                 placeholder={"customer service\ntroubleshooting\nproject coordination"}
                 disabled={loading}
               />
-              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">Only list work you can defend in an interview.</span>
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One skill per line. Only list work you can defend in an interview.</span>
             </label>
 
             <label>
               <span className="metric-label">Certifications and licenses</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-32 resize-y py-3"
-                value={certificationText}
-                onChange={(event) => update("certifications", splitLines(event.target.value))}
+                values={draft.certifications}
+                onValuesChange={(values) => update("certifications", values)}
                 placeholder={"Professional license\nIndustry certification\nSafety training"}
                 disabled={loading}
               />
-              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">Optional. Leave this blank if credentials are not important in your field.</span>
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One per line. Optional: leave this blank if credentials are not important in your field.</span>
             </label>
 
             <label>
               <span className="metric-label">Industries or work settings you prefer</span>
-              <textarea
+              <LineListTextarea
                 className="input-shell mt-2 min-h-32 resize-y py-3"
-                value={sectorText}
-                onChange={(event) => update("sectors", splitLines(event.target.value))}
+                values={draft.sectors}
+                onValuesChange={(values) => update("sectors", values)}
                 placeholder={"Industry\nWork environment\nSpecialty area"}
                 disabled={loading}
               />
+              <span className="mt-2 block text-xs text-[var(--color-text-muted)]">One per line.</span>
             </label>
           </div>
 
@@ -382,6 +379,7 @@ export function CareerProfile() {
             </button>
             <div className="flex items-center gap-3">
               {saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved on this device</span>}
+              {saveNotice && <span role="status" data-testid="profile-save-notice" className="max-w-sm text-xs text-[var(--color-text-secondary)]">{saveNotice}</span>}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={loading || saving}>
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save career profile"}
@@ -397,7 +395,7 @@ export function CareerProfile() {
             <span className="metric-label">Career evidence</span>
             <h2 id="career-evidence-heading" className="mt-2 text-2xl font-semibold">Build from work you can prove.</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-              Import a DOCX, text-bearing PDF, or plain-text resume. Job Ranger preserves the original, extracts locally, and asks you to review each statement before it can support a future resume.
+              Import a DOCX, text-bearing PDF, or plain-text resume. Sojourner preserves the original, extracts locally, and asks you to review each statement before it can support a future resume.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -507,7 +505,7 @@ export function CareerProfile() {
             <div>
               <h3 className="text-lg font-semibold">Review imported evidence</h3>
               <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                Imported statements are proposals. Confirm, correct, merge, or reject them before Job Ranger treats them as facts.
+                Imported statements are proposals. Confirm, correct, merge, or reject them before Sojourner treats them as facts.
               </p>
             </div>
           </div>
@@ -663,7 +661,7 @@ export function CareerProfile() {
       <section className="support-note mt-6 flex items-start gap-3 px-5 py-4 text-sm text-[var(--color-text-secondary)]">
         <BriefcaseBusiness className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
         <p>
-          Next, open Find Jobs. Listings will show plain-language fit guidance based on information you saved here and job data Job Ranger actually collected. Confirmed career evidence will also become available to later resume and interview workflows.
+          Next, open Find Jobs. Listings will show plain-language fit guidance based on information you saved here and job data Sojourner actually collected. Confirmed career evidence will also become available to later resume and interview workflows.
         </p>
       </section>
     </Layout>

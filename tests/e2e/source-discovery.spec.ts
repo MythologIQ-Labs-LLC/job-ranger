@@ -114,7 +114,7 @@ test("discovers opportunities, dismisses a lead, and approves a monitorable empl
 
   await expect(
     page.getByRole("heading", {
-      name: "Find places to look, then choose what Job Ranger should monitor.",
+      name: "Find places to look, then choose what Sojourner should monitor.",
       exact: true,
     }),
   ).toBeVisible();

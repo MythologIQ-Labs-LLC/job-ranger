@@ -17,6 +17,7 @@ import type {
   SettingsUpdate,
 } from "../../src/shared/contracts.js";
 import { sql, SqliteClient, toSqlLiteral } from "./sqlite.cjs";
+import { replaceNul } from "./nul-text.cjs";
 
 type CompanyRow = {
   id: number;
@@ -463,7 +464,8 @@ export class JobScoutRepository {
       throw new Error(`Failed to upsert job ${input.sourceJobId}`);
     }
 
-    const contentText = (input.descriptionText.trim() || input.descriptionSnippet.trim() || input.title.trim());
+    // Hash the text as it is stored: SQL literals store NUL as U+FFFD (#297).
+    const contentText = replaceNul(input.descriptionText.trim() || input.descriptionSnippet.trim() || input.title.trim()).text;
     const contentHash = createHash("sha256").update(contentText).digest("hex");
     const snapshotId = stableSnapshotId(String(row.id), contentHash);
     await this.sqlite.exec(sql`

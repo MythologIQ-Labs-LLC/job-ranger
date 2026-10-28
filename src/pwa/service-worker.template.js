@@ -1,4 +1,4 @@
-/* Job Ranger web runtime service worker (generated at build time).
+/* Sojourner web runtime service worker (generated at build time).
  *
  * Scope of responsibility: the versioned application shell ONLY.
  * - It never reads, stores, or proxies career data (that lives in the

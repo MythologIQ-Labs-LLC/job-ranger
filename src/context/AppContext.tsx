@@ -34,6 +34,8 @@ interface AppState {
   systemStatus: SystemStatus | null;
   toasts: Toast[];
   loading: boolean;
+  /** The workspace data has been read successfully at least once. */
+  loaded: boolean;
   refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -61,6 +63,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,13 +105,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSettings(nextSettings);
         setScrapeRuns(nextRuns);
         setSystemStatus(nextSystemStatus);
+        // Committed with the data, so no frame shows "loaded" with the empty initial lists.
+        setLoaded(true);
+        setLoading(false);
       });
     } catch (refreshError) {
       const message =
-        refreshError instanceof Error ? refreshError.message : "Failed to load Job Ranger data.";
+        refreshError instanceof Error ? refreshError.message : "Failed to load Sojourner data.";
       setError(message);
-    } finally {
       setLoading(false);
+    } finally {
       setRefreshing(false);
     }
   };
@@ -132,6 +138,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       systemStatus,
       toasts,
       loading,
+      loaded,
       refreshing,
       error,
       refresh,
@@ -174,7 +181,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       },
       removeToast,
     }),
-    [companies, jobs, filters, scrapeRuns, settings, systemStatus, toasts, loading, refreshing, error],
+    [companies, jobs, filters, scrapeRuns, settings, systemStatus, toasts, loading, loaded, refreshing, error],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
