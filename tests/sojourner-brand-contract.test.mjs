@@ -26,6 +26,13 @@ assert.match(sidebar, />Employment Toolkit<\/p>/);
 assert.match(flavor, /<title>Sojourner Demo<\/title>/);
 assert.match(flavor, /name: "Sojourner Demo"/);
 assert.match(worker, /name: "job-ranger-runtime"/);
+// Preserve the installed PWA's cache and inter-tab event identities so an update
+// does not silently strand an existing workspace or change lock semantics.
+assert.match(read("src/pwa/service-worker.template.js"), /CACHE_PREFIX = "job-ranger-shell-"/);
+assert.match(read("src/pwa/service-worker.template.js"), /ON_DEMAND_CACHE = "job-ranger-on-demand-v1"/);
+assert.match(read("src/pwa/runtime/client.ts"), /STORAGE_FAILURE_EVENT = "job-ranger:storage-failure"/);
+assert.match(read("src/pwa/runtime/client.ts"), /BOOT_STATE_EVENT = "job-ranger:boot-state"/);
+assert.match(read("src/pwa/PwaShell.tsx"), /Sojourner is open in another tab or window/);
 assert.match(packaging, /job-ranger-web-v\$\{version\}\.zip/);
 assert.match(read("src/demo/session.ts"), /job-ranger\.\*/);
 assert.match(read("src/components/BackupRestorePanel.tsx"), /\.jobranger/);
