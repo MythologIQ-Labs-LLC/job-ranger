@@ -284,3 +284,13 @@ test("recovered receipts with missing typed fields fail closed before network ac
     assert.equal(calls, 0);
   }
 });
+
+test("malformed recovery search entries stay ambiguous without a second upload", async () => {
+  for (const files of [[null], [null, remote], [42], ["invalid"], [remote, null]]) {
+    const { requests, fetchMock } = driver([json({ files })]);
+    const result = await findCreatedDriveFile(secret, "op_314_verified_1", fetchMock);
+    assert.deepEqual(result, { status: "ambiguous" });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].options.method ?? "GET", "GET");
+  }
+});
