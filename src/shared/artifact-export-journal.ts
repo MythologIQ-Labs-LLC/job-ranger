@@ -89,7 +89,8 @@ export function blocksFreshArtifactExport(
 ): boolean {
   validateJournalRecord(record);
   return record.accountId === accountId && record.artifactId === artifactId &&
-    (record.status === "uploading" ||
+    (record.status === "prepared" ||
+     record.status === "uploading" ||
      record.status === "accepted_unverified" ||
      record.status === "unknown_remote_outcome" ||
      record.status === "verification_failed");
