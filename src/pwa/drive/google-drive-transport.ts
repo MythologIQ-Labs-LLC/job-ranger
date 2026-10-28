@@ -81,11 +81,38 @@ export async function uploadApprovedDriveFile(
     throw new DriveTransportError("invalid", "The document changed after the user approved the exact export.");
   }
 
+  // Google accepts the "root" alias on create, but returns its opaque folder ID
+  // in files.get. Resolve it before sending any bytes so readback can verify the
+  // *actual* destination instead of falsely comparing an opaque ID with "root".
+  let destinationId = input.destinationId;
+  if (destinationId === "root") {
+    let response: Response;
+    try {
+      response = await http(`${FILES_ENDPOINT}/root?fields=id,mimeType`, {
+        headers: { Authorization: `Bearer ${input.accessToken}` },
+        cache: "no-store", redirect: "error",
+      });
+    } catch {
+      throw new DriveTransportError("invalid", "My Drive destination could not be verified. No upload was attempted.");
+    }
+    if (!response.ok) {
+      throw new DriveTransportError("action_needed", "Google did not authorize reading the My Drive destination. No upload was attempted.");
+    }
+    let root: { id?: unknown; mimeType?: unknown };
+    try { root = await response.json(); } catch {
+      throw new DriveTransportError("invalid", "My Drive returned invalid destination metadata. No upload was attempted.");
+    }
+    if (!root || typeof root.id !== "string" || !ID.test(root.id) ||
+        root.mimeType !== "application/vnd.google-apps.folder") {
+      throw new DriveTransportError("invalid", "Google did not verify My Drive's root folder. No upload was attempted.");
+    }
+    destinationId = root.id;
+  }
   const boundary = `sojourner_${crypto.randomUUID().replaceAll("-", "")}`;
   const metadata = {
     name: input.name,
     mimeType: input.mimeType,
-    parents: [input.destinationId],
+    parents: [destinationId],
     appProperties: { [DRIVE_OPERATION_PROPERTY]: input.operationId },
   };
   const body = new Blob([
@@ -146,7 +173,7 @@ export async function uploadApprovedDriveFile(
   }
   if (!data || data.id !== remoteId || data.name !== input.name ||
       data.mimeType !== input.mimeType || !Array.isArray(data.parents) ||
-      !data.parents.includes(input.destinationId) ||
+      !data.parents.includes(destinationId) ||
       data.appProperties?.[DRIVE_OPERATION_PROPERTY] !== input.operationId ||
       Number(data.size) !== input.bytes.size) {
     return { status: "verification_failed", remoteId, reason: "Drive file metadata did not match the approved destination and document." };
