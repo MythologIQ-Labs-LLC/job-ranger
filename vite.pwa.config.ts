@@ -53,6 +53,15 @@ const buildId = pwaBuildId({
   override: process.env.JOB_RANGER_BUILD_ID,
 });
 
+// Only a public Web OAuth client ID is embedded; never a token or client secret.
+// The demo flavor cannot access Google, even if a maintainer sets the variable.
+const suppliedGoogleId = (process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID ?? "").trim();
+if (suppliedGoogleId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(suppliedGoogleId)) {
+  throw new Error("Invalid Google Web OAuth client ID format");
+}
+const googleWebClientId = flavor === "demo" ? "" : suppliedGoogleId;
+const driveSecurity = { googleOAuthEnabled: googleWebClientId.length > 0 };
+
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
     root,
@@ -113,7 +122,7 @@ function listFiles(directory: string, base = directory): string[] {
 }
 
 function headersFile(): string {
-  const headers = buildSecurityHeaders();
+  const headers = buildSecurityHeaders(driveSecurity);
   const lines = ["/*", ...Object.entries(headers).map(([key, value]) => `  ${key}: ${value}`)];
   lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "");
   lines.push("/assets/*", "  Cache-Control: public, max-age=31536000, immutable", "");
@@ -172,7 +181,7 @@ function shellManifestPlugin(): Plugin {
     apply: "build",
     transformIndexHtml(html) {
       const shell = html
-        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy().replace(/; frame-ancestors 'none'/, ""))
+        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy(driveSecurity).replace(/; frame-ancestors 'none'/, ""))
         .replace("%JOB_RANGER_BUILD_ID%", buildId);
       return flavor === "demo" ? demoIndexHtml(shell) : shell;
     },
@@ -216,7 +225,7 @@ function shellManifestPlugin(): Plugin {
             commit,
             sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
-            contentSecurityPolicy: buildContentSecurityPolicy(),
+            contentSecurityPolicy: buildContentSecurityPolicy(driveSecurity),
             // Exact deployed service-worker bytes are pinned independently of the
             // immutable precache list; the worker itself is intentionally not precached.
             serviceWorkerSha256: createHash("sha256")
@@ -263,6 +272,7 @@ export default defineConfig({
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
     __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
+    __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: JSON.stringify(googleWebClientId),
   },
   worker: {
     format: "es",
@@ -286,7 +296,7 @@ export default defineConfig({
     // shares an address (origin) with the standard web app's workspace.
     ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.dev } : {}),
     headers: {
-      ...buildSecurityHeaders(),
+      ...buildSecurityHeaders(driveSecurity),
       // Vite's dev client needs inline/eval support; the production CSP is
       // enforced by the built index.html meta tag and the _headers file.
       "Content-Security-Policy": "",
@@ -296,7 +306,7 @@ export default defineConfig({
     host: "localhost",
     port: 4174,
     strictPort: true,
-    headers: buildSecurityHeaders(),
+    headers: buildSecurityHeaders(driveSecurity),
     ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.preview } : {}),
   },
 });
