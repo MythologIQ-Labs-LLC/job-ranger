@@ -92,6 +92,22 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
     });
   }
 
+  /** Read only the unresolved receipts for one authenticated account and artifact. */
+  async unresolvedForArtifact(accountId: string, artifactId: string): Promise<ExportJournalRecord[]> {
+    if (!/^[A-Za-z0-9_:-]{1,160}$/.test(accountId) ||
+        !/^[A-Za-z0-9_:-]{1,160}$/.test(artifactId)) {
+      throw new Error("Invalid Drive journal lookup.");
+    }
+    return this.transaction<ExportJournalRecord[]>("readonly", (store, done) => {
+      const request = store.getAll(undefined, 10_001);
+      request.onsuccess = () => {
+        if (request.result.length > 10_000) { store.transaction.abort(); return; }
+        done((request.result as ExportJournalRecord[]).filter(entry =>
+          blocksFreshArtifactExport(entry, accountId, artifactId)));
+      };
+    });
+  }
+
   async insertIfAbsent(record: ExportJournalRecord): Promise<boolean> {
     validateJournalRecord(record);
     if (record.status !== "prepared" || record.remoteId || record.verifiedSha256) {
