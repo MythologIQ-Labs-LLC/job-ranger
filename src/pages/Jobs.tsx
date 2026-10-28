@@ -123,7 +123,7 @@ export function Jobs() {
           Spend your time on the jobs that look worth it.
         </h1>
         <p className="page-copy">
-          Job Ranger compares each listing with the target track you choose and the Career Evidence you have actually confirmed. Eligibility, evidence coverage, career direction, preferences, blockers, and unknowns stay separate instead of being collapsed into a pretend hiring probability.
+          Sojourner compares each listing with the target track you choose and the Career Evidence you have actually confirmed. Eligibility, evidence coverage, career direction, preferences, blockers, and unknowns stay separate instead of being collapsed into a pretend hiring probability.
         </p>
       </section>
 
