@@ -231,3 +231,51 @@ export async function findCreatedDriveFile(
       ? { status: "ambiguous" }
       : { status: "not_confirmed" };
 }
+
+/** Read-only recovery of one prior operation; NEVER submits files.create. */
+export async function verifyRecoveredDriveFile(
+  accessToken: string,
+  expected: { operationId: string; remoteId: string; name: string; mimeType: string;
+    destinationId: string; approvedSha256: string },
+  http: Fetch = fetch,
+): Promise<boolean> {
+  if (!accessToken || /[\r\n]/.test(accessToken) || !OPERATION.test(expected.operationId) ||
+      !ID.test(expected.remoteId) || !ID.test(expected.destinationId) ||
+      !HASH.test(expected.approvedSha256) || expected.mimeType !== "application/pdf" ||
+      expected.name.length < 4 || expected.name.length > 180 ||
+      !expected.name.endsWith(".pdf")) return false;
+  const auth = { Authorization: `Bearer ${accessToken}` };
+  try {
+    let destinationId = expected.destinationId;
+    if (destinationId === "root") {
+      const root = await http(`${FILES_ENDPOINT}/root?fields=id,mimeType`, {
+        headers: auth, cache: "no-store", redirect: "error",
+      });
+      if (!root.ok) return false;
+      const rootData = await root.json();
+      if (!rootData || !ID.test(rootData.id) ||
+          rootData.mimeType !== "application/vnd.google-apps.folder") return false;
+      destinationId = rootData.id;
+    }
+    const base = `${FILES_ENDPOINT}/${encodeURIComponent(expected.remoteId)}`;
+    const metadata = await http(`${base}?fields=id,name,mimeType,parents,size,appProperties&supportsAllDrives=false`, {
+      headers: auth, cache: "no-store", redirect: "error",
+    });
+    if (!metadata.ok) return false;
+    const data = await metadata.json();
+    if (!data || data.id !== expected.remoteId || data.name !== expected.name ||
+        data.mimeType !== expected.mimeType || !Array.isArray(data.parents) ||
+        !data.parents.includes(destinationId) ||
+        data.appProperties?.[DRIVE_OPERATION_PROPERTY] !== expected.operationId ||
+        !Number.isSafeInteger(Number(data.size)) ||
+        Number(data.size) < 1 || Number(data.size) > DRIVE_FILE_UPLOAD_LIMIT) return false;
+    const readback = await http(`${base}?alt=media`, {
+      headers: auth, cache: "no-store", redirect: "error",
+    });
+    if (!readback.ok) return false;
+    const bytes = await readback.blob();
+    return bytes.size === Number(data.size) &&
+      bytes.size <= DRIVE_FILE_UPLOAD_LIMIT &&
+      await sha256(bytes) === expected.approvedSha256;
+  } catch { return false; }
+}
