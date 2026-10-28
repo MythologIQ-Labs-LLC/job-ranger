@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
+import { strToU8, zipSync } from "fflate";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -184,6 +185,67 @@ test("PWA → Electron: a web archive validates and restores in the desktop runt
   expect(artifact.managedPath.startsWith(restored.dataDirectory)).toBe(true);
   expect(createHash("sha256").update(await readFile(artifact.managedPath)).digest("hex")).toBe(imported.artifact.contentHash);
   await restored.backend.dispose();
+});
+
+/** A valid DOCX padded with incompressible, non-sensitive bytes so its artifact spans many 1 MiB reads. */
+function paddedResumeDocx(padBytes: number): Buffer {
+  const pad = new Uint8Array(padBytes);
+  let value = 302;
+  for (let index = 0; index < pad.length; index += 1) {
+    value = (value * 1103515245 + 12345) >>> 0;
+    pad[index] = value >>> 24;
+  }
+  const body = '<w:p><w:r><w:t>Jordan Ellis</w:t></w:r></w:p><w:p><w:r><w:t>Warehouse Coordinator, Tacoma Freight, 2022 - Present</w:t></w:r></w:p>';
+  return Buffer.from(zipSync({
+    "[Content_Types].xml": strToU8('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="bin" ContentType="application/octet-stream"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'),
+    "word/document.xml": strToU8(`<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`),
+    "word/media/padding.bin": [pad, { level: 0 }],
+  }));
+}
+
+// #302: the web export streams each file into the archive in bounded chunks (two passes) through
+// OPFS. A multi-megabyte artifact must come out byte-identical to the in-memory encoder's layout.
+test("PWA export streams a multi-megabyte artifact into a canonical archive the desktop restores", async ({ page }) => {
+  await page.goto(server.url);
+  await waitForRuntime(page);
+  const docx = paddedResumeDocx(6 * 1024 * 1024 + 123);
+  await page.goto(`${server.url}#/career-profile`);
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import resume" }).click();
+  await (await chooser).setFiles({
+    name: "jordan-ellis-resume.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: docx,
+  });
+  await expect.poll(async () => {
+    const artifacts = await page.evaluate(() => window.electronAPI.career.listSourceArtifacts());
+    return artifacts.length === 1 ? artifacts[0].extractionState : "missing";
+  }, { timeout: 30_000 }).not.toMatch(/missing|pending/);
+  const [artifact] = await page.evaluate(() => window.electronAPI.career.listSourceArtifacts());
+  const { createHash } = await import("node:crypto");
+  const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+  expect(artifact.contentHash).toBe(sha256(docx));
+
+  await page.goto(`${server.url}#/settings`);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Create backup" }).click();
+  const saved = await download;
+  const archivePath = path.join(workRoot, `streamed-${saved.suggestedFilename()}`);
+  await saved.saveAs(archivePath);
+  const bytes = await readFile(archivePath);
+  const shown = (await page.getByTestId("backup-created-sha256").textContent())?.replace("SHA-256 ", "").trim();
+  expect(sha256(bytes)).toBe(shown);
+
+  // Same bytes the in-memory STORE encoder produces for these entries, in this order.
+  const entries = archive.decodeStoreZip(bytes);
+  expect(Buffer.from(archive.encodeStoreZip(entries)).equals(bytes)).toBe(true);
+  const stored = entries.find((entry: { bytes: Uint8Array }) => sha256(entry.bytes) === artifact.contentHash);
+  expect(stored?.bytes.length).toBe(docx.length);
+
+  const desktop = await openElectronInstall(path.join(workRoot, "desktop-streamed"));
+  const selection = await desktop.backups.validateRestoreSource(archivePath);
+  expect(selection.archive.producer.runtime).toBe("web");
+  await desktop.backend.dispose();
 });
 
 test("corrupted, foreign, newer, and unknown-schema backups are rejected without touching data", async ({ page }) => {
