@@ -196,3 +196,26 @@ test("cancelled unused receipt survives reload and releases its artifact reserva
   }, setup.record);
   expect(recovered).toEqual({ status: "cancelled", blocked: false, fresh: true });
 });
+
+test("durable storage rejects an illegal uploading to cancelled transition", async ({ page }) => {
+  await install(page);
+  const result = await page.evaluate(async () => {
+    const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+    const journal = new Journal();
+    const prepared = {
+      schemaVersion: 1, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      accountId: "storageAccount", destinationId: "root", artifactId: "storageArtifact",
+      artifactRevision: "1", bytesSha256: "e".repeat(64), fileName: "resume.pdf",
+      mimeType: "application/pdf", status: "prepared", remoteId: null,
+      verifiedSha256: null, updatedAt: new Date().toISOString(),
+    };
+    await journal.insertIfAbsent(prepared);
+    const uploading = { ...prepared, status: "uploading", updatedAt: new Date().toISOString() };
+    await journal.compareAndSwap(prepared.operationId, "prepared", uploading);
+    const accepted = await journal.compareAndSwap(prepared.operationId, "uploading",
+      { ...uploading, status: "cancelled", updatedAt: new Date().toISOString() });
+    const stored = await journal.findOperation(prepared.operationId);
+    return { accepted, status: stored?.status };
+  });
+  expect(result).toEqual({ accepted: false, status: "uploading" });
+});
