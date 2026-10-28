@@ -220,3 +220,26 @@ test("recovery resolves My Drive root and does not POST or trust the literal roo
   }, fetchMock), true);
   assert.deepEqual(requests.map(x => x.options.method ?? "GET"), ["GET", "GET", "GET"]);
 });
+
+test("recovery accepts an approved uppercase PDF extension while rejecting unsafe filenames", async () => {
+  const input = await good();
+  const name = "Sojourner-Resume.PDF";
+  const { requests, fetchMock } = driver([
+    json({ ...remote, name }), new Response(document),
+  ]);
+  assert.equal(await verifyRecoveredDriveFile(secret, {
+    operationId: input.operationId, remoteId: remote.id, name,
+    mimeType: "application/pdf", destinationId: input.destinationId,
+    approvedSha256: input.approvedSha256,
+  }, fetchMock), true);
+  assert.equal(requests.some(x => x.options.method === "POST"), false);
+  for (const unsafe of ["../resume.pdf", "resume.pdf/child", " resume.pdf"]) {
+    let calls = 0;
+    assert.equal(await verifyRecoveredDriveFile(secret, {
+      operationId: input.operationId, remoteId: remote.id, name: unsafe,
+      mimeType: "application/pdf", destinationId: input.destinationId,
+      approvedSha256: input.approvedSha256,
+    }, async () => { calls++; throw new Error("unexpected request"); }), false);
+    assert.equal(calls, 0);
+  }
+});
