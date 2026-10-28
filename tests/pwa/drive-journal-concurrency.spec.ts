@@ -42,16 +42,25 @@ async function install(page: import("@playwright/test").Page) {
   await page.route("**" + scriptPath, route => route.fulfill({
     status: 200, contentType: "text/javascript", body: bundled,
   }));
+  // Insert a parser-created same-origin script rather than dynamically assigning
+  // script.src. The production Trusted Types policy remains enforced.
+  await page.route(server.url, async route => {
+    const response = await route.fetch();
+    const html = await response.text();
+    if (!html.includes("</head>")) throw new Error("Expected PWA document head");
+    await route.fulfill({
+      response,
+      body: html.replace("</head>", `<script src="${scriptPath}"></script></head>`),
+    });
+  });
   await page.goto(server.url);
-  await page.addScriptTag({ url: new URL(scriptPath, server.url).toString() });
+  await page.waitForFunction(() => Boolean((window as any).__sojournerDriveJournal?.BrowserDriveExportJournal));
 }
 
 test("concurrent tabs cannot reserve separate approval IDs for the same account and resume", async ({ page }) => {
-  await install(page);
-  const result = await page.evaluate(async () => {
-    const Constructor = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
-    const journalA = new Constructor();
-    const journalB = new Constructor();
+  const second = await page.context().newPage();
+  try {
+    await Promise.all([install(page), install(second)]);
     const common = {
       schemaVersion: 1, accountId: "googleAccount1", destinationId: "root",
       artifactId: "resumeArtifact1", artifactRevision: "1",
@@ -59,21 +68,27 @@ test("concurrent tabs cannot reserve separate approval IDs for the same account 
       status: "prepared", remoteId: null, verifiedSha256: null,
       updatedAt: new Date().toISOString(),
     };
-    const first = { ...common, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID() };
-    const second = { ...common, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID() };
-    const attempts = await Promise.all([
-      journalA.insertIfAbsent(first),
-      journalB.insertIfAbsent(second),
-    ]);
-    const pending = await journalB.hasUnresolvedForArtifact(common.accountId, common.artifactId);
-    const otherAccount = await journalB.hasUnresolvedForArtifact("otherAccount", common.artifactId);
-    const otherResume = await journalB.hasUnresolvedForArtifact(common.accountId, "otherResume");
-    return { attempts, pending, otherAccount, otherResume };
-  });
-  expect(result.attempts.filter(Boolean)).toHaveLength(1);
-  expect(result.pending).toBe(true);
-  expect(result.otherAccount).toBe(false);
-  expect(result.otherResume).toBe(false);
+    const attempts = await Promise.all([page, second].map(tab => tab.evaluate(async common => {
+      const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+      const journal = new Journal();
+      return journal.insertIfAbsent({
+        ...common, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      });
+    }, common)));
+    const observed = await second.evaluate(async common => {
+      const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+      const journal = new Journal();
+      return {
+        pending: await journal.hasUnresolvedForArtifact(common.accountId, common.artifactId),
+        otherAccount: await journal.hasUnresolvedForArtifact("otherAccount", common.artifactId),
+        otherResume: await journal.hasUnresolvedForArtifact(common.accountId, "otherResume"),
+      };
+    }, common);
+    expect(attempts.filter(Boolean)).toHaveLength(1);
+    expect(observed).toEqual({ pending: true, otherAccount: false, otherResume: false });
+  } finally {
+    await second.close();
+  }
 });
 
 test("pending status persists after navigation/reload and terminal verification permits a new consent", async ({ page }) => {
