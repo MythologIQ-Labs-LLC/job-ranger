@@ -75,6 +75,7 @@ function safeOpenUrl(id: string): string {
 /** A single Drive files.create POST followed by provider metadata and byte readback. */
 export async function uploadApprovedDriveFile(
   input: ApprovedDriveFile, http: Fetch = fetch,
+  beforePost?: () => Promise<void>,
 ): Promise<DriveUploadOutcome> {
   validate(input);
   if (await sha256(input.bytes) !== input.approvedSha256) {
@@ -123,6 +124,10 @@ export async function uploadApprovedDriveFile(
     `\r\n--${boundary}--\r\n`,
   ]);
   const auth = { Authorization: `Bearer ${input.accessToken}` };
+  // The caller must commit the durable uploading state AFTER all local and
+  // read-only destination checks, but BEFORE any network request that can
+  // create a remote file. A rejected callback aborts without a POST.
+  if (beforePost) await beforePost();
   let created: Response;
   try {
     created = await http(UPLOAD_ENDPOINT, {
