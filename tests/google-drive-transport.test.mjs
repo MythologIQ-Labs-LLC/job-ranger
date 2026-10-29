@@ -294,3 +294,32 @@ test("malformed recovery search entries stay ambiguous without a second upload",
     assert.equal(requests[0].options.method ?? "GET", "GET");
   }
 });
+
+test("pre-POST failure never commits uploading; successful preflight commits before POST", async () => {
+  const input = { ...await good(), destinationId: "root" };
+  let commits = 0;
+  const denied = driver([json({}, 403)]);
+  await assert.rejects(uploadApprovedDriveFile(input, denied.fetchMock,
+    async () => { commits++; }), DriveTransportError);
+  assert.equal(commits, 0);
+  assert.deepEqual(denied.requests.map(x => x.options.method ?? "GET"), ["GET"]);
+
+  const stopped = driver([json({ id: "rootOpaque", mimeType: "application/vnd.google-apps.folder" })]);
+  await assert.rejects(uploadApprovedDriveFile(input, stopped.fetchMock,
+    async () => { commits++; throw new Error("journal commit failed"); }), /journal commit failed/);
+  assert.equal(commits, 1);
+  assert.deepEqual(stopped.requests.map(x => x.options.method ?? "GET"), ["GET"]);
+
+  const successful = driver([
+    json({ id: "rootOpaque", mimeType: "application/vnd.google-apps.folder" }),
+    json({ id: remote.id }), json({ ...remote, parents: ["rootOpaque"] }), new Response(document),
+  ]);
+  let durable = false;
+  const verified = await uploadApprovedDriveFile(input, async (url, options) => {
+    if (options.method === "POST") assert.equal(durable, true);
+    return successful.fetchMock(url, options);
+  }, async () => { durable = true; });
+  assert.equal(verified.status, "verified");
+  assert.deepEqual(successful.requests.map(x => x.options.method ?? "GET"),
+    ["GET", "POST", "GET", "GET"]);
+});
