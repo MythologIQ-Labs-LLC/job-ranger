@@ -272,7 +272,9 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       // Any failure after a remote POST might have created a file. Never offer an automatic retry.
       setError(journalRecord.current?.status === "uploading" || journalRecord.current?.status === "accepted_unverified"
         ? "The Drive export may already exist. Check Google Drive before approving a new upload."
-        : cause instanceof Error ? cause.message : "Drive export could not be completed. Your local resume is unchanged.");
+        : journalRecord.current?.status === "prepared"
+          ? "The upload did not begin. The unused reservation remains saved. Select 'Check prior Drive exports' and cancel that reservation before reviewing another upload."
+          : cause instanceof Error ? cause.message : "Drive export could not be completed. Your local resume is unchanged.");
     } finally { setBusy(false); }
   };
 
