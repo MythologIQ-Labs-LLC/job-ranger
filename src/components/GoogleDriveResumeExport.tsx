@@ -242,11 +242,15 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
           operationId, proposalId: selected.proposal.proposalId, status: "uploading",
           bytesSha256: selected.proposal.bytesSha256, remoteId: null, verifiedSha256: null,
         };
-        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current, uploading, new Date().toISOString());
         return uploadApprovedDriveFile({
           accessToken: token, operationId, name: selected.proposal.fileName,
           mimeType: selected.proposal.mimeType, destinationId: selected.proposal.approvedDestinationId,
           bytes: freshBytes, approvedSha256: selected.proposal.bytesSha256,
+        }, fetch, async () => {
+          // No POST can begin until this write commits. Preflight errors leave
+          // the reservation prepared and safely cancellable by the user.
+          journalRecord.current = await advanceDurableExport(
+            journal.current!, journalRecord.current!, uploading, new Date().toISOString());
         });
       });
       if (!journalRecord.current || !journal.current) throw new Error("The export receipt was not saved.");
