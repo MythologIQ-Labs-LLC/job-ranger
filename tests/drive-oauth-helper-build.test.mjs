@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -35,6 +35,12 @@ test("helper build requires two exact HTTPS origins and no client secret", () =>
 
 test("helper build contains only isolated files and fail-closed public settings", () => {
   assert.match(run(), /Deploy ONLY to https:\/\/auth.example.test/);
+  writeFileSync(path.join(output, "old-config-secret.txt"), "stale private configuration");
+  assert.match(run(), /Deploy ONLY to https:\/\/auth.example.test/);
+  assert.deepEqual(readdirSync(output).sort(),
+    ["_headers", "config.mjs", "helper.mjs", "index.html"].sort(),
+    "rebuilt security helper must not retain stale files");
+
   const html = readFileSync(path.join(output, "index.html"), "utf8");
   const js = readFileSync(path.join(output, "helper.mjs"), "utf8");
   const conf = readFileSync(path.join(output, "config.mjs"), "utf8");
