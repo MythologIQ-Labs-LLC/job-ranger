@@ -17,6 +17,10 @@ const app = (process.env.SOJOURNER_DRIVE_APP_ORIGIN ?? "").trim();
 const helper = (process.env.SOJOURNER_DRIVE_HELPER_ORIGIN ?? "").trim();
 const client = (process.env.SOJOURNER_DRIVE_GOOGLE_WEB_CLIENT_ID ?? "").trim();
 
+// Remove any previous deployment output before validating configuration.
+// A failed build must not leave a stale, apparently deployable helper behind.
+rmSync(output, { recursive: true, force: true });
+
 function exactOrigin(value) {
   try {
     const url = new URL(value);
@@ -58,9 +62,7 @@ const headers = [
   "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()",
   "",
 ].join("\n");
-// Rebuild from an empty fixed output directory. Stale files must never be published
-// beside this security-sensitive helper (for example, old configs or maps).
-rmSync(output, { recursive: true, force: true });
+// A validated build always starts with an empty output directory.
 mkdirSync(output, { recursive: true });
 for (const file of ["index.html", "helper.mjs"]) {
   // Source must be shipped unchanged. The output contains no PWA assets or data.
