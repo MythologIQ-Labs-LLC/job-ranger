@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { transport } from "../mcp/local-readonly-server.mjs";
 import { createRequire } from "node:module";
 import { promises as fs } from "node:fs";
 import os from "node:os";
@@ -134,6 +136,37 @@ try {
   noData.child.stdin.end();
   assert.equal(await new Promise((resolve) => noData.child.once("close", resolve)), 0);
   assert.equal(await fingerprint(), before);
+
+  // Deterministic EOF drain: an accepted slow tool must finish before the
+  // server releases the snapshot. Do not rely on event-loop scheduling.
+  const fakeStdin = new EventEmitter();
+  fakeStdin.setEncoding = () => {};
+  const replies = [];
+  let releaseRead;
+  const stalledRead = new Promise(resolve => { releaseRead = resolve; });
+  const drain = transport({
+    tools: [{ name: "get_capabilities" }],
+    execute: async () => {
+      await stalledRead;
+      return { status: "completed" };
+    },
+  }, null, fakeStdin, { write: line => replies.push(JSON.parse(line)) });
+  fakeStdin.emit("data", JSON.stringify({ jsonrpc: "2.0", id: 1,
+    method: "initialize" }) + "\n" +
+    JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call",
+      params: { name: "get_capabilities", arguments: {} } }) + "\n");
+  fakeStdin.emit("end");
+  let drainedEarly = false;
+  void drain.then(() => { drainedEarly = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(drainedEarly, false,
+    "EOF must not end the server while a tool read is still pending");
+  assert.deepEqual(replies.map(reply => reply.id), [1]);
+  releaseRead();
+  await drain;
+  assert.equal(drainedEarly, true);
+  assert.deepEqual(replies.map(reply => reply.id), [1, 2]);
+  assert.equal(replies[1].result.structuredContent.status, "completed");
 
   // A client may pipeline small requests and close its input immediately.
   // EOF must not race accepted async requests against backend/snapshot cleanup.
