@@ -38,6 +38,7 @@ export class DriveHelperResponseGate {
     if (url.origin !== helperOrigin || url.protocol !== "https:" ||
         url.username || url.password || url.pathname !== "/" ||
         url.search || url.hash || !NONCE.test(nonce) ||
+        !helperWindow || typeof helperWindow !== "object" ||
         !Number.isFinite(deadline) || deadline <= now()) {
       throw new Error("Invalid isolated OAuth response gate configuration.");
     }
