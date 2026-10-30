@@ -36,6 +36,14 @@ When the helper origin is set, main PWA CSP removes Google's GIS script, stylesh
 
 The main PWA opens the helper after the user's first click. The helper initializes GIS only on its own separate origin and calls `requestAccessToken()` synchronously from the user's **second** click. An authorization response is not upload consent; existing verified-account, exact-artifact approval, durable journal and upload-readback controls still apply.
 
+## Nonce custody and third-party script ordering
+
+The helper must **not** include a parser-loaded Google GIS script in its HTML. The module `helper.mjs` first obtains the `nonce` from the fragment and calls `history.replaceState` to clear it. Only after validating the exact configured application origin, expected client-ID format, one-time nonce and live opener does it create a GIS script element. The script URL comes from the narrow `sojourner-google-gis` Trusted Types policy, under CSP `require-trusted-types-for 'script'; trusted-types sojourner-google-gis`.
+
+This reduces the nonce exposure of a third-party script executing on the helper origin. It does **not** make GIS a trusted execution environment, eliminate the opener-navigation trust tradeoff or substitute for HTTPS-origin isolation and browser qualification.
+
+The `tests/drive-oauth-helper-runtime.test.mjs` suite imports the **built helper module** with mocked browser objects and verifies actual nonce removal precedes GIS insertion, token requests require the helper's second user click, single-use handoff targets the configured application origin, and invalid/unpaired popups never load GIS. This is a Node simulation, **not** a real-browser or real-Google receipt. Test scripts must be executed on the exact PR head before any merge claim.
+
 ## Local verification
 
 ```sh
