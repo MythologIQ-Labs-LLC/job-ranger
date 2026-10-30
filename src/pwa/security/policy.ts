@@ -26,10 +26,12 @@ export function isAllowedAcquisitionOrigin(url: string): boolean {
   }
 }
 
-export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; }
+export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; isolatedGoogleOAuthOrigin?: string; }
 
 export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): string {
-  const google = options.googleOAuthEnabled === true;
+  const isolated = options.googleOAuthEnabled === true && Boolean(options.isolatedGoogleOAuthOrigin);
+  const google = options.googleOAuthEnabled === true && !isolated;
+  const googleApis = options.googleOAuthEnabled === true;
   return [
     "default-src 'none'",
     // 'wasm-unsafe-eval' permits compiling the bundled SQLite WebAssembly
@@ -39,12 +41,12 @@ export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): st
     google ? "style-src 'self' https://accounts.google.com/gsi/style" : "style-src 'self'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/ https://www.googleapis.com https://oauth2.googleapis.com" : ""}`,
+    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/" : ""}${googleApis ? " https://www.googleapis.com https://oauth2.googleapis.com" : ""}`,
     "manifest-src 'self'",
     "media-src 'none'",
     "object-src 'none'",
     google ? "frame-src https://accounts.google.com/gsi/" : "frame-src 'none'",
-    "child-src 'self'",
+    `child-src 'self'${isolated ? " " + options.isolatedGoogleOAuthOrigin : ""}`,
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",
