@@ -13,9 +13,16 @@ export const RECOVERY_CHANNELS: ReadonlySet<string> = new Set(["backups:select-r
 
 const DAMAGED_DATABASE = /\bSQLITE_(NOTADB|CORRUPT)\b|file is not a database|database disk image is malformed/i;
 
+/**
+ * A schema SQLite cannot parse is also reported as SQLITE_CORRUPT ("malformed database schema"),
+ * but that is what a healthy database written by a newer SQLite looks like to an older build
+ * (for example after a service-worker rollback). It must never be offered a destructive restore.
+ */
+const NEWER_OR_UNPARSEABLE_SCHEMA = /malformed database schema/i;
+
 export function isDamagedWorkspaceError(error: unknown): boolean {
   const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error ?? "");
-  return DAMAGED_DATABASE.test(message);
+  return DAMAGED_DATABASE.test(message) && !NEWER_OR_UNPARSEABLE_SCHEMA.test(message);
 }
 
 export interface RecoveryContext {

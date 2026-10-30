@@ -17,6 +17,8 @@ function RestoreFromBackup() {
   const [staging, setStaging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const summary = useRef<HTMLParagraphElement>(null);
+  // Only the latest choice counts: a second pick while the first is still validating wins.
+  const latestChoice = useRef(0);
   const chooseButton = useRef<HTMLButtonElement>(null);
   const api = (window as unknown as { electronAPI?: { backups: { selectRestore(): Promise<BackupRestoreSelection | null>; stageRestore(path: string): Promise<unknown> } } }).electronAPI;
   const firstRender = useRef(true);
@@ -31,10 +33,13 @@ function RestoreFromBackup() {
   if (!api) return null;
   // No busy state while the browser's file picker is open: some browsers never report a cancel.
   const choose = async () => {
+    const choice = ++latestChoice.current;
     setError(null);
     try {
-      setSelection(await api.backups.selectRestore());
+      const result = await api.backups.selectRestore();
+      if (choice === latestChoice.current) setSelection(result);
     } catch (cause) {
+      if (choice !== latestChoice.current) return;
       setSelection(null);
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -71,7 +76,7 @@ function RestoreFromBackup() {
             <p key={index} className="text-sm leading-6 text-[var(--color-text-secondary)]">{warning}</p>
           ))}
           <p className="text-sm font-semibold leading-6">
-            Restoring permanently replaces the damaged workspace, including anything you changed after this backup was made.
+            Restoring permanently replaces the damaged workspace. Changes made after this backup was created are lost.
           </p>
           <div className="flex flex-wrap gap-3">
             <button type="button" className="primary-button" disabled={staging} onClick={() => void restore()}>

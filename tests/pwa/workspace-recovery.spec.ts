@@ -1,4 +1,5 @@
 import { chromium, expect, test, type Page } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +28,10 @@ async function fileDigest(page: Page, file: string): Promise<string> {
   }, file);
 }
 
+const GARBAGE = "this is not a database";
+// SHA-256 of GARBAGE: the damaged file must still hold exactly what the test wrote.
+const GARBAGE_SHA256 = createHash("sha256").update(GARBAGE).digest("hex");
+
 /** Leaves the app (stopping its worker), then overwrites the OPFS database with garbage. */
 async function damageDatabase(page: Page, file: string): Promise<void> {
   await page.goto(`${server.url}/manifest.webmanifest`);
@@ -35,7 +40,7 @@ async function damageDatabase(page: Page, file: string): Promise<void> {
     const parts = p.split("/").filter(Boolean);
     for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
     const writable = await (await dir.getFileHandle(parts[parts.length - 1])).createWritable();
-    await writable.write(new TextEncoder().encode("this is not a database"));
+    await writable.write(new TextEncoder().encode(GARBAGE));
     await writable.close();
   }, file);
 }
@@ -71,7 +76,8 @@ test("a damaged workspace can be replaced from a backup on the error screen", as
     await expect(recovery).toBeVisible();
     // In recovery mode only backup validation and staging are served.
     await expect(page.evaluate(() => window.electronAPI.career.getProfile())).rejects.toThrow(/not a database/);
-    const damaged = await fileDigest(page, file);
+    const damaged = GARBAGE_SHA256;
+    expect(await fileDigest(page, file)).toBe(damaged);
 
     const chooser = page.waitForEvent("filechooser");
     await recovery.getByRole("button", { name: "Choose a backup file" }).click();
@@ -107,7 +113,8 @@ test("a file that is not a valid backup is refused and the workspace stays untou
     const file = await databasePath(page);
     await damageDatabase(page, file);
     await page.goto(server.url);
-    const damaged = await fileDigest(page, file);
+    const damaged = GARBAGE_SHA256;
+    expect(await fileDigest(page, file)).toBe(damaged);
     const recovery = page.getByTestId("pwa-recovery-restore");
     await expect(recovery).toBeVisible({ timeout: 30_000 });
     const chooser = page.waitForEvent("filechooser");

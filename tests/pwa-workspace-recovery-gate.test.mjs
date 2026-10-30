@@ -16,6 +16,8 @@ const notDamaged = [
   new Error("Pending restore marker is invalid"),
   new Error("Backup artifact hash mismatch: artifacts/a.pdf"),
   new Error("No handler registered for 'career:get-profile'"),
+  // A healthy database written by a newer SQLite (unparseable schema) is not "damaged".
+  new Error("SQLITE_CORRUPT: sqlite3 result code 11: malformed database schema (jobs) - near \"STRICT\": syntax error"),
   "SQLITE_BUSY: database is locked",
   null,
 ];
