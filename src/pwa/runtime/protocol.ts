@@ -51,7 +51,13 @@ export type WorkerFailureCode =
 export type WorkerToPageMessage =
   | { type: "waiting-for-lock" }
   | { type: "ready"; info: RuntimeInfo; demo?: DemoWorkspaceStartup }
-  | { type: "fatal"; code: WorkerFailureCode; message: string }
+  | {
+      type: "fatal";
+      code: WorkerFailureCode;
+      message: string;
+      /** The workspace could not be opened, but a .jobranger backup can still be validated and restored. */
+      recoverableWithBackup?: boolean;
+    }
   | {
       type: "result";
       id: number;

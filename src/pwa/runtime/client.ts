@@ -13,12 +13,13 @@ import type {
   WorkerFailureCode,
   WorkerToPageMessage,
 } from "./protocol";
+import { RECOVERY_CHANNELS } from "./workspace-recovery";
 
 export type RuntimeBootState =
   | { status: "starting" }
   | { status: "waiting-for-lock" }
   | { status: "ready"; info: RuntimeInfo; demo?: DemoWorkspaceStartup }
-  | { status: "failed"; code: WorkerFailureCode; message: string };
+  | { status: "failed"; code: WorkerFailureCode; message: string; recoverableWithBackup?: boolean };
 
 interface PendingCall {
   resolve: (value: unknown) => void;
@@ -135,7 +136,12 @@ export class WebRuntimeClient {
         );
         return;
       case "fatal":
-        this.setState({ status: "failed", code: message.code, message: message.message });
+        this.setState({
+          status: "failed",
+          code: message.code,
+          message: message.message,
+          recoverableWithBackup: message.recoverableWithBackup === true,
+        });
         return;
       case "result": {
         const call = this.calls.get(message.id);
@@ -181,7 +187,9 @@ export class WebRuntimeClient {
   }
 
   private send(channel: string, args: unknown[], dialog?: DialogPayload): Promise<unknown> {
-    if (this.state.status === "failed") return Promise.reject(new Error(this.state.message));
+    if (this.state.status === "failed" && !(this.state.recoverableWithBackup && RECOVERY_CHANNELS.has(channel))) {
+      return Promise.reject(new Error(this.state.message));
+    }
     const id = this.nextId++;
     const message: PageToWorkerMessage = { type: "invoke", id, channel, args, dialog };
     const transfer = dialog?.files.map((file) => file.bytes) ?? [];
