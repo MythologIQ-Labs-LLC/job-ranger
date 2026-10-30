@@ -160,10 +160,13 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
           await move("verified", found.remoteId, original.bytesSha256);
           recovered++;
         }
-        const uncertain = pending.some(record => record.status !== "prepared");
+        const uncertainCount = pending.filter(record => record.status !== "prepared").length;
+        const remainingUncertain = uncertainCount - recovered;
         setRecoveryMessage(recovered > 0
-          ? `Verified ${recovered} prior Drive export(s). Any remaining uncertain operations stay blocked.`
-          : uncertain
+          ? remainingUncertain > 0
+            ? `Verified ${recovered} prior Drive export(s). ${remainingUncertain} uncertain operation(s) remain blocked.`
+            : `Verified all ${recovered} prior uncertain Drive export(s). Any unused prepared reservations can be cancelled below.`
+          : uncertainCount > 0
             ? "No prior upload could be verified. Uncertain operations remain blocked; check Google Drive before further action."
             : "Only unused, pre-upload reservations were found. Cancel them below to review a fresh export; no remote upload was started for these reservations.");
       });
