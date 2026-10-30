@@ -2,7 +2,7 @@
 
 Status: **CAPTURED AND INDEPENDENTLY REVIEWED (media READY) / NOT APPROVED FOR PUBLICATION**. Owner request: 2026-10-29; capture 2026-10-30. Tracking: #354 (site assets), #295 (recording), #339 (name/launch), #315 (Google Drive export).
 
-This is an editorial and production manifest, **not** a claim that the new media exists. Only media recorded from the running, appropriately qualified Sojourner PWA may replace historical Job Ranger assets. The prior WebM and screenshots remain historical until independently reviewed replacements are approved.
+This is the evidence-backed manifest for captured, reviewed Sojourner PWA media. The image and video binaries are preserved outside public Git and are **not yet approved for publication**. The prior Job Ranger WebM and screenshots remain historical assets until the owner authorizes replacement and approves the website storage destination.
 
 ## Product and source-of-truth
 
