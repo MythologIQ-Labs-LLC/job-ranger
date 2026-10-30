@@ -92,7 +92,7 @@ export async function caption(page: Page, text: string | null): Promise<void> {
       bar = document.createElement("div");
       bar.id = "demo-caption";
       Object.assign(bar.style, {
-        position: "fixed", left: "0px", bottom: "0px", width: "288px", minHeight: "186px", boxSizing: "border-box",
+        position: "fixed", left: "0px", bottom: "0px", width: "288px", minHeight: "215px", boxSizing: "border-box",
         display: "flex", alignItems: "center",
         zIndex: "2147483646", pointerEvents: "none", padding: "22px 24px", borderRadius: "0",
         background: "#f4fbf6", color: "#10261c",

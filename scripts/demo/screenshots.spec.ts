@@ -60,6 +60,14 @@ async function assessment(page: Page): Promise<void> {
   await capture(page, "opportunity-assessment.png");
 }
 
+/** Scrolls Applications so the status filters, the tracked job and its linked resume file all show. */
+async function showLinkedResume(page: Page): Promise<void> {
+  await scrollToElement(page, page.getByText("Focus your applications", { exact: true }), 24);
+  const file = page.locator("main").getByText(/^PDF v1 · /).first();
+  await expect(file).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("combobox", { name: `Application status for ${DEMO_JOB_TITLE}` })).toBeInViewport({ ratio: 1 });
+}
+
 async function careerEvidence(page: Page): Promise<void> {
   await go(page, "#/career-evidence/new", { route: "#/career-evidence/new", heading: "Build your career evidence one fact at a time.", content: ["Review and correct confirmed evidence"] });
   const current = page.locator("#current-evidence-heading");
@@ -90,6 +98,8 @@ async function deliberateApplication(page: Page): Promise<void> {
   await expect(status).toHaveValue("applied");
   await page.getByRole("button", { name: /Application details/ }).first().click();
   await expect(page.getByText("Submitted files", { exact: false }).filter({ visible: true }).first()).toBeVisible();
+  await waitForLayoutStable(page);
+  await showLinkedResume(page);
   await capture(page, "deliberate-application.png");
 }
 
