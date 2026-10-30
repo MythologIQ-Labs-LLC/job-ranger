@@ -54,7 +54,7 @@
     "repo:hygiene:test": "node --test tests/repo-hygiene-audit.test.mjs",
     "test:architecture-index": "node tests/architecture-index.test.cjs",
     "build:drive-oauth-helper": "node scripts/build-drive-oauth-helper.mjs",
-    "test:drive-oauth-isolation": "node --experimental-transform-types --no-warnings tests/drive-oauth-helper-response.test.mjs && node --experimental-transform-types --no-warnings tests/drive-isolated-oauth-pwa.test.mjs && node tests/drive-oauth-helper-build.test.mjs",
+    "test:drive-oauth-isolation": "node --experimental-transform-types --no-warnings tests/drive-oauth-helper-response.test.mjs && node --experimental-transform-types --no-warnings tests/drive-isolated-oauth-pwa.test.mjs && node tests/drive-oauth-helper-build.test.mjs && node tests/drive-oauth-helper-runtime.test.mjs",
     "test:drive-artifact-export": "npm run desktop:compile && node --experimental-strip-types tests/artifact-export-approval.test.mjs && node --experimental-strip-types tests/artifact-export-journal.test.mjs && node --experimental-strip-types tests/pwa-drive-web-auth.test.mjs && node --experimental-strip-types tests/pwa-drive-csp.test.mjs && node --experimental-strip-types tests/google-drive-account.test.mjs && node --experimental-strip-types tests/google-drive-transport.test.mjs && npm run test:drive-oauth-isolation"
   },
   "dependencies": {
