@@ -46,7 +46,7 @@ test("helper build contains only isolated files and fail-closed public settings"
   assert.match(conf, /test-id\.apps\.googleusercontent\.com/);
   assert.doesNotMatch(conf, /client_secret|access_token|refresh_token/i);
   assert.match(headers, /frame-ancestors 'none'/);
-  assert.match(headers, /Cross-Origin-Opener-Policy: same-origin-allow-popups/);
+  assert.match(headers, /Cross-Origin-Opener-Policy: unsafe-none/);
   assert.match(headers, /Referrer-Policy: no-referrer/);
   assert.match(headers, /Cache-Control: no-store/);
   assert.doesNotMatch(html + js + conf, /indexedDB|localStorage|opfs|serviceWorker/);
