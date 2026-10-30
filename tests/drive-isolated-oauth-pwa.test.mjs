@@ -110,3 +110,73 @@ test("isolated popup fails closed when same-origin, invalid origin or blocked", 
     else globalThis.window = original;
   }
 });
+
+test("timers fire: response timeout, closed popup and token expiry each discard the attempt or token", async () => {
+  const original = globalThis.window;
+  let clock = 1000;
+  let timers = [];
+  let nextId = 1;
+  const listeners = new Set();
+  let opened = null;
+  const popup = { closed: false, close() { this.closed = true; } };
+  globalThis.window = {
+    location: { origin: "https://career.example.test" },
+    open(url) { opened = url; popup.closed = false; return popup; },
+    addEventListener(event, handler) { if (event === "message") listeners.add(handler); },
+    removeEventListener(event, handler) { if (event === "message") listeners.delete(handler); },
+    setTimeout(fn, delay) { const id = nextId++; timers.push({ id, fn, at: clock + delay, repeat: 0 }); return id; },
+    clearTimeout(id) { timers = timers.filter(t => t.id !== id); },
+    setInterval(fn, delay) { const id = nextId++; timers.push({ id, fn, at: clock + delay, repeat: delay }); return id; },
+    clearInterval(id) { timers = timers.filter(t => t.id !== id); },
+  };
+  const advance = (ms) => {
+    const end = clock + ms;
+    for (;;) {
+      const due = timers.filter(t => t.at <= end).sort((a, b) => a.at - b.at)[0];
+      if (!due) break;
+      clock = due.at;
+      if (due.repeat) due.at += due.repeat; else timers = timers.filter(t => t !== due);
+      due.fn();
+    }
+    clock = end;
+  };
+  const grant = (expiresIn) => {
+    const nonce = new URL(opened).hash.slice("#nonce=".length);
+    [...listeners].forEach(fn => fn({ origin: "https://auth.example.test", source: popup,
+      data: { version: 1, type: "sojourner.drive-oauth.response", nonce, scope: DRIVE_HELPER_SCOPE, accessToken: "short-lived", expiresIn } }));
+  };
+  try {
+    const auth = new IsolatedDriveAuthorization("https://auth.example.test", () => {}, () => clock);
+    // 1. No response from the helper: the attempt times out and stops listening.
+    auth.authorize();
+    advance(10 * 60_000);
+    assert.equal(auth.snapshot().phase, "action_needed");
+    assert.match(auth.snapshot().message, /timed out|closed/);
+    assert.equal(listeners.size, 0);
+    // 2. The user closes the helper window: noticed by polling, attempt discarded.
+    auth.authorize();
+    popup.closed = true;
+    advance(600);
+    assert.equal(auth.snapshot().phase, "action_needed");
+    assert.match(auth.snapshot().message, /closed before completion/);
+    assert.equal(listeners.size, 0);
+    // 3. A granted token is discarded when it expires, without anyone calling snapshot().
+    auth.authorize();
+    grant(120);
+    assert.equal(auth.snapshot().phase, "authorized_unverified");
+    let published = null;
+    const watched = new IsolatedDriveAuthorization("https://auth.example.test", view => { published = view; }, () => clock);
+    watched.authorize();
+    grant(120);
+    assert.equal(published.phase, "authorized_unverified");
+    advance(121_000);
+    assert.equal(published.phase, "action_needed", "expiry is published by the timer itself");
+    await assert.rejects(watched.withTokenForUserAction(async token => token), /Authorize Google Drive/);
+    assert.equal(timers.length, 0 + timers.filter(t => t.repeat).length, "no pending expiry timer remains");
+    auth.dispose();
+    watched.dispose();
+  } finally {
+    if (original === undefined) delete globalThis.window;
+    else globalThis.window = original;
+  }
+});

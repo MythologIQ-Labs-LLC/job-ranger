@@ -31,6 +31,8 @@ export class IsolatedDriveAuthorization {
   private listener: ((event: MessageEvent) => void) | null = null;
   private timeout: number | null = null;
   private closedCheck: number | null = null;
+  /** Discards the token the moment it expires, not only when the next status check runs. */
+  private expiryTimer: number | null = null;
   private view: DriveAuthView = {
     phase: "not_connected", message: "Google Drive is not connected.", expiresAt: null,
   };
@@ -68,8 +70,14 @@ export class IsolatedDriveAuthorization {
     this.closedCheck = null;
   }
 
+  private clearExpiry(): void {
+    if (this.expiryTimer !== null) window.clearTimeout(this.expiryTimer);
+    this.expiryTimer = null;
+  }
+
   private reset(message: string): void {
     this.clearAttempt();
+    this.clearExpiry();
     this.accessToken = null;
     this.expiry = 0;
     this.publish({ phase: "action_needed", message, expiresAt: null });
@@ -84,6 +92,7 @@ export class IsolatedDriveAuthorization {
       return;
     }
     this.clearAttempt();
+    this.clearExpiry();
     this.accessToken = null;
     this.expiry = 0;
     const id = nonce();
@@ -117,6 +126,10 @@ export class IsolatedDriveAuthorization {
         message: "Google Drive access authorized. No document was uploaded.",
         expiresAt: this.expiry,
       });
+      this.expiryTimer = window.setTimeout(() => {
+        this.expiryTimer = null;
+        if (this.view.phase === "authorized_unverified") this.reset("Google authorization expired. Authorize again to continue.");
+      }, Math.max(0, this.expiry - this.now()));
     };
     window.addEventListener("message", this.listener);
     this.timeout = window.setTimeout(() => {
@@ -140,6 +153,7 @@ export class IsolatedDriveAuthorization {
 
   dispose(): void {
     this.clearAttempt();
+    this.clearExpiry();
     this.accessToken = null;
     this.expiry = 0;
     this.disposed = true;
