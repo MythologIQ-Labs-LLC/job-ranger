@@ -160,9 +160,12 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
           await move("verified", found.remoteId, original.bytesSha256);
           recovered++;
         }
+        const uncertain = pending.some(record => record.status !== "prepared");
         setRecoveryMessage(recovered > 0
-          ? `Verified ${recovered} prior Drive export(s). Remaining ambiguous operations stay blocked.`
-          : "No prior upload could be verified. The duplicate-upload protection remains active. Check the Google account and Drive before further action.");
+          ? `Verified ${recovered} prior Drive export(s). Any remaining uncertain operations stay blocked.`
+          : uncertain
+            ? "No prior upload could be verified. Uncertain operations remain blocked; check Google Drive before further action."
+            : "Only unused, pre-upload reservations were found. Cancel them below to review a fresh export; no remote upload was started for these reservations.");
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not safely reconcile the previous Drive export.");
