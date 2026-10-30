@@ -26,40 +26,43 @@ export function isAllowedAcquisitionOrigin(url: string): boolean {
   }
 }
 
-export function buildContentSecurityPolicy(): string {
+export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; }
+
+export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): string {
+  const google = options.googleOAuthEnabled === true;
   return [
     "default-src 'none'",
     // 'wasm-unsafe-eval' permits compiling the bundled SQLite WebAssembly
     // module only; JavaScript eval stays forbidden.
-    "script-src 'self' 'wasm-unsafe-eval'",
+    google ? "script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client" : "script-src 'self' 'wasm-unsafe-eval'",
     "worker-src 'self'",
-    "style-src 'self'",
+    google ? "style-src 'self' https://accounts.google.com/gsi/style" : "style-src 'self'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}`,
+    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/ https://www.googleapis.com https://oauth2.googleapis.com" : ""}`,
     "manifest-src 'self'",
     "media-src 'none'",
     "object-src 'none'",
-    "frame-src 'none'",
+    google ? "frame-src https://accounts.google.com/gsi/" : "frame-src 'none'",
     "child-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
     "require-trusted-types-for 'script'",
-    "trusted-types job-ranger-script-url",
+    google ? "trusted-types job-ranger-script-url job-ranger-google-gis" : "trusted-types job-ranger-script-url",
   ].join("; ");
 }
 
 /** Headers for every response served from the production origin. */
-export function buildSecurityHeaders(): Record<string, string> {
+export function buildSecurityHeaders(options: PwaSecurityOptions = {}): Record<string, string> {
   return {
-    "Content-Security-Policy": buildContentSecurityPolicy(),
+    "Content-Security-Policy": buildContentSecurityPolicy(options),
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": options.googleOAuthEnabled ? "same-origin-allow-popups" : "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Permissions-Policy":
       "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()",

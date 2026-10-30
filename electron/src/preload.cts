@@ -180,6 +180,7 @@ const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & 
     applyTailoring: (request) =>
       ipcRenderer.invoke("resume:apply-tailoring", request),
     exportPdf: (request) => ipcRenderer.invoke("resume:export-pdf", request),
+    readVerifiedArtifactForExport: (artifactId) => ipcRenderer.invoke("resume:read-verified-artifact-for-export", artifactId),
     compareVersions: (fromArtifactId, toArtifactId) =>
       ipcRenderer.invoke("resume:compare-versions", fromArtifactId, toArtifactId),
   },

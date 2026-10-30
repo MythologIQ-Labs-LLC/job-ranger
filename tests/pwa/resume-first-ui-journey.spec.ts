@@ -198,6 +198,34 @@ test("resume-first user can pursue a fixture job without importing unapproved fa
   await page.getByRole("button", { name: "Export verified PDF" }).click();
   await expect(page.getByText(/passed the gates and was linked to this application/)).toBeVisible();
   await expect(page.getByText("PDF v1", { exact: true })).toBeVisible();
+  // #314: The new Drive export feature reads ONLY a previously verified managed PDF.
+  // This uses the real browser worker + shared ResumeService, not a mocked file or
+  // test-only path read. No Google request is made by this read-only qualification.
+  const preparedForDrive = await page.evaluate(async () => {
+    const api = window.electronAPI;
+    const [projection] = await api.resume.list();
+    const detail = await api.resume.get(projection.id);
+    const artifact = detail.artifacts.find((item) => item.format === "pdf");
+    if (!artifact) throw Error("No saved verified PDF");
+    const content = await api.resume.readVerifiedArtifactForExport(artifact.id);
+    const observed = Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", content.bytes)),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
+    return {
+      idMatch: content.artifactId === artifact.id,
+      revisionMatch: content.revision === String(artifact.version),
+      contentMatchesRecord: observed === artifact.contentHash && content.contentHash === observed,
+      fileName: content.fileName, mimeType: content.mimeType,
+      pdfSignature: new TextDecoder().decode(content.bytes.slice(0, 5)),
+    };
+  });
+  expect(preparedForDrive).toMatchObject({
+    idMatch: true, revisionMatch: true, contentMatchesRecord: true,
+    mimeType: "application/pdf", pdfSignature: "%PDF-",
+  });
+  expect(preparedForDrive.fileName).toMatch(/\.pdf$/i);
+
 
   // Read-only canonical observations, not a parallel mutation path.
   const persisted = await page.evaluate(async () => {
