@@ -1,0 +1,85 @@
+WEBVTT
+Kind: captions
+Language: en
+
+NOTE
+Sojourner: Employment Toolkit walkthrough, 81.88 s, no audio track and no narration.
+These captions describe what is on screen. Text in quotation marks is shown on screen.
+Cue times were measured from the final video's visible page changes
+(source commit d31e95e38d0de614f8a0a03af5988616a97214f8).
+All people, employers, listings and records shown are fictional demo data.
+
+1
+00:00:00.000 --> 00:00:04.000
+[Opening title added for the recording]
+"Find the opportunities actually worth pursuing."
+"Sojourner · local-first Career Ops"
+
+2
+00:00:04.000 --> 00:00:14.400
+[Sojourner, Target Tracks] The fictional user opens their target track,
+"Practice operations", kept separate from their paused current track.
+On-screen caption: "Start with where you want to go."
+
+3
+00:00:14.400 --> 00:00:18.000
+[Find Jobs] One fictional listing appears:
+Practice Operations Coordinator, Harbor Health, Baltimore, MD.
+
+4
+00:00:18.000 --> 00:00:26.500
+[Opportunity assessment] Results are kept separate:
+"Eligibility · Unclear", "Evidence · Partial", "Career · Aligned", "Preferences · Mixed".
+A potential blocker: required Epic EHR experience has no confirmed support.
+On-screen caption: "Separate evidence, alignment, blockers, preferences, and unknowns."
+
+5
+00:00:26.500 --> 00:00:35.300
+[Evidence coverage] 3 direct, 1 transferable, 0 to confirm, 2 gaps,
+followed by what Sojourner still does not know about the listing.
+
+6
+00:00:35.300 --> 00:00:39.100
+The assessment is closed. Back on Find Jobs, the My Career menu opens
+and Career Evidence is chosen.
+
+7
+00:00:39.100 --> 00:00:48.600
+[Career Evidence] Scrolls to "Review and correct confirmed evidence":
+a CPR/BLS credential, two past roles and one achievement.
+On-screen caption: "Keep every claim grounded in work you can support."
+
+8
+00:00:48.600 --> 00:00:56.800
+[Find Jobs] The assessment is reopened and "Prepare resume" is chosen for this listing.
+On-screen caption: "Prepare and track the opportunities you deliberately choose."
+
+9
+00:00:56.800 --> 00:01:01.300
+[Resume] The resume builder targets the tracked job.
+A fictional email address, morgan.rivera@example.org, is typed,
+then "Create truthful draft" is selected.
+
+10
+00:01:01.300 --> 00:01:06.500
+The draft is built only from confirmed Career Evidence
+and shows "Truth Gate passed". "Export verified PDF" is selected.
+
+11
+00:01:06.500 --> 00:01:10.300
+The exported version, "PDF v1", is listed as passed
+and linked to the tracked application.
+
+12
+00:01:10.300 --> 00:01:13.000
+[Applications] The tracked application's status is changed from Interested to Applied.
+This records a status on this device; nothing is sent to the employer.
+
+13
+00:01:13.000 --> 00:01:16.750
+Application details show one linked resume file under "Submitted files":
+"PDF v1 · submitted", recorded on this device.
+
+14
+00:01:16.750 --> 00:01:21.880
+On-screen caption: "Local-first Career Ops. Quality over quantity."
