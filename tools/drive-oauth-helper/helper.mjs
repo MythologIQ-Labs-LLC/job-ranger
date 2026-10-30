@@ -5,12 +5,12 @@
  */
 import { APP_ORIGIN, GOOGLE_WEB_CLIENT_ID } from "./config.mjs";
 
+const GOOGLE_SCRIPT = "https://accounts.google.com/gsi/client";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const TYPE = "sojourner.drive-oauth.response";
 const NONCE = /^[A-Za-z0-9_-]{32,128}$/;
 const grant = document.getElementById("grant");
 const status = document.getElementById("status");
-const gisScript = document.getElementById("gis");
 let completed = false;
 
 function report(message) {
@@ -34,6 +34,10 @@ if (!isExactHttpsOrigin(APP_ORIGIN) ||
     !nonce || !NONCE.test(nonce) || fragment.size !== 1 || !window.opener) {
   report("Authorization is not configured for this browser window. Close it and try again.");
 } else {
+  // IMPORTANT: The nonce is no longer in location.hash before any third-party
+  // script can execute. GIS runs only on this helper origin, never in the PWA.
+  const gisScript = document.createElement("script");
+  gisScript.async = true;
   const enable = () => {
     if (window.google?.accounts?.oauth2?.initTokenClient) {
       grant.disabled = false;
@@ -46,7 +50,27 @@ if (!isExactHttpsOrigin(APP_ORIGIN) ||
   gisScript.addEventListener("error", () => {
     report("Google authorization is unavailable. No document was uploaded.");
   }, { once: true });
-  if (window.google?.accounts?.oauth2?.initTokenClient) enable();
+  if (window.google?.accounts?.oauth2?.initTokenClient) {
+    enable();
+  } else {
+    try {
+      // require-trusted-types-for 'script' forbids assigning a raw URL.
+      // This policy can create only Google's documented GIS script URL.
+      const tt = window.trustedTypes;
+      const trustedUrl = tt
+        ? tt.createPolicy("sojourner-google-gis", {
+            createScriptURL(url) {
+              if (url !== GOOGLE_SCRIPT) throw new TypeError("Unapproved GIS script URL");
+              return url;
+            },
+          }).createScriptURL(GOOGLE_SCRIPT)
+        : GOOGLE_SCRIPT;
+      gisScript.src = trustedUrl;
+      document.head.appendChild(gisScript);
+    } catch {
+      report("Google authorization script could not be loaded securely.");
+    }
+  }
 
   grant.addEventListener("click", () => {
     if (completed || !window.google?.accounts?.oauth2?.initTokenClient) return;
