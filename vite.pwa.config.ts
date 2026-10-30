@@ -60,7 +60,19 @@ if (suppliedGoogleId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(
   throw new Error("Invalid Google Web OAuth client ID format");
 }
 const googleWebClientId = flavor === "demo" ? "" : suppliedGoogleId;
-const driveSecurity = { googleOAuthEnabled: googleWebClientId.length > 0 };
+const rawHelperOrigin = (process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN ?? "").trim();
+if (rawHelperOrigin) {
+  const url = new URL(rawHelperOrigin);
+  if (url.protocol !== "https:" || url.origin !== rawHelperOrigin ||
+      url.pathname !== "/" || url.search || url.hash || url.username || url.password) {
+    throw new Error("Google OAuth helper must be one exact HTTPS origin without a path.");
+  }
+}
+const googleOAuthHelperOrigin = flavor === "demo" ? "" : rawHelperOrigin;
+const driveSecurity = {
+  googleOAuthEnabled: googleWebClientId.length > 0 || googleOAuthHelperOrigin.length > 0,
+  isolatedGoogleOAuthOrigin: googleOAuthHelperOrigin || undefined,
+};
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
@@ -273,6 +285,7 @@ export default defineConfig({
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
     __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
     __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: JSON.stringify(googleWebClientId),
+    __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__: JSON.stringify(googleOAuthHelperOrigin),
   },
   worker: {
     format: "es",
