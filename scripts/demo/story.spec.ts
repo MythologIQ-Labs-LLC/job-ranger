@@ -183,7 +183,7 @@ async function organizedApplication(page: Page, mark: Mark): Promise<void> {
   await status.selectOption("applied");
   await expect(status).toHaveValue("applied");
   await glideClick(page, page.getByRole("button", { name: /Application details/ }).first());
-  await expect(page.getByText("Submitted files", { exact: false }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText("Resume versions", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await waitForLayoutStable(page);
   await shot(page, "03-deliberate-application.png");
   await hold(page, 2000);

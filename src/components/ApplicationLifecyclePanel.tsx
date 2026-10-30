@@ -26,6 +26,14 @@ interface ApplicationLifecyclePanelProps {
   applicationId: string;
 }
 
+// How the user described each exported version; Sojourner itself never sends files to employers.
+const RESUME_PURPOSE_LABELS: Record<string, string> = {
+  submitted: "Version you sent",
+  "recruiter-copy": "Recruiter copy",
+  "interview-copy": "Interview copy",
+  other: "Other",
+};
+
 const emptyContact: ApplicationContactInput = {
   name: "",
   role: null,
@@ -108,7 +116,7 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
         <span>
           <span className="font-semibold text-[var(--color-text-primary)]">Application details</span>
           <span className="ml-2 text-xs text-[var(--color-text-muted)]">
-            {open ? "contacts, events, reminders, submitted files" : "people, follow-ups, submitted files"}
+            {open ? "contacts, events, reminders, resume versions" : "people, follow-ups, resume versions"}
           </span>
         </span>
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -130,10 +138,10 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 font-semibold">
-                      <FileText className="h-4 w-4" /> Submitted files
+                      <FileText className="h-4 w-4" /> Resume versions
                     </div>
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      Exact resume artifacts Sojourner linked to this application.
+                      The exact resume files you exported for this job. Sojourner keeps them here and never sends them to an employer.
                     </p>
                   </div>
                   <span className="soft-badge">{lifecycle.lifecycle.artifacts.length}</span>
@@ -142,7 +150,7 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                 <div className="mt-3 space-y-2">
                   {lifecycle.lifecycle.artifacts.length === 0 ? (
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      No submitted resume is recorded yet. Export a targeted resume for this tracked job to preserve the exact version here.
+                      No resume version is linked yet. Export a resume for this tracked job to keep the exact version here.
                     </p>
                   ) : (
                     lifecycle.lifecycle.artifacts.map((artifact) => (
@@ -152,7 +160,7 @@ export function ApplicationLifecyclePanel({ applicationId }: ApplicationLifecycl
                       >
                         <div>
                           <div className="font-semibold text-sm">
-                            {artifact.format.toUpperCase()} v{artifact.version} · {artifact.purpose}
+                            {artifact.format.toUpperCase()} v{artifact.version} · {RESUME_PURPOSE_LABELS[artifact.purpose] ?? artifact.purpose}
                           </div>
                           <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                             Recorded {format(new Date(artifact.recordedAt), "MMM d, yyyy h:mm a")}

@@ -277,7 +277,7 @@ export function Resume() {
               <input className="input-shell mt-2" value={contact.links.join(", ")} onChange={(e) => setContact({ ...contact, links: e.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="Portfolio, LinkedIn, GitHub, or other relevant links" />
             </label>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
               <label><span className="metric-label">Format</span><select className="select-shell mt-2" value={context} onChange={(e) => setContext(e.target.value as ResumeCreateInput["context"])}><option value="private-sector">Private sector</option><option value="hybrid">Hybrid / career change</option><option value="federal">Federal</option><option value="academic">Academic CV</option></select></label>
               <label><span className="metric-label">Template</span><select className="select-shell mt-2" value={templateId} onChange={(e) => setTemplateId(e.target.value as ResumeTemplateId)}><option value="ats-standard-v1">ATS-safe standard</option><option value="ats-compact-v1">ATS-safe compact</option></select></label>
               <label><span className="metric-label">Page size</span><select className="select-shell mt-2" value={pageFormat} onChange={(e) => setPageFormat(e.target.value as ResumeCreateInput["pageFormat"])}><option value="letter">Letter</option><option value="a4">A4</option></select></label>
