@@ -1,0 +1,208 @@
+{
+  "product": "Sojourner: Employment Toolkit",
+  "package": "sojourner-2026-10-30-d31e95e",
+  "status": "CAPTURED AND REVIEWED, NOT APPROVED FOR PUBLICATION (owner approval pending)",
+  "sourceCommit": "d31e95e38d0de614f8a0a03af5988616a97214f8",
+  "appSourceEqualsMain": "bc3a473 (origin/main at capture; no diff under src, public, index.html, vite configs, electron)",
+  "fixture": {
+    "file": "scripts/demo/fixture.ts",
+    "gitBlob": "b6d24eaad59e2c4ccaa898deb50769ee489bf248",
+    "sha256": "8bbe758c22a4c340fe01d79896ce2e0fe569e49ecf5206152f5e9fd774362f91",
+    "classification": "fictional seeded data (Morgan Rivera, Harbor Health)"
+  },
+  "environment": {
+    "os": "Windows 11 Pro 10.0.26300",
+    "node": "24.19.0",
+    "playwright": "1.64.0",
+    "browser": "Chromium 156.0.8078.4 (Playwright chromium v1248, headless)",
+    "ffmpeg": "9.0.1 (Gyan essentials build)"
+  },
+  "viewport": "1600x900",
+  "theme": "canopy",
+  "timeZone": "America/New_York (-04:00)",
+  "rights": "First-party capture of MythologIQ Labs software with fictional data; no third-party audio or imagery. Owned by MythologIQ Labs LLC.",
+  "commands": [
+    "npm ci",
+    "npm run typecheck",
+    "npm run build:pwa",
+    "npm run build:pwa:demo",
+    "node scripts/verify-studio-handoff.mjs --site dist-pwa --flavor standard",
+    "node scripts/verify-studio-handoff.mjs --site dist-pwa-demo --flavor demo",
+    "npm run demo:record",
+    "npm run demo:screenshots",
+    "ffmpeg (VP9/H.264 encodes, poster frame)"
+  ],
+  "recordingChecks": {
+    "durationSeconds": 81.88,
+    "frames": 2047,
+    "frameRate": "25/1",
+    "sampledFrames": 108,
+    "nearBlankFrames": 0,
+    "consoleOrPageErrors": 0
+  },
+  "overlaysInVideo": [
+    "Opening title card 0:00-0:04 (recording script)",
+    "Short captions in the lower-left sidebar area, top edge on a nav-row boundary (recording script)",
+    "Visible cursor ring (recording script)"
+  ],
+  "notShown": [
+    "Google Drive export (PR #315, not accepted)",
+    "Application submission to employers",
+    "Live remote job feeds or background monitoring",
+    "Hiring outcomes"
+  ],
+  "files": [
+    {
+      "path": "video/sojourner-walkthrough.webm",
+      "kind": "video",
+      "sha256": "0b32196b89db0c97440e00daf97d774fa8b37864b217c6d54614b39cad3489f1",
+      "bytes": 3894659,
+      "width": 1600,
+      "height": 900,
+      "codec": "vp9",
+      "profile": "Profile 0",
+      "frameRate": "25/1",
+      "durationSeconds": 81.88,
+      "captured": "2026-10-30T00:06:49-04:00",
+      "provenance": "VP9 re-encode (CRF 34) of the raw Playwright recording; identical frames and timing (2047 frames, SSIM 0.996 vs raw).",
+      "altText": "Silent walkthrough of the Sojourner web app with fictional data; captions and transcript provided."
+    },
+    {
+      "path": "video/sojourner-walkthrough.mp4",
+      "kind": "video",
+      "sha256": "060615bef63d5baf5b6d49a5c06df0c4d6993acf369fa9d18600eb6aff6a8852",
+      "bytes": 5747491,
+      "width": 1600,
+      "height": 900,
+      "codec": "h264",
+      "profile": "High",
+      "frameRate": "25/1",
+      "durationSeconds": 81.88,
+      "captured": "2026-10-30T00:06:49-04:00",
+      "provenance": "H.264 High (CRF 21, faststart) encode of the raw recording; identical frames and timing (2047 frames, SSIM 0.997 vs raw).",
+      "altText": "Silent walkthrough of the Sojourner web app with fictional data; captions and transcript provided."
+    },
+    {
+      "path": "video/sojourner-walkthrough-poster.png",
+      "kind": "poster",
+      "sha256": "bbe9429689b84da8fe5f4867c522978b096d0dce38ffca74eb62b17ac5711766",
+      "bytes": 445640,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:06:49-04:00",
+      "provenance": "Frame at 0:24.00 of sojourner-walkthrough.webm (opportunity assessment drawer; includes the recording caption and cursor ring).",
+      "altText": "Sojourner opportunity assessment showing eligibility unclear, evidence partial, career aligned and preferences mixed for a fictional Practice Operations Coordinator listing."
+    },
+    {
+      "path": "video/sojourner-walkthrough.vtt",
+      "kind": "captions",
+      "sha256": "4cb059a882af81d262400a5473c5826c8fdcb23c6df0048539e25b4e75059d79",
+      "bytes": 2944,
+      "captured": "2026-10-30",
+      "provenance": "WebVTT, 14 cues, 0:00-1:21.88; cue starts measured from visible page changes in the final video; describes on-screen action (no narration)."
+    },
+    {
+      "path": "video/sojourner-walkthrough-transcript.md",
+      "kind": "transcript",
+      "sha256": "198d432d4e190ecd6a5a999f7d870b2107104e3e1544bab8a47627de859bbc47",
+      "bytes": 4546,
+      "captured": "2026-10-30",
+      "provenance": "Descriptive transcript and short text alternative matched to the final video."
+    },
+    {
+      "path": "screenshots/career-direction.png",
+      "kind": "screenshot",
+      "sha256": "b0f8e1908f5654920a27cbf7d8d7ee06d03683bc1d68a631318b0136d340edf7",
+      "bytes": 429843,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:07:38-04:00",
+      "provenance": "npm run demo:screenshots",
+      "altText": "Sojourner Target Tracks with the Practice operations target track open beside a paused current track."
+    },
+    {
+      "path": "screenshots/opportunity-assessment.png",
+      "kind": "screenshot",
+      "sha256": "a33524207f158fc55721f4eadc5a5c73c958f1e2f717ee2d4a40892a7ce1c485",
+      "bytes": 195233,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:07:40-04:00",
+      "provenance": "npm run demo:screenshots",
+      "altText": "Sojourner opportunity assessment drawer: eligibility unclear, evidence partial, career aligned, preferences mixed, with an Epic EHR blocker and listed unknowns."
+    },
+    {
+      "path": "screenshots/career-evidence.png",
+      "kind": "screenshot",
+      "sha256": "13df14a165485be2c7725b998efd5c61bcaa9527974661c135f63c23b21dcb93",
+      "bytes": 374824,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:07:42-04:00",
+      "provenance": "npm run demo:screenshots (spec added in 2d1d90c)",
+      "altText": "Sojourner Career Evidence: review and correct confirmed evidence, listing a CPR/BLS credential, two roles and one achievement."
+    },
+    {
+      "path": "screenshots/resume-truth-gate.png",
+      "kind": "screenshot",
+      "sha256": "f4bbc557e1fe1ec552976da83869ebe57ce0db0adbd4b3f420c37ae74001d62e",
+      "bytes": 345879,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:07:46-04:00",
+      "provenance": "npm run demo:screenshots (spec added in 2d1d90c)",
+      "altText": "Sojourner resume builder with a draft created from confirmed Career Evidence and a Truth Gate passed badge."
+    },
+    {
+      "path": "screenshots/deliberate-application.png",
+      "kind": "screenshot",
+      "sha256": "18f8919527a7edca0b4b0cd851dc28a10dde445d273a5e81e48a8a4378886463",
+      "bytes": 297138,
+      "width": 1600,
+      "height": 900,
+      "codec": "png",
+      "captured": "2026-10-30T00:07:50-04:00",
+      "provenance": "npm run demo:screenshots (framing fixed in d31e95e)",
+      "altText": "Sojourner Applications tracking a fictional Practice Operations Coordinator job: status Applied recorded by the user, with one linked resume file, PDF v1, under Submitted files."
+    },
+    {
+      "path": "brand/sojourner-icon.png",
+      "kind": "icon",
+      "sha256": "3c557f2dbe8273d97ce05e9aacf49ec51df68bdbd66d466feb1a11d664a28e4c",
+      "bytes": 282170,
+      "width": 550,
+      "height": 550,
+      "codec": "png",
+      "captured": "repository file public/ICON.png (committed 2026-10-28)",
+      "provenance": "Existing approved app icon, copied unchanged; RGBA with transparent background.",
+      "altText": "Sojourner icon"
+    },
+    {
+      "path": "source/raw-playwright-recording.webm",
+      "kind": "master",
+      "sha256": "dcec7f019c2a1e49079cdefd3b2388903fbe91c8698bc82c8b6b50a0dfaef397",
+      "bytes": 17883225,
+      "width": 1600,
+      "height": 900,
+      "codec": "vp9",
+      "profile": "Profile 0",
+      "frameRate": "25/1",
+      "durationSeconds": 81.88,
+      "captured": "2026-10-30T00:06:49-04:00",
+      "provenance": "Unedited Playwright recordVideo output of npm run demo:record (VP9)."
+    },
+    {
+      "path": "source/demo-report.json",
+      "kind": "report",
+      "sha256": "11232dc6a62328723d0af47a380453bd6df091c514fe874577eb4e9240b9e259",
+      "bytes": 547,
+      "captured": "2026-10-30T00:06:49-04:00",
+      "provenance": "Recorder beat timings and frame-review metadata written by npm run demo:record."
+    }
+  ]
+}
