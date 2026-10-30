@@ -228,7 +228,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
         }
         await validateApprovedArtifactExport(selected.proposal, approval, freshBytes, Date.now(), hash);
         journal.current ??= new BrowserDriveExportJournal();
-        journalRecord.current = {
+        const reservation: ExportJournalRecord = {
           schemaVersion: 1, operationId, approvalId: approval.approvalId,
           accountId: currentAccount.accountId,
           destinationId: selected.proposal.approvedDestinationId,
@@ -237,7 +237,9 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
           mimeType: selected.proposal.mimeType, status: "prepared",
           remoteId: null, verifiedSha256: null, updatedAt: new Date().toISOString(),
         };
-        await reserveExport(journal.current, journalRecord.current);
+        await reserveExport(journal.current, reservation);
+        // Only advertise a cancellable reservation after durable insertion succeeds.
+        journalRecord.current = reservation;
         const uploading: ExportReceipt = {
           operationId, proposalId: selected.proposal.proposalId, status: "uploading",
           bytesSha256: selected.proposal.bytesSha256, remoteId: null, verifiedSha256: null,
