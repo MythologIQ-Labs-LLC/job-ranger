@@ -26,10 +26,12 @@ export function isAllowedAcquisitionOrigin(url: string): boolean {
   }
 }
 
-export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; }
+export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; isolatedGoogleOAuthOrigin?: string; }
 
 export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): string {
-  const google = options.googleOAuthEnabled === true;
+  const isolated = options.googleOAuthEnabled === true && Boolean(options.isolatedGoogleOAuthOrigin);
+  const google = options.googleOAuthEnabled === true && !isolated;
+  const googleApis = options.googleOAuthEnabled === true;
   return [
     "default-src 'none'",
     // 'wasm-unsafe-eval' permits compiling the bundled SQLite WebAssembly
@@ -39,11 +41,12 @@ export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): st
     google ? "style-src 'self' https://accounts.google.com/gsi/style" : "style-src 'self'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/ https://www.googleapis.com https://oauth2.googleapis.com" : ""}`,
+    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/" : ""}${googleApis ? " https://www.googleapis.com/drive/v3/ https://www.googleapis.com/upload/drive/v3/" : ""}`,
     "manifest-src 'self'",
     "media-src 'none'",
     "object-src 'none'",
     google ? "frame-src https://accounts.google.com/gsi/" : "frame-src 'none'",
+    // window.open() is not governed by CSP; the helper popup needs no child-src entry.
     "child-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
