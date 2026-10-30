@@ -24,7 +24,7 @@ SOJOURNER_DRIVE_GOOGLE_WEB_CLIENT_ID=YOUR_PUBLIC_WEB_CLIENT_ID.apps.googleuserco
 npm run build:drive-oauth-helper
 ```
 
-The output is `build/drive-oauth-helper/`. Deploy this output only to the configured helper origin, not within `dist-pwa/`, not as a subpath of the Career Ops origin, and not to the public marketing/demo site. The generated `_headers` file is meaningful only when the selected host actually honors that format. Independently inspect the **live response headers** (especially CSP, COOP, no-referrer, no-store, frame-ancestors) before any OAuth acceptance.
+The output is `build/drive-oauth-helper/`. Deploy this output only to the configured helper origin, not within `dist-pwa/`, not as a subpath of the Career Ops origin, and not to the public marketing/demo site. The generated `_headers` file is meaningful only when the selected host actually honors that format. Independently inspect the **live response headers** (especially CSP, COOP, no-referrer, no-store, frame-ancestors) before any OAuth acceptance. **COOP compatibility is deliberately asymmetric:** the parent PWA uses `same-origin-allow-popups` and the separate-origin helper must use `unsafe-none` to preserve `window.opener` and the exact popup `WindowProxy`; making both origins `same-origin-allow-popups` severs the cross-origin messaging channel. The helper's `unsafe-none` policy permits an opener relationship and is a reviewed tradeoff, not cross-origin isolation by COOP. The helper must remain its own origin with a restricted CSP and no Career Ops data. Confirm the pair in real browsers; see MDN Cross-Origin-Opener-Policy compatibility tables.
 
 For the main PWA build, set:
 
