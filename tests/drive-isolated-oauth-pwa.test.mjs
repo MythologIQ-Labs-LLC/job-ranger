@@ -16,8 +16,14 @@ test("isolated PWA mode does not load Google's script into the career workspace"
   assert.ok(!directives["script-src"].includes("accounts.google.com"));
   assert.ok(!directives["style-src"].includes("accounts.google.com"));
   assert.equal(directives["frame-src"], "frame-src 'none'");
-  assert.ok(directives["connect-src"].includes("https://www.googleapis.com"));
-  assert.ok(directives["child-src"].includes(helper));
+  // Only the Drive API paths the app calls; no whole-host googleapis.com, no unused token-info origin.
+  assert.ok(directives["connect-src"].includes("https://www.googleapis.com/drive/v3/"));
+  assert.ok(directives["connect-src"].includes("https://www.googleapis.com/upload/drive/v3/"));
+  assert.ok(!/https:\/\/www\.googleapis\.com(\s|;|$)/.test(directives["connect-src"]));
+  assert.ok(!directives["connect-src"].includes("oauth2.googleapis.com"));
+  assert.ok(!directives["connect-src"].includes("accounts.google.com"));
+  assert.equal(directives["child-src"], "child-src 'self'");
+  assert.equal(directives["trusted-types"], "trusted-types job-ranger-script-url");
   assert.equal(buildSecurityHeaders({
     googleOAuthEnabled: true, isolatedGoogleOAuthOrigin: helper,
   })["Cross-Origin-Opener-Policy"], "same-origin-allow-popups");
