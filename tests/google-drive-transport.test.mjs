@@ -112,15 +112,23 @@ test("deny invalid token, oversized upload, unsupported MIME and newline in toke
   }
 });
 
-test("401, 403 and 429 expose actionable categories, without retries or token leakage", async () => {
-  for (const [status, category] of [[401,"action_needed"], [403,"denied"], [429,"quota"]]) {
+test("a definitive 4xx POST is a non-blocking rejection with an actionable category, no retry and no token leakage", async () => {
+  for (const [status, category] of [[400,"invalid"], [401,"action_needed"], [403,"denied"], [404,"invalid"], [429,"quota"]]) {
     const { requests, fetchMock } = driver([new Response("", { status })]);
-    await assert.rejects(uploadApprovedDriveFile(await good(), fetchMock), error => {
-      assert.equal(error.category, category);
-      assert.equal(error.message.includes(secret), false);
-      return true;
-    });
-    assert.equal(requests.length, 1);
+    let durable = 0;
+    const outcome = await uploadApprovedDriveFile(await good(), fetchMock, async () => { durable++; });
+    assert.equal(outcome.status, "rejected", String(status));
+    assert.equal(outcome.category, category);
+    assert.equal(outcome.remoteId, null);
+    assert.match(outcome.reason, /Nothing was created in Drive/);
+    assert.equal(outcome.reason.includes(secret), false);
+    assert.equal(durable, 1, "the attempt was durably recorded before the POST");
+    assert.equal(requests.length, 1, "no retry");
+  }
+  // 408 and 5xx stay ambiguous: Google may have created the file.
+  for (const status of [408, 500, 503]) {
+    const { fetchMock } = driver([new Response("", { status })]);
+    assert.equal((await uploadApprovedDriveFile(await good(), fetchMock)).status, "unknown_remote_outcome", String(status));
   }
 });
 

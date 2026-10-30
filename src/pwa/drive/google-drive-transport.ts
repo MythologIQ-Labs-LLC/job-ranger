@@ -41,7 +41,9 @@ export interface ApprovedDriveFile {
 export type DriveUploadOutcome =
   | { status: "verified"; remoteId: string; name: string; sha256: string; openUrl: string }
   | { status: "verification_failed"; remoteId: string; reason: string }
-  | { status: "unknown_remote_outcome"; remoteId: string | null; reason: string };
+  | { status: "unknown_remote_outcome"; remoteId: string | null; reason: string }
+  /** Google definitively refused the create request (4xx other than 408): no file was created. */
+  | { status: "rejected"; remoteId: null; category: DriveTransportError["category"]; reason: string };
 
 type Fetch = typeof fetch;
 
@@ -61,11 +63,20 @@ function validate(input: ApprovedDriveFile): void {
     throw new DriveTransportError("invalid", "The approved Drive export is invalid or exceeds the 5 MB upload limit.");
   }
 }
-function outcomeForPostStatus(status: number): never {
-  if (status === 401) throw new DriveTransportError("action_needed", "Google Drive authorization expired. Reconnect before a new user-approved export.");
-  if (status === 403) throw new DriveTransportError("denied", "Google Drive rejected this upload. Check Drive permissions or available storage.");
-  if (status === 429) throw new DriveTransportError("quota", "Google Drive is rate-limiting uploads. No automatic retry was attempted.");
-  throw new DriveTransportError("invalid", "Google Drive rejected the upload request. Your local document is unchanged.");
+/**
+ * A definitive 4xx answer to files.create means Google created nothing. It is returned as an
+ * outcome (not thrown) so the caller can record the durable attempt as failed, which does not
+ * block a later, newly approved export of the same document.
+ */
+function rejectedPost(status: number): DriveUploadOutcome {
+  if (status === 401) return { status: "rejected", remoteId: null, category: "action_needed",
+    reason: "Google Drive authorization expired before the upload. Nothing was created in Drive. Reconnect, then approve the export again." };
+  if (status === 403) return { status: "rejected", remoteId: null, category: "denied",
+    reason: "Google Drive refused this upload (check Drive permissions or available storage). Nothing was created in Drive." };
+  if (status === 429) return { status: "rejected", remoteId: null, category: "quota",
+    reason: "Google Drive is rate-limiting uploads. Nothing was created in Drive and no automatic retry was attempted." };
+  return { status: "rejected", remoteId: null, category: "invalid",
+    reason: "Google Drive rejected the upload request. Nothing was created in Drive; your local document is unchanged." };
 }
 function safeOpenUrl(id: string): string {
   if (!ID.test(id)) throw new DriveTransportError("invalid", "Google Drive returned an invalid file identifier.");
@@ -147,7 +158,7 @@ export async function uploadApprovedDriveFile(
       return { status: "unknown_remote_outcome", remoteId: null,
         reason: "Google Drive did not confirm whether it created the file. Check Drive before another export." };
     }
-    outcomeForPostStatus(created.status);
+    return rejectedPost(created.status);
   }
   let file: { id?: unknown };
   try { file = await created.json(); } catch {
