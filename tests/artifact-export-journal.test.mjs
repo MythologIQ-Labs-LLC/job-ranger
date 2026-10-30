@@ -38,6 +38,22 @@ const receipt = (r, status, remoteId = null, observed = null) =>
   }, status, remoteId, observed);
 
 describe("durable artifact export journal contract", () => {
+  it("a POST Google definitively rejected is recorded failed and does not block a new approval (#315 M1)", async () => {
+    const db = store();
+    await reserveExport(db, record);
+    const uploading = await advanceDurableExport(db, record, receipt(record, "uploading"), "2026-10-15T15:00:01.000Z");
+    assert.equal(blocksFreshArtifactExport(uploading, record.accountId, record.artifactId), true, "an in-flight upload blocks");
+    const failed = await advanceDurableExport(db, uploading, receipt(uploading, "failed"), "2026-10-15T15:00:02.000Z");
+    assert.equal(failed.status, "failed");
+    assert.equal(blocksFreshArtifactExport(failed, record.accountId, record.artifactId), false, "a definitive rejection must not block forever");
+    // A new, separately approved export of the same document can be reserved.
+    await reserveExport(db, { ...record, operationId: "op:retry", approvalId: "approval:retry" });
+    // An ambiguous outcome still blocks: Google may have created the file.
+    const ambiguous = await advanceDurableExport(db, { ...record, operationId: "op:retry", approvalId: "approval:retry" },
+      receipt({ ...record, operationId: "op:retry" }, "uploading"), "2026-10-15T15:00:03.000Z");
+    const unknown = await advanceDurableExport(db, ambiguous, receipt(ambiguous, "unknown_remote_outcome"), "2026-10-15T15:00:04.000Z");
+    assert.equal(blocksFreshArtifactExport(unknown, record.accountId, record.artifactId), true);
+  });
   it("rejects forged completed states and malformed identifiers", () => {
     assert.doesNotThrow(() => validateJournalRecord(record));
     assert.throws(() => validateJournalRecord({ ...record, status: "verified" }), /matching remote readback/);

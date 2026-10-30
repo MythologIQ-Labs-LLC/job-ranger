@@ -280,6 +280,14 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
       const receipt = (status: ExportReceipt["status"], remoteId: string | null, sha256: string | null): ExportReceipt =>
         ({ operationId, proposalId: selected.proposal.proposalId, status,
           bytesSha256: selected.proposal.bytesSha256, remoteId, verifiedSha256: sha256 });
+      if (output.status === "rejected") {
+        // Google created nothing: close this attempt as failed so it never blocks a new approval.
+        journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current,
+          receipt("failed", null, null), new Date().toISOString());
+        if (output.category === "action_needed") session.current?.forgetSession();
+        setError(output.reason);
+        return;
+      }
       if (output.status === "unknown_remote_outcome") {
         journalRecord.current = await advanceDurableExport(journal.current, journalRecord.current,
           receipt("unknown_remote_outcome", output.remoteId, null), new Date().toISOString());
