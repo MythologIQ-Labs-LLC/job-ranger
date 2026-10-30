@@ -48,7 +48,7 @@ const csp = [
 const headers = [
   "/*",
   "  Content-Security-Policy: " + csp,
-  "  Cross-Origin-Opener-Policy: same-origin-allow-popups",
+  "  Cross-Origin-Opener-Policy: unsafe-none",
   "  Cross-Origin-Resource-Policy: same-origin",
   "  Referrer-Policy: no-referrer",
   "  X-Content-Type-Options: nosniff",
