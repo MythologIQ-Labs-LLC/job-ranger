@@ -52,6 +52,8 @@ You can enter anywhere in that flow. A resume is evidence about work you have do
 
 ### See it in action
 
+**Updated Sojourner media is in production, not published yet.** The [first-party recording, screenshot and website handoff checklist](./docs/marketing/SOJOURNER_MEDIA_HANDOFF.md) tracks the new captures, provenance and owner review. The linked video below remains a clearly labeled historical Job Ranger recording until a verified replacement is accepted.
+
 These screenshots and the walkthrough video come from the production web build with fictional sample data (Morgan Rivera, Harbor Health). No real person's career data is shown.
 
 **[Watch the earlier Job Ranger walkthrough (WebM, recorded before the Sojourner rename)](./docs/assets/demo/job-ranger-demo.webm)**: choosing a direction, assessing a listing, checking Career Evidence, preparing a truthful resume, and tracking the application.
