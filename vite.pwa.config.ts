@@ -27,6 +27,7 @@ import {
   pwaOutDirName,
 } from "./scripts/pwa-flavor.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
+import { resolveDriveBuildConfig } from "./src/pwa/build/drive-build-config.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 // Build flavor (scripts/pwa-flavor.mjs): "standard" (default) or "demo". The
@@ -53,26 +54,13 @@ const buildId = pwaBuildId({
   override: process.env.JOB_RANGER_BUILD_ID,
 });
 
-// Only a public Web OAuth client ID is embedded; never a token or client secret.
-// The demo flavor cannot access Google, even if a maintainer sets the variable.
-const suppliedGoogleId = (process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID ?? "").trim();
-if (suppliedGoogleId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(suppliedGoogleId)) {
-  throw new Error("Invalid Google Web OAuth client ID format");
-}
-const googleWebClientId = flavor === "demo" ? "" : suppliedGoogleId;
-const rawHelperOrigin = (process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN ?? "").trim();
-if (rawHelperOrigin) {
-  const url = new URL(rawHelperOrigin);
-  if (url.protocol !== "https:" || url.origin !== rawHelperOrigin ||
-      url.pathname !== "/" || url.search || url.hash || url.username || url.password) {
-    throw new Error("Google OAuth helper must be one exact HTTPS origin without a path.");
-  }
-}
-const googleOAuthHelperOrigin = flavor === "demo" ? "" : rawHelperOrigin;
-const driveSecurity = {
-  googleOAuthEnabled: googleWebClientId.length > 0 || googleOAuthHelperOrigin.length > 0,
-  isolatedGoogleOAuthOrigin: googleOAuthHelperOrigin || undefined,
-};
+// Only a public Web OAuth client ID is embedded; never a token or client secret. Drive is enabled only
+// through the isolated OAuth helper origin, and never in the demo flavor (drive-build-config.ts).
+const { googleWebClientId, googleOAuthHelperOrigin, driveSecurity } = resolveDriveBuildConfig({
+  flavor,
+  clientId: process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID,
+  helperOrigin: process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN,
+});
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   return createRuntimeAdapterPlugin(target, {
