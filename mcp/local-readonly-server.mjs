@@ -132,6 +132,13 @@ function transport(adapter, capturedAt) {
   });
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", acceptChunk);
+  // EOF means no more requests can arrive, not that async tool reads are done.
+  // Keep the snapshot and stdout alive until all accepted calls have settled.
+  return new Promise((resolve) => {
+    process.stdin.once("end", () => {
+      void queue.then(resolve, resolve);
+    });
+  });
 }
 async function main() {
   const { dataDir, scopes } = options(process.argv.slice(2));
@@ -139,8 +146,7 @@ async function main() {
     // Zero-data introspection must not open, copy, initialize, or even locate
     // the canonical database. Only the tool manifest is available.
     const adapter = createReadOnlyAdapter({ career: {}, jobs: {}, personalBrand: {} }, []);
-    transport(adapter, null);
-    await new Promise((resolve) => process.stdin.once("end", resolve));
+    await transport(adapter, null);
     return;
   }
   const { JobScoutBackend } = load("backend.cjs");
@@ -173,8 +179,7 @@ async function main() {
     await personalBrand.initialize();
     const adapter = createReadOnlyAdapter({ jobs, career, personalBrand }, scopes);
     // Never log private records or setup details to stdout: stdout is JSON-RPC only.
-    transport(adapter, backup.capturedAt);
-    await new Promise((resolve) => process.stdin.once("end", resolve));
+    await transport(adapter, backup.capturedAt);
   } finally { await cleanup(); }
 }
 main().catch(() => {
