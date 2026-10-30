@@ -3,6 +3,7 @@ import { CloudUpload } from "lucide-react";
 import { getDesktopApi } from "../services/api";
 import { IS_DEMO_FLAVOR } from "../demo/flavor";
 import { loadGoogleDriveSdk } from "../pwa/drive/gis-sdk";
+import { IsolatedDriveAuthorization } from "../pwa/drive/isolated-drive-auth";
 import { DriveWebAuthorization, type DriveAuthView, type GoogleOAuthTokenApi } from "../pwa/drive/google-web-auth";
 import { verifyDriveAccount } from "../pwa/drive/google-drive-account";
 import { uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, type DriveUploadOutcome } from "../pwa/drive/google-drive-transport";
@@ -15,6 +16,9 @@ import type { ExportJournalRecord } from "../shared/artifact-export-journal";
 declare const __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: string | undefined;
 const CLIENT_ID = typeof __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__ === "string"
   ? __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__.trim() : "";
+declare const __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__: string | undefined;
+const HELPER_ORIGIN = typeof __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__ === "string"
+  ? __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__.trim() : "";
 const INIT: DriveAuthView = { phase: "not_connected", message: "Google Drive is not connected in this browser session.", expiresAt: null };
 
 interface PreparedExport {
@@ -37,7 +41,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
   const [result, setResult] = useState<DriveUploadOutcome | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [preparedPending, setPreparedPending] = useState<ExportJournalRecord[]>([]);
-  const session = useRef<DriveWebAuthorization | null>(null);
+  const session = useRef<DriveWebAuthorization | IsolatedDriveAuthorization | null>(null);
   const prepared = useRef<PreparedExport | null>(null);
   const journal = useRef<BrowserDriveExportJournal | null>(null);
   const ledger = useRef(new ExportApprovalLedger());
@@ -52,7 +56,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
   }, []);
 
   // Unconfigured releases and the fictional demo must not advertise or contact Google.
-  if (!CLIENT_ID || IS_DEMO_FLAVOR) return null;
+  if ((!CLIENT_ID && !HELPER_ORIGIN) || IS_DEMO_FLAVOR) return null;
 
   const resetReview = () => {
     prepared.current = null;
@@ -67,10 +71,21 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
     finally { setBusy(false); }
   };
   const authorize = () => {
-    if (!sdk) return;
     resetReview();
-    // Direct click, never await before Google's popup request.
-    session.current ??= new DriveWebAuthorization(CLIENT_ID, setView);
+    // Both variants require a direct user click, never an awaited effect.
+    if (HELPER_ORIGIN) {
+      if (!(session.current instanceof IsolatedDriveAuthorization)) {
+        session.current?.dispose();
+        session.current = new IsolatedDriveAuthorization(HELPER_ORIGIN, setView);
+      }
+      session.current.authorize();
+      return;
+    }
+    if (!sdk) return;
+    if (!(session.current instanceof DriveWebAuthorization)) {
+      session.current?.dispose();
+      session.current = new DriveWebAuthorization(CLIENT_ID, setView);
+    }
     session.current.authorize(sdk);
   };
   const prepare = async () => {
@@ -294,7 +309,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
         Google receives the document only after confirmation. Files are saved to the top level of My Drive.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {!sdk ? (
+        {!sdk && !HELPER_ORIGIN ? (
           <button type="button" className="secondary-button" disabled={busy} onClick={() => void load()}>
             Load Google authorization
           </button>
@@ -314,7 +329,7 @@ export function GoogleDriveResumeExport({ artifactId, version }: { artifactId: s
             Check prior Drive exports
           </button>
         )}
-        {sdk && view.phase !== "not_connected" && (
+        {(sdk || HELPER_ORIGIN) && view.phase !== "not_connected" && (
           <button type="button" className="surface-link-button" disabled={busy} onClick={() => {
             session.current?.forgetSession(); resetReview();
           }}>Forget authorization</button>
