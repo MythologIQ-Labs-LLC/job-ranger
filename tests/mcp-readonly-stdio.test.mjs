@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { transport } from "../mcp/local-readonly-server.mjs";
 import { createRequire } from "node:module";
 import { promises as fs } from "node:fs";
 import os from "node:os";
@@ -134,6 +136,74 @@ try {
   noData.child.stdin.end();
   assert.equal(await new Promise((resolve) => noData.child.once("close", resolve)), 0);
   assert.equal(await fingerprint(), before);
+
+  // Deterministic EOF drain: an accepted slow tool must finish before the
+  // server releases the snapshot. Do not rely on event-loop scheduling.
+  const fakeStdin = new EventEmitter();
+  fakeStdin.setEncoding = () => {};
+  const replies = [];
+  let releaseRead;
+  const stalledRead = new Promise(resolve => { releaseRead = resolve; });
+  const drain = transport({
+    tools: [{ name: "get_capabilities" }],
+    execute: async () => {
+      await stalledRead;
+      return { status: "completed" };
+    },
+  }, null, fakeStdin, { write: line => replies.push(JSON.parse(line)) });
+  fakeStdin.emit("data", JSON.stringify({ jsonrpc: "2.0", id: 1,
+    method: "initialize" }) + "\n" +
+    JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call",
+      params: { name: "get_capabilities", arguments: {} } }) + "\n");
+  fakeStdin.emit("end");
+  let drainedEarly = false;
+  void drain.then(() => { drainedEarly = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(drainedEarly, false,
+    "EOF must not end the server while a tool read is still pending");
+  assert.deepEqual(replies.map(reply => reply.id), [1]);
+  releaseRead();
+  await drain;
+  assert.equal(drainedEarly, true);
+  assert.deepEqual(replies.map(reply => reply.id), [1, 2]);
+  assert.equal(replies[1].result.structuredContent.status, "completed");
+
+  // A client may pipeline small requests and close its input immediately.
+  // EOF must not race accepted async requests against backend/snapshot cleanup.
+  const burstChild = spawn(process.execPath,
+    [path.join(root, "mcp", "local-readonly-server.mjs"), "--scopes=none"], {
+      cwd: root, stdio: ["pipe", "pipe", "pipe"], env: { ...process.env },
+    });
+  let burstOutput = "";
+  let burstErrors = "";
+  burstChild.stdout.on("data", data => { burstOutput += data.toString(); });
+  burstChild.stderr.on("data", data => { burstErrors += data.toString(); });
+  const requests = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } },
+    ...Array.from({ length: 3300 }, (_, i) =>
+      ({ jsonrpc: "2.0", id: i + 2, method: "ping" })),
+    { jsonrpc: "2.0", id: 3302, method: "tools/list", params: {} },
+  ];
+  const batch = requests.map(message => JSON.stringify(message)).join("\n") + "\n";
+  assert.ok(Buffer.byteLength(batch, "utf8") > 128 * 1024);
+  burstChild.stdin.end(batch);
+  const burstExit = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      burstChild.kill();
+      reject(new Error("Pipelined MCP batch did not drain before EOF."));
+    }, 30000);
+    burstChild.once("error", err => { clearTimeout(timer); reject(err); });
+    burstChild.once("close", code => { clearTimeout(timer); resolve(code); });
+  });
+  assert.equal(burstExit, 0, burstErrors);
+  const responses = burstOutput.trim().split("\n").map(JSON.parse);
+  assert.equal(responses.length, requests.length,
+    "all framed requests must finish before stdin EOF releases the server");
+  for (let index = 0; index < responses.length; index++) {
+    assert.equal(responses[index].id, requests[index].id);
+    assert.ok("result" in responses[index], "pipelined request may not be discarded");
+  }
+  assert.deepEqual(responses.at(-1).result.tools.map(tool => tool.name), ["get_capabilities"]);
 
   const noConsent = protocolClient([`--data-dir=${dir}`]);
   const deniedStartup = await new Promise((resolve) => noConsent.child.once("close", resolve));
