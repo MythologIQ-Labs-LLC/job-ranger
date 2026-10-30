@@ -40,12 +40,21 @@ test("helper build contains only isolated files and fail-closed public settings"
   const conf = readFileSync(path.join(output, "config.mjs"), "utf8");
   const headers = readFileSync(path.join(output, "_headers"), "utf8");
   assert.match(html, /Continue with Google/);
+  assert.doesNotMatch(html, /<script[^>]+src=["']https:\/\/accounts\.google\.com/i,
+    "parser-loaded GIS could observe the OAuth nonce before scrub");
+  assert.match(js, /tt\.createPolicy\("sojourner-google-gis"/);
+  assert.match(js, /if \(url !== GOOGLE_SCRIPT\) throw/);
+  assert.ok(js.indexOf("history.replaceState(") >= 0 &&
+    js.indexOf("history.replaceState(") < js.indexOf("document.head.appendChild(gisScript)"),
+    "the nonce must be removed before the GIS script is appended");
   assert.match(js, /window\.opener\.postMessage/);
   assert.match(js, /client\.requestAccessToken\(\)/);
   assert.match(conf, /https:\/\/career\.example\.test/);
   assert.match(conf, /test-id\.apps\.googleusercontent\.com/);
   assert.doesNotMatch(conf, /client_secret|access_token|refresh_token/i);
   assert.match(headers, /frame-ancestors 'none'/);
+  assert.match(headers, /trusted-types sojourner-google-gis/);
+  assert.match(headers, /require-trusted-types-for 'script'/);
   assert.match(headers, /Cross-Origin-Opener-Policy: unsafe-none/);
   assert.match(headers, /Referrer-Policy: no-referrer/);
   assert.match(headers, /Cache-Control: no-store/);
