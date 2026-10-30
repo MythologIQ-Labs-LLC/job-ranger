@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -31,6 +31,11 @@ test("helper build requires two exact HTTPS origins and no client secret", () =>
     cwd: root,
     env: { ...process.env, ...config, SOJOURNER_DRIVE_GOOGLE_WEB_CLIENT_SECRET: "never" },
   }));
+  run();
+  assert.equal(existsSync(output), true, "valid build should create helper output");
+  assert.throws(() => run({ SOJOURNER_DRIVE_HELPER_ORIGIN: "http://insecure.example.test" }));
+  assert.equal(existsSync(output), false,
+    "invalid configuration must clear previously built deployment files");
 });
 
 test("helper build contains only isolated files and fail-closed public settings", () => {
