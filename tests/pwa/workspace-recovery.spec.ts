@@ -35,14 +35,14 @@ const GARBAGE_SHA256 = createHash("sha256").update(GARBAGE).digest("hex");
 /** Leaves the app (stopping its worker), then overwrites the OPFS database with garbage. */
 async function damageDatabase(page: Page, file: string): Promise<void> {
   await page.goto(`${server.url}/manifest.webmanifest`);
-  await page.evaluate(async (p) => {
+  await page.evaluate(async ([p, garbage]) => {
     let dir = await navigator.storage.getDirectory();
     const parts = p.split("/").filter(Boolean);
     for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
     const writable = await (await dir.getFileHandle(parts[parts.length - 1])).createWritable();
-    await writable.write(new TextEncoder().encode(GARBAGE));
+    await writable.write(new TextEncoder().encode(garbage));
     await writable.close();
-  }, file);
+  }, [file, GARBAGE] as const);
 }
 
 test("a damaged workspace can be replaced from a backup on the error screen", async () => {
