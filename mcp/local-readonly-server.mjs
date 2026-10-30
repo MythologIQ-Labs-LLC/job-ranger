@@ -68,8 +68,8 @@ async function openSnapshot(dataDir, sqliteBinaryPath) {
 function stringify(data) {
   return JSON.stringify(data, (_, value) => typeof value === "bigint" ? value.toString() : value);
 }
-function transport(adapter, capturedAt) {
-  const send = (value) => process.stdout.write(stringify(value) + "\n");
+export function transport(adapter, capturedAt, stdin = process.stdin, stdout = process.stdout) {
+  const send = (value) => stdout.write(stringify(value) + "\n");
   const failure = (id, code, message) => send({ jsonrpc: "2.0", id,
     error: { code, message } });
   let started = false;
@@ -130,12 +130,12 @@ function transport(adapter, capturedAt) {
       queue = queue.then(() => dispatch(parsed)).catch(() => undefined);
     },
   });
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", acceptChunk);
+  stdin.setEncoding("utf8");
+  stdin.on("data", acceptChunk);
   // EOF means no more requests can arrive, not that async tool reads are done.
   // Keep the snapshot and stdout alive until all accepted calls have settled.
   return new Promise((resolve) => {
-    process.stdin.once("end", () => {
+    stdin.once("end", () => {
       void queue.then(resolve, resolve);
     });
   });
@@ -182,7 +182,11 @@ async function main() {
     await transport(adapter, backup.capturedAt);
   } finally { await cleanup(); }
 }
+// Exporting the pure stdio transport permits deterministic EOF/drain tests.
+// Module imports must never start a database-backed server implicitly.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 main().catch(() => {
   process.stderr.write("Job Ranger read-only MCP failed to start. Check explicit data directory, scopes, runtime build and SQLite availability.\n");
   process.exitCode = 1;
 });
+}
