@@ -46,11 +46,9 @@ const instant = (value: string): number => {
   const time = Date.parse(value);
   return Number.isFinite(time) && new Date(time).toISOString() === value ? time : NaN;
 };
+// The only approved Drive export is a verified resume PDF (#314); other formats are refused.
 const MIME_EXTENSIONS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "application/pdf": [".pdf"],
-  "text/plain": [".txt"],
-  "text/markdown": [".md"],
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 });
 
 export function validateExportProposal(proposal: ExportProposal, nowMs: number): void {
