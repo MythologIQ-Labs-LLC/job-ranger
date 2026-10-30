@@ -151,7 +151,7 @@ try {
       ({ jsonrpc: "2.0", id: i + 2, method: "ping" })),
     { jsonrpc: "2.0", id: 3302, method: "tools/list", params: {} },
   ];
-  const batch = requests.map(message => JSON.stringify(message)).join("\\n") + "\\n";
+  const batch = requests.map(message => JSON.stringify(message)).join("\n") + "\n";
   assert.ok(Buffer.byteLength(batch, "utf8") > 128 * 1024);
   burstChild.stdin.end(batch);
   const burstExit = await new Promise((resolve, reject) => {
@@ -163,7 +163,7 @@ try {
     burstChild.once("close", code => { clearTimeout(timer); resolve(code); });
   });
   assert.equal(burstExit, 0, burstErrors);
-  const responses = burstOutput.trim().split("\\n").map(JSON.parse);
+  const responses = burstOutput.trim().split("\n").map(JSON.parse);
   assert.equal(responses.length, requests.length,
     "all framed requests must finish before stdin EOF releases the server");
   for (let index = 0; index < responses.length; index++) {
