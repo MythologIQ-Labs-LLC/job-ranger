@@ -44,6 +44,7 @@ const csp = [
   "frame-ancestors 'none'",
   "object-src 'none'",
   "require-trusted-types-for 'script'",
+  "trusted-types sojourner-google-gis",
 ].join("; ");
 const headers = [
   "/*",
