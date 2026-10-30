@@ -3,7 +3,7 @@
  * This module NEVER loads GIS. The remote helper must use its own HTTPS origin,
  * and tokens exist only in this browser session's private fields.
  */
-import { DriveHelperResponseGate } from "./oauth-helper-response-contract";
+import { DriveHelperResponseGate } from "./oauth-helper-response-contract.ts";
 import type { DriveAuthView } from "./google-web-auth";
 
 const EXPIRY_SKEW = 30_000;
