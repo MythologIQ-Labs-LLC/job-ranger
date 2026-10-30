@@ -23,6 +23,16 @@ try {
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
     const colours = ["#000000", "#808080", "#ffffff"];
+    // Warm the encoder first: on a cold browser the first MediaRecorder can start hundreds of
+    // milliseconds late, which cuts the measured black second short.
+    ctx.fillStyle = colours[0];
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const warmup = new MediaRecorder(canvas.captureStream(30), { mimeType: "video/webm" });
+    const warmed = new Promise((resolve) => (warmup.onstop = resolve));
+    warmup.start();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    warmup.stop();
+    await warmed;
     const started = performance.now();
     let running = true;
     const draw = () => {

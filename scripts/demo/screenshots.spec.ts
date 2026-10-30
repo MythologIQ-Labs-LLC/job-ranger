@@ -1,6 +1,7 @@
-// Curated README screenshots: same fixture, build, and theme as the demo, but
-// unrecorded and without the demo's cursor or caption overlays.
-// Run with `npm run demo:screenshots`; copy accepted images to docs/assets/screenshots/.
+// Curated README and website screenshots: same fixture, build, and theme as the demo,
+// but unrecorded and without the demo's cursor or caption overlays.
+// Run with `npm run demo:screenshots`; accepted images are reviewed before publication
+// (docs/marketing/SOJOURNER_MEDIA_HANDOFF.md).
 import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -9,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { startPwaServer } from "../../tests/pwa/support/server";
 import { distPwa, waitForRuntime } from "../../tests/pwa/support/fixtures";
 import { DEMO_EMPLOYER, DEMO_JOB_TITLE, TARGET_TRACK, prepareDemoContext, seedDemo } from "./fixture";
-import { scrollToTop, waitForDemoReady, waitForLayoutStable } from "./ready";
+import { scrollToElement, scrollToTop, waitForDemoReady, waitForLayoutStable } from "./ready";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = process.env.JOB_RANGER_DEMO_OUT ?? path.resolve(here, "..", "..", "build", "demo", "curated");
@@ -59,6 +60,15 @@ async function assessment(page: Page): Promise<void> {
   await capture(page, "opportunity-assessment.png");
 }
 
+async function careerEvidence(page: Page): Promise<void> {
+  await go(page, "#/career-evidence/new", { route: "#/career-evidence/new", heading: "Build your career evidence one fact at a time.", content: ["Review and correct confirmed evidence"] });
+  const current = page.locator("#current-evidence-heading");
+  await scrollToElement(page, current, 24);
+  const facts = page.locator("main").getByText(/Referral backlog|Rebuilt the referral queue/).filter({ visible: true });
+  await expect(facts.first()).toBeInViewport();
+  await capture(page, "career-evidence.png");
+}
+
 async function deliberateApplication(page: Page): Promise<void> {
   await go(page, "#/jobs", { route: "#/jobs", heading: FIND_JOBS, content: [DEMO_JOB_TITLE] });
   const drawer = await openAssessment(page);
@@ -66,7 +76,12 @@ async function deliberateApplication(page: Page): Promise<void> {
   await waitForDemoReady(page, { route: "#/resume", heading: "Build the document from facts you have actually confirmed.", content: ["Targeting tracked job"] });
   await page.getByLabel("Email", { exact: true }).fill("morgan.rivera@example.org");
   await page.getByRole("button", { name: "Create truthful draft" }).click();
-  await expect(page.getByText("Truth Gate passed", { exact: true })).toBeVisible();
+  const passed = page.getByText("Truth Gate passed", { exact: true });
+  await expect(passed).toBeVisible();
+  // The confirmed-fact draft beside the passed Truth Gate, framed as in the walkthrough.
+  await scrollToElement(page, passed, 140);
+  await expect(passed).toBeInViewport();
+  await capture(page, "resume-truth-gate.png");
   await page.getByRole("button", { name: "Export verified PDF" }).click();
   await expect(page.getByRole("button", { name: /Download file|Show file/ }).first()).toBeVisible();
   await go(page, "#/applications", { route: "#/applications", heading: "Keep track of what happens after a job looks promising.", content: [DEMO_JOB_TITLE] });
@@ -78,7 +93,7 @@ async function deliberateApplication(page: Page): Promise<void> {
   await capture(page, "deliberate-application.png");
 }
 
-test("curated README screenshots", async () => {
+test("curated README and website screenshots", async () => {
   test.setTimeout(180_000);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
@@ -100,6 +115,7 @@ test("curated README screenshots", async () => {
     await waitForRuntime(page);
     await careerDirection(page);
     await assessment(page);
+    await careerEvidence(page);
     await deliberateApplication(page);
     expect(problems, problems.join("\n")).toEqual([]);
   } finally {
