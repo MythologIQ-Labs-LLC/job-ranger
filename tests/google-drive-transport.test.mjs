@@ -323,3 +323,37 @@ test("pre-POST failure never commits uploading; successful preflight commits bef
   assert.deepEqual(successful.requests.map(x => x.options.method ?? "GET"),
     ["GET", "POST", "GET", "GET"]);
 });
+
+test("invalid input and digest mismatch never enter the durable upload boundary", async () => {
+  for (const change of [
+    { name: "../unsafe.pdf" },
+    { approvedSha256: "0".repeat(64) },
+  ]) {
+    let requests = 0;
+    let durableTransitions = 0;
+    await assert.rejects(uploadApprovedDriveFile(
+      { ...await good(), ...change },
+      async () => { requests++; throw new Error("unexpected network access"); },
+      async () => { durableTransitions++; },
+    ), DriveTransportError);
+    assert.equal(requests, 0);
+    assert.equal(durableTransitions, 0);
+  }
+});
+
+test("ambiguous POST is reported only after the caller's durable boundary succeeds", async () => {
+  let durable = false;
+  let posts = 0;
+  const outcome = await uploadApprovedDriveFile(await good(), async (_url, options) => {
+    assert.equal(options.method, "POST");
+    assert.equal(durable, true, "remote POST must follow durable uploading transition");
+    posts++;
+    throw new Error("network failed after POST began");
+  }, async () => { durable = true; });
+  assert.equal(posts, 1);
+  assert.deepEqual(outcome, {
+    status: "unknown_remote_outcome",
+    remoteId: null,
+    reason: "The upload connection was interrupted. Check Drive before approving another export.",
+  });
+});
