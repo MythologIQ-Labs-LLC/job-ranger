@@ -10,11 +10,9 @@ const FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files";
 const ID = /^[A-Za-z0-9_-]{1,160}$/;
 const OPERATION = /^[A-Za-z0-9_-]{1,100}$/;
 const HASH = /^[0-9a-f]{64}$/;
+// The only approved Drive export is a verified resume PDF; nothing else may be uploaded.
 const MIME = new Map([
   ["application/pdf", ".pdf"],
-  ["text/plain", ".txt"],
-  ["text/markdown", ".md"],
-  ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"],
 ]);
 export const DRIVE_OPERATION_PROPERTY = "sojournerExportOperation";
 
