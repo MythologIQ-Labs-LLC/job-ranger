@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { createReadOnlyAdapter, READ_SCOPES } from "./read-only-adapter.mjs";
+import { createStdioLineFramer } from "./stdio-line-framer.mjs";
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -72,7 +73,6 @@ function transport(adapter, capturedAt) {
   const failure = (id, code, message) => send({ jsonrpc: "2.0", id,
     error: { code, message } });
   let started = false;
-  let pending = "";
   let queue = Promise.resolve();
   async function dispatch(message) {
     if (!message || message.jsonrpc !== "2.0" ||
@@ -119,28 +119,19 @@ function transport(adapter, capturedAt) {
       failure(message.id, -32603, "MCP request failed.");
     }
   }
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", (chunk) => {
-    pending += chunk;
-    if (Buffer.byteLength(pending, "utf8") > MAX_MESSAGE_BYTES) {
-      failure(null, -32600, "MCP request exceeds the size limit.");
-      pending = "";
-      return;
-    }
-    while (pending.includes("\n")) {
-      const index = pending.indexOf("\n");
-      const line = pending.slice(0, index); pending = pending.slice(index + 1);
-      if (!line.trim()) continue;
-      if (Buffer.byteLength(line) > MAX_MESSAGE_BYTES) {
-        failure(null, -32600, "MCP request exceeds the size limit.");
-        continue;
-      }
+  const acceptChunk = createStdioLineFramer({
+    maxLineBytes: MAX_MESSAGE_BYTES,
+    onOversize: () => failure(null, -32600, "MCP request exceeds the size limit."),
+    onLine: (line) => {
+      if (!line.trim()) return;
       let parsed;
       try { parsed = JSON.parse(line); }
-      catch { failure(null, -32700, "Invalid JSON."); continue; }
+      catch { failure(null, -32700, "Invalid JSON."); return; }
       queue = queue.then(() => dispatch(parsed)).catch(() => undefined);
-    }
+    },
   });
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", acceptChunk);
 }
 async function main() {
   const { dataDir, scopes } = options(process.argv.slice(2));
