@@ -74,7 +74,7 @@ async function deliberateApplication(page: Page): Promise<void> {
   await status.selectOption("applied");
   await expect(status).toHaveValue("applied");
   await page.getByRole("button", { name: /Application details/ }).first().click();
-  await expect(page.getByText("Submitted files", { exact: false }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText("Resume versions", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await capture(page, "deliberate-application.png");
 }
 

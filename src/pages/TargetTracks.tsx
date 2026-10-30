@@ -255,7 +255,7 @@ export function TargetTracks() {
           )}
           {editingId === "legacy-default" && editingTrack?.origin === "user" && (
             <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-              This promoted bridge remains reserved during the Career Profile transition and cannot be deleted yet.
+              This track started from your Career Profile, which still relies on it, so it cannot be deleted yet. You can rename it, change it, or clear Active to stop using it.
             </div>
           )}
 

@@ -178,7 +178,7 @@ test("a goal-first user keeps the goal while later evidence changes only the evi
   let assessment = await openAssessment(page);
   await expect(assessment.getByText("Eligibility · Unclear", { exact: true })).toBeVisible();
   await expect(assessment.getByText("Evidence · Limited", { exact: true })).toBeVisible();
-  await expect(assessment.getByText("0 direct", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("0 supported", { exact: true })).toBeVisible();
   await expect(assessment.getByText("0 transferable", { exact: true })).toBeVisible();
   await expect(assessment.getByText(/^Evidence: /)).toHaveCount(0);
   await expect(assessment.getByText("Potential blockers")).toBeVisible();
