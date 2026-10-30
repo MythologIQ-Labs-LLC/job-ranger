@@ -45,7 +45,9 @@ test("rejects forged source, origin, nonce, version, scope, token and lifetime",
 });
 
 test("expires and invalidates without exposing an access token", () => {
-  const expired = new DriveHelperResponseGate(origin, windowProxy, nonce, 11_000, () => 11_000);
+  let clock = 10_000;
+  const expired = new DriveHelperResponseGate(origin, windowProxy, nonce, 11_000, () => clock);
+  clock = 11_000;
   assert.equal(expired.accept(message()), null);
   const revoked = new DriveHelperResponseGate(origin, windowProxy, nonce, 20_000, () => 10_000);
   revoked.invalidate();
