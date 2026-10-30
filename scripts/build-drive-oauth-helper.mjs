@@ -6,7 +6,7 @@
  * SOJOURNER_DRIVE_APP_ORIGIN, SOJOURNER_DRIVE_HELPER_ORIGIN,
  * SOJOURNER_DRIVE_GOOGLE_WEB_CLIENT_ID.
  */
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -58,6 +58,9 @@ const headers = [
   "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()",
   "",
 ].join("\n");
+// Rebuild from an empty fixed output directory. Stale files must never be published
+// beside this security-sensitive helper (for example, old configs or maps).
+rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
 for (const file of ["index.html", "helper.mjs"]) {
   // Source must be shipped unchanged. The output contains no PWA assets or data.
