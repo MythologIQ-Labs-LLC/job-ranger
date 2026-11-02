@@ -1,10 +1,10 @@
 # Sojourner: Employment Toolkit — first-party media capture and website handoff
 
-Status: **CAPTURED AND INDEPENDENTLY REVIEWED (media READY) / NOT APPROVED FOR PUBLICATION**. Owner request: 2026-10-29; capture 2026-10-30. Tracking: #354 (site assets), #295 (recording), #339 (name/launch), #315 (Google Drive export).
+Status: **CAPTURED AND INDEPENDENTLY REVIEWED (media READY) / APPROVED FOR README USE (owner, 2026-11-02); website publication remains with the designated website session**. Owner request: 2026-10-29; capture 2026-10-30. Tracking: #354 (site assets), #295 (recording), #339 (name/launch), #315 (Google Drive export).
 
 This is the evidence-backed manifest for captured, reviewed Sojourner PWA media. The approved binaries are on the orphan, assets-only branch [`media/sojourner-website-assets-2026-10-30`](https://github.com/MythologIQ-Labs-LLC/sojourner/tree/media/sojourner-website-assets-2026-10-30), pinned at `863a5509a4b0ebeb1935f238b776b8c5ceb44b66`. That branch is never merged into `main`. Retrieve each file as `https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/<path>`, using the paths and SHA-256 values in its `media-manifest.json`. The repository was renamed from `job-ranger` on 2026-11-02, and the old URL still resolves.
 
-Public publication on the website is **not yet approved**. Website integration belongs only to the owner's designated website session. The prior Job Ranger WebM and screenshots remain historical assets on `main` until the owner authorizes replacement.
+On 2026-11-02 the owner approved using these files publicly in the repository README, which embeds them from the pinned commit above. Website integration still belongs only to the owner's designated website session. The prior Job Ranger WebM and screenshots on `main` are historical assets, no longer shown in the README.
 
 ## Product and source-of-truth
 
