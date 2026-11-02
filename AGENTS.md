@@ -28,21 +28,12 @@ Windows binaries and installers this repository distributes **must be Authentico
 - Endpoint `https://eus.codesigning.azure.net/`, account `MythologIQ-Labs-Signing`, certificate profile `mythologiq-labs-public-release` (Public Trust). Publisher shown to users: `MythologIQ Labs, LLC`. Timestamp server: `http://timestamp.acs.microsoft.com`.
 - Canonical procedure, verified tooling and framework integration: `MythologIQ-Labs-LLC/Myth-Tech-Forge` at `docs/WINDOWS_CODE_SIGNING_STANDARD.md`. Follow it; don't invent another signing path.
 - Sign release builds only (release tag or manual release), never PR or routine CI builds. Windows runners bill at 2x Actions minutes.
-- Signing requires the Artifact Signing Certificate Profile Signer role. Today only the owner's local `az login` identity has it. A CI signing identity (GitHub OIDC) doesn't exist yet, and creating one, or any secret or role assignment, needs owner approval. Never commit credentials.
+- Signing requires the Artifact Signing Certificate Profile Signer role. Creating a signing identity, federated credential, secret or role assignment needs owner approval. Never commit credentials.
 - A release is signed only after `signtool verify /pa` passes, the signer is `MythologIQ Labs, LLC`, and the signature is timestamped. Record that output in the release evidence.
 
-**This repository (Electron, electron-builder):**
-- Signing is already wired in `electron-builder.windows.cjs` via `win.azureSignOptions` and fails closed when required.
-- `release-build.yml` signs only when the repository variable `JOB_RANGER_REQUIRE_WINDOWS_SIGNING=1` is set for a publishing release.
-- The variables should be:
-
-  | Variable | Value |
-  | --- | --- |
-  | `JOB_RANGER_WINDOWS_SIGN_ENDPOINT` | `https://eus.codesigning.azure.net/` |
-  | `JOB_RANGER_WINDOWS_SIGN_ACCOUNT` | `MythologIQ-Labs-Signing` |
-  | `JOB_RANGER_WINDOWS_SIGN_PROFILE` | `mythologiq-labs-public-release` |
-  | `JOB_RANGER_WINDOWS_SIGN_PUBLISHER` | `MythologIQ Labs, LLC` |
-
-- As of 2026-10-30 none of these variables or Azure secrets are set, so CI releases are unsigned.
-- electron-builder authenticates with `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`. Provisioning that identity is an owner decision.
-- Microsoft Store packages (`electron-builder.store.cjs`, `windows-store-package.yml`) are signed by the Store and need no Artifact Signing.
+**This repository (Electron, electron-builder). Windows is the primary product channel (ARCH-001):**
+- `scripts/windows-sign.cjs` signs through SignTool and the Artifact Signing client with the Azure CLI credential only, the same pattern as `Knapp-Kevin/sonic-rift`. There is no client secret. `electron-builder.windows.cjs` uses it as the `win.signtoolOptions.sign` hook when `JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR` is set, and fails closed when `JOB_RANGER_REQUIRE_WINDOWS_SIGNING=1` and it is not.
+- `release-build.yml` signs **every publishing run** (a `v*` tag, or a manual run with publish on) and never a build-only run. A publishing Windows job enters the `release` environment, waits for owner approval, signs in with `azure/login` (GitHub OIDC, environment variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), signs the bundled `sqlite3.exe`, builds and signs the app and installer, and then `scripts/verify-windows-distribution.ps1 -RequireSigned` fails the run unless every executable passes `signtool verify /pa`, is signed by `MythologIQ Labs, LLC` and is timestamped.
+- The CI sign-in needs a federated credential with subject `repo:MythologIQ-Labs-LLC@273517516/sojourner@1183592914:environment:release` on an app that has the Signer role on the profile, plus the `release` environment on this repository. Both are owner-provisioned.
+- Locally, the owner can sign after `az login` by setting `JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR` before `npm run electron:build:win`.
+- Microsoft Store packages (`electron-builder.store.cjs`, `windows-store-package.yml`) are not a shipping channel. If they are ever submitted, the Store signs them.

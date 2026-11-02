@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Sojourner — Authorize Google Drive</title>
+</head>
+<body>
+  <main>
+    <h1>Authorize Sojourner for Google Drive</h1>
+    <p>This separate window requests access only when you choose to continue. It cannot read your Sojourner career workspace.</p>
+    <p>Google Drive access does not upload anything. A separate approval is required for each document export.</p>
+    <button type="button" id="grant" disabled>Continue with Google</button>
+    <p id="status" role="status" aria-live="polite">Checking authorization configuration…</p>
+  </main>
+  <!-- helper.mjs validates and clears the one-time fragment before loading GIS. -->
+  <script type="module" src="./helper.mjs"></script>
+</body>
+</html>
