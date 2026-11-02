@@ -1,6 +1,6 @@
 # Sojourner Brand Transition: Legacy Job Ranger Asset Inventory
 
-**Owner-selected identity (2026-10-28): Sojourner: Employment Toolkit.** See [the canonical architecture index](./ARCHITECTURE_INDEX.md) and [brand migration issue #339](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/339). The assets catalogued below still represent the **historical Job Ranger presentation**. They are not automatically approved as Sojourner brand art and must be reviewed or replaced coherently before a public rebrand. Keep legacy names for compatibility, history and accurate reference until migration is qualified.
+**Owner-selected identity (2026-10-28): Sojourner: Employment Toolkit.** See [the canonical architecture index](./ARCHITECTURE_INDEX.md) and [brand migration issue #339](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/339). The assets catalogued below still represent the **historical Job Ranger presentation**. They are not automatically approved as Sojourner brand art and must be reviewed or replaced coherently before a public rebrand. Keep legacy names for compatibility, history and accurate reference until migration is qualified.
 
 The goal is one coherent source of brand assets, not competing ad-hoc variants. A visual change must not silently change runtime identifiers, browser storage origin, archive compatibility, application signing or OAuth configuration.
 

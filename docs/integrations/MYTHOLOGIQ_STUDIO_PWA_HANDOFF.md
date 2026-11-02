@@ -1,7 +1,7 @@
 # MythologIQ Studio: Job Ranger PWA handoff
 
 **Status:** implementation candidate; NOT deployed, released, approved for public access, or linked from Studio.  
-**Implementation authority:** `MythologIQ-Labs-LLC/job-ranger` owns the entire PWA.  
+**Implementation authority:** `MythologIQ-Labs-LLC/sojourner` owns the entire PWA.  
 **Website consumer:** `Knapp-Kevin/MythologIQ`, specifically `/side-projects/job-ranger`.  
 **Related:** Job Ranger #299 (closed prior proposal; new owner authorization is **repository-side preparation only**), Studio #128 (closed planning proposal), distribution architecture, PWA runtime, and existing protected `deploy-pwa.yml`.
 

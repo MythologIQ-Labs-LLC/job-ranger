@@ -81,7 +81,7 @@ Surface is the route (or runtime surface) where the feature ships.
 | FX063 | Skip link, Escape and focus after mobile navigation (#279) | src/components/Layout.tsx:25 | HELP.md | tests/pwa/nav-keyboard-a11y.spec.ts | unverified | shell |
 | FX064 | Pause, resume and reschedule a job source (#275) | src/pages/Companies.tsx:542 | HELP.md | tests/pwa/source-schedule.spec.ts | unverified | /companies |
 | FX065 | Edit, enable and disable a filter (#272) | src/pages/Filters.tsx:112 | HELP.md | tests/pwa/filter-editing.spec.ts | unverified | /filters |
-| FX066 | Copy current cover-letter text (#270) | src/components/ApplicationMaterialsPanel.tsx:182 | HELP.md | tests/pwa/cover-letter-copy.spec.ts | unverified | /applications |
+| FX066 | Copy current cover-letter text (#270), gated by pure handoff readiness without changing application status (#228) | src/components/ApplicationMaterialsPanel.tsx:194 | HELP.md; docs/design/APPLICATION_MATERIALS.md | tests/pwa/cover-letter-copy.spec.ts; tests/application-handoff.test.mjs; tests/e2e/application-materials.spec.ts | unverified | /applications |
 | FX067 | Save notification settings in place (#276) | src/pages/Settings.tsx:289 | HELP.md | tests/pwa/settings-save-feedback.spec.ts | unverified | /settings |
 | FX068 | Task-first Home decision cards (#306, #317) | src/pages/Dashboard.tsx:177 | HELP.md | tests/pwa/home-task-first.spec.ts | unverified | / |
 | FX069 | Applications status focus with unsaved-editor retention (#310) | src/pages/Applications.tsx:101 | HELP.md | tests/pwa/applications-status-focus.spec.ts | unverified | /applications |

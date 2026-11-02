@@ -103,3 +103,47 @@ test("evidence that changes while the panel is open blocks copying at copy time"
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("clipboard before copy");
   await expect(page.getByRole("button", { name: "Copy text of cover letter version 1" })).toBeDisabled();
 });
+
+async function applicationStatus(page: Page, applicationId: string) {
+  return page.evaluate(async (id) =>
+    (await window.electronAPI.applications.list()).find((item) => item.id === id)?.status, applicationId);
+}
+
+test("copying never changes application status or contacts another origin (#228)", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.url });
+  const seeded = await seedApplication(page);
+  await openMaterials(page);
+  expect(await applicationStatus(page, seeded.applicationId)).toBe("interested");
+  const lifecycleOf = () => page.evaluate((id) => window.electronAPI.applicationLifecycle.get(id), seeded.applicationId);
+  const lifecycleBefore = await lifecycleOf();
+
+  const offOrigin: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).origin !== new URL(server.url).origin) offOrigin.push(request.url());
+  });
+  await page.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
+  await expect(page.getByRole("status", { name: "Cover letter copy status" })).toContainText("Cover letter version 1 copied");
+
+  expect(offOrigin).toEqual([]);
+  expect(await applicationStatus(page, seeded.applicationId)).toBe("interested");
+  expect(await lifecycleOf()).toEqual(lifecycleBefore);
+});
+
+test("a re-read version with incomplete evidence links is refused by the readiness check (#228)", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.url });
+  await seedApplication(page);
+  await openMaterials(page);
+  await page.evaluate(() => navigator.clipboard.writeText("clipboard before copy"));
+  // Simulate a malformed canonical projection on the copy-time re-read. The cached card was
+  // valid, so only evaluateApplicationHandoff in the copy path can refuse it.
+  await page.evaluate(() => {
+    const materials = window.electronAPI.applicationMaterials;
+    const list = materials.list.bind(materials);
+    materials.list = async (id) => (await list(id)).map((item) => ({ ...item, selectedEvidenceIds: [] }));
+  });
+
+  await page.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
+  await expect(page.getByRole("status", { name: "Cover letter copy status" }))
+    .toContainText("was not copied: its Career Evidence links are incomplete");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("clipboard before copy");
+});

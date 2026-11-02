@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -8,20 +9,15 @@ const repoRoot = path.resolve(__dirname, "..");
 function runConfig(env = {}) {
   const script = `
     const config = require('./electron-builder.windows.cjs');
-    process.stdout.write(JSON.stringify(config.win.azureSignOptions || null));
+    process.stdout.write(JSON.stringify(config.win.signtoolOptions || null));
   `;
   return spawnSync(process.execPath, ["-e", script], {
     cwd: repoRoot,
     env: {
       ...process.env,
       JOB_RANGER_REQUIRE_WINDOWS_SIGNING: "0",
-      AZURE_TENANT_ID: "",
-      AZURE_CLIENT_ID: "",
-      AZURE_CLIENT_SECRET: "",
-      JOB_RANGER_WINDOWS_SIGN_ENDPOINT: "",
-      JOB_RANGER_WINDOWS_SIGN_ACCOUNT: "",
-      JOB_RANGER_WINDOWS_SIGN_PROFILE: "",
-      JOB_RANGER_WINDOWS_SIGN_PUBLISHER: "",
+      JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR: "",
+      JOB_RANGER_SIGNTOOL_PATH: "",
       ...env,
     },
     encoding: "utf8",
@@ -31,30 +27,65 @@ function runConfig(env = {}) {
 async function run() {
   const tester = runConfig();
   assert.equal(tester.status, 0, tester.stderr);
-  assert.equal(tester.stdout, "null", "tester builds may omit Windows signing configuration");
+  assert.equal(tester.stdout, "null", "build-only candidates are never signed");
 
   const publicMissing = runConfig({ JOB_RANGER_REQUIRE_WINDOWS_SIGNING: "1" });
-  assert.notEqual(publicMissing.status, 0, "stable public Windows builds must fail without signing configuration");
+  assert.notEqual(publicMissing.status, 0, "published Windows builds must fail without the signing client");
   assert.match(publicMissing.stderr, /code signing is required/i);
 
-  const complete = runConfig({
-    JOB_RANGER_REQUIRE_WINDOWS_SIGNING: "1",
-    AZURE_TENANT_ID: "tenant",
-    AZURE_CLIENT_ID: "client",
-    AZURE_CLIENT_SECRET: "secret",
-    JOB_RANGER_WINDOWS_SIGN_ENDPOINT: "https://example.codesigning.azure.net/",
-    JOB_RANGER_WINDOWS_SIGN_ACCOUNT: "job-ranger-signing",
-    JOB_RANGER_WINDOWS_SIGN_PROFILE: "public-release",
-    JOB_RANGER_WINDOWS_SIGN_PUBLISHER: "Job Ranger",
-  });
-  assert.equal(complete.status, 0, complete.stderr);
-  const azure = JSON.parse(complete.stdout);
-  assert.deepEqual(azure, {
-    endpoint: "https://example.codesigning.azure.net/",
-    codeSigningAccountName: "job-ranger-signing",
-    certificateProfileName: "public-release",
-    publisherName: "Job Ranger",
-  });
+  const badClient = runConfig({ JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR: path.join(repoRoot, "does-not-exist") });
+  assert.notEqual(badClient.status, 0, "a configured but missing signing client fails closed");
+  assert.match(badClient.stderr, /Artifact Signing client not found/);
+
+  // A complete signing setup: a fake client folder and SignTool path.
+  const clientDir = fs.mkdtempSync(path.join(os.tmpdir(), "sojourner-signing-client-"));
+  fs.mkdirSync(path.join(clientDir, "bin", "x64"), { recursive: true });
+  fs.writeFileSync(path.join(clientDir, "bin", "x64", "Azure.CodeSigning.Dlib.dll"), "");
+  const fakeSignTool = path.join(clientDir, "signtool.exe");
+  fs.writeFileSync(fakeSignTool, "");
+  try {
+    const complete = runConfig({
+      JOB_RANGER_REQUIRE_WINDOWS_SIGNING: "1",
+      JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR: clientDir,
+      JOB_RANGER_SIGNTOOL_PATH: fakeSignTool,
+    });
+    assert.equal(complete.status, 0, complete.stderr);
+    assert.deepEqual(JSON.parse(complete.stdout), {
+      sign: path.join(repoRoot, "scripts", "windows-sign.cjs"),
+      signingHashAlgorithms: ["sha256"],
+    });
+  } finally {
+    fs.rmSync(clientDir, { recursive: true, force: true });
+  }
+
+  // The signer follows the Windows code signing standard: the organization's profile, SHA-256,
+  // RFC 3161 timestamping, and the Azure CLI credential only (GitHub OIDC or `az login`, no secret).
+  const signer = require("../scripts/windows-sign.cjs");
+  assert.equal(typeof signer, "function", "electron-builder loads the module as its sign hook");
+  assert.deepEqual(
+    { ...signer.ARTIFACT_SIGNING, ExcludeCredentials: undefined },
+    {
+      Endpoint: "https://eus.codesigning.azure.net/",
+      CodeSigningAccountName: "MythologIQ-Labs-Signing",
+      CertificateProfileName: "mythologiq-labs-public-release",
+      ExcludeCredentials: undefined,
+    },
+  );
+  for (const credential of ["EnvironmentCredential", "ManagedIdentityCredential", "InteractiveBrowserCredential"]) {
+    assert.ok(signer.ARTIFACT_SIGNING.ExcludeCredentials.includes(credential), `${credential} is excluded`);
+  }
+  assert.ok(!signer.ARTIFACT_SIGNING.ExcludeCredentials.includes("AzureCliCredential"), "the Azure CLI credential stays allowed");
+  assert.deepEqual(signer.signToolArgs("out/Job Ranger.exe", "client/dlib.dll", "metadata.json"), [
+    "sign", "/v", "/fd", "SHA256", "/tr", "http://timestamp.acs.microsoft.com", "/td", "SHA256",
+    "/dlib", "client/dlib.dll", "/dmdf", "metadata.json", "out/Job Ranger.exe",
+  ]);
+  assert.equal(signer.resolveSigning({}), null);
+  assert.throws(() => signer.signFile("x.exe", {}), /not configured/);
+  for (const forbidden of ["AZURE_CLIENT_SECRET", "azureSignOptions"]) {
+    for (const file of ["electron-builder.windows.cjs", "scripts/windows-sign.cjs", ".github/workflows/release-build.yml"]) {
+      assert.doesNotMatch(fs.readFileSync(path.join(repoRoot, file), "utf8"), new RegExp(forbidden), `${file} uses no ${forbidden}`);
+    }
+  }
 
   const notarizeHook = require("../scripts/notarize.cjs").default;
   const saved = {
@@ -119,8 +150,15 @@ async function run() {
     }
   }
   assert.ok(gatedSteps >= 9, `expected to find every publishing step, found ${gatedSteps}`);
-  assert.ok(signingLines >= 12, `expected to find the signing credentials, found ${signingLines}`);
-  assert.match(workflow, /JOB_RANGER_REQUIRE_WINDOWS_SIGNING \}\}" == "1" && "\$PUBLISH_RELEASE" == "true" \]\]/);
+  assert.ok(signingLines >= 13, `expected to find the signing credentials, found ${signingLines}`);
+  // Every published Windows installer is signed; only publishing runs enter the release environment,
+  // which holds the owner-approved GitHub OIDC sign-in.
+  assert.match(workflow, /\n          # Every published Windows installer is signed; a build-only candidate never is\.\n          if \[\[ "\$PUBLISH_RELEASE" == "true" \]\]; then\n            echo "signed=true"/);
+  assert.match(workflow, /\n  build-windows:\n(?:    .*\n)*?    environment: \$\{\{ \(github\.event_name == 'push' \|\| inputs\.publish\) && 'release' \|\| '' \}\}\n/);
+  assert.equal((workflow.match(/\n    environment: /g) || []).length, 1, "only the Windows signing job uses an environment");
+  assert.match(workflow, /uses: azure\/login@v2\n        with:\n          client-id: \$\{\{ vars\.AZURE_CLIENT_ID \}\}/);
+  assert.match(workflow, /node scripts\/windows-sign\.cjs build\/sqlite\/sqlite3\.exe/);
+  assert.match(workflow, /verify-windows-distribution\.ps1 -RequireSigned:\$requireSigned/);
   assert.match(workflow, /\[0-9\]\+\$ && "\$PUBLISH_RELEASE" == "true" \]\]/);
   assert.equal((workflow.match(/\n          persist-credentials: false\n/g) || []).length, 2);
   assert.equal((workflow.match(/name: Keep build-only candidate as a workflow artifact\n        if: env\.PUBLISH_RELEASE != 'true'\n/g) || []).length, 2);

@@ -66,7 +66,7 @@ function main() {
   if (args.some(x => x.startsWith("--") && !["--repo", "--snapshot", "--json", "--stale-days"].includes(x))) throw Error("Unknown audit flag");
   const file = arg("--snapshot", null);
   const state = file ? JSON.parse(readFileSync(file, "utf8")) :
-    fromGithub(arg("--repo", "MythologIQ-Labs-LLC/job-ranger"));
+    fromGithub(arg("--repo", "MythologIQ-Labs-LLC/sojourner"));
   const days = Number(arg("--stale-days", "14"));
   const r = auditRepository(state, { staleDays: days });
   if (args.includes("--json")) return void process.stdout.write(JSON.stringify(r, null, 2) + "\n");

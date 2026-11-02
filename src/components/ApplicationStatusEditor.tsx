@@ -75,11 +75,15 @@ export function ApplicationStatusEditor({ application, onSave, onDirtyChange }: 
         value={draft}
         onChange={(event) => select(event.target.value as ApplicationStatus)}
         aria-label={`Application status for ${application.title}`}
+        aria-describedby={`application-status-hint-${application.id}`}
       >
         {statuses.map((status) => (
           <option key={status.value} value={status.value}>{status.label}</option>
         ))}
       </select>
+      <p id={`application-status-hint-${application.id}`} className="text-xs text-[var(--color-text-muted)]">
+        Status recorded by you
+      </p>
       {(state === "saving" || state === "saved") && (
         <p role="status" aria-label="Application status save status" className="text-xs text-[var(--color-text-muted)]">
           {state === "saving" ? "Saving status..." : "Saved"}

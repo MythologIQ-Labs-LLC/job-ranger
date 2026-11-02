@@ -53,6 +53,7 @@ import {
   type DemoWorkspaceSentinel,
 } from "./demo-workspace";
 import { fileBytesForTransfer } from "./transfer-file-bytes";
+import { canOfferRestoreFromBackup, RECOVERY_CHANNELS } from "./workspace-recovery";
 
 declare const __JOB_RANGER_VERSION__: string;
 declare const __JOB_RANGER_BUILD_ID__: string;
@@ -68,6 +69,18 @@ const appVersion = __JOB_RANGER_VERSION__;
 const buildId = __JOB_RANGER_BUILD_ID__;
 const pending: Extract<PageToWorkerMessage, { type: "invoke" }>[] = [];
 let ready = false;
+/**
+ * When the workspace database is damaged, only RECOVERY_CHANNELS are served, so a user can restore
+ * a .jobranger backup. Restore never reads or writes the damaged database: it validates the backup,
+ * stages it beside the workspace, and the next start swaps it in through applyPendingRestore before
+ * anything opens the database. See workspace-recovery.ts for when it is offered.
+ */
+let recoveryMode = false;
+/** applyPendingRestore finished; a failure there is never answered with another restore. */
+let pendingRestoreSettled = false;
+let backupIpcRegistered = false;
+/** Validating a backup needs the SQLite engine; recovery is offered only once it is running. */
+let engineReady = false;
 
 function post(message: WorkerToPageMessage, transfer: Transferable[] = []): void {
   scope.postMessage(message, transfer);
@@ -232,6 +245,10 @@ scope.addEventListener("message", (event) => {
   }
   if (!message || message.type !== "invoke") return;
   if (!ready) {
+    if (recoveryMode && RECOVERY_CHANNELS.has(message.channel)) {
+      void handleInvoke(message);
+      return;
+    }
     pending.push(message);
     return;
   }
@@ -338,9 +355,11 @@ async function boot(): Promise<void> {
         dirname,
       }),
     );
+    engineReady = true;
 
     await fs.mkdir(USER_DATA_DIRECTORY, { recursive: true });
     await applyPendingRestore({ userDataDirectory: USER_DATA_DIRECTORY, dataDirectory: DATA_DIRECTORY });
+    pendingRestoreSettled = true;
 
     const backend = new JobScoutBackend({
       dataDirectory: DATA_DIRECTORY,
@@ -376,6 +395,7 @@ async function boot(): Promise<void> {
       appVersion,
       producer: { runtime: "web", channel: "web", appVersion, buildId },
     });
+    backupIpcRegistered = true;
     const discoveryFetch = createPinnedFetch();
     registerCoreIpcHandlers({
       backend,
@@ -423,10 +443,32 @@ async function boot(): Promise<void> {
     post(demo ? { type: "ready", info: await runtimeInfo(), demo } : { type: "ready", info: await runtimeInfo() });
     for (const message of pending.splice(0)) void handleInvoke(message);
   } catch (error) {
+    const storageUnavailable = error instanceof JobRangerStorageError;
+    // Only a positively identified damaged database is answered with "Restore from a backup":
+    // a newer-version workspace, a storage error or a failed pending restore may hold healthy data.
+    if (!storageUnavailable && canOfferRestoreFromBackup({ error, demo: IS_DEMO_FLAVOR, engineReady, pendingRestoreSettled })) {
+      try {
+        if (!backupIpcRegistered) {
+          initializeBackupIpc({
+            dataDirectory: DATA_DIRECTORY,
+            userDataDirectory: USER_DATA_DIRECTORY,
+            databasePath: join(DATA_DIRECTORY, "jobscout.sqlite3"),
+            sqliteBinaryPath: "",
+            appVersion,
+            producer: { runtime: "web", channel: "web", appVersion, buildId },
+          });
+          backupIpcRegistered = true;
+        }
+        recoveryMode = true;
+      } catch {
+        recoveryMode = false;
+      }
+    }
     post({
       type: "fatal",
-      code: error instanceof JobRangerStorageError ? "storage-unavailable" : "startup-failed",
+      code: storageUnavailable ? "storage-unavailable" : "startup-failed",
       message: error instanceof Error ? error.message : String(error),
+      recoverableWithBackup: recoveryMode,
     });
   }
 }

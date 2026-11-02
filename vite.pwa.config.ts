@@ -27,13 +27,21 @@ import {
   pwaOutDirName,
 } from "./scripts/pwa-flavor.mjs";
 import { createRuntimeAdapterPlugin, type RuntimeTarget } from "./src/pwa/build/runtime-adapter-plugin.ts";
+import { resolveDriveBuildConfig } from "./src/pwa/build/drive-build-config.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 // Build flavor (scripts/pwa-flavor.mjs): "standard" (default) or "demo". The
 // demo flavor builds into its own directory so it can never overwrite, or be
 // deployed as, the standard workspace build.
 const flavor = parsePwaFlavor(process.env[PWA_FLAVOR_ENV]);
-const outDir = path.join(root, pwaOutDirName(flavor));
+// Test-only override (scripts/build-pwa-drive-e2e.mjs): a configured-Drive standard build goes to its
+// own directory so the default dist-pwa/ stays unconfigured. Never used for a release artifact.
+const DRIVE_E2E_OUT_DIR = "dist-pwa-drive-e2e";
+const outDirOverride = (process.env.SOJOURNER_PWA_TEST_OUT_DIR ?? "").trim();
+if (outDirOverride && (outDirOverride !== DRIVE_E2E_OUT_DIR || flavor !== "standard")) {
+  throw new Error(`SOJOURNER_PWA_TEST_OUT_DIR may only be "${DRIVE_E2E_OUT_DIR}" for the standard flavor.`);
+}
+const outDir = path.join(root, outDirOverride || pwaOutDirName(flavor));
 const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
 
 function gitCommit(): string {
@@ -51,6 +59,15 @@ const buildId = pwaBuildId({
   commit,
   flavor,
   override: process.env.JOB_RANGER_BUILD_ID,
+});
+
+// Drive is enabled only through the isolated OAuth helper origin, and never in the demo flavor
+// (drive-build-config.ts). Only the helper origin is embedded: the Google Web OAuth client ID belongs
+// to the helper build (scripts/build-drive-oauth-helper.mjs), because Google sign-in never runs here.
+const { googleOAuthHelperOrigin, driveSecurity } = resolveDriveBuildConfig({
+  flavor,
+  clientId: process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID,
+  helperOrigin: process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN,
 });
 
 function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
@@ -113,7 +130,7 @@ function listFiles(directory: string, base = directory): string[] {
 }
 
 function headersFile(): string {
-  const headers = buildSecurityHeaders();
+  const headers = buildSecurityHeaders(driveSecurity);
   const lines = ["/*", ...Object.entries(headers).map(([key, value]) => `  ${key}: ${value}`)];
   lines.push("", "/sw.js", "  Cache-Control: no-cache", "", "/index.html", "  Cache-Control: no-cache", "");
   lines.push("/assets/*", "  Cache-Control: public, max-age=31536000, immutable", "");
@@ -172,7 +189,7 @@ function shellManifestPlugin(): Plugin {
     apply: "build",
     transformIndexHtml(html) {
       const shell = html
-        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy().replace(/; frame-ancestors 'none'/, ""))
+        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy(driveSecurity).replace(/; frame-ancestors 'none'/, ""))
         .replace("%JOB_RANGER_BUILD_ID%", buildId);
       return flavor === "demo" ? demoIndexHtml(shell) : shell;
     },
@@ -214,9 +231,9 @@ function shellManifestPlugin(): Plugin {
             buildId,
             flavor,
             commit,
-            sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
+            sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/sojourner",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
-            contentSecurityPolicy: buildContentSecurityPolicy(),
+            contentSecurityPolicy: buildContentSecurityPolicy(driveSecurity),
             // Exact deployed service-worker bytes are pinned independently of the
             // immutable precache list; the worker itself is intentionally not precached.
             serviceWorkerSha256: createHash("sha256")
@@ -263,6 +280,7 @@ export default defineConfig({
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
     __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
+    __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__: JSON.stringify(googleOAuthHelperOrigin),
   },
   worker: {
     format: "es",
@@ -286,7 +304,7 @@ export default defineConfig({
     // shares an address (origin) with the standard web app's workspace.
     ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.dev } : {}),
     headers: {
-      ...buildSecurityHeaders(),
+      ...buildSecurityHeaders(driveSecurity),
       // Vite's dev client needs inline/eval support; the production CSP is
       // enforced by the built index.html meta tag and the _headers file.
       "Content-Security-Policy": "",
@@ -296,7 +314,7 @@ export default defineConfig({
     host: "localhost",
     port: 4174,
     strictPort: true,
-    headers: buildSecurityHeaders(),
+    headers: buildSecurityHeaders(driveSecurity),
     ...(flavor === "demo" ? { port: DEMO_LOCAL_PORTS.preview } : {}),
   },
 });
