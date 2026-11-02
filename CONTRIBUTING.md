@@ -161,7 +161,7 @@ Current documentation authority is indexed in [docs/README.md](./docs/README.md)
 
 ## Licensing
 
-By contributing, you agree that your contribution may be distributed under the repository's GNU Affero General Public License v3.0 only (AGPL-3.0-only).
+Outside contributions require agreement to the [Sojourner Contributor License Agreement](./CLA.md). It lets MythologIQ Labs, LLC distribute your contribution under the repository's GNU Affero General Public License v3.0 only (AGPL-3.0-only) and under commercial license terms, while you keep ownership. Agree by adding the statement from section 6 of the CLA to your pull request description. Pull requests without it will not be merged.
 
 Do not copy third-party code/assets into Job Ranger unless the exact license permits the intended use and attribution obligations are preserved. The repository license does not automatically replace or override the terms of bundled templates, fonts, models, datasets, dependencies, or hosted services.
 
