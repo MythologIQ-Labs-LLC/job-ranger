@@ -1,16 +1,40 @@
 import { useState } from "react";
-import { Filter as FilterIcon, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Filter as FilterIcon, Pencil, Plus, Power, SlidersHorizontal, Trash2 } from "lucide-react";
 import { FilterForm } from "../components/FilterForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Layout } from "../components/Layout";
 import { Modal } from "../components/Modal";
 import { useAppContext } from "../context/AppContext";
+import type { Filter, FilterDraft } from "../types";
+
+function toDraft(filter: Filter): FilterDraft {
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...draft } = filter;
+  return draft;
+}
+
+function ruleText(values: string[], empty: string): string {
+  return values.join(", ") || empty;
+}
 
 export function Filters() {
-  const { filters, companies, addFilter, deleteFilter } = useAppContext();
+  const { filters, companies, addFilter, updateFilter, deleteFilter } = useAppContext();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTargetId, setEditTargetId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const deleteTarget = filters.find((filter) => filter.id === deleteTargetId) ?? null;
+  const editTarget = filters.find((filter) => filter.id === editTargetId) ?? null;
+
+  const toggle = async (filter: Filter) => {
+    setTogglingId(filter.id);
+    try {
+      await updateFilter(filter.id, { isActive: !filter.isActive });
+    } catch {
+      // updateFilter already reports the failure; the card keeps showing the saved state.
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   return (
     <Layout>
@@ -71,11 +95,11 @@ export function Filters() {
         {filters.map((filter) => {
           const company = companies.find((candidate) => candidate.id === filter.companyId);
           return (
-            <section key={filter.id} className="panel panel-strong p-6">
+            <section key={filter.id} className="panel panel-strong p-6" aria-labelledby={`filter-name-${filter.id}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">{filter.name}</h2>
+                    <h2 id={`filter-name-${filter.id}`} className="text-xl font-semibold text-[var(--color-text-primary)]">{filter.name}</h2>
                     <span className={`soft-badge ${filter.isActive ? "soft-badge-success" : "soft-badge-info"}`}>
                       {filter.isActive ? "Active" : "Disabled"}
                     </span>
@@ -84,30 +108,44 @@ export function Filters() {
                     {company ? `Scoped to ${company.name}` : "Applies to every supported company"}
                   </p>
                 </div>
-                <button type="button" onClick={() => setDeleteTargetId(filter.id)} aria-label={`Delete filter ${filter.name}`} className="danger-button">
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setEditTargetId(filter.id)} aria-label={`Edit filter ${filter.name}`} className="secondary-button">
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void toggle(filter)}
+                    disabled={togglingId === filter.id}
+                    aria-label={`${filter.isActive ? "Disable" : "Enable"} filter ${filter.name}`}
+                    className="secondary-button"
+                  >
+                    <Power className="h-4 w-4" aria-hidden="true" />
+                    {filter.isActive ? "Disable" : "Enable"}
+                  </button>
+                  <button type="button" onClick={() => setDeleteTargetId(filter.id)} aria-label={`Delete filter ${filter.name}`} className="danger-button">
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 text-sm text-[var(--color-text-secondary)] md:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <p className="font-semibold text-[var(--color-text-primary)]">Title includes</p>
-                  <p className="mt-1">{filter.titleInclude.join(", ") || "Any"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[var(--color-text-primary)]">Keywords include</p>
-                  <p className="mt-1">{filter.keywordsInclude.join(", ") || "Any"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[var(--color-text-primary)]">Location includes</p>
-                  <p className="mt-1">{filter.locationInclude.join(", ") || "Any"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[var(--color-text-primary)]">Minimum salary</p>
-                  <p className="mt-1">{filter.salaryMin ? `$${filter.salaryMin.toLocaleString()}` : "Any"}</p>
-                </div>
-              </div>
+              <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-[var(--color-text-secondary)] md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ["Title includes", ruleText(filter.titleInclude, "Any")],
+                  ["Keywords include", ruleText(filter.keywordsInclude, "Any")],
+                  ["Location includes", ruleText(filter.locationInclude, "Any")],
+                  ["Minimum salary", filter.salaryMin ? `$${filter.salaryMin.toLocaleString()}` : "Any"],
+                  ["Title excludes", ruleText(filter.titleExclude, "None")],
+                  ["Keywords exclude", ruleText(filter.keywordsExclude, "None")],
+                  ["Location excludes", ruleText(filter.locationExclude, "None")],
+                ].map(([term, value]) => (
+                  <div key={term}>
+                    <dt className="font-semibold text-[var(--color-text-primary)]">{term}</dt>
+                    <dd className="mt-1">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </section>
           );
         })}
@@ -134,6 +172,20 @@ export function Filters() {
           }}
           onCancel={() => setModalOpen(false)}
         />
+      </Modal>
+      <Modal open={Boolean(editTarget)} onClose={() => setEditTargetId(null)} title="Edit filter">
+        {editTarget && (
+          <FilterForm
+            key={editTarget.id}
+            companies={companies}
+            initial={toDraft(editTarget)}
+            onSubmit={async (draft) => {
+              await updateFilter(editTarget.id, draft);
+              setEditTargetId(null);
+            }}
+            onCancel={() => setEditTargetId(null)}
+          />
+        )}
       </Modal>
     </Layout>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, ClipboardCopy, FileText, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Copy, FileText, Plus, Trash2 } from "lucide-react";
 import type { ApplicationMaterialProjection } from "../shared/application-materials";
 import { evaluateApplicationHandoff, type ApplicationHandoffBlockReason } from "../shared/application-handoff";
 import { getDesktopApi } from "../services/api";
@@ -13,12 +13,13 @@ function materialText(material: ApplicationMaterialProjection): string {
   return material.sections.map((section) => section.text).join("\n\n");
 }
 
-const handoffMessages: Record<ApplicationHandoffBlockReason, string> = {
-  "missing-material": "This cover letter no longer exists. Refresh application materials.",
-  "unsupported-kind": "This material is not a supported cover letter.",
-  "stale-evidence": "Supporting Career Evidence changed. Rebuild this draft before copying.",
-  "empty-material": "This cover letter has no usable text.",
-  "missing-evidence-links": "The factual evidence links for this draft are incomplete. Rebuild it before copying.",
+// Completes "Cover letter version N was not copied: ..." for each fail-closed readiness reason.
+const copyBlockedReasons: Record<ApplicationHandoffBlockReason, string> = {
+  "missing-material": "this version no longer exists. Reopen application materials to see current versions.",
+  "unsupported-kind": "it is not a cover letter.",
+  "stale-evidence": "its supporting Career Evidence changed. Create a new version from current evidence.",
+  "empty-material": "it has no text to copy. Create a new version from current evidence.",
+  "missing-evidence-links": "its Career Evidence links are incomplete. Create a new version from current evidence.",
 };
 
 export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterialsPanelProps) {
@@ -28,12 +29,34 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
-  const [copyOutcome, setCopyOutcome] = useState<{
-    materialId: string;
-    kind: "success" | "error";
-    message: string;
-  } | null>(null);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const selectedMaterial = materials.find((material) => material.id === deleteMaterialId) ?? null;
+
+  // Sojourner never sends applications or changes their status; copying is the manual handoff.
+  // Evidence state is re-read at copy time and checked by the pure readiness contract, so a
+  // cached list never lets a stale, empty or incompletely linked version be copied.
+  const copy = async (material: ApplicationMaterialProjection) => {
+    let current: ApplicationMaterialProjection | undefined;
+    try {
+      const latest = await getDesktopApi().applicationMaterials.list(applicationId);
+      setMaterials(latest);
+      current = latest.find((item) => item.id === material.id && item.applicationId === applicationId);
+    } catch {
+      setCopyNotice(`Cover letter version ${material.version} was not copied because its evidence could not be re-checked.`);
+      return;
+    }
+    const readiness = evaluateApplicationHandoff(current ?? null);
+    if (!readiness.ready) {
+      setCopyNotice(`Cover letter version ${material.version} was not copied: ${copyBlockedReasons[readiness.reason]}`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(readiness.text);
+      setCopyNotice(`Cover letter version ${material.version} copied. Review it before you send it.`);
+    } catch {
+      setCopyNotice("Copy was unavailable. Select the cover letter text below and copy it manually.");
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -67,47 +90,6 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
       setError(
         createError instanceof Error ? createError.message : "Unable to create cover letter",
       );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copyCoverLetter = async (projectionId: string, version: number) => {
-    setLoading(true);
-    setError(null);
-    setCopyOutcome(null);
-    try {
-      // Canonical re-read is required: the UI's cached draft may predate an evidence edit.
-      const current = await getDesktopApi().applicationMaterials.list(applicationId);
-      setMaterials(current);
-      const selected = current.find(
-        (item) => item.id === projectionId && item.applicationId === applicationId,
-      ) ?? null;
-      const readiness = evaluateApplicationHandoff(selected);
-      if (!readiness.ready) {
-        setCopyOutcome({
-          materialId: projectionId,
-          kind: "error",
-          message: handoffMessages[readiness.reason],
-        });
-        return;
-      }
-      if (typeof navigator.clipboard?.writeText !== "function") {
-        throw new Error("Clipboard access is unavailable in this browser.");
-      }
-      await navigator.clipboard.writeText(readiness.text);
-      setCopyOutcome({
-        materialId: projectionId,
-        kind: "success",
-        message: `Copied cover letter v${version}. Paste it into the employer's application when ready.`,
-      });
-    } catch (copyError) {
-      const reason = copyError instanceof Error ? copyError.message : "Clipboard access failed";
-      setCopyOutcome({
-        materialId: projectionId,
-        kind: "error",
-        message: `Copy failed: ${reason}`,
-      });
     } finally {
       setLoading(false);
     }
@@ -153,7 +135,7 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-2xl text-xs leading-5 text-[var(--color-text-muted)]">
-              Job Ranger keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
+              Sojourner keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
             </p>
             <button
               type="button"
@@ -167,6 +149,12 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
 
           {error && (
             <div className="support-note px-4 py-3 text-sm text-[var(--color-danger)]">{error}</div>
+          )}
+
+          {copyNotice && (
+            <p role="status" aria-label="Cover letter copy status" className="support-note px-4 py-3 text-sm">
+              {copyNotice}
+            </p>
           )}
 
           {warnings.map((warning) => (
@@ -199,47 +187,34 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
                         Prepared {new Date(material.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      className="surface-link-button p-2 text-[var(--color-text-muted)]"
-                      aria-label={`Delete cover letter version ${material.version}`}
-                      disabled={loading}
-                      onClick={() => setDeleteMaterialId(material.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        aria-label={`Copy text of cover letter version ${material.version}`}
+                        aria-describedby={material.staleEvidenceIds.length > 0 ? `copy-blocked-${material.id}` : undefined}
+                        disabled={loading || material.staleEvidenceIds.length > 0}
+                        onClick={() => void copy(material)}
+                      >
+                        <Copy className="h-4 w-4" aria-hidden="true" /> Copy text
+                      </button>
+                      <button
+                        type="button"
+                        className="surface-link-button p-2 text-[var(--color-text-muted)]"
+                        aria-label={`Delete cover letter version ${material.version}`}
+                        disabled={loading}
+                        onClick={() => setDeleteMaterialId(material.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      aria-label={`Copy cover letter v${material.version}`}
-                      disabled={loading || material.staleEvidenceIds.length > 0}
-                      onClick={() => void copyCoverLetter(material.id, material.version)}
-                    >
-                      <ClipboardCopy className="h-4 w-4" />
-                      Copy cover letter
-                    </button>
-                    <span className="text-xs text-[var(--color-text-muted)]">
-                      Explicit copy only. Job Ranger does not submit an application.
-                    </span>
-                  </div>
-                  {copyOutcome?.materialId === material.id && (
-                    <p
-                      className={`mt-2 text-sm ${copyOutcome.kind === "error" ? "text-[var(--color-danger)]" : "text-[var(--color-text-secondary)]"}`}
-                      role={copyOutcome.kind === "error" ? "alert" : "status"}
-                      aria-label={copyOutcome.kind === "error" ? "Cover letter copy error" : "Cover letter copy status"}
-                    >
-                      {copyOutcome.kind === "success" ? "Copied. " : ""}{copyOutcome.message}
-                    </p>
-                  )}
 
                   {material.staleEvidenceIds.length > 0 && (
                     <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--color-warning)] px-3 py-3 text-sm">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-warning)]" />
-                      <span>
-                        Supporting Career Evidence changed after this draft was created. Do not use this version without reviewing or rebuilding it.
+                      <span id={`copy-blocked-${material.id}`}>
+                        Supporting Career Evidence changed after this draft was created. Do not use this version without reviewing or rebuilding it. To copy a letter, create a new version from current evidence.
                       </span>
                     </div>
                   )}

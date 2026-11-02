@@ -58,7 +58,7 @@ export function electronRuntimeInfo(input: {
   const warnings: string[] = [];
   if (input.channel === "microsoft-store") {
     warnings.push(
-      "Microsoft Store installs keep Job Ranger data inside the package's private storage. Uninstalling the Store app removes that data, so create a backup before uninstalling.",
+      "Legacy Microsoft Store installs keep Sojourner workspace data inside the package's private storage. Uninstalling the Store app removes that data, so create a backup before uninstalling.",
     );
   }
   return {

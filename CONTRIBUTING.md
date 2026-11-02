@@ -2,7 +2,11 @@
 
 Thanks for helping improve Job Ranger. The project is intentionally consumer-facing: contributions should make the job-search experience more reliable, understandable, private, and usable by people who do not have software-development expertise.
 
+Architecture decisions, supported distribution targets and explicit supersessions are governed by the [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). Electron and Store tests remain engineering validation, not obligations to ship a native application.
+
 ## Before you start
+
+The day-to-day [repository workflow](./docs/REPOSITORY_WORKFLOW.md) explains work-in-progress limits, status/area triage, review/merge standards, and closeout responsibilities. It applies to maintainers, contributors, and local coding agents. Run `npm run repo:hygiene` with the authenticated GitHub CLI before opening additional PRs.
 
 Use an issue before beginning work that changes product behavior, architecture, persistence, security boundaries, packaging, or major dependencies.
 
@@ -60,6 +64,18 @@ For user-facing visual changes, include screenshots when they materially help re
 
 The project deliberately preserves GitHub Actions budget. Hosted CI/CD is not required for every routine documentation change or every iteration of release preparation.
 
+### Hosted-run policy
+
+- **Keep work-in-progress PRs in Draft.** Draft PR pushes are not a reason to spend hosted runner minutes. Make related commits and review changes together, rather than pushing each small adjustment to a ready-for-review PR.
+- **Promote to Ready for review once a meaningful, reviewed candidate exists.** The promotion triggers the applicable hosted validation. New commits on a ready PR trigger those checks again, so batch remediation locally before pushing.
+- **Run local targeted checks first.** Prefer focused tests, typecheck, and relevant platform builds. Record commands and results accurately; never mark a release gate as satisfied by a skipped workflow.
+- **Preserve complete checks for ready PRs and releases.** CI, PWA, Electron E2E and Store suites still apply when their existing path filters permit, and release/manual workflows remain available. A skipped draft job is not proof of correctness.
+- **Use manual hosted runs sparingly.** Trigger only for a specific missing environment, failure reproduction, or release-candidate gate. No automatic rerun on success and no duplicate runs simply to refresh a status badge.
+- **Protect the actual billing owner.** Repository settings alone cannot establish available organization/account minutes or spending limits. Consult GitHub Billing & licensing / Actions usage for the billable owner before expensive platform sweeps. If the budget is near its limit, defer noncritical hosted runs and record blocked validation rather than claiming success.
+- **Avoid redundant full validations.** Review already successful exact-head evidence before rerunning. Do not run `repo:health`, PWA and Store packaging repeatedly for documentation or trivial follow-up edits.
+
+In the CI, Web / PWA, Electron E2E and Windows Store workflows, `pull_request` events on a draft yield skipped jobs, and the `ready_for_review` event runs the normal PR checks against the whole PR diff. `converted_to_draft` starts a skipped run that cancels any in-progress PR run, so a PR moved back to draft stops spending minutes; earlier results stay on the commit until it is marked ready again. `push` to `main`, manual `workflow_dispatch` runs (now also available for CI and Electron E2E, in their own concurrency group so they never cancel a push run), and the `workflow_call` release validation that `release-build.yml` makes into the Web / PWA and Windows Store workflows are **not** suppressed. GitHub refuses to merge a draft; that is the only merge guard this rule relies on, because `main` has no required status checks and a skipped job would count as passing.
+
 When appropriate, the maintainer may run validation manually in an isolated environment.
 
 Manual validation should record:
@@ -84,9 +100,29 @@ npm run test:e2e
 
 Do not claim a hosted gate passed when it was intentionally not run.
 
+## Optional local evidence verifier (development only)
+
+The standalone [local evidence checker](./scripts/local_evidence_cli.py) verifies **declared, literal source facts** from exact committed Git objects without network access or third-party Python packages. It is optional and does not enforce pull requests or satisfy Qor governance gates.
+
+Run the [four-claim sample inventory](./docs/examples/local-evidence-sample.evidence.json) from a checkout containing this tool (Git 2.44+ recommended, Python 3.10+):
+
+```sh
+SHA=$(git rev-parse HEAD)
+python scripts/local_evidence_cli.py --repo . --head "$SHA" --inventory docs/examples/local-evidence-sample.evidence.json
+```
+
+On Windows PowerShell:
+
+```powershell
+$sha = git rev-parse HEAD
+py -3 scripts/local_evidence_cli.py --repo . --head $sha --inventory docs/examples/local-evidence-sample.evidence.json
+```
+
+The sample pins source claims to a known ancestor commit and should report four verified claims. The inventory itself is read from the **explicit** `--head` commit. A failure, missing object, or incomplete clone must be investigated, not interpreted as a PASS. The [research/validation record](./docs/research/LOCAL_EVIDENCE_CLI_267.md) explains the exact schema, operating assumptions, tests and limits. **Human judgments, omitted claims and plan prose are not checked.**
+
 ## Pull requests
 
-Use pull requests when they improve review, collaboration, risk management, or release evidence.
+Use pull requests when they improve review, collaboration, risk management, or release evidence. The [PR template](./.github/pull_request_template.md) requires a parent issue, exact tested commit, evidence, limitations and a post-merge closeout plan. Keep a maximum of three actively developed feature PRs, with security/critical-data-loss exceptions requiring explicit owner approval. Do not open redundant CI-only PRs or automatically merge green, outdated prototypes.
 
 A documentation-only maintainer remediation may be merged directly when opening a pull request would consume unnecessary hosted Actions budget. The same truth/review standard still applies.
 
@@ -125,7 +161,7 @@ Current documentation authority is indexed in [docs/README.md](./docs/README.md)
 
 ## Licensing
 
-By contributing, you agree that your contribution may be distributed under the repository's GNU Affero General Public License v3.0 only (AGPL-3.0-only).
+Outside contributions require agreement to the [Sojourner Contributor License Agreement](./CLA.md). It lets MythologIQ Labs, LLC distribute your contribution under the repository's GNU Affero General Public License v3.0 only (AGPL-3.0-only) and under commercial license terms, while you keep ownership. Agree by adding the statement from section 6 of the CLA to your pull request description. Pull requests without it will not be merged.
 
 Do not copy third-party code/assets into Job Ranger unless the exact license permits the intended use and attribution obligations are preserved. The repository license does not automatically replace or override the terms of bundled templates, fonts, models, datasets, dependencies, or hosted services.
 

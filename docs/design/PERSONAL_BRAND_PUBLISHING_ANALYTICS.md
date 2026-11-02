@@ -815,3 +815,93 @@ A future common protocol library may remove duplicated HTTP/schema mechanics. It
 - `CAREER_EVIDENCE_PERSISTENCE_CONTRACT.md`;
 - `SEARCH_LEARNING.md`;
 - `../DISTRIBUTION_TRUST.md`.
+
+
+## Native LinkedIn XLSX analytics and reconciliation (2026-10-10)
+
+**Delivered foundations:** PR #224 embeds LinkedIn-only instructions plus the official LinkedIn help link in Personal Brand. PR #225 supplies a strictly bounded client-local XLSX decoder and six-sheet preview. PR #227 adds versioned feature migration 1007, manual confirmation before save, normalized immutable SQLite import records, content digest-based idempotence, an import ledger and explicitly confirmed deletion. Import records participate in the existing Job Ranger backup and downgrade safeguards. The original XLSX bytes are never stored or sent to LinkedIn; users should retain their original exports.
+
+**Reconciliation scope (this PR):** `src/shared/linkedin-reconciliation.ts` projects saved import snapshots without mutating canonical records. Overlapping exports are aligned to calendar date, and *identical* metric values across exports count once. When two exports disagree for the same calendar date and metric, that metric becomes `conflict` with null display value and retained source IDs; later import time is **not** treated as a truth authority. No values are silently overwritten. An empty or absent observation remains missing, not zero. Complete-period totals are withheld for that metric when any day is missing or disputed. No extrapolation is performed. Users can inspect the latest 14 calendar days, gaps, conflicts and reasons directly on the Personal Brand page.
+
+**Top posts:** LinkedIn's two separate top-post rankings are partial samples. They are never combined into an overall cumulative ranking across different exports, nor are their counts added to daily account totals. The read projection exposes ranked posts only from the most recently *saved* workbook, with explicit provenance. It does not claim that the latest imported file is the most recently measured by LinkedIn. Demographic observations likewise remain tied to each import rather than being averaged across exports.
+
+**Strict authority:** Aggregate impressions, daily engagement, follower growth and ranked-post metrics are *observations from user-imported files*, not authenticated LinkedIn API statements, causal content experiments or verified career outcomes. Reconciliation is deterministic, inference-free, API-free and local-first. No implicit attribution from aggregate analytics to the existing per-post manual publication receipts or Career Outcome Journal is authorized.
+
+**Validation:** Synthetic/adversarial tests exercise overlapping agreement, per-metric disagreement, missing fields/dates, deterministic ordering, exact source attribution, top-post boundary, idempotence, pure input preservation and hostile inputs. The existing real-PWA browser journey now checks the reconciliation view after explicit save, reload and deletion. Linux/Windows PWA, Electron, upgrades and Store packaging remain mandatory exact-head checks.
+
+**Not yet delivered:** deeper analytics dashboards, source-backed historical post text ingestion, matching rankings to separately recorded publication receipts, trend segmentation, user-resolved corrected-statistic conflicts, cross-file citation/authorization UI, and externally verified LinkedIn source metrics. These require separately governed slices, including tests ensuring no accidental employment-outcome claims.
+
+
+## LinkedIn ranked-post to approved-copy provenance (2026-10-10 candidate)
+
+This bounded issue #236 slice does **not** scrape LinkedIn or infer text from the XLSX. It reads the latest imported workbook's partial TOP POSTS sample and attempts to match each ranked URL to a distinct, existing **user-confirmed LinkedIn publication receipt**. Tracking query strings and fragments are discarded for safe LinkedIn permalink comparison; a date discrepancy causes explicit refusal, not automatic timezone guessing.
+
+To disclose a draft's **original approved copy**, the record must also have precisely one prepared package with identical approved draft revision, platform, stored fingerprint and recomputed SHA-256 over its exact body. Ambiguous URLs, publication-date mismatch, absent original copy, forged body/fingerprint or duplicate packages all fail closed. Current objective/hook/format metadata is shown only when the current persisted draft is still the same approved revision and exact text. Otherwise historical metadata remains unknown, while an independently fingerprint-verified original prepared copy can still be shown.
+
+The user interface names this material *approved copy*, not verified live LinkedIn text. The export contains no comments, actual text, or proof of career outcomes. Source-ranked metrics are kept separate from manual per-post snapshots and age-normalized comparisons; aggregate daily metrics are not assigned to a ranked post. Source-provenance warnings remain visible. This is a read projection only: no new schema, API permissions, persistence, external requests, automatic posting, or modification of the Truth Gate.
+
+The follow-on work in #236 remains open for individually reviewed historical post text not already captured by Job Ranger, optional privacy-governed comments, and richer observational dashboards. None may be inferred or synthesized from the native Excel export.
+
+
+## Historical LinkedIn post archive (2026-10-10 candidate)
+
+This is a distinct, user-attested record type for LinkedIn posts published *before* Job Ranger's prepublication review workflow. It must never be represented as a verified LinkedIn source, a reviewed publishing package, a career-outcome event, or authenticated comment material.
+
+- The user manually supplies the **permalink**, original **publication calendar day** (not an invented timestamp or time zone), the **post text**, and whether it was **copied from their own published post** or **reconstructed from memory**. Both modes require explicit affirmative attestation. Reconstructed text is explicitly not an exact copy.
+- The back end normalizes only supported HTTPS LinkedIn post URLs, rejects unknown fields, impossible dates, excessive/control-character text, duplicates by canonical URL and collisions with Job Ranger's already confirmed publishing receipts. Adding a future approved publishing receipt for a currently archived historical URL is also blocked until the archive entry is deliberately removed.
+- The user-attested content is independently stored in versioned SQLite migration **1008**, with a SHA-256 of the exact body, creation time, source method and separate `user_attested_historical` authority label. This digest detects exact byte changes; it does **not** cryptographically prove LinkedIn publication, authorship or source authenticity.
+- The user can inspect and explicitly delete records. There is no hidden background scrape, bulk harvest, OAuth, browser automation, social comment ingestion, automatic text rewrite, inferred source rating, or change to Career Evidence/Truth Gate. Raw post text remains within the Job Ranger local database and existing backup/restore boundary; users should consider local backup privacy and delete copied material they do not wish to retain.
+- The read-only join uses a **single latest saved XLSX** top-post sample. It matches by canonical URL and the publication day, refuses conflicting/ambiguous dates and leaves missing metrics unknown. Ranked observations are not a complete post population, do not represent uniform post-age windows, and cannot establish causal effectiveness. User-attested historical text is never silently upgraded into the `copy-verified` status reserved for earlier, prepublication-approved packages.
+- The isolated archive is LinkedIn-only. Optional manually reviewed comments, user-controlled qualitative labels, revision/supersession history, fuller dashboards and age-normalized comparisons remain governed follow-ons in issue #236.
+
+Qualification requires repository health, adversarial validation, SQLite restart/backup and deletion isolation, Linux/Windows PWA, Electron E2E, Windows Store package, release upgrades, and CodeQL. All passing gates must refer to the exact merge candidate SHA.
+
+
+## Observed LinkedIn performance dashboard (2026-10-10 candidate)
+
+This read-only summary uses the already-reconciled manual XLSX daily observations. The latest available seven *calendar days* are compared against the immediately preceding seven days for impressions, engagements and new followers **separately**. A metric must have seven uncontested, explicitly observed dates in **each** window before any sum or difference may appear. Unknowns, conflicts, missing days, partial periods, malformed data or unsafe integer totals withhold that metric without hiding independently valid metrics.
+
+Only a complete comparison with a nonzero prior total receives a percent change; a zero baseline cannot produce a percentage. Every displayed trend is a calendar-aligned observation, **not** post-normalized engagement rate, recruiter activity, a career-outcome measurement, causal effectiveness claim, or inference recommendation. Sources remain the user-imported workbooks, not provider-authenticated API observations. Their partial, top-50 post rankings are not silently combined with daily account totals or sorted into a fictitious all-time leaderboard. The feature needs no migrations, new outbound access or new permissions.
+
+The Personal Brand UI presents all three metric comparisons with explicit completeness, calendar windows and unavailable reasons; adversarial unit tests cover overlapping disputes, missing dates, empty history, zero prior values, repeated input identity and stable full-window behavior. A PWA browser journey tests intact and conflicting re-imports through the real IPC/SQLite boundary. Future optional topic/hook/format performance should require user-reviewed labels, comparable post-age capture intervals and transparent uncertainty, rather than extracting unsupported text from analytics exports.
+
+
+## Original approved-copy, same-age hook reviews (2026-10-10 candidate)
+
+This phase intentionally does **not** use the LinkedIn XLSX partial TOP POSTS rankings to judge individual hooks, topics, or performance. Those export totals have no comparable *post age* capture window and may represent different exposure periods. The only admissible comparisons use the existing manual individual-post cumulative snapshots that qualify for the 24/48/168-hour age gates.
+
+For each user-confirmed publication, the content context projection demands exactly one corresponding reviewed/prepared copy package matching the confirmed revision, destination and receipt digest. It recomputes SHA-256 over the **exact** stored body bytes, verifies the current draft is still the same revision and original body, and requires explicit objective, hook, format, and target-audience labels. Revised drafts, absent/ambiguous packages, mismatched fingerprints, incomplete/estimated snapshots and unknown metadata remain excluded. No migration, newly synthesized text, NLP labeling or hidden inference is used.
+
+Candidate pairs must have different *user-authored* hook labels while retaining identical recorded objective, format, audience label set, metric definition/source label and observation authority states. Observation ages must also be within a stricter cross-post margin (2h for the 24h cohort; 4h for 48h; 8h for 168h). The display exposes both original approved texts, the individual observed measurements, and a conspicuous **review-only, not controlled** limitation. It does not select a winner, extrapolate a result or claim that a hook caused reach, recruiter interest or employment.
+
+This remains an **incomplete** controlled-variable framework because post **topics**, publication time, actual audience and broader platform distribution context are not recorded in normalized form. Those variables must not be inferred from text. A future separately governed topic-tag intake should require user selection/confirmation and appropriate privacy and versioned provenance before quantitative topic-stratified comparisons are considered.
+
+Tests cover missing observations, stale revisions, forged copy digests, duplicate packages, mismatched audience/format/objective/source states, inconsistent age and deterministic pair ordering. The existing browser learning journey also checks intact approved copy disclosure and candidate refusal when changing to an ineligible age or metric.
+
+
+## Explicit LinkedIn topic labeling, versioned (2026-10-10 candidate, #244)
+
+This phase allows users to manually assign a small set (at most six) of topic labels to a **confirmed LinkedIn publication** or a **user-attested historical LinkedIn post**. It requires an explicit checkbox confirmation, 2–50 character normalized topic strings, duplicate rejection and strict target existence. Neither the LinkedIn XLSX nor unreviewed content supplies topic labels. **No automatic topic inference is implemented.** AI-generated labels or speculative themes cannot silently enter this authority path.
+
+Schema migration **1009** creates a separate, append-only SQLite topic-event table. Each user-confirmed labeling or clearing event has a unique ID, per-target revision, recorded time, immutable user-attested topic set, and a fingerprint bound to its actual source publication or historical-post bytes. Concurrent edits use a database-level revision precondition: a stale writer cannot overwrite a newer assertion. Clearing active labels appends an **empty-topic tombstone**, retaining the edit history locally. Source text, publishing packages, URL receipts, all imported XLSX data and Career Evidence are never mutated by changing labels.
+
+The browser UI surfaces the exact source category, topic list, current revision and per-target audit history. Historical reconstructed-from-memory content remains distinguished from copied text. A source deletion purges the historical record's topic events in the **same SQLite transaction** to avoid storing orphan annotations after a privacy-directed delete; other records' topic revisions remain intact. Full local backups contain active and older revision events until source deletion. There is no server upload, LinkedIn authentication, scraping or automatic publishing.
+
+**Deliberate analysis boundary:** A topic label is an editorial/user assertion, not provider-authenticated content. No topic is scored, ranked, averaged or declared a winner here. Issue #244's future grouped performance analysis remains subject to individual-post same-age cumulative measurements, immutable provenance, explicit per-post labels, and robust small-sample warnings. LinkedIn XLSX top-50 snapshots without consistent post-age windows remain excluded. The feature is **not** employment-outcome evidence or an inference override.
+
+Qualification includes strict input and duplicate-label tests; SQLite stale/concurrent revisions, event history, independent deletion and backup/restore tests; PWA manual save/edit/clear/reload and historical source purge; exact-head Linux/Windows PWA, Electron, release upgrade, packaged Store, and CodeQL gates.
+
+
+## Qualified topic cohort coverage (2026-10-10 candidate; issue #244)
+
+Topic attestations from migration 1009 are **reviewed assertions**, not natural-language model classifications. This reporting phase is a pure local projection. It performs no new database writes and accesses no social-provider API.
+
+The model admits only a current user-confirmed **single-topic label** whose source fingerprint matches the same publication's existing, cryptographically verified original approved copy and confirmed receipt. Historical-post assertions, cleared labels, ambiguous duplicates and multi-topic records are excluded from causal-appearing comparisons. An unlabeled or otherwise unsupported post is shown as missing coverage, **never** as a zero-performance example.
+
+Individual-post same-age metric observations must already pass the Personal Brand learning eligibility gate. The label projection further restricts post ages to within 2h of the 24h checkpoint, 4h of the 48h checkpoint, or 8h of the 168h checkpoint. Within any one group, the **recorded** hook, format, objective, audience labels, metric source label, measurement authority states, and selected metric definition must match. Audience labels do **not** prove that the same people saw each post.
+
+A topic's sample count can be displayed for research coverage. Descriptive medians and observed minimum/maximum are withheld unless the same context contains **at least two distinct topics with three distinct eligible posts per topic**. Results are presented alphabetically by user label, **never ranked by metric**. No 'winning topic,' significance claim, normalized exposure claim, experiment result or career-outcome link is generated. Posting time, actual audience, external conditions, selection bias and unobserved differences are explicitly uncontrolled. This threshold is a minimum disclosure safeguard, not a statistical-power guarantee.
+
+The source is a locally saved user-attested topic event plus a matching individually measured cumulative snapshot. LinkedIn's XLSX top-50 leaderboard is never imported into this per-topic analysis, because that export lacks post-age exposure windows. Estimated, missing or conflicting individual metrics remain outside the existing learning gate. Historical transcriptions remain archival rather than silently becoming prepublication-approved posts.
+
+Acceptance testing must cover complete six-post sample groups, five-post small-sample withholding, absent/cleared/multi-label/duplicate/stale/mismatched-source events, label integrity, snapshot trust, copy fingerprint, audience/objective/format/hook/source differences, age tolerance and deterministic alphabetical ordering. PWA browser tests must verify qualified descriptive groups, wrong-age refusal and invalidation after a user clears a label. No existing truth or inference contracts are relaxed.

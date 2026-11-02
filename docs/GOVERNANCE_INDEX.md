@@ -1,6 +1,9 @@
 # Governance Index
 
-**Last Reviewed**: 2026-10-09
+> **Separate architecture authority:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md). This governance inventory cannot authorize an architecture contradictory to that index.
+
+
+**Last Reviewed**: 2026-10-15 (review of `main` at `5c749dc28170bc46ce2b104fe24309d3aff7a02c`; previous review 2026-10-10 at `4721e7fa782099c69019494d6f823c2cc372b98d`)
 
 A single authoritative map of every governance artifact in this project, organized
 into six freshness tiers with explicit drift contracts. A stale entry here is
@@ -13,10 +16,11 @@ MUST be current at every cycle close. Drift signal: wrong version / wrong state 
 
 | Artifact | Path | Freshness marker |
 |----------|------|------------------|
-| Meta Ledger | `docs/META_LEDGER.md` | latest sealed entry (#27, Phase 5 seal) |
-| System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-06 |
+| Meta Ledger | `docs/META_LEDGER.md` | latest entry on main #94, Phase 16 seal; later Phase 17 VETOs/remediations exist on draft PR #232 only |
+| System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-15; main and published release distinguished |
 | Concept | `docs/CONCEPT.md` | stable |
-| Architecture Plan | `docs/ARCHITECTURE_PLAN.md` | stable |
+| Architecture Index | `docs/ARCHITECTURE_INDEX.md` | authoritative current decisions and supersession register |
+| Architecture Plan | `docs/ARCHITECTURE_PLAN.md` | product authority within architecture index |
 | Backlog | `docs/BACKLOG.md` | open items current |
 | Governance Index | `docs/GOVERNANCE_INDEX.md` | Last Reviewed date current |
 | Feature Index | `docs/FEATURE_INDEX.md` | every row's status matches its cited test |
@@ -34,6 +38,7 @@ Stable; changes are explicit doctrine events. Drift signal: rules contradict eac
 | Project governance | `GOVERNANCE.md` |
 | Security policy | `SECURITY.md` |
 | Contributing | `CONTRIBUTING.md` |
+| Repository workflow (intake, WIP limits, hygiene audit, closeout) | `docs/REPOSITORY_WORKFLOW.md` |
 | Code of conduct | `CODE_OF_CONDUCT.md` |
 | Third-party notices | `THIRD_PARTY_NOTICES.md` |
 | Branding | `docs/BRANDING.md` |
@@ -47,8 +52,9 @@ Live until close; ages out at substantiate. Drift signal: shipped feature still 
 
 | Artifact | Path | Opened |
 |----------|------|--------|
-| v1.3.0 release candidate | `docs/validation/RELEASE_CANDIDATE_V1.3.0.md` | 2026-10-06 |
-| Roadmap | `docs/planning/PLAN.md` | current as of 2026-10-05 |
+| v1.3.0 release candidate | `docs/validation/RELEASE_CANDIDATE_V1.3.0.md` | 2026-10-06 baseline; no later slice automatically admitted |
+| Current main documentation reconciliation | `docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md` | 2026-10-10; refreshed 2026-10-15 |
+| Roadmap | `docs/planning/PLAN.md` | current as of 2026-10-10 |
 | Release readiness | `docs/RELEASE_READINESS.md` | ongoing |
 | Product gap review | `docs/PRODUCT_GAP_REVIEW.md` | ongoing |
 | Universal user story matrix | `docs/validation/UNIVERSAL_USER_STORY_MATRIX.md` | ongoing |
@@ -57,7 +63,7 @@ Live until close; ages out at substantiate. Drift signal: shipped feature still 
 
 Live for plan duration; archived at substantiate. Drift signal: plan shipped but artifact still presents as open.
 
-Status below is quoted from the Meta Ledger. All are historical; they remain in `docs/` and are due for archival (BACKLOG H1).
+Status below is quoted from the **main-branch** Meta Ledger through #94. All listed main-branch plans are historical; they remain in `docs/` and are due for archival (BACKLOG H1). **Active Phase 17 draft plan, remediation and review artifacts reside on PR #232, not on main.** Do not add or label those artifacts as merged, passed or sealed here until qualification and merger.
 
 | Artifact | Path | Plan |
 |----------|------|------|
@@ -79,7 +85,7 @@ Status below is quoted from the Meta Ledger. All are historical; they remain in 
 | Phase 14 inference Slice A | `docs/plan-qor-phase14-inference-slice-a.md` | PLAN #74, VETO #75, PASS #76, implemented #77, sealed #78 |
 | Phase 15 mapper negation (G12) | `docs/plan-qor-phase15-mapper-negation.md` | PLAN #79, VETO #80-#83, remediate, user-approved override, PASS #84, implemented #85, sealed #86 |
 | Phase 16 mapper claim action (G13) | `docs/plan-qor-phase16-mapper-claim-action.md` | PLAN #87, VETO #88-#91, remediate (gate-loop), user-approved overrides, PASS #92, implemented #93, sealed #94 |
-| Candidate-controlled application handoff | `docs/plans/228-application-handoff.md` | plan prepared, Qortara plan gate / independent audit pending; no code authorized (#228) |
+| Application handoff readiness delta (#228) | `docs/plans/228-application-handoff.md` | not a Meta Ledger entry: no Qortara plan gate or audit PASS is recorded. Owner decision 2026-11-02: implementation proceeds under the `GOVERNANCE.md` merge standard. Copy baseline already on main via #270; plan covers only the remaining delta |
 
 ## Tier 5 — Reference Material
 

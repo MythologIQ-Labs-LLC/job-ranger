@@ -194,7 +194,7 @@ for (const expected of ["Avery Okafor", "avery@example.com", "EXPERIENCE", "Ware
 assert.ok(text.indexOf("Warehouse Shift Lead") < text.indexOf("dock-to-stock"), "statement order preserved");
 assert.ok(text.indexOf("EXPERIENCE") < text.indexOf("SKILLS"), "section order preserved");
 const metadataDocument = await pdfLib.PDFDocument.load(first);
-assert.equal(metadataDocument.getCreator(), "Job Ranger");
+assert.equal(metadataDocument.getCreator(), "Sojourner");
 await assert.rejects(
   renderResumePdfBytes(pdfLib, projection, [{ section: "Skills", order: 1, text: "Mandarin (普通话)" }]),
   (error) => error instanceof ResumePdfEncodingError && /cannot encode/.test(error.message),
