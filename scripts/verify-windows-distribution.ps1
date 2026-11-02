@@ -1,8 +1,13 @@
 param(
   [switch]$RequireSigned,
   [string[]]$ArtifactPath,
-  [string]$ReportPath
+  [string]$ReportPath,
+  [string]$SignToolPath
 )
+
+# Publisher required by the Windows code signing standard
+# (MythologIQ-Labs-LLC/Myth-Tech-Forge docs/WINDOWS_CODE_SIGNING_STANDARD.md).
+$ExpectedSignerPattern = '^CN="MythologIQ Labs, LLC"'
 
 $ErrorActionPreference = "Stop"
 
@@ -27,9 +32,12 @@ if ($ArtifactPath -and $ArtifactPath.Count -gt 0) {
     $targets += (Resolve-Path -LiteralPath $candidate).Path
   }
 } else {
-  $appExe = Join-Path $PSScriptRoot "../release/win-unpacked/Job Ranger.exe"
-  if (Test-Path -LiteralPath $appExe) {
-    $targets += (Resolve-Path $appExe).Path
+  # Every executable the installer puts on disk that we sign, plus the installer itself.
+  foreach ($relative in @("Job Ranger.exe", "resources/elevate.exe", "resources/sqlite3.exe")) {
+    $candidate = Join-Path $PSScriptRoot "../release/win-unpacked/$relative"
+    if (Test-Path -LiteralPath $candidate) {
+      $targets += (Resolve-Path $candidate).Path
+    }
   }
   $targets += Get-ChildItem -Path (Join-Path $PSScriptRoot "../release") -Filter "Job*windows*.exe" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
 }
@@ -39,12 +47,24 @@ if ($targets.Count -eq 0) {
   throw "No Windows release executables were found for trust verification."
 }
 
+if ($RequireSigned -and -not $SignToolPath) {
+  $SignToolPath = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+    Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+  if (-not $SignToolPath) { throw "signtool.exe was not found; it is needed to verify a signed release." }
+}
+
 $results = foreach ($target in $targets) {
   $signature = Get-AuthenticodeSignature -FilePath $target
   $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $target
   $item = Get-Item -LiteralPath $target
   $subject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { $null }
   $issuer = if ($signature.SignerCertificate) { $signature.SignerCertificate.Issuer } else { $null }
+  $timestamper = if ($signature.TimeStamperCertificate) { $signature.TimeStamperCertificate.Subject } else { $null }
+  $signToolVerified = $null
+  if ($RequireSigned) {
+    & $SignToolPath verify /pa $target | Out-Host
+    $signToolVerified = ($LASTEXITCODE -eq 0)
+  }
   $entry = [ordered]@{
     path = $target
     fileName = $item.Name
@@ -54,10 +74,20 @@ $results = foreach ($target in $targets) {
     statusMessage = $signature.StatusMessage
     signerSubject = $subject
     signerIssuer = $issuer
+    timestamperSubject = $timestamper
+    signToolVerifyPa = $signToolVerified
   }
 
-  if ($RequireSigned -and $signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-    $entry.failure = "Public release requires a valid Authenticode signature."
+  if ($RequireSigned) {
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+      $entry.failure = "Public release requires a valid Authenticode signature."
+    } elseif ($subject -notmatch $ExpectedSignerPattern) {
+      $entry.failure = "Unexpected signer: $subject"
+    } elseif (-not $timestamper) {
+      $entry.failure = "The signature is not timestamped."
+    } elseif (-not $signToolVerified) {
+      $entry.failure = "signtool verify /pa failed."
+    }
   }
 
   [pscustomobject]$entry
@@ -75,9 +105,10 @@ try {
 }
 
 $report = [ordered]@{
-  schemaVersion = 2
+  schemaVersion = 3
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
   requireSigned = [bool]$RequireSigned
+  expectedSigner = if ($RequireSigned) { 'CN="MythologIQ Labs, LLC"' } else { $null }
   host = [ordered]@{
     computerName = $env:COMPUTERNAME
     os = $windowsCaption
@@ -90,7 +121,7 @@ $report = [ordered]@{
 $report | ConvertTo-Json -Depth 8 | Set-Content -Path $ReportPath -Encoding UTF8
 Get-Content $ReportPath
 
-$invalid = @($results | Where-Object { $_.status -ne "Valid" })
+$invalid = @($results | Where-Object { $_.failure })
 if ($RequireSigned -and $invalid.Count -gt 0) {
   throw "Windows distribution trust verification failed for $($invalid.Count) artifact(s)."
 }

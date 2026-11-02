@@ -7,6 +7,10 @@ export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export const distPwa = path.join(projectRoot, "dist-pwa");
 /** Demo-flavor production build (npm run build:pwa:demo), served on its own origin by its tests. */
 export const distPwaDemo = path.join(projectRoot, "dist-pwa-demo");
+/** Drive-CONFIGURED standard build (npm run build:pwa:drive-e2e), used only by drive-export-component.spec.ts. */
+export const distPwaDriveE2e = path.join(projectRoot, "dist-pwa-drive-e2e");
+/** Helper origin baked into that build; the spec routes it, it never resolves. */
+export const DRIVE_E2E_HELPER_ORIGIN = "https://helper.test";
 
 /** Minimal, valid DOCX (OOXML package) for a non-software career history. */
 export function healthcareResumeDocx(): Buffer {

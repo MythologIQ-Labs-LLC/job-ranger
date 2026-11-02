@@ -90,10 +90,10 @@ The three-PR cap uses only explicitly \`status:active\` PRs, not every
 open draft. Stale draft flags are informational.
 
 Useful queue views, once labels are configured:
-[open issues](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues?q=is%3Aissue+is%3Aopen),
-[open PRs](https://github.com/MythologIQ-Labs-LLC/job-ranger/pulls?q=is%3Apr+is%3Aopen),
-[active work](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues?q=is%3Aopen+label%3Astatus%3Aactive),
-[blocked work](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues?q=is%3Aopen+label%3Astatus%3Ablocked).
+[open issues](https://github.com/MythologIQ-Labs-LLC/sojourner/issues?q=is%3Aissue+is%3Aopen),
+[open PRs](https://github.com/MythologIQ-Labs-LLC/sojourner/pulls?q=is%3Apr+is%3Aopen),
+[active work](https://github.com/MythologIQ-Labs-LLC/sojourner/issues?q=is%3Aopen+label%3Astatus%3Aactive),
+[blocked work](https://github.com/MythologIQ-Labs-LLC/sojourner/issues?q=is%3Aopen+label%3Astatus%3Ablocked).
 
 ## Actions budget is a real acceptance constraint
 
@@ -108,7 +108,7 @@ local evidence and an explicitly budget-aware commit.
 ## First-pass backlog cleanup, October 2026
 
 Evidence and the changing counts live on
-[issue #194](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/194),
+[issue #194](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/194),
 rather than in a perpetually stale count in this guide.
 
 High-impact active delivery references: #194 reliability and data integrity;

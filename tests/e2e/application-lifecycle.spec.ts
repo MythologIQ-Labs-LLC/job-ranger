@@ -77,7 +77,7 @@ test("application lifecycle preserves submitted file, contact, event, and remind
   await expect(applicationCard).toBeVisible();
   await applicationCard.getByRole("button", { name: "Application details", exact: false }).click();
 
-  await expect(applicationCard.getByText("PDF v1 · submitted", { exact: true })).toBeVisible();
+  await expect(applicationCard.getByText("PDF v1 · Version you sent", { exact: true })).toBeVisible();
 
   await applicationCard.getByRole("button", { name: "Add person", exact: true }).click();
   await applicationCard.getByLabel("Contact name", { exact: true }).fill("Morgan Recruiter");
@@ -102,7 +102,7 @@ test("application lifecycle preserves submitted file, contact, event, and remind
 
   const reloadedCard = page.locator("article").filter({ hasText: application.title });
   await reloadedCard.getByRole("button", { name: "Application details", exact: false }).click();
-  await expect(reloadedCard.getByText("PDF v1 · submitted", { exact: true })).toBeVisible();
+  await expect(reloadedCard.getByText("PDF v1 · Version you sent", { exact: true })).toBeVisible();
   await expect(reloadedCard.getByText("Morgan Recruiter · Recruiter", { exact: true })).toBeVisible();
   await expect(reloadedCard.getByText("Panel interview", { exact: true })).toBeVisible();
 

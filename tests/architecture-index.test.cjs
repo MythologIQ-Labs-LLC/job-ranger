@@ -11,8 +11,9 @@ assert.match(index, /^# Canonical Architecture Index/m);
 for (const decision of ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-004", "ARCH-005", "ARCH-006"]) {
   assert.match(index, new RegExp('\\b' + decision + '\\b'), 'missing decision: ' + decision);
 }
-assert.match(index, /Progressive Web App is the sole intended product runtime and distribution channel/);
-assert.match(index, /Electron is an internal engineering harness/);
+assert.match(index, /A signed Windows application is the primary product deliverable; the Progressive Web App continues/);
+assert.match(index, /Electron is the Windows product runtime and remains the shared-core engineering harness/);
+assert.match(index, /ARCH-001 "PWA is the sole intended product runtime and distribution channel" \| \*\*Superseded 2026-11-02/);
 assert.match(index, /Microsoft Store.*Superseded|Superseded.*Microsoft Store/i);
 const requiredEntryPoints = [
   "AGENTS.md",
