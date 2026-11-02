@@ -142,7 +142,9 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
   }
 
   async compareAndSwap(operationId: string, expected: ExportStatus, next: ExportJournalRecord): Promise<boolean> {
-    validateJournalRecord(next);
+    // A malformed or self-contradictory successor (for example "failed" without
+    // reserved-ID evidence) is refused without touching storage.
+    try { validateJournalRecord(next); } catch { return false; }
     if (next.operationId !== operationId || next.status === expected) return false;
     return this.transaction<boolean>("readwrite", (store, done) => {
       const request = store.get(operationId);

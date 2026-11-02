@@ -215,7 +215,7 @@ test("durable storage rejects an illegal uploading to cancelled transition", asy
     const accepted = await journal.compareAndSwap(prepared.operationId, "uploading",
       { ...uploading, status: "cancelled", updatedAt: new Date().toISOString() });
     const skippedVerification = await journal.compareAndSwap(prepared.operationId, "uploading",
-      { ...uploading, status: "verified", remoteId: "unverifiedFile",
+      { ...uploading, status: "verified", remoteId: prepared.reservedFileId,
         verifiedSha256: prepared.bytesSha256, updatedAt: new Date().toISOString() });
     const stored = await journal.findOperation(prepared.operationId);
     const stillBlocked = await journal.hasUnresolvedForArtifact(prepared.accountId, prepared.artifactId);
