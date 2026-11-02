@@ -103,7 +103,7 @@ test.describe("progressive first-run onboarding", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -144,7 +144,7 @@ test.describe("progressive first-run onboarding", () => {
     await page.reload();
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -210,7 +210,7 @@ test.describe("progressive first-run onboarding", () => {
     await page.getByRole("button", { name: "Continue to Career Profile", exact: true }).click();
     await expect(
       page.getByRole("heading", {
-        name: "Tell Job Ranger what good work looks like for you.",
+        name: "Tell Sojourner what good work looks like for you.",
         exact: true,
       }),
     ).toBeVisible();
@@ -245,7 +245,7 @@ test.describe("progressive first-run onboarding", () => {
     await page.getByRole("button", { name: "Import a resume", exact: true }).click();
     await expect(
       page.getByRole("heading", {
-        name: "Tell Job Ranger what good work looks like for you.",
+        name: "Tell Sojourner what good work looks like for you.",
         exact: true,
       }),
     ).toBeVisible();

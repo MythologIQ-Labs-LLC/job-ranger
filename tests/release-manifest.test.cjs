@@ -50,6 +50,11 @@ async function run() {
     selectPlatformArtifacts(["job-ranger-web-v1.3.0.zip", "Job Ranger-v1.3.0-windows-x64.exe"], "web"),
     ["job-ranger-web-v1.3.0.zip"],
   );
+  // The demo flavor archive is never mistaken for the standard web release.
+  assert.deepEqual(
+    selectPlatformArtifacts(["job-ranger-web-demo-v1.3.0.zip", "job-ranger-web-v1.3.0.zip"], "web"),
+    ["job-ranger-web-v1.3.0.zip"],
+  );
   assert.throws(() => selectPlatformArtifacts([], "linux"), /Unsupported release-manifest platform/);
 
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-release-manifest-"));

@@ -1,5 +1,8 @@
 # Architecture and Evolution Plan
 
+> **Authority routing:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) is the single source for active architecture decisions, canonical document selection and explicit supersession. In case of conflict, the index prevails. This document remains canonical for product authority and trust boundaries only within that index.
+
+
 This document describes Job Ranger's current architecture and the boundaries that future work must preserve.
 
 Older phase plans are historical implementation records. They do not override this document, current source, tests, or published-release evidence.

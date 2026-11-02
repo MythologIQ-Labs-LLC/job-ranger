@@ -1,24 +1,86 @@
+import { useCallback, useRef, useState } from "react";
+import { useBeforeUnload, useBlocker } from "react-router-dom";
 import { ExternalLink, FileText, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ApplicationInsightsPanel } from "../components/ApplicationInsightsPanel";
 import { ApplicationLifecyclePanel } from "../components/ApplicationLifecyclePanel";
 import { ApplicationMaterialsPanel } from "../components/ApplicationMaterialsPanel";
+import { ApplicationNotesEditor } from "../components/ApplicationNotesEditor";
+import { ApplicationStatusEditor } from "../components/ApplicationStatusEditor";
 import { InterviewPrepPanel } from "../components/InterviewPrepPanel";
 import { Layout } from "../components/Layout";
-import { useApplications, type ApplicationStatus } from "../career/storage";
-import { getDesktopApi } from "../services/api";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { DemoListingBadge, DemoListingLinkMessage, openListingUrl } from "../components/DemoListingNotice";
+import { useApplications } from "../career/storage";
+import { isDemoListing } from "../shared/demo-listing";
+import type { ApplicationStatus } from "../shared/contracts";
 
-const statuses: Array<{ value: ApplicationStatus; label: string }> = [
+type StatusFocus = "all" | "interested" | "applied" | "interview" | "offer" | "closed";
+const STATUS_FOCUS: { value: StatusFocus; label: string }[] = [
+  { value: "all", label: "All" },
   { value: "interested", label: "Interested" },
   { value: "applied", label: "Applied" },
   { value: "interview", label: "Interview" },
-  { value: "offer", label: "Offer" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
+  { value: "offer", label: "Offers" },
+  { value: "closed", label: "Closed" },
 ];
+
+function matchesStatusFocus(status: ApplicationStatus, focus: StatusFocus): boolean {
+  if (focus === "all") return true;
+  if (focus === "closed") return status === "rejected" || status === "withdrawn";
+  return status === focus;
+}
+
 
 export function Applications() {
   const { applications, update, remove, loading, error } = useApplications();
+  const [deleteApplicationId, setDeleteApplicationId] = useState<string | null>(null);
+  const [statusFocus, setStatusFocus] = useState<StatusFocus>("all");
+  const deleteApplication = applications.find((item) => item.id === deleteApplicationId) ?? null;
+  const [dirtyFields, setDirtyFields] = useState<Record<string, true>>({});
+  const hasUnsavedChanges = Object.keys(dirtyFields).length > 0;
+  const leavingRef = useRef(false);
+  // Fictional demo listings have no real posting; opening one explains that instead.
+  const [demoLinkApplicationId, setDemoLinkApplicationId] = useState<string | null>(null);
+
+  // Never unmount an editor while its latest local intent has not been acknowledged.
+  // A saved status change can move a record out of the selected category: it stays
+  // visible until its status AND notes are completely persisted or resolved.
+  const visibleApplications = applications.filter((application) =>
+    matchesStatusFocus(application.status, statusFocus) ||
+    Boolean(dirtyFields[application.id + ":status"]) ||
+    Boolean(dirtyFields[application.id + ":notes"]),
+  );
+  const statusCounts = Object.fromEntries(
+    STATUS_FOCUS.map(({ value }) => [value, applications.filter((application) => matchesStatusFocus(application.status, value)).length]),
+  ) as Record<StatusFocus, number>;
+
+  const markDirty = useCallback((id: string, field: "status" | "notes", dirty: boolean) => {
+    const key = id + ":" + field;
+    setDirtyFields((current) => {
+      if (Boolean(current[key]) === dirty) return current;
+      const next = { ...current };
+      if (dirty) next[key] = true;
+      else delete next[key];
+      return next;
+    });
+  }, []);
+
+  // A data-router blocker catches links, browser back/forward and programmatic
+  // SPA navigation, not merely clicks within the Sidebar.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  // Hard reload and tab close use the browser's native advisory. Force-quit
+  // or sudden power loss cannot be intercepted by client-side navigation.
+  useBeforeUnload(useCallback((event) => {
+    if (!hasUnsavedChanges) return;
+    event.preventDefault();
+    event.returnValue = "";
+  }, [hasUnsavedChanges]));
+
 
   return (
     <Layout>
@@ -39,7 +101,39 @@ export function Applications() {
         </section>
       )}
 
-      <div className="mt-8 space-y-4">
+      <section aria-label="Application status filters" className="panel panel-muted mt-6 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Focus your applications</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Filter by recorded status, not by inferred urgency or assumed deadlines.
+            </p>
+          </div>
+          <p role="status" className="text-sm text-[var(--color-text-secondary)]">
+            Showing {visibleApplications.length} of {applications.length} tracked applications
+          </p>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Application status view">
+          {STATUS_FOCUS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={statusFocus === value}
+              onClick={() => setStatusFocus(value)}
+              className={statusFocus === value ? "primary-button" : "secondary-button"}
+            >
+              {label} ({statusCounts[value]})
+            </button>
+          ))}
+        </div>
+        {hasUnsavedChanges && (
+          <p role="status" className="mt-3 text-sm text-[var(--color-text-secondary)]">
+            Applications with unsaved edits stay visible across status filters until their latest changes are saved.
+          </p>
+        )}
+      </section>
+
+      <div className="mt-5 space-y-4">
         {loading && (
           <div className="panel panel-strong px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
             Loading your applications...
@@ -55,45 +149,46 @@ export function Applications() {
           </div>
         )}
 
-        {applications.map((application) => (
+        {!loading && applications.length > 0 && visibleApplications.length === 0 && (
+          <div className="panel panel-strong px-6 py-9 text-sm text-[var(--color-text-secondary)]">
+            No tracked applications have this recorded status. Choose another status or All.
+          </div>
+        )}
+
+        {visibleApplications.map((application) => (
           <article key={application.id} className="panel panel-strong p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
+                {isDemoListing(application.url) && (
+                  <div className="mb-2">
+                    <DemoListingBadge url={application.url} />
+                  </div>
+                )}
                 <button
                   type="button"
-                  onClick={() => void getDesktopApi().openExternal(application.url)}
+                  onClick={() => openListingUrl(application.url, () => setDemoLinkApplicationId(application.id))}
                   className="surface-link-button inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
                 >
                   {application.title}
                   <ExternalLink className="h-4 w-4" />
                 </button>
+                {demoLinkApplicationId === application.id && <DemoListingLinkMessage />}
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{application.companyName}</p>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   Added {formatDistanceToNow(new Date(application.createdAt), { addSuffix: true })}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <select
-                  className="select-shell min-w-40"
-                  value={application.status}
-                  onChange={(event) =>
-                    void update(application.id, {
-                      status: event.target.value as ApplicationStatus,
-                    })
-                  }
-                  aria-label={`Application status for ${application.title}`}
-                >
-                  {statuses.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <ApplicationStatusEditor
+                  application={application}
+                  onSave={(status) => update(application.id, { status })}
+                  onDirtyChange={(dirty) => markDirty(application.id, "status", dirty)}
+                />
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => void remove(application.id)}
+                  onClick={() => setDeleteApplicationId(application.id)}
                   aria-label={`Remove ${application.title} from applications`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -102,17 +197,18 @@ export function Applications() {
               </div>
             </div>
 
-            <label className="mt-5 block">
-              <span className="metric-label">Notes</span>
-              <textarea
-                className="input-shell mt-2 min-h-24 resize-y py-3"
-                value={application.notes}
-                onChange={(event) =>
-                  void update(application.id, { notes: event.target.value })
-                }
-                placeholder="What you liked about the role, context you want to remember, or anything that does not belong to a specific person or milestone..."
-              />
-            </label>
+            {(dirtyFields[application.id + ":notes"] || dirtyFields[application.id + ":status"]) &&
+              !matchesStatusFocus(application.status, statusFocus) && (
+                <p role="status" className="mt-4 text-sm font-semibold text-[var(--color-warning)]">
+                  Kept visible because this application has unsaved changes, even though its saved status does not match this view.
+                </p>
+              )}
+
+            <ApplicationNotesEditor
+              application={application}
+              onSave={(notes) => update(application.id, { notes })}
+              onDirtyChange={(dirty) => markDirty(application.id, "notes", dirty)}
+            />
 
             <ApplicationLifecyclePanel applicationId={application.id} />
             <ApplicationInsightsPanel applicationId={application.id} />
@@ -123,6 +219,43 @@ export function Applications() {
           </article>
         ))}
       </div>
+      <ConfirmDialog
+        open={blocker.state === "blocked"}
+        onClose={() => {
+          if (!leavingRef.current && blocker.state === "blocked") blocker.reset();
+          leavingRef.current = false;
+        }}
+        onConfirm={() => {
+          if (blocker.state !== "blocked") return;
+          leavingRef.current = true;
+          blocker.proceed();
+        }}
+        title="Leave with unsaved changes?"
+        message={hasUnsavedChanges
+          ? "Your application has notes or a status selection that the local database has not confirmed. Leaving may discard those changes. Stay here to retry the save, or explicitly leave without saving."
+          : "The pending changes are now saved. You can continue navigating or stay on this page."}
+        confirmLabel={hasUnsavedChanges ? "Leave without saving" : "Continue navigation"}
+        cancelLabel="Stay on this page"
+        variant="warning"
+      />
+      <ConfirmDialog
+        open={Boolean(deleteApplication)}
+        onClose={() => setDeleteApplicationId(null)}
+        onConfirm={async () => {
+          if (!deleteApplication) throw new Error("The selected application is no longer available.");
+          await remove(deleteApplication.id);
+          setDirtyFields((current) => {
+            const next = { ...current };
+            delete next[deleteApplication.id + ":status"];
+            delete next[deleteApplication.id + ":notes"];
+            return next;
+          });
+          setDeleteApplicationId(null);
+        }}
+        title="Remove tracked application?"
+        message={`Remove "${deleteApplication?.title ?? "this application"}" at "${deleteApplication?.companyName ?? "this organization"}" from your tracked job search? This also removes the locally recorded application context, including its notes and associated contacts and milestones. This cannot be undone.`}
+        confirmLabel="Remove application"
+      />
     </Layout>
   );
 }

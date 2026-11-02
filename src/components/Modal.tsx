@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -6,7 +7,25 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  placement?: "center" | "right";
+}
+
+// Only visible, enabled controls may participate in the keyboard cycle.
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
+function focusables(dialog: HTMLElement): HTMLElement[] {
+  return Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+    (element) => element.getClientRects().length > 0 &&
+      !element.closest("[hidden], [inert], [aria-hidden='true']"),
+  );
 }
 
 export function Modal({
@@ -15,29 +34,67 @@ export function Modal({
   title,
   children,
   size = "md",
+  placement = "center",
 }: ModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (open) {
-      document.body.classList.add("body-modal-open");
-    } else {
-      document.body.classList.remove("body-modal-open");
-    }
-
-    return () => {
-      document.body.classList.remove("body-modal-open");
-    };
+    if (open) document.body.classList.add("body-modal-open");
+    else document.body.classList.remove("body-modal-open");
+    return () => document.body.classList.remove("body-modal-open");
   }, [open]);
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
+    if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
 
-    if (open) window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+    // A form opens ready for entry; confirmation dialogs without inputs use
+    // their first button. This avoids leaving focus behind an aria-modal layer.
+    const firstField = dialog.querySelector<HTMLElement>(
+      "input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+    );
+    if (firstField && firstField.getClientRects().length > 0) firstField.focus();
+    else (focusables(dialog)[0] ?? dialog).focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables(dialog);
+      if (items.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -45,24 +102,29 @@ export function Modal({
     sm: "max-w-md",
     md: "max-w-lg",
     lg: "max-w-2xl",
+    xl: "max-w-5xl",
   } as const;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  // Rendered at the document root: a panel ancestor with backdrop-filter (or transform)
+  // would otherwise become the containing block, pinning the "fixed" layer inside that
+  // card instead of the viewport and leaving the rest of the page clickable.
+  return createPortal(
+    <div className={`fixed inset-0 z-50 flex ${placement === "right" ? "items-stretch justify-end p-0 sm:p-4" : "items-center justify-center p-4"}`}>
       <div
-        ref={overlayRef}
         aria-hidden="true"
         className="fixed inset-0 bg-black/45 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
-        className={`panel panel-strong relative w-full ${sizeClasses[size]} transform rounded-[1.75rem] shadow-2xl transition-all`}
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={`panel panel-strong relative flex w-full ${sizeClasses[size]} flex-col shadow-2xl transition-all ${placement === "right" ? "max-h-[100dvh] !rounded-none sm:max-h-[calc(100dvh-2rem)] sm:!rounded-[1.75rem]" : "max-h-[calc(100dvh-2rem)] rounded-[1.75rem]"}`}
       >
-        <div className="border-divider flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
+        <div className="border-divider flex shrink-0 items-center justify-between border-b px-6 py-4">
+          <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
           <button
             type="button"
             aria-label={`Close ${title}`}
@@ -72,8 +134,9 @@ export function Modal({
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

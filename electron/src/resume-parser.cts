@@ -4,6 +4,7 @@ import {
   toMarkdown,
   type ConvertErrorCode,
 } from "@firecrawl/anydoc";
+import { replaceNul, unreadableCharactersWarning } from "./nul-text.cjs";
 
 export const RESUME_PARSER_ID = "@firecrawl/anydoc";
 export const RESUME_PARSER_VERSION = "0.2.4";
@@ -122,7 +123,9 @@ export async function extractResumeDocument(
   try {
     // Anydoc 0.2.4's local Node API is deterministic and does not invoke hosted OCR.
     // Image-only PDFs surface as needsOcr and remain an explicit user-facing state.
-    const rawText = await toMarkdown(filePath);
+    // Unmapped glyphs can surface as NUL, which the desktop database cannot read back (#297).
+    const extracted = replaceNul(await toMarkdown(filePath));
+    const rawText = extracted.text;
     if (!rawText.trim()) {
       throw new ResumeParserError(
         "No meaningful text could be extracted from this document.",
@@ -135,7 +138,7 @@ export async function extractResumeDocument(
       parserVersion: RESUME_PARSER_VERSION,
       detectedFormat: format,
       rawText,
-      warnings: [],
+      warnings: extracted.replaced > 0 ? [unreadableCharactersWarning(extracted.replaced)] : [],
     };
   } catch (error) {
     if (error instanceof ResumeParserError) throw error;
