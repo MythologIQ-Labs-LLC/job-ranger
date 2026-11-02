@@ -91,7 +91,7 @@ export function ApplicationInsightsPanel({ applicationId }: { applicationId: str
               </select>
             </label>
             <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">
-              Assigned explicitly for search analysis. Job Ranger does not infer this from the job title.
+              Assigned explicitly for search analysis. Sojourner does not infer this from the job title.
             </p>
           </section>
 

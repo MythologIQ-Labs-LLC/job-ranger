@@ -116,5 +116,6 @@ test("non-Latin resumes render with verified on-demand fonts, pass the Parseabil
     resume.projection.id,
   );
   expect(failure).toMatch(/right-to-left or Indic scripts/);
-  expect(failure).toMatch(/Windows app/);
+  expect(failure).toMatch(/Remove or transliterate that text/);
+  expect(failure).not.toMatch(/Windows app|desktop app/);
 });

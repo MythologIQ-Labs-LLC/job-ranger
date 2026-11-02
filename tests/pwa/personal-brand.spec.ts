@@ -31,7 +31,7 @@ test("Personal Brand manual workflow persists exact copy, receipt and analytics 
   await page.getByLabel("Hypothesis to evaluate").fill("A concrete experience brings profile visits.");
   await expect(page.getByText("A human must review originality")).toBeVisible();
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("Draft saved in the Job Ranger database.")).toBeVisible();
+  await expect(page.getByText("Draft saved in the Sojourner database.")).toBeVisible();
 
   await page.reload();
   await waitForRuntime(page);
@@ -364,7 +364,7 @@ test("LinkedIn XLSX requires review before saving and deduplicates repeat import
   await expect(area.getByRole("button", { name: "Review and save LinkedIn export" })).toBeDisabled();
   await area.getByRole("checkbox", { name: /I reviewed the reporting period/i }).check();
   await area.getByRole("button", { name: "Review and save LinkedIn export" }).click();
-  await expect(area.getByText(/LinkedIn analytics saved in the local Job Ranger database/)).toBeVisible();
+  await expect(area.getByText(/LinkedIn analytics saved in the local Sojourner database/)).toBeVisible();
   await expect(area.getByTestId("linkedin-import-ledger").getByText(/Saved LinkedIn exports \(1\)/)).toBeVisible();
   const linkedPosts = area.getByTestId("linkedin-post-content-enrichment");
   await expect(linkedPosts.getByText(/1 original approved copies matched/)).toBeVisible();
@@ -489,8 +489,11 @@ test("LinkedIn dashboard compares only complete seven-day windows and withholds 
   await page.evaluate(payload=>window.electronAPI.personalBrand.saveLinkedInImport(payload,true),content(22));
   await page.reload();
   await waitForRuntime(page);
-  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
+  // Before the saved exports load, both windows read "Unavailable"; wait for the settled
+  // conflict state before using the exact-text locator (#298).
   await expect(impressions.getByText("Conflicting observations")).toBeVisible();
+  await expect(impressions.getByText("Unavailable",{exact:true})).toHaveCount(1);
+  await expect(impressions.getByText("Unavailable",{exact:true})).toBeVisible();
   await expect(impressions.getByText("Change unavailable")).toBeVisible();
   await expect(dashboard.getByTestId("linkedin-weekly-engagements").getByText("14",{exact:true})).toBeVisible();
 });

@@ -6,7 +6,7 @@ import {
 } from "../shared/linkedin-history";
 import type { LinkedInReconciliationReport } from "../shared/linkedin-reconciliation";
 
-/** A separate archive for POSTS PUBLISHED BEFORE Job Ranger reviewed them. */
+/** A separate archive for POSTS PUBLISHED BEFORE Sojourner reviewed them. */
 export function HistoricalLinkedInArchive({ analytics }: {
   analytics: LinkedInReconciliationReport;
 }) {
@@ -67,7 +67,7 @@ export function HistoricalLinkedInArchive({ analytics }: {
       className="rounded-xl border border-[var(--color-border)] p-4 space-y-4">
       <h3 className="font-semibold">Archive older LinkedIn posts</h3>
       <p className="text-sm text-[var(--color-text-secondary)]">
-        For posts that Job Ranger did not prepare before publication. Paste the actual post URL,
+        For posts that Sojourner did not prepare before publication. Paste the actual post URL,
         original date and text. LinkedIn's analytics export contains metrics, not post text or replies.
         Archived text is user-attested, not verified by LinkedIn or approved before publishing.
         Do not paste private messages, third-party comments or confidential material.

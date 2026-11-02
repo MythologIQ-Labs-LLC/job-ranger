@@ -17,6 +17,7 @@ test.afterAll(async () => {
 test("Find Jobs explains a selected-track opportunity assessment without a fit percentage", async () => {
   const { page } = fixture;
 
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "My Career" }).click();
   await page.getByRole("link", { name: "Career Profile", exact: true }).click();
   await page.getByRole("button", { name: "Paste text", exact: true }).click();
   await page
@@ -106,22 +107,24 @@ test("Find Jobs explains a selected-track opportunity assessment without a fit p
   await page.reload();
   await page.getByRole("link", { name: "Find Jobs", exact: true }).click();
   await expect(page.getByText("Administrative Coordinator", { exact: true })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Assessment target track", exact: true })).toHaveValue(/track-/);
+  await expect(page.getByRole("combobox", { name: "Assessment direction", exact: true })).toHaveValue(/track-/);
 
   const jobCard = page.locator("article").filter({ hasText: "Administrative Coordinator" });
   await expect(jobCard).not.toContainText(/\d+%/);
 
   await jobCard.getByRole("button", { name: /Opportunity assessment/ }).click();
-  await expect(jobCard.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
-  await expect(jobCard.getByText("Career · Aligned", { exact: true })).toBeVisible();
-  await expect(jobCard.getByText("Preferences · Aligned", { exact: true })).toBeVisible();
-  await expect(jobCard.getByText("Evidence · Partial", { exact: true })).toBeVisible();
-  await expect(jobCard.getByText("Supported", { exact: true }).first()).toBeVisible();
-  await expect(jobCard.getByText("Gap", { exact: true }).first()).toBeVisible();
-  await expect(jobCard.getByText("What Job Ranger still does not know", { exact: true })).toBeVisible();
-  await expect(jobCard.getByText(/not a hiring prediction/)).toBeVisible();
+  // The assessment opens in a focus-managed drawer rendered at the document root.
+  const assessment = page.getByRole("dialog", { name: "Opportunity assessment: Administrative Coordinator", exact: true });
+  await expect(assessment.getByText("Eligibility · Likely", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Career · Aligned", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Preferences · Aligned", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Evidence · Partial", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Supported", { exact: true }).first()).toBeVisible();
+  await expect(assessment.getByText("Gap", { exact: true }).first()).toBeVisible();
+  await expect(assessment.getByText("What Sojourner still does not know", { exact: true })).toBeVisible();
+  await expect(assessment.getByText(/not a hiring prediction/)).toBeVisible();
 
-  await jobCard.getByRole("button", { name: "Prepare resume", exact: true }).click();
+  await assessment.getByRole("button", { name: "Prepare resume", exact: true }).click();
   await expect(
     page.getByRole("heading", {
       name: "Build the document from facts you have actually confirmed.",

@@ -24,6 +24,9 @@ const suites = [
   "resume-tailoring-smoke-test",
   "resume-import-smoke-test",
   "v1-1-2-upgrade-smoke-test",
+  "sql-text-readback.test",
+  "nul-text.test",
+  "demo-seed-smoke-test",
 ];
 
 let failed = 0;

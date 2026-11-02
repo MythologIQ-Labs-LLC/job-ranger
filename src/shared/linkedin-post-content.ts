@@ -1,6 +1,6 @@
 /**
  * Join the latest LinkedIn XLSX TOP POSTS sample to independently
- * user-confirmed Job Ranger publication receipts and immutable copy packages.
+ * user-confirmed Sojourner publication receipts and immutable copy packages.
  *
  * Content is NEVER present in the analytics export itself. A URL match alone
  * does not prove the exact published content: show copy only when the original
@@ -142,7 +142,7 @@ export async function matchLinkedInRankedPosts(
   const unmatchedCount = rows.filter(row => row.status === "unmatched").length;
   const warnings = [
     "Post rankings are a partial sample from one imported XLSX, not an all-time ranking or a complete publishing archive.",
-    "A saved review package proves only the user-approved text. Job Ranger has not read LinkedIn's live post or its comments.",
+    "A saved review package proves only the user-approved text. Sojourner has not read LinkedIn's live post or its comments.",
     "Comparing raw post totals without the same observation-age window does not establish content effectiveness.",
   ];
   if (rows.some(row => row.status === "publication-date-conflict"))

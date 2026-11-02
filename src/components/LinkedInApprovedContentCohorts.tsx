@@ -66,7 +66,7 @@ export function LinkedInApprovedContentCohorts({
           </p>
           {result.candidates.length===0 ? (
             <p className="text-sm">
-              No supported hook contrast yet. Record two original Job Ranger-reviewed posts
+              No supported hook contrast yet. Record two original Sojourner-reviewed posts
               with matched-age snapshots, retained approved text, and explicit hook labels.
               No winner is identified.
             </p>

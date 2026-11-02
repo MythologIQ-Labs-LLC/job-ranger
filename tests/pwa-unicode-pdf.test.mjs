@@ -154,7 +154,7 @@ assert.ok(!Buffer.from(latin).toString("latin1").includes("FontFile2"), "Windows
 for (const text of ["مدير مشروع في الرياض", "מנהל פרויקטים בתל אביב", "परियोजना प्रबंधक", "திட்ட மேலாளர்"]) {
   await assert.rejects(
     renderResumePdfBytes(pdfLib, projection({ fullName: "Test", email: "t@example.com" }), [{ section: "Skills", order: 0, text }], unicode),
-    (error) => error instanceof ResumePdfEncodingError && /right-to-left or Indic/.test(error.message) && /Windows app/.test(error.message),
+    (error) => error instanceof ResumePdfEncodingError && /right-to-left or Indic/.test(error.message) && /Remove or transliterate/.test(error.message) && !/Windows app|desktop app/.test(error.message),
     text,
   );
 }
