@@ -26,11 +26,13 @@ The current favicon uses the same visual source as the runtime icon.
 
 Use for documentation or presentation contexts that need the Job Ranger name and brand mark together.
 
-### README banner (legacy, replacement required)
+### README banner
 
-`docs/assets/branding/job-ranger-banner.png`
+`docs/assets/branding/sojourner-banner.png` (2172x724, provided by the owner on 2026-11-02 in #366)
 
-Historical Job Ranger artwork only. Do not place this outdated banner at the top of the Sojourner README. Replace with `docs/assets/branding/sojourner-banner.png` after graphic approval (tracking issue #365).
+The current Sojourner banner, shown at the top of the README. Text: "Sojourner. Employment Toolkit. Local-first tools for a more thoughtful job search."
+
+`docs/assets/branding/job-ranger-banner.png` is historical Job Ranger artwork only. Keep it for provenance, but never present it as current Sojourner art.
 
 ### Social preview (legacy, replacement required)
 

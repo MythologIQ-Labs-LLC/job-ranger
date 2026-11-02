@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/branding/sojourner-banner.svg" alt="Sojourner: Employment Toolkit. Find your direction, organize your search, and move forward with confidence." width="100%" />
+  <img src="docs/assets/branding/sojourner-banner.png" alt="Sojourner: Employment Toolkit. Local-first tools for a more thoughtful job search." width="100%" />
 </p>
 
 <p align="center">
