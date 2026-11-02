@@ -85,6 +85,7 @@ Status below is quoted from the **main-branch** Meta Ledger through #94. All lis
 | Phase 14 inference Slice A | `docs/plan-qor-phase14-inference-slice-a.md` | PLAN #74, VETO #75, PASS #76, implemented #77, sealed #78 |
 | Phase 15 mapper negation (G12) | `docs/plan-qor-phase15-mapper-negation.md` | PLAN #79, VETO #80-#83, remediate, user-approved override, PASS #84, implemented #85, sealed #86 |
 | Phase 16 mapper claim action (G13) | `docs/plan-qor-phase16-mapper-claim-action.md` | PLAN #87, VETO #88-#91, remediate (gate-loop), user-approved overrides, PASS #92, implemented #93, sealed #94 |
+| Application handoff readiness delta (#228) | `docs/plans/228-application-handoff.md` | not a Meta Ledger entry: no Qortara plan gate or audit PASS is recorded. Owner decision 2026-11-02: implementation proceeds under the `GOVERNANCE.md` merge standard. Copy baseline already on main via #270; plan covers only the remaining delta |
 
 ## Tier 5 — Reference Material
 
