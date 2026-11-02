@@ -28,7 +28,7 @@ export async function verifyDriveAccount(token: string, http: typeof fetch = fet
       : "Google Drive did not verify the active account.");
   }
   let about: { user?: { permissionId?: unknown; emailAddress?: unknown; displayName?: unknown; me?: unknown } };
-  try { about = await response.json(); } catch {
+  try { about = await response.json() as typeof about; } catch {
     throw new DriveAccountVerificationError("Google Drive returned an invalid account response.");
   }
   const user = about?.user;

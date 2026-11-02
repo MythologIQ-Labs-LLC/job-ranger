@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { verifyDriveAccount, DriveAccountVerificationError } from "../src/pwa/drive/google-drive-account.ts";
+import { verifyDriveAccount, DriveAccountVerificationError } from "../src/shared/drive/google-drive-account.ts";
 const TOKEN = "PRIVATE_FAKE_TOKEN";
 test("Drive-scope account check returns stable permission ID and display label without leaking token", async () => {
   let calls = 0;

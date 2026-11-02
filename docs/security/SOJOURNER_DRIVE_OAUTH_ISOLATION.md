@@ -8,7 +8,7 @@ Sojourner's browser-only Career Ops workspace stores sensitive career informatio
 
 | Surface | Bundle | Trust and authority |
 | --- | --- | --- |
-| Career Ops main PWA | `vite.pwa.config.ts`, `src/components/GoogleDriveResumeExport.tsx`, `src/pwa/drive/isolated-drive-auth.ts` | Opens helper on explicit click, generates 256-bit nonce, validates exact helper origin and WindowProxy, single-use grant, holds token only in volatile memory; independently approves and journals each PDF export |
+| Career Ops main PWA | `vite.pwa.config.ts`, `src/components/GoogleDriveResumeExport.tsx`, `src/pwa/drive/pwa-drive-port.ts` (runs the shared `src/shared/drive/drive-export-flow.ts`), `src/pwa/drive/isolated-drive-auth.ts` | Opens helper on explicit click, generates 256-bit nonce, validates exact helper origin and WindowProxy, single-use grant, holds token only in volatile memory; independently approves and journals each PDF export |
 | OAuth helper | `tools/drive-oauth-helper/index.html`, `helper.mjs` | Standalone page with GIS script and separate **second** explicit user click. It does not import app code or handle documents; posts only token grant data to configured exact app origin |
 | OAuth gate | `src/pwa/drive/oauth-helper-response-contract.ts` | Validates protocol, exact message type, nonce, helper source and origin, `drive.file` scope, token shape, lifetime and replay prevention |
 | Static helper build | `scripts/build-drive-oauth-helper.mjs` | Rejects missing/malformed/matching origins or client-secret input and emits only HTML, JS, public config and static security headers |

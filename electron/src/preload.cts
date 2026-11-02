@@ -13,8 +13,9 @@ import type { ResumeDesktopApi } from "../../src/shared/resume-api.js";
 import type { SourceDiscoveryDesktopApi } from "../../src/shared/source-discovery.js";
 import type { RuntimeDesktopApi } from "../../src/shared/runtime.js";
 import type { LegacyInstallDesktopApi } from "../../src/shared/legacy-install.js";
+import type { GoogleDriveDesktopApi } from "../../src/shared/google-drive-desktop.js";
 
-const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & SourceDiscoveryDesktopApi & ApplicationLifecycleDesktopApi & InterviewPrepDesktopApi & CareerStoriesDesktopApi & PersonalBrandDesktopApi & ApplicationMaterialsDesktopApi & BackupDesktopApi & ApplicationInsightsDesktopApi & JsonResumeDesktopApi & RuntimeDesktopApi & LegacyInstallDesktopApi = {
+const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & SourceDiscoveryDesktopApi & ApplicationLifecycleDesktopApi & InterviewPrepDesktopApi & CareerStoriesDesktopApi & PersonalBrandDesktopApi & ApplicationMaterialsDesktopApi & BackupDesktopApi & ApplicationInsightsDesktopApi & JsonResumeDesktopApi & RuntimeDesktopApi & LegacyInstallDesktopApi & GoogleDriveDesktopApi = {
   getAppVersion: () => ipcRenderer.invoke("app:get-version"),
   getPlatform: () => ipcRenderer.invoke("app:get-platform"),
   getRuntimeInfo: () => ipcRenderer.invoke("app:get-runtime-info"),
@@ -161,6 +162,21 @@ const desktopApi: DesktopApi & ResumeDesktopApi & EvidenceExtensionDesktopApi & 
   legacyInstall: {
     detect: () => ipcRenderer.invoke("legacy-install:detect"),
     stageImport: () => ipcRenderer.invoke("legacy-install:stage-import"),
+  },
+  // Windows Google Drive export (#314). Electron-only: the PWA worker registers none of
+  // these channels; the browser uses the isolated OAuth helper instead (src/pwa/drive).
+  drive: {
+    status: () => ipcRenderer.invoke("drive:status"),
+    connect: (flowId) => ipcRenderer.invoke("drive:connect", flowId),
+    cancelConnect: (flowId) => ipcRenderer.invoke("drive:cancel-connect", flowId),
+    disconnect: () => ipcRenderer.invoke("drive:disconnect"),
+    prepareExport: (artifactId, version) => ipcRenderer.invoke("drive:prepare-export", artifactId, version),
+    discardExport: (proposalId) => ipcRenderer.invoke("drive:discard-export", proposalId),
+    confirmExport: (proposalId) => ipcRenderer.invoke("drive:confirm-export", proposalId),
+    reconcileExports: (artifactId) => ipcRenderer.invoke("drive:reconcile-exports", artifactId),
+    cancelPreparedExport: (artifactId, operationId) =>
+      ipcRenderer.invoke("drive:cancel-prepared-export", artifactId, operationId),
+    abandonExport: (artifactId, operationId) => ipcRenderer.invoke("drive:abandon-export", artifactId, operationId),
   },
   jsonResume: {
     importFile: () => ipcRenderer.invoke("json-resume:import"),

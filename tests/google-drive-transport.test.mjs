@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, reserveDriveFileId,
   inspectReservedDriveFile, DRIVE_OPERATION_PROPERTY, DriveTransportError,
-} from "../src/pwa/drive/google-drive-transport.ts";
+} from "../src/shared/drive/google-drive-transport.ts";
 
 const secret = "NEVER_LOG_A_PROVIDER_TOKEN";
 const document = new Blob(["Sojourner verified PDF test bytes"], { type: "application/pdf" });

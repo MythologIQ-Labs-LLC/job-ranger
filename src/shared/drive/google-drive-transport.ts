@@ -112,7 +112,7 @@ export async function reserveDriveFileId(accessToken: string, http: Fetch = fetc
       "Google Drive did not reserve a file for this export. Nothing was uploaded.");
   }
   let body: { ids?: unknown };
-  try { body = await response.json(); } catch {
+  try { body = await response.json() as typeof body; } catch {
     throw new DriveTransportError("invalid", "Google Drive returned an invalid file reservation. Nothing was uploaded.");
   }
   const ids = body?.ids;
@@ -143,7 +143,7 @@ export async function inspectReservedDriveFile(
   if (response.status === 404) return "absent";
   if (!response.ok) return "unknown";
   try {
-    const data = await response.json();
+    const data = await response.json() as { id?: unknown } | null;
     return data && data.id === reservedFileId ? "found" : "unknown";
   } catch { return "unknown"; }
 }
@@ -185,7 +185,7 @@ export async function uploadApprovedDriveFile(
       throw new DriveTransportError("action_needed", "Google did not authorize reading the My Drive destination. No upload was attempted.");
     }
     let root: { id?: unknown; mimeType?: unknown };
-    try { root = await response.json(); } catch {
+    try { root = await response.json() as typeof root; } catch {
       throw new DriveTransportError("invalid", "My Drive returned invalid destination metadata. No upload was attempted.");
     }
     if (!root || typeof root.id !== "string" || !ID.test(root.id) ||
@@ -238,7 +238,7 @@ export async function uploadApprovedDriveFile(
   if (created.ok) {
     // The reserved ID is authoritative; a parseable receipt must agree with it.
     let file: { id?: unknown } | null = null;
-    try { file = await created.json(); } catch { file = null; }
+    try { file = await created.json() as { id?: unknown } | null; } catch { file = null; }
     if (file && typeof file === "object" && file.id !== undefined && file.id !== input.reservedFileId) {
       return { status: "unknown_remote_outcome", remoteId: null,
         reason: "Google did not confirm the reserved file identifier. Do not automatically upload again." };
@@ -259,7 +259,7 @@ export async function uploadApprovedDriveFile(
   }
   let data: { id?: unknown; name?: unknown; mimeType?: unknown; parents?: unknown;
     size?: unknown; appProperties?: Record<string, unknown> };
-  try { data = await details.json(); } catch {
+  try { data = await details.json() as typeof data; } catch {
     return { status: "verification_failed", remoteId, reason: "Drive returned invalid file metadata." };
   }
   if (!data || data.id !== remoteId || data.name !== input.name ||
@@ -313,7 +313,7 @@ export async function findCreatedDriveFile(
   if (!response.ok) return { status: "not_confirmed" };
   let result: { files?: Array<{ id?: unknown; appProperties?: Record<string, unknown> }>;
     nextPageToken?: unknown; incompleteSearch?: unknown };
-  try { result = await response.json(); } catch { return { status: "not_confirmed" }; }
+  try { result = await response.json() as typeof result; } catch { return { status: "not_confirmed" }; }
   if (!Array.isArray(result?.files) || result.nextPageToken || result.incompleteSearch) {
     return { status: "ambiguous" };
   }
@@ -352,7 +352,7 @@ export async function verifyRecoveredDriveFile(
         headers: auth, cache: "no-store", redirect: "error",
       });
       if (!root.ok) return false;
-      const rootData = await root.json();
+      const rootData = await root.json() as { id?: unknown; mimeType?: unknown } | null;
       if (!rootData || typeof rootData.id !== "string" || !ID.test(rootData.id) ||
           rootData.mimeType !== "application/vnd.google-apps.folder") return false;
       destinationId = rootData.id;
@@ -362,7 +362,8 @@ export async function verifyRecoveredDriveFile(
       headers: auth, cache: "no-store", redirect: "error",
     });
     if (!metadata.ok) return false;
-    const data = await metadata.json();
+    const data = await metadata.json() as { id?: unknown; name?: unknown; mimeType?: unknown; parents?: unknown;
+      size?: unknown; appProperties?: Record<string, unknown> } | null;
     if (!data || data.id !== expected.remoteId || data.name !== expected.name ||
         data.mimeType !== expected.mimeType || !Array.isArray(data.parents) ||
         !data.parents.includes(destinationId) ||
