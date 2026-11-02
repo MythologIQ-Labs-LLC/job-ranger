@@ -369,8 +369,21 @@ function parseStagedState(value: unknown): StagedRestoreState {
   };
 }
 
+/** Runs against the staged database before it is verified (see addRestoreCarryOver). */
+export type RestoreCarryOver = (stagedDatabasePath: string) => Promise<void>;
+
 export class BackupService {
   private readonly liveSqlite: SqliteClient;
+  private readonly restoreCarryOvers: RestoreCarryOver[] = [];
+
+  /**
+   * Registers device bookkeeping that must survive a restore (the storage location
+   * records, #249): it is copied into the staged database before the staged database's
+   * integrity check and hash, so the restored workspace keeps it.
+   */
+  addRestoreCarryOver(carryOver: RestoreCarryOver): void {
+    this.restoreCarryOvers.push(carryOver);
+  }
 
   constructor(private readonly options: BackupServiceOptions) {
     this.liveSqlite = new SqliteClient(options.databasePath, options.sqliteBinaryPath, {
@@ -697,6 +710,7 @@ export class BackupService {
           `This backup contains text with NUL characters (U+0000) that could not be stored as \uFFFD: ${describeRepairFailures(unrepaired)}. Nothing was restored.`,
         );
       }
+      for (const carryOver of this.restoreCarryOvers) await carryOver(stagedDatabasePath);
       const integrity = await stagedSqlite.queryOne<IntegrityRow>("PRAGMA integrity_check;");
       if (!integrity || integrity.integrity_check !== "ok") {
         throw new Error("Staged restore database failed integrity verification after path rebasing");

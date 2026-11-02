@@ -89,3 +89,5 @@ playwright-report/
 
 # Generated Google Drive Desktop OAuth client config (#314); never commit
 /build/google-oauth/
+# Generated Microsoft (OneDrive) client config (#249); never commit
+/build/microsoft-oauth/

@@ -140,6 +140,9 @@ jobs:
           # Repository variables; when unset the build ships with Drive export disabled.
           JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID }}
           JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET }}
+          # OneDrive storage location (#249): the Microsoft public client's application id
+          # (no secret exists). Repository variable; when unset OneDrive shows as not set up.
+          JOB_RANGER_MICROSOFT_CLIENT_ID: ${{ vars.JOB_RANGER_MICROSOFT_CLIENT_ID }}
 
       - name: Verify packaged SQLite runtime
         shell: pwsh

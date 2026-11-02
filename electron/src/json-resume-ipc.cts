@@ -1,6 +1,7 @@
 import { dialog, ipcMain } from "electron";
 import path from "node:path";
 import { JsonResumeAdapter } from "./json-resume-adapter.cjs";
+import { notifyDocumentExported } from "./storage/document-exports.cjs";
 
 export function initializeJsonResumeIpc(options: {
   databasePath: string;
@@ -32,6 +33,9 @@ export function initializeJsonResumeIpc(options: {
       filters: [{ name: "JSON Resume", extensions: ["json"] }],
     });
     if (selection.canceled || !selection.filePath) return null;
-    return adapter.exportFile(selection.filePath);
+    const result = await adapter.exportFile(selection.filePath);
+    // Windows storage location (#249): copy the exported file there when one is set up.
+    notifyDocumentExported(result.filePath, path.basename(result.filePath));
+    return result;
   });
 }

@@ -31,6 +31,7 @@ const { ApplicationMaterialsBackend } = load("application-materials-backend.cjs"
 const { ApplicationInsightsBackend } = load("application-insights-backend.cjs");
 const { ResumeService } = load("resume-service.cjs");
 const { SqliteDriveExportJournal } = load("drive/drive-export-journal.cjs");
+const { StorageRecords } = load("storage/storage-records.cjs");
 const { BackupService, applyPendingRestore } = load("backup-service.cjs");
 const { migrations } = load("migrations.cjs");
 const { FEATURE_MIGRATION_VERSIONS } = load("feature-migrations.cjs");
@@ -82,6 +83,8 @@ async function openCurrent(dataDirectory) {
   await resume.initialize();
   // Windows Google Drive export journal (#314); opening it applies migration 1010.
   await new SqliteDriveExportJournal(new SqliteClient(options.databasePath, options.sqliteBinaryPath)).initialize();
+  // Windows storage location records (#249); opening them applies migration 1011.
+  await new StorageRecords(new SqliteClient(options.databasePath, options.sqliteBinaryPath)).initialize();
 
   const applications = await career.listApplications();
   for (const application of applications) {
