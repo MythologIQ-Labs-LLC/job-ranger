@@ -55,7 +55,7 @@ async function run() {
     const config = JSON.parse(loaded.stdout);
     await validateConfiguration(config, new DebugLogger(false));
     assert.deepEqual(config.win.target, [{ target: 'appx', arch: ['x64'] }]);
-    assert.equal(config.win.azureSignOptions, undefined, 'Store packages are signed by Microsoft, not Azure Artifact Signing');
+    assert.equal(config.win.signtoolOptions, undefined, 'Store packages are signed by Microsoft, not Azure Artifact Signing');
     assert.match(config.win.artifactName, env === storeEnv ? /windows-store-\$/ : /windows-store-validation-/);
   }
   const nsis = require('../electron-builder.windows.cjs');

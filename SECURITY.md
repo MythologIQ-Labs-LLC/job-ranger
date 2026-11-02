@@ -147,17 +147,17 @@ Repository-side distribution trust is governed by [`docs/DISTRIBUTION_TRUST.md`]
 
 ### Supported channels after v1.2.0
 
-The supported ordinary-user channels are the Microsoft Store package and the web/PWA runtime served from a controlled HTTPS origin. In those channels, Store certification with Microsoft-managed signing, and HTTPS origin identity with browser security, establish installation trust. Job Ranger-owned code-signing certificates are not a prerequisite for either.
+The primary channel is the signed Windows installer; the web/PWA runtime, served from a controlled HTTPS origin, continues alongside it ([`docs/ARCHITECTURE_INDEX.md`](./docs/ARCHITECTURE_INDEX.md) ARCH-001). Installation trust comes from the MythologIQ Labs, LLC Authenticode signature for the installer, and from HTTPS origin identity and browser security for the PWA. The Microsoft Store package is not a shipping channel.
 
 ### Direct-download binaries
 
-Direct-download installers are advanced/test artifacts unless they are independently signed. Azure Artifact Signing is opt-in (`JOB_RANGER_REQUIRE_WINDOWS_SIGNING`) and never blocks a release; an unsigned installer is labelled `testerOnly` in its release manifest. Native macOS packages are built only on manual dispatch.
+Every published Windows installer is signed; a build-only candidate never is and is never published. Native macOS packages are built only on manual dispatch.
 
-When direct-download signing is used, the Windows path is:
+The Windows path is:
 
-- Microsoft Azure Artifact Signing;
-- Authenticode verification of packaged application executable and installer;
-- release trust evidence recorded in `windows-signing.json`.
+- Microsoft Azure Artifact Signing with the `mythologiq-labs-public-release` profile, signed in through GitHub OIDC from the owner-approved `release` environment (no client secret);
+- signing of the application executable, bundled `sqlite3.exe`, helper executables and installer, timestamped;
+- `signtool verify /pa`, signer `MythologIQ Labs, LLC` and timestamp checks for each, recorded in `windows-signing.json`.
 
 When a native macOS package is published, its path is:
 
@@ -171,7 +171,7 @@ Clean-machine evidence for promoted direct-download binaries follows [`docs/CLEA
 
 ### Prerelease/tester builds
 
-Prerelease tags may remain unsigned, but they are tester-only rather than public-trust releases.
+Prerelease tags are signed like any published Windows release. Unsigned Windows builds exist only as short-lived build-only workflow artifacts.
 
 The release pipeline emits SHA-256 checksums and machine-readable release manifests from the exact packaged files uploaded to GitHub Releases.
 
