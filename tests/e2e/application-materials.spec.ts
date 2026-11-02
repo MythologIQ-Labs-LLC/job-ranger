@@ -103,6 +103,45 @@ test("application materials preserve factual evidence links and flag stale draft
   await expect(card.getByText(/unsupported or ambiguous requirements/i)).toBeVisible();
   await expect(card.getByText(/Taylor Example/)).toBeVisible();
 
+  // Copying through the single Copy text control writes the exact text and never submits,
+  // marks the application applied, or changes its status. Electron's clipboard is substituted.
+  const statusOf = () => page.evaluate(async (id) =>
+    (await window.electronAPI.applications.list()).find((item) => item.id === id)?.status, application.id);
+  expect(await statusOf()).toBe("interested");
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => {
+        (window as unknown as { __copiedMaterial?: string }).__copiedMaterial = text;
+      } },
+    });
+  });
+  const expected = await page.evaluate(async (id) => {
+    const [letter] = await window.electronAPI.applicationMaterials.list(id);
+    return letter.sections.map((section) => section.text).join("\n\n");
+  }, application.id);
+  await card.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
+  await expect(card.getByRole("status", { name: "Cover letter copy status" }))
+    .toContainText("Cover letter version 1 copied");
+  const copied = await page.evaluate(() =>
+    (window as unknown as { __copiedMaterial?: string }).__copiedMaterial,
+  );
+  expect(copied).toBe(expected);
+  expect(copied).toContain("Built production TypeScript services and APIs");
+  expect(await statusOf()).toBe("interested");
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => { throw new Error("Clipboard permission denied"); } },
+    });
+  });
+  await card.getByRole("button", { name: "Copy text of cover letter version 1" }).click();
+  await expect(card.getByRole("status", { name: "Cover letter copy status" }))
+    .toContainText("Copy was unavailable");
+  await expect(card.getByRole("status", { name: "Cover letter copy status" })).not.toContainText("copied");
+  expect(await statusOf()).toBe("interested");
+
   await page.evaluate(async (id) => {
     await window.electronAPI.careerEvidence.supersedeEvidence(id, {
       subjectType: "achievement",
@@ -118,4 +157,6 @@ test("application materials preserve factual evidence links and flag stale draft
   await expect(
     reloadedCard.getByText(/Supporting Career Evidence changed after this draft was created/i),
   ).toBeVisible();
+  await expect(reloadedCard.getByRole("button", { name: "Copy text of cover letter version 1" })).toBeDisabled();
+  expect(await statusOf()).toBe("interested");
 });
