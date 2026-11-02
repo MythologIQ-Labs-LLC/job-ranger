@@ -96,7 +96,7 @@ async function run() {
   assert.doesNotMatch(manifest, /<Extensions>|startupTask|windows\.protocol|fileTypeAssociation/);
   assert.match(manifest, /EntryPoint="Windows\.FullTrustApplication"/);
   assert.match(manifest, /Executable="app\\Job Ranger\.exe"/);
-  assert.match(manifest, new RegExp(`Version="${windowsVersion.replace(/\./g, '\\.')}"`));
+  assert.ok(manifest.includes(`Version="${windowsVersion}"`), `AppX manifest declares Version="${windowsVersion}"`);
   assert.match(manifest, /MinVersion="10\.0\.17763\.0"/);
   assert.match(manifest, /Square310x310Logo="assets\\LargeTile\.png"/);
   assert.match(manifest, /<DisplayName>Job Ranger \(validation\)<\/DisplayName>/);
