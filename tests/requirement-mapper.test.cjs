@@ -360,4 +360,60 @@ function mapOne(requirementText, records, kind) {
   assert.ok(capAndNegation.mapping.explanation.includes(CLAIM_ACTION_NOTE_PREFIX));
 }
 
+// G11 (#183): terminal periods must not turn stop words into stray
+// unmatched tokens or downgrade confirmed matching evidence.
+{
+  const direct = mapOne('Experience with insurance verification is required.', [
+    evidence('g11-insurance', 'Experience with insurance verification is required'),
+  ]);
+  assert.equal(direct.mapping.classification, 'direct',
+    'punctuation-only variation must not reduce true support to transferable');
+  assert.equal(direct.mapping.evidenceId, 'g11-insurance');
+
+  const extracted = extractJobRequirements(
+    job('g11-job', 'Insurance Specialist', 'Experience with insurance verification is required.'), now,
+  ).find((item) => item.text === 'Experience with insurance verification is required.');
+  assert.ok(extracted, 'punctuated requirement must still be extracted');
+  assert.equal(extracted.normalizedTerm, 'insurance verification',
+    'sentence-terminal required. is a stop word, not part of the search term');
+  assert.equal(extracted.sourceText, 'Experience with insurance verification is required.',
+    'source wording is not rewritten by token matching');
+
+  const unconfirmed = mapOne('Experience with insurance verification is required.', [
+    evidence('g11-imported', 'Experience with insurance verification is required', {
+      verificationState: 'imported',
+    }),
+  ]);
+  assert.equal(unconfirmed.mapping.classification, 'ambiguous',
+    'terminal-period fix must not self-confirm imported evidence');
+  assert.equal(unconfirmed.mapping.userConfirmed, false);
+
+  const denied = mapOne('Experience with insurance verification is required.', [
+    evidence('g11-denied', 'Never performed insurance verification.'),
+  ]);
+  assert.notEqual(denied.mapping.classification, 'direct',
+    'negated claims must not gain direct support from punctuation normalization');
+
+  const partial = mapOne('Experience with insurance verification is required.', [
+    evidence('g11-partial', 'Experience with insurance billing, not verification.'),
+  ]);
+  assert.notEqual(partial.mapping.classification, 'direct',
+    'a semantically different activity must not be upgraded by G11');
+}
+
+// Dots inside or at the start of technology names must remain meaningful.
+// The token change is deliberately NOT a global punctuation rewrite.
+{
+  for (const [text, statement] of [
+    ['Experience with Node.js is required.', 'Built Node.js services'],
+    ['Experience with .NET is required.', 'Built .NET services'],
+    ['Experience with version 3.0 is required.', 'Shipped version 3.0 releases'],
+    ['Experience with C++ is required.', 'Built C++ services'],
+  ]) {
+    const mapped = mapOne(text, [evidence('g11-tech', statement)]);
+    assert.equal(mapped.mapping.classification, 'direct',
+      `internal dot and symbol token preservation: ${text}`);
+  }
+}
+
 console.log('requirement mapper tests passed');

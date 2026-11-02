@@ -44,12 +44,32 @@ export async function waitForLayoutStable(page: Page, settleMs = 600): Promise<v
   }, settleMs);
 }
 
-/** Smoothly scrolls the document so the element's top sits `offset` px below the viewport top. */
+/**
+ * Smoothly scrolls the element's nearest scroll container (the document, or the body of
+ * an open dialog such as the assessment drawer) so the element's top sits `offset` px
+ * below that container's top, then waits for the scroll to settle.
+ */
 export async function scrollToElement(page: Page, locator: Locator, offset = 24): Promise<void> {
-  await locator.evaluate((element, off) => {
-    const scroller = document.scrollingElement ?? document.documentElement;
-    const top = element.getBoundingClientRect().top + scroller.scrollTop - off;
+  await locator.evaluate(async (element, off) => {
+    const root = document.scrollingElement ?? document.documentElement;
+    let scroller: Element = root;
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      const overflowY = getComputedStyle(node).overflowY;
+      if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
+        scroller = node;
+        break;
+      }
+    }
+    const containerTop = scroller === root ? 0 : scroller.getBoundingClientRect().top;
+    const top = element.getBoundingClientRect().top - containerTop + scroller.scrollTop - off;
     scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    let last = -1;
+    let stableFrames = 0;
+    while (stableFrames < 10) {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      stableFrames = scroller.scrollTop === last ? stableFrames + 1 : 0;
+      last = scroller.scrollTop;
+    }
   }, offset);
   await waitForLayoutStable(page, 700);
 }

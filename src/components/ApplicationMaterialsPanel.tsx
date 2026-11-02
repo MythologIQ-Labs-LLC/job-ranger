@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, FileText, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Copy, FileText, Plus, Trash2 } from "lucide-react";
 import type { ApplicationMaterialProjection } from "../shared/application-materials";
 import { getDesktopApi } from "../services/api";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface ApplicationMaterialsPanelProps {
   applicationId: string;
@@ -17,6 +18,33 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const selectedMaterial = materials.find((material) => material.id === deleteMaterialId) ?? null;
+
+  // Sojourner never sends applications; copying is the manual handoff. Evidence state is
+  // re-read at copy time, so a cached list never lets a stale version be copied.
+  const copy = async (material: ApplicationMaterialProjection) => {
+    let current: ApplicationMaterialProjection | undefined;
+    try {
+      const latest = await getDesktopApi().applicationMaterials.list(applicationId);
+      setMaterials(latest);
+      current = latest.find((item) => item.id === material.id);
+    } catch {
+      setCopyNotice(`Cover letter version ${material.version} was not copied because its evidence could not be re-checked.`);
+      return;
+    }
+    if (!current || current.staleEvidenceIds.length > 0) {
+      setCopyNotice(`Cover letter version ${material.version} was not copied: its supporting Career Evidence changed. Create a new version from current evidence.`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(materialText(current));
+      setCopyNotice(`Cover letter version ${current.version} copied. Review it before you send it.`);
+    } catch {
+      setCopyNotice("Copy was unavailable. Select the cover letter text below and copy it manually.");
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -60,11 +88,13 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
     setError(null);
     try {
       await getDesktopApi().applicationMaterials.delete(projectionId);
-      setMaterials(await getDesktopApi().applicationMaterials.list(applicationId));
+      // Do not turn a successful deletion into a false failure merely because
+      // a subsequent list refresh is unavailable. The deleted ID is known.
+      setMaterials((current) => current.filter((material) => material.id !== projectionId));
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error ? deleteError.message : "Unable to delete application material",
-      );
+      // Preserve the rejected promise for ConfirmDialog so the user sees
+      // a truthful failure and can cancel or retry. No optimistic deletion.
+      throw deleteError;
     } finally {
       setLoading(false);
     }
@@ -93,7 +123,7 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-2xl text-xs leading-5 text-[var(--color-text-muted)]">
-              Job Ranger keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
+              Sojourner keeps these drafts separate from Career Evidence. Rebuild a draft if its supporting evidence later changes.
             </p>
             <button
               type="button"
@@ -107,6 +137,12 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
 
           {error && (
             <div className="support-note px-4 py-3 text-sm text-[var(--color-danger)]">{error}</div>
+          )}
+
+          {copyNotice && (
+            <p role="status" aria-label="Cover letter copy status" className="support-note px-4 py-3 text-sm">
+              {copyNotice}
+            </p>
           )}
 
           {warnings.map((warning) => (
@@ -139,22 +175,34 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
                         Prepared {new Date(material.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      className="surface-link-button p-2 text-[var(--color-text-muted)]"
-                      aria-label={`Delete cover letter version ${material.version}`}
-                      disabled={loading}
-                      onClick={() => void remove(material.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        aria-label={`Copy text of cover letter version ${material.version}`}
+                        aria-describedby={material.staleEvidenceIds.length > 0 ? `copy-blocked-${material.id}` : undefined}
+                        disabled={loading || material.staleEvidenceIds.length > 0}
+                        onClick={() => void copy(material)}
+                      >
+                        <Copy className="h-4 w-4" aria-hidden="true" /> Copy text
+                      </button>
+                      <button
+                        type="button"
+                        className="surface-link-button p-2 text-[var(--color-text-muted)]"
+                        aria-label={`Delete cover letter version ${material.version}`}
+                        disabled={loading}
+                        onClick={() => setDeleteMaterialId(material.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {material.staleEvidenceIds.length > 0 && (
                     <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--color-warning)] px-3 py-3 text-sm">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-warning)]" />
-                      <span>
-                        Supporting Career Evidence changed after this draft was created. Do not use this version without reviewing or rebuilding it.
+                      <span id={`copy-blocked-${material.id}`}>
+                        Supporting Career Evidence changed after this draft was created. Do not use this version without reviewing or rebuilding it. To copy a letter, create a new version from current evidence.
                       </span>
                     </div>
                   )}
@@ -168,6 +216,18 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(selectedMaterial)}
+        onClose={() => setDeleteMaterialId(null)}
+        onConfirm={async () => {
+          if (!selectedMaterial) throw new Error("The selected cover letter is no longer available.");
+          await remove(selectedMaterial.id);
+          setDeleteMaterialId(null);
+        }}
+        title="Delete cover letter version?"
+        message={`Delete cover letter version ${selectedMaterial?.version ?? ""}? This permanently removes this draft and its recorded evidence links from application materials. Other versions and Career Evidence remain unchanged. This cannot be undone.`}
+        confirmLabel="Delete cover letter"
+      />
     </div>
   );
 }

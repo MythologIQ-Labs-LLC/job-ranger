@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Compass, Plus, Save, Trash2 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { EconomicPathwayExplorer } from "../components/EconomicPathwayExplorer";
+import { LineListTextarea } from "../components/LineListTextarea";
 import {
   emptyTargetTrackInput,
   toTargetTrackInput,
@@ -40,9 +43,7 @@ const schedules: Array<{ value: WorkSchedule; label: string }> = [
   { value: "rotating", label: "Rotating shifts" },
 ];
 
-function splitList(value: string): string[] {
-  return Array.from(new Set(value.split(/\n|,/).map((item) => item.trim()).filter(Boolean)));
-}
+const ONE_PER_LINE = "One per line.";
 
 function cloneEmpty(): CareerTargetTrackInput {
   return structuredClone(emptyTargetTrackInput);
@@ -116,6 +117,7 @@ export function TargetTracks() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<CareerTargetTrackInput>(cloneEmpty);
   const [saved, setSaved] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const editingTrack = useMemo(
     () => targetTracks.tracks.find((track) => track.id === editingId) ?? null,
@@ -160,17 +162,26 @@ export function TargetTracks() {
 
   const handleSave = async () => {
     if (!draft.name.trim()) return;
-    const result = await targetTracks.save(editingId, draft);
-    setEditingId(result.id);
-    setDraft(toTargetTrackInput(result));
-    setSaved(true);
+    try {
+      const result = await targetTracks.save(editingId, draft);
+      setEditingId(result.id);
+      setDraft(toTargetTrackInput(result));
+      setSaved(true);
+    } catch {
+      // useTargetTracks already exposes the failure on screen.
+      setSaved(false);
+    }
   };
 
-  const handleDelete = async () => {
-    if (!editingId || editingId === "legacy-default") return;
-    await targetTracks.remove(editingId);
-    startNew();
+  const confirmDelete = async () => {
+    if (!deleteTargetId || deleteTargetId === "legacy-default") return;
+    const id = deleteTargetId;
+    await targetTracks.remove(id);
+    setDeleteTargetId(null);
+    if (editingId === id) startNew();
   };
+
+  const deleteTarget = targetTracks.tracks.find((track) => track.id === deleteTargetId) ?? null;
 
   return (
     <Layout>
@@ -260,7 +271,8 @@ export function TargetTracks() {
 
           <label className="mt-5 block">
             <span className="metric-label">Roles in this track</span>
-            <textarea className="input-shell mt-2 min-h-28 resize-y py-3" value={draft.roleTitles.join("\n")} onChange={(event) => markChanged({ ...draft, roleTitles: splitList(event.target.value) })} />
+            <LineListTextarea className="input-shell mt-2 min-h-28 resize-y py-3" values={draft.roleTitles} onValuesChange={(roleTitles) => markChanged({ ...draft, roleTitles })} />
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{ONE_PER_LINE}</span>
           </label>
 
           <section className="border-divider mt-7 border-t pt-6">
@@ -269,7 +281,10 @@ export function TargetTracks() {
               <StrengthSelect label="Geography importance" value={draft.constraints.geography.strength} onChange={(strength) => updateConstraints("geography", { ...draft.constraints.geography, strength })} />
             </div>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[1fr_180px]">
-              <textarea aria-label="Track locations" className="input-shell min-h-24 resize-y py-3" value={draft.constraints.geography.locations.join("\n")} onChange={(event) => updateConstraints("geography", { ...draft.constraints.geography, locations: splitList(event.target.value) })} />
+              <div>
+                <LineListTextarea aria-label="Track locations" className="input-shell min-h-24 w-full resize-y py-3" values={draft.constraints.geography.locations} onValuesChange={(locations) => updateConstraints("geography", { ...draft.constraints.geography, locations })} />
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">One place per line, for example "Annapolis, MD".</span>
+              </div>
               <label><span className="metric-label">Commute radius</span><input className="input-shell mt-2" aria-label="Track commute radius" type="number" min="0" value={draft.constraints.geography.radiusMiles ?? ""} onChange={(event) => updateConstraints("geography", { ...draft.constraints.geography, radiusMiles: event.target.value ? Number(event.target.value) : null })} /></label>
             </div>
           </section>
@@ -305,7 +320,7 @@ export function TargetTracks() {
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="metric-label">Schedule availability</span>
-                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Select schedules you are willing to work. If a listing names several possible shifts and only some fit, Job Ranger leaves the result uncertain.</p>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Select schedules you are willing to work. If a listing names several possible shifts and only some fit, Sojourner leaves the result uncertain.</p>
               </div>
               <StrengthSelect
                 label="Schedule importance"
@@ -321,7 +336,8 @@ export function TargetTracks() {
               />
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><span className="metric-label">Industries or settings</span><StrengthSelect label="Industry importance" value={draft.constraints.industries.strength} onChange={(strength) => updateConstraints("industries", { ...draft.constraints.industries, strength })} /></div>
-            <textarea className="input-shell mt-2 min-h-24 resize-y py-3" aria-label="Track industries" value={draft.constraints.industries.values.join("\n")} onChange={(event) => updateConstraints("industries", { ...draft.constraints.industries, values: splitList(event.target.value) })} />
+            <LineListTextarea className="input-shell mt-2 min-h-24 resize-y py-3" aria-label="Track industries" values={draft.constraints.industries.values} onValuesChange={(values) => updateConstraints("industries", { ...draft.constraints.industries, values })} />
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{ONE_PER_LINE}</span>
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
               <label><span className="metric-label">After-hours or on-call</span><select className="select-shell mt-2" aria-label="Track on-call preference" value={draft.constraints.onCall.value} onChange={(event) => updateConstraints("onCall", { ...draft.constraints.onCall, value: event.target.value as CareerTargetTrackInput["constraints"]["onCall"]["value"] })}><option value="either">No preference</option><option value="yes">Okay with it</option><option value="no">Avoid it</option></select></label>
               <StrengthSelect label="On-call importance" value={draft.constraints.onCall.strength} onChange={(strength) => updateConstraints("onCall", { ...draft.constraints.onCall, strength })} />
@@ -332,13 +348,22 @@ export function TargetTracks() {
             <div>{saved && <span className="text-sm font-semibold text-[var(--color-success)]">Saved</span>}</div>
             <div className="flex flex-wrap gap-3">
               {editingTrack?.origin === "user" && editingId !== "legacy-default" && (
-                <button type="button" className="secondary-button" onClick={() => void handleDelete()} disabled={targetTracks.busy}><Trash2 className="h-4 w-4" /> Delete</button>
+                <button type="button" className="secondary-button" onClick={() => setDeleteTargetId(editingId)} disabled={targetTracks.busy}><Trash2 className="h-4 w-4" /> Delete</button>
               )}
               <button type="button" className="primary-button" onClick={() => void handleSave()} disabled={targetTracks.busy || !draft.name.trim()}><Save className="h-4 w-4" />{targetTracks.busy ? "Saving..." : "Save target track"}</button>
             </div>
           </div>
         </div>
       </section>
+      <EconomicPathwayExplorer />
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDelete}
+        title="Delete target track?"
+        message={`Delete "${deleteTarget?.name ?? "this track"}" from your career search? This removes the saved direction and its preferences. This action cannot be undone.`}
+        confirmLabel="Delete target track"
+      />
     </Layout>
   );
 }

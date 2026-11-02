@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useCareerStories } from "../career/stories";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { CandidateEvidence } from "../shared/contracts";
 import type { CareerStory, CareerStoryInput } from "../shared/career-stories";
 
@@ -71,6 +72,7 @@ export function CareerStoriesPanel({ evidence }: CareerStoriesPanelProps) {
   const stories = useCareerStories();
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteStoryId, setDeleteStoryId] = useState<string | null>(null);
   const [draft, setDraft] = useState<StoryDraft>(emptyDraft);
 
   const evidenceById = useMemo(
@@ -114,6 +116,8 @@ export function CareerStoriesPanel({ evidence }: CareerStoriesPanelProps) {
     }
     resetForm();
   };
+
+  const selectedStory = stories.stories.find((story) => story.id === deleteStoryId) ?? null;
 
   const activeStory = editingId
     ? stories.stories.find((story) => story.id === editingId) ?? null
@@ -329,7 +333,7 @@ export function CareerStoriesPanel({ evidence }: CareerStoriesPanelProps) {
                       type="button"
                       className="surface-link-button p-2 text-[var(--color-text-muted)]"
                       aria-label={`Delete Career Story ${story.title}`}
-                      onClick={() => void stories.remove(story.id)}
+                      onClick={() => setDeleteStoryId(story.id)}
                       disabled={stories.busy}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -376,6 +380,18 @@ export function CareerStoriesPanel({ evidence }: CareerStoriesPanelProps) {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(selectedStory)}
+        onClose={() => setDeleteStoryId(null)}
+        onConfirm={async () => {
+          if (!selectedStory) throw new Error("The selected Career Story is no longer available.");
+          await stories.remove(selectedStory.id);
+          setDeleteStoryId(null);
+        }}
+        title="Delete Career Story?"
+        message={`Delete "${selectedStory?.title ?? "this story"}" and its situation, challenge, action, result, reflection, and story-to-evidence links? Your underlying Career Evidence remains unchanged. This cannot be undone.`}
+        confirmLabel="Delete Career Story"
+      />
     </section>
   );
 }

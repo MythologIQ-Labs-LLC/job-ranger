@@ -4,6 +4,7 @@ import type { RuntimeInfo } from "../shared/runtime";
 import type { LegacyInstallStatus } from "../shared/legacy-install";
 import { getDesktopApi } from "../services/api";
 import { repairAppShell } from "../pwa/shell-repair";
+import { IS_DEMO_FLAVOR } from "../demo/flavor";
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "unknown";
@@ -44,8 +45,8 @@ export function RuntimePanel() {
       const granted = await navigator.storage?.persist?.();
       setMessage(
         granted
-          ? "This browser granted persistent storage for Job Ranger."
-          : "The browser did not grant persistent storage. Installing Job Ranger as an app (or bookmarking and using it regularly) often allows it. Keep exporting backups.",
+          ? "This browser granted persistent storage for Sojourner."
+          : "The browser did not grant persistent storage. Installing Sojourner as an app (or bookmarking and using it regularly) often allows it. Keep exporting backups.",
       );
       await refresh();
     } catch (error) {
@@ -58,7 +59,7 @@ export function RuntimePanel() {
     setMessage(null);
     try {
       await getDesktopApi().legacyInstall.stageImport();
-      setMessage("Import staged. Job Ranger is restarting…");
+      setMessage("Import staged. Sojourner is restarting…");
     } catch (error) {
       setBusy(false);
       setMessage(error instanceof Error ? error.message : "The import could not be staged.");
@@ -78,8 +79,8 @@ export function RuntimePanel() {
           <h2 className="text-2xl font-semibold">This installation</h2>
         </div>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-          Job Ranger keeps your career data on this device. Different installations (web app, Windows app) keep separate
-          data; move data between them with a portable <code>.jobranger</code> backup.
+          Sojourner keeps your career data on this device. Different installations (the web app at another address, or an
+          earlier desktop installation) keep separate data; move data between them with a portable <code>.jobranger</code> backup.
         </p>
       </div>
       <div className="panel panel-strong space-y-4 p-6 text-sm text-[var(--color-text-secondary)]">
@@ -126,7 +127,7 @@ export function RuntimePanel() {
           <div className="space-y-2">
             <p className="leading-6">
               Web app limits: career sites that need a full browser window (for example Workday or iCIMS pages), scheduled
-              checks while Job Ranger is closed, system tray, and desktop notifications are available only in the Windows
+              checks while Sojourner is closed, system tray, and desktop notifications are available only in the Windows
               app. Supported job-board APIs (Greenhouse, Lever, Ashby, SmartRecruiters) are read directly from this browser
               without sending your career data anywhere.
             </p>
@@ -138,7 +139,7 @@ export function RuntimePanel() {
             >
               Repair app shell (keeps your data)
             </button>
-            {info.storage.persisted !== true && (
+            {info.storage.persisted !== true && !IS_DEMO_FLAVOR && (
               <button type="button" className="secondary-button" onClick={() => void requestPersistence()}>
                 <HardDrive className="h-4 w-4" />
                 Request persistent storage
@@ -153,7 +154,7 @@ export function RuntimePanel() {
             {legacy.found ? (
               <>
                 <p className="mt-2 leading-6">
-                  Job Ranger found data from a direct-download installation (last changed{" "}
+                  Sojourner found data from an earlier Job Ranger direct-download installation (last changed{" "}
                   {legacy.lastModified ? new Date(legacy.lastModified).toLocaleString() : "unknown"}). Importing copies it into
                   this Microsoft Store installation and replaces the Store app's current data. The original installation
                   and its data are left untouched.

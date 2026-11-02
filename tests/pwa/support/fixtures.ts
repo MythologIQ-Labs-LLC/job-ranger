@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 export const distPwa = path.join(projectRoot, "dist-pwa");
+/** Demo-flavor production build (npm run build:pwa:demo), served on its own origin by its tests. */
+export const distPwaDemo = path.join(projectRoot, "dist-pwa-demo");
 
 /** Minimal, valid DOCX (OOXML package) for a non-software career history. */
 export function healthcareResumeDocx(): Buffer {
@@ -45,12 +47,22 @@ export const greenhouseFixture = {
   ],
 };
 
+/**
+ * Resolves once the web runtime is usable *and* the application has rendered.
+ *
+ * The entry point installs `window.electronAPI` before it imports the `App` chunk, and
+ * the boot screen only exists after React mounts, so neither fact alone proves the UI is
+ * on screen (#298). Every route, including onboarding and loading states, renders the
+ * shared `Layout`, whose `#main-content` landmark is therefore the readiness signal.
+ */
 export async function waitForRuntime(page: Page): Promise<void> {
   await page.waitForFunction(() => Boolean((window as unknown as { electronAPI?: unknown }).electronAPI), null, {
     timeout: 60_000,
   });
   await page.waitForFunction(
-    () => !document.querySelector('[data-testid="pwa-boot-screen"]'),
+    () =>
+      !document.querySelector('[data-testid="pwa-boot-screen"]') &&
+      document.getElementById("main-content") !== null,
     null,
     { timeout: 60_000 },
   );
