@@ -170,4 +170,115 @@ assert.equal(reader.tools.every((tool) => tool.annotations.readOnlyHint), true);
   assert.equal(counts.mutation, 0);
 }
 
-console.log("MCP read-only scope, minimization, delegation, injection-data parity and proposal preview tests passed");
+// Isolated workspace stub: every listDrafts() call is a fresh read of mutable
+// stored state (structured clone), so tests can change the source between calls.
+function draftWorkspace(initialDrafts) {
+  const state = { drafts: structuredClone(initialDrafts), reads: 0 };
+  const adapter = createReadOnlyAdapter({
+    ...services,
+    personalBrand: {
+      ...services.personalBrand,
+      listDrafts: async () => { state.reads++; return structuredClone(state.drafts); },
+    },
+  }, ["post-content:read"]);
+  return { state, adapter };
+}
+const verifiedDraft = {
+  ...draft, id: "verified-draft", revision: 3,
+  body: "I led the warehouse migration to a new inventory system.",
+  claimChecks: [{
+    claim: "I led the warehouse migration.", evidenceIds: ["confirmed"],
+    verified: true, privacyCleared: true,
+  }],
+};
+
+// (1) Every prior claim is removed from the text and an unrelated new claim is
+// added. The saved revision's attestations must not make the proposal pass.
+{
+  const { adapter } = draftWorkspace([verifiedDraft]);
+  const saved = await adapter.execute("evaluate_post_readiness", { draftId: verifiedDraft.id });
+  assert.equal(saved.status, "review", "fixture: the saved revision's claims are fully attested");
+  const preview = await adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 3,
+    proposedBody: "I won a national award for hospital logistics.",
+  });
+  assert.equal(preview.status, "blocked");
+  assert.equal(preview.approved, false);
+  // Independent of the proposal-level finding, the old claim is not counted as
+  // support: it is an unreviewed placeholder that blocks on evidence and privacy.
+  const assessed = preview.findings.filter((finding) =>
+    finding.code !== "proposal_requires_fresh_claim_and_privacy_review");
+  assert(assessed.some((finding) => finding.code === "claim_0_unsupported" && finding.severity === "blocking"));
+  assert(assessed.some((finding) => finding.code === "claim_0_privacy" && finding.severity === "blocking"));
+  assert(!JSON.stringify(preview).includes("national award"), "proposal text is not echoed");
+  assert(!JSON.stringify(preview).includes("warehouse migration"), "old claim text is not echoed");
+}
+
+// (2) Malformed or non-string saved claim checks fail closed with an explicit
+// blocking finding; they never crash the tool or keep a prior attestation.
+{
+  const attested = { verified: true, privacyCleared: true };
+  const malformedVariants = [
+    "I led the warehouse migration.",
+    null,
+    { 0: { claim: "x", evidenceIds: ["confirmed"], ...attested }, length: 1 },
+    [null],
+    ["I led the warehouse migration."],
+    [{ claim: 42, evidenceIds: ["confirmed"], ...attested }],
+    [{ claim: ["I led"], evidenceIds: ["confirmed"], ...attested }],
+    [{ claim: "I led the warehouse migration.", evidenceIds: "confirmed", ...attested }],
+    [{ claim: "I led the warehouse migration.", evidenceIds: [7], ...attested }],
+    [{ claim: "I led the warehouse migration.", ...attested }],
+    [{ claim: "Valid claim", evidenceIds: ["confirmed"], ...attested }, { claim: null, ...attested }],
+  ];
+  for (const claimChecks of malformedVariants) {
+    const { state, adapter } = draftWorkspace([{ ...verifiedDraft, claimChecks }]);
+    const preview = await adapter.execute("preview_post_revision_readiness", {
+      draftId: verifiedDraft.id, expectedRevision: 3, proposedBody: "Changed copy.",
+    });
+    assert.equal(preview.status, "blocked", `malformed ${JSON.stringify(claimChecks)} must block`);
+    assert(preview.findings.some((finding) =>
+      finding.code === "claim_checks_malformed" && finding.severity === "blocking"),
+      `malformed ${JSON.stringify(claimChecks)} must be reported`);
+    assert.deepEqual(state.drafts[0].claimChecks, claimChecks, "stored claim checks are untouched");
+  }
+  const { adapter } = draftWorkspace([verifiedDraft]);
+  const wellFormed = await adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 3, proposedBody: "Changed copy.",
+  });
+  assert(!wellFormed.findings.some((finding) => finding.code === "claim_checks_malformed"));
+  assert.equal(counts.mutation, 0);
+}
+
+// (3) Time of check vs time of use: the expected revision is compared against a
+// fresh read on every call, never a revision observed by an earlier call.
+{
+  const { state, adapter } = draftWorkspace([verifiedDraft]);
+  const checked = await adapter.execute("evaluate_post_readiness", { draftId: verifiedDraft.id });
+  assert.equal(checked.revision, 3);
+  const readsAfterCheck = state.reads;
+  const first = await adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 3, proposedBody: "Proposal A.",
+  });
+  assert.equal(first.basedOnRevision, 3);
+  assert.equal(state.reads, readsAfterCheck + 1, "each preview performs its own read");
+  // The user saves a new revision in the app between the model's check and use.
+  state.drafts[0] = { ...state.drafts[0], revision: 4, body: "User-edited saved copy." };
+  await assert.rejects(() => adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 3, proposedBody: "Proposal A.",
+  }), /Stale draft revision/);
+  assert.equal(state.reads, readsAfterCheck + 2);
+  const refreshed = await adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 4, proposedBody: "Proposal A.",
+  });
+  assert.equal(refreshed.basedOnRevision, 4);
+  assert.equal(refreshed.hypotheticalRevision, 5);
+  // A draft deleted after the check is not found rather than served from memory.
+  state.drafts = [];
+  await assert.rejects(() => adapter.execute("preview_post_revision_readiness", {
+    draftId: verifiedDraft.id, expectedRevision: 4, proposedBody: "Proposal A.",
+  }), /Draft not found/);
+  assert.equal(counts.mutation, 0);
+}
+
+console.log("MCP read-only scope, minimization, delegation, injection-data parity and proposal preview (claim reset, malformed claims, fresh-read revision) tests passed");

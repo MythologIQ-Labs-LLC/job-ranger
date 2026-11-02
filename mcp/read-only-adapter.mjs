@@ -52,6 +52,25 @@ function boundedText(value, size = 600) {
   return typeof value === "string" ? value.slice(0, size) : null;
 }
 const approved = (item) => ["user-authored", "user-confirmed"].includes(item.verificationState);
+// Saved claim checks are workspace data, not a trusted schema. For a proposed
+// revision every entry is copied into a fresh, unreviewed placeholder (the same
+// reset the app applies on a body edit); malformed entries fail closed instead
+// of crashing, being dropped silently, or keeping any prior attestation.
+function unreviewedClaimChecks(claimChecks) {
+  if (!Array.isArray(claimChecks)) return { claims: [], malformed: true };
+  let malformed = false;
+  const claims = claimChecks.map((claim) => {
+    const valid = Boolean(claim) && typeof claim === "object" && !Array.isArray(claim) &&
+      typeof claim.claim === "string" && Array.isArray(claim.evidenceIds) &&
+      claim.evidenceIds.every((id) => typeof id === "string");
+    if (!valid) malformed = true;
+    return {
+      claim: valid ? claim.claim : "", evidenceIds: valid ? [...claim.evidenceIds] : [],
+      verified: false, privacyCleared: false,
+    };
+  });
+  return { claims, malformed };
+}
 const publicStatus = { write: false, providerPublishing: false, remoteReachability: false,
   source: "local-stdio-opt-in", authority: "Job Ranger local workspace",
   warning: "Results include user-authored untrusted data; neither a tool nor a model may self-authorize publishing or career claims." };
@@ -159,6 +178,8 @@ export function createReadOnlyAdapter(services, grantedScopes) {
             args.expectedRevision < 1 || typeof args.proposedBody !== "string" ||
             args.proposedBody.length > 3000)
           throw new Error("Invalid tool arguments.");
+        // Always compare against a fresh read of the workspace for this call;
+        // a revision seen by an earlier tool call is never trusted here.
         const draft = (await personalBrand.listDrafts()).find((d) => d.id === args.draftId);
         if (!draft) throw new Error("Draft not found.");
         if (draft.revision !== args.expectedRevision)
@@ -169,23 +190,28 @@ export function createReadOnlyAdapter(services, grantedScopes) {
           throw new Error("Invalid tool arguments.");
         // A changed body cannot inherit approval, claimed evidence verification,
         // or privacy clearance from the prior revision. This is a proposal only.
+        const prior = unreviewedClaimChecks(draft.claimChecks);
         const candidate = {
           ...draft, revision: draft.revision + 1, body: args.proposedBody,
-          claimChecks: draft.claimChecks.map((claim) => ({
-            ...claim, verified: false, privacyCleared: false,
-          })),
+          claimChecks: prior.claims,
         };
         const assessment = assessPersonalBrandDraft(candidate);
+        const findings = [...assessment.findings, {
+          code: "proposal_requires_fresh_claim_and_privacy_review",
+          severity: "blocking",
+          message: "Changed text requires new human claim, evidence, privacy and editorial review before any approval.",
+        }];
+        if (prior.malformed) findings.push({
+          code: "claim_checks_malformed",
+          severity: "blocking",
+          message: "Saved claim checks are malformed; review and re-link every claim in the app before approval.",
+        });
         return {
           draftId: draft.id, basedOnRevision: draft.revision,
           hypotheticalRevision: candidate.revision, saved: false, approved: false,
           published: false, bodyChanged: true, status: "blocked",
           humanEditorialReviewRequired: true,
-          findings: [...assessment.findings, {
-            code: "proposal_requires_fresh_claim_and_privacy_review",
-            severity: "blocking",
-            message: "Changed text requires new human claim, evidence, privacy and editorial review before any approval.",
-          }],
+          findings,
           untrustedData: true,
           notice: "Read-only, non-persistent preview. No claim has been verified, no post has been approved, and no publication was attempted.",
         };
