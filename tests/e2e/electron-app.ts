@@ -19,6 +19,10 @@ export interface ElectronAppFixture {
 
 interface LaunchElectronAppOptions {
   showOnboarding?: boolean;
+  /** Extra environment for the app (for example a local fake service endpoint). */
+  env?: Record<string, string>;
+  /** Reuse an existing user-data directory, e.g. to relaunch after a simulated crash. */
+  userDataDir?: string;
 }
 
 /**
@@ -37,7 +41,7 @@ interface LaunchElectronAppOptions {
 export async function launchElectronApp(
   options: LaunchElectronAppOptions = {},
 ): Promise<ElectronAppFixture> {
-  const tempDataDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-e2e-"));
+  const tempDataDir = options.userDataDir ?? await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-e2e-"));
   const electronExe = require("electron") as unknown as string;
 
   console.log("Launching Electron app root:", projectRoot);
@@ -50,6 +54,7 @@ export async function launchElectronApp(
     cwd: projectRoot,
     env: {
       ...process.env,
+      ...options.env,
       NODE_ENV: "production",
     },
     timeout: 60000,

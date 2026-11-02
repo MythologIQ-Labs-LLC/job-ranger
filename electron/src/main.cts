@@ -6,6 +6,7 @@ import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "./evidence-extension-ipc.cjs";
 import { initializeBackupIpc } from "./backup-ipc.cjs";
+import { initializeDriveIpc } from "./drive-ipc.cjs";
 import { applyPendingRestore } from "./backup-service.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
@@ -286,10 +287,17 @@ app.whenReady().then(async () => {
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
-    await initializeResumeIpc({
+    const resumeService = await initializeResumeIpc({
       dataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+    });
+    // Google Drive export (#314): hidden unless this build has a Desktop OAuth client.
+    await initializeDriveIpc({
+      userDataDirectory,
+      databasePath: systemStatus.databasePath,
+      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+      resumeService,
     });
     initializeBackupIpc({
       dataDirectory,
