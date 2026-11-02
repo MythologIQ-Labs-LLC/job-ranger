@@ -7,8 +7,16 @@
 
 After that snapshot, `main` gained only #319 (test-only: a busy timeout for two Electron e2e helpers), #263 (CI only: draft pull requests skip the heavy hosted jobs until marked ready for review) and #312 (development dependencies: Electron 44.7.0, Playwright 1.64.0, Vite 8.3.4, CJK font packages 5.3.1). None is intended to change user-facing behavior; #312 updates the packaged Electron runtime and CJK font packages and is covered only by the final-main validation at `dd0cf63`, recorded on #194.
 
-**Published release:** v1.2.0
-**Current development line:** post-v1.2.0; v1.3.0 release candidate in preparation ([`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md))
+## Release facts (updated 2026-11-02)
+
+- **Published Sojourner release:** none yet. The first is **v1.0.0-alpha.1**, a GitHub pre-release with a Windows installer signed by `MythologIQ Labs, LLC` (`Sojourner-v1.0.0-alpha.1-windows-x64.exe`, installing `Sojourner.exe`). It is prepared on the development line (`package.json` `1.0.0-alpha.1`) and not tagged; acceptance: [`RELEASE_READINESS.md`](./RELEASE_READINESS.md), "Current Windows release acceptance".
+- **Job Ranger releases (separate, earlier product line):** v1.0.0 to v1.2.0. On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits. The last stable one is `job-ranger-v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` (promoted from rc.5, unsigned). The v1.3.0 Job Ranger candidate was never tagged; its content ships in Sojourner 1.0.0-alpha.1.
+- **Upgrade identity:** the Sojourner installer keeps `appId` `com.jobranger.app` so that it upgrades a Job Ranger v1.2.0 installation in place (manual check pending in the release acceptance), and the packaged app pins its data folder to the historical `%APPDATA%\Job Ranger` (`resolvePinnedUserDataDirectory`, `electron/src/distribution.cts`). The Microsoft Store package keeps its own identity and `Job Ranger Store` data folder. `npm run test:release-upgrade` verifies upgrades from `job-ranger-v1.2.0`.
+
+The October 15 snapshot below still says "v1.2.0" for what was then the published release; read it as Job Ranger `job-ranger-v1.2.0`.
+
+**Published release (at the snapshot):** Job Ranger v1.2.0 (now tag `job-ranger-v1.2.0`; its GitHub Release was removed 2026-11-02)
+**Current development line:** Sojourner `1.0.0-alpha.1` (prepared, not tagged), which supersedes the v1.3.0 Job Ranger candidate ([`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md))
 **Shipped release lineage:** v1.2.0 promoted from v1.2.0-rc.5
 **Release commit:** `71f9b790a1f456321aee2c783f39f4a6784b83a9`
 
@@ -320,11 +328,12 @@ Future acquisition changes must preserve connection-level pinning rather than re
 
 ## Distribution trust
 
-> **Forward change (post-v1.2.0, implemented on the development line):**
-> - Azure Artifact Signing is opt-in (`vars.JOB_RANGER_REQUIRE_WINDOWS_SIGNING`). An unsigned direct installer is labelled tester-only in its release manifest.
+> **Forward change (2026-11-02, ARCH-001, #364, #363):**
+> - Every publishing run of `release-build.yml` signs the Windows installer and its executables with MythologIQ Labs Azure Artifact Signing through GitHub OIDC (owner-approved `release` environment, no client secret), and fails unless `signtool verify /pa` passes with signer `MythologIQ Labs, LLC` and a timestamp. Build-only runs are unsigned and `testerOnly`.
+> - Releases are titled "Sojourner `<tag>`"; `-alpha`, `-beta` and `-rc.` tags are GitHub pre-releases. A tag push no longer builds the Microsoft Store package (manual `windows-store` dispatch only).
 > - Native macOS builds run only on manual dispatch.
-> - Each Store package and web build gets a release manifest and a GitHub artifact attestation.
-> - Supported channels are the Microsoft Store (#125) and the web/PWA runtime (#130).
+> - Each web build gets a release manifest and a GitHub artifact attestation.
+> - The signed Windows installer is the primary channel and the web/PWA continues (#130); the Microsoft Store is not a shipping channel.
 >
 > The description below is the **v1.2.0-era** trust pipeline, kept as historical release truth.
 
@@ -373,11 +382,11 @@ macOS verifier support includes explicit `.app`/report paths and records/enforce
 
 `docs/CLEAN_MACHINE_TRUST_VALIDATION.md` defines the normal-user install/first-launch evidence procedure. These tools do not automate around SmartScreen, Smart App Control, or Gatekeeper user prompts.
 
-## Shipped v1.2.0 release evidence
+## Shipped v1.2.0 release evidence (Job Ranger, historical)
 
-Immutable tag:
+Immutable tag (renamed 2026-11-02; its GitHub Release and assets were removed, so the artifact names below are historical):
 
-`v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` (promoted byte-for-byte from `v1.2.0-rc.5`)
+`v1.2.0`, now `job-ranger-v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` (promoted byte-for-byte from `v1.2.0-rc.5`)
 
 Hosted release run `37259653622` succeeded on both Windows and macOS.
 
@@ -524,7 +533,7 @@ Career relationship/company-targeting design under #121 is complete as a bounded
 
 ## Post-release distribution follow-up
 
-Stable v1.2.0 publication is complete. The certificate-first follow-up (Azure Artifact Signing + Apple Developer ID) was superseded by the accepted distribution architecture: the Microsoft Store (#125) and the web/PWA runtime (#130). v1.2.0 artifacts are immutable and will not be replaced in place.
+Stable v1.2.0 publication was completed and later archived (tag `job-ranger-v1.2.0`, GitHub Release removed 2026-11-02). The Store-first follow-up was in turn superseded by ARCH-001 (2026-11-02): the signed Windows installer is primary, built with Azure Artifact Signing, and the web/PWA runtime (#130) continues. The first Sojourner release is `v1.0.0-alpha.1`.
 
 ## Current sources of truth
 

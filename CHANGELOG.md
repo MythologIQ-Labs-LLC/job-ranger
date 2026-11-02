@@ -2,13 +2,35 @@
 
 All notable user-facing, architecture, governance, and maintenance changes should be recorded here.
 
+**Product lines.** Sojourner (from `1.0.0-alpha.1`) is a new product line. The Job Ranger releases below (v1.0.0 to v1.2.0) are kept as history: their GitHub Releases were removed on 2026-11-02 and their git tags renamed to `job-ranger-v*` (same commits, for example `job-ranger-v1.2.0`). The v1.3.0 Job Ranger candidate was never published; its content ships in Sojourner `1.0.0-alpha.1`.
+
 ## Unreleased
 
-Release-candidate preparation for v1.3.0 is active. Changes after the candidate freeze belong here until they are deliberately admitted to the release.
+Nothing yet beyond `1.0.0-alpha.1`.
 
-### Added on main (release admission pending)
+## 1.0.0-alpha.1 - Sojourner (prepared, not yet tagged)
 
-These capabilities exist on the current development line. They were **not** part of the published v1.2.0 release, and their presence on `main` does not automatically include them in the dated v1.3.0 release-candidate scope.
+The first Sojourner release: a signed Windows installer published as a GitHub **pre-release** (#363, #339). It contains everything on `main` since Job Ranger v1.2.0, detailed in the sections below and under v1.3.0. Release acceptance: [`docs/RELEASE_READINESS.md`](./docs/RELEASE_READINESS.md), "Current Windows release acceptance".
+
+### Highlights
+
+- **Sojourner: Employment Toolkit** (#351): the application formerly called Job Ranger, with Sojourner copy and artwork. It remains local-first: no account, no telemetry, and nothing leaves the device unless the person starts it.
+- **Signed Windows app** (#364): `Sojourner-v1.0.0-alpha.1-windows-x64.exe` installs `Sojourner.exe`, with "Sojourner" shortcuts and uninstall entry. Every executable is Authenticode-signed by **MythologIQ Labs, LLC** (Azure Artifact Signing through GitHub OIDC, owner-approved `release` environment), and the release run fails unless `signtool verify /pa` passes with that signer and a timestamp. Release assets carry SHA-256 checksums, a release manifest and a GitHub artifact attestation.
+- **In-place upgrade from Job Ranger v1.2.0:** the installer keeps Job Ranger's application ID (`com.jobranger.app`), so it upgrades an existing Job Ranger installation, and the packaged app keeps reading the existing data folder (`%APPDATA%\Job Ranger`). Uninstalling never deletes that folder.
+- **Web app (PWA)** continues alongside Windows on the same application core, with portable `.jobranger` backups that move a workspace between the two.
+- **Workspace recovery** (#358): when a web workspace cannot open, the startup error screen offers to restore a backup.
+- **Google Drive export, off by default** (#315): a person can approve export of a verified Sojourner PDF to their own Google Drive from the web app; Google sign-in runs on an isolated helper origin and nothing is sent without explicit approval. Builds without a configured OAuth client ship with Drive export disabled. Windows Drive export and user-chosen storage locations (PR #369) are **pending**: they are part of this release only if merged before the tag.
+- Also on `main`: Himalayas remote-job discovery with local role matching (#233), the opt-in career exploration brief (#191), the cover-letter copy readiness gate (#230), honest empty Find Jobs results with one-click filter recovery (#248), and the offline Career Ops guide (#186).
+
+### Release engineering
+
+- Version `1.0.0-alpha.1`. The release workflow titles releases "Sojourner `<tag>`" and marks `-alpha`, `-beta` and `-rc.` tags as pre-releases. A pushed `v*` tag no longer builds the Microsoft Store package; it stays available through a manual run with platform `windows-store`.
+- `npm run test:release-upgrade` defaults to the newest stable Sojourner tag and, until one exists, to `job-ranger-v1.2.0`. It no longer runs `node` through a shell, which broke when Node is installed under a path with spaces.
+- The Microsoft Store package keeps its historical identity (`Job Ranger.exe`, `Job Ranger Store` data folder); the Store is not a shipping channel.
+
+### Changes on main since Job Ranger v1.2.0
+
+These capabilities exist on the development line and were **not** part of the published Job Ranger v1.2.0 release.
 
 - **Manual-first Personal Brand:** user-authored post drafts, deterministic readiness findings, exact-copy review packages, human-confirmed publishing receipts, saved observation snapshots, conservative learning, and a dedicated page. No connected publishing or LinkedIn account access.
 - **LinkedIn analytics evidence:** local XLSX preview, explicitly confirmed import/persistence and deduplication, reconciliation of observed snapshots, manually attested historical post text and topic labels, observed performance dashboards, and cautious approved-content cohort comparisons. Missing data remains missing; correlations are not employment outcomes.
@@ -42,9 +64,9 @@ These capabilities exist on the current development line. They were **not** part
 - The README has a "See it in action" section with three screenshots of the web build using fictional data, regenerated by `npm run demo:screenshots`, and the accepted 85-second walkthrough video (`docs/assets/demo/job-ranger-demo.webm`), and links to a new self-hosting guide (`docs/SELF_HOSTING.md`). Repository links and the attestation verification commands now name `MythologIQ-Labs-LLC/job-ranger`, as does the `build-info.json` source repository for builds made outside GitHub Actions.
 - Both web browser-suite CI jobs upload Playwright traces and screenshots when a test fails. The service-worker update test no longer races the browser's own update check.
 
-## v1.3.0 - Release candidate
+## v1.3.0 - Job Ranger release candidate (never published)
 
-Not yet published. Candidate evidence: [`docs/validation/RELEASE_CANDIDATE_V1.3.0.md`](./docs/validation/RELEASE_CANDIDATE_V1.3.0.md).
+Never published as Job Ranger; superseded by Sojourner `1.0.0-alpha.1`, which includes this content. Candidate evidence: [`docs/validation/RELEASE_CANDIDATE_V1.3.0.md`](./docs/validation/RELEASE_CANDIDATE_V1.3.0.md).
 
 Implements the accepted distribution architecture (Microsoft Store + local-first web/PWA runtime; #125, #130). Nothing below is shipped yet. The Store channel awaits Partner Center certification. The web app runs today as a local self-hosted install at `http://localhost:4174`; a public production deployment is deliberately deferred until there is demand for external distribution (#145). Validation evidence: [`docs/validation/DISTRIBUTION_IMPLEMENTATION_2026-10-05.md`](./docs/validation/DISTRIBUTION_IMPLEMENTATION_2026-10-05.md).
 
@@ -92,7 +114,7 @@ Implements the accepted distribution architecture (Microsoft Store + local-first
 - After a scrape finished, the idle scrape queue could still read the database. That read raced shutdown and produced an unhandled "unable to open database" error.
 - Greenhouse job descriptions (entity-escaped HTML from the Greenhouse API) are now unescaped before requirement extraction, so requirements are detected individually instead of as one block.
 
-## v1.2.0 - 2026-10-05
+## v1.2.0 - 2026-10-05 (Job Ranger, tag `job-ranger-v1.2.0`)
 
 v1.2.0 is the stable public release, promoted from immutable `v1.2.0-rc.5` at `71f9b790a1f456321aee2c783f39f4a6784b83a9`. The Windows/macOS artifacts are byte-identical to the rc.5 packages that passed packaged-runtime smoke, native trust-verifier execution, SHA-256 verification, and schema-v2 release-manifest generation. The release is intentionally unsigned/unnotarized under an explicit owner-approved exception.
 

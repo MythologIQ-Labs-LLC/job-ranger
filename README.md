@@ -80,11 +80,11 @@ Sojourner is a **Windows application first**. The same app also runs as a **prog
 
 | Option | Best for | Status |
 | --- | --- | --- |
-| **Windows installer** | Everyday use on Windows 10 and 11 | Every release is code-signed by **MythologIQ Labs, LLC**, and that signature is verified before publication. The first signed release is being prepared. Watch [Releases](https://github.com/MythologIQ-Labs-LLC/sojourner/releases) for it. |
+| **Windows installer** | Everyday use on Windows 10 and 11 | Every release is code-signed by **MythologIQ Labs, LLC**, and that signature is verified before publication. The first signed alpha is **v1.0.0-alpha.1** (a pre-release, being prepared). Watch [Releases](https://github.com/MythologIQ-Labs-LLC/sojourner/releases) for it. |
 | **Run it locally in your browser** | Trying Sojourner today on any desktop with Chrome or Edge | Available now from source. See the quick start below. |
 | **Hosted web app** | Use without installing anything | Planned. It needs a production web origin and broader browser validation first. |
 
-> The [v1.2.0 release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) (published as Job Ranger) is kept as immutable history. Its installers are **unsigned**. Please wait for the signed Windows release rather than turning off SmartScreen or other platform protections.
+> Earlier releases were published as **Job Ranger**, a separate product line. They are archived as `job-ranger-v*` git tags (for example `job-ranger-v1.2.0`) and are no longer offered as downloads; their installers were **unsigned**. Please wait for the signed Sojourner release rather than turning off SmartScreen or other platform protections. If you use Job Ranger v1.2.0, the Sojourner installer is built to upgrade it in place and keep your data; create a backup first.
 
 ### Quick start: run Sojourner locally
 
@@ -169,9 +169,9 @@ Architecture decisions are recorded in the [Canonical Architecture Index](./docs
 
 | | |
 | --- | --- |
-| **Development line** | v1.3.0 candidate, containing the signed Windows release pipeline, the PWA runtime, workspace recovery, Google Drive export (off by default), and the Sojourner rename. |
-| **Latest published release** | [v1.2.0](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) (October 5, 2026, as Job Ranger, unsigned), kept as immutable history. |
-| **Next release** | The first signed Windows installer, built and signed by the [release workflow](./.github/workflows/release-build.yml) only after owner approval. |
+| **Development line** | `1.0.0-alpha.1`, the first Sojourner release: the signed Windows release pipeline, the PWA runtime, workspace recovery, Google Drive export (off by default), and the Sojourner rename. |
+| **Latest published release** | None yet for Sojourner. Job Ranger releases (last: v1.2.0, October 5, 2026, unsigned) are archived as `job-ranger-v*` tags. |
+| **Next release** | **v1.0.0-alpha.1**, the first signed alpha: a Windows installer published as a GitHub pre-release, built and signed by the [release workflow](./.github/workflows/release-build.yml) only after owner approval. |
 | **Other platforms** | macOS and Linux are served by the PWA. Native packages are not planned. |
 
 The factual snapshot lives in [SYSTEM_STATE.md](./docs/SYSTEM_STATE.md); history is in [CHANGELOG.md](./CHANGELOG.md); release gates are in [RELEASE_READINESS.md](./docs/RELEASE_READINESS.md).

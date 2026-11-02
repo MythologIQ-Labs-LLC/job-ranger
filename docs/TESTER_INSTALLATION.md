@@ -1,58 +1,63 @@
 # Tester Installation Guidance
 
-**Audience:** informed testers using Job Ranger prerelease artifacts.  
-**Not the normal public-installation path.** Going forward, ordinary users install Job Ranger from the Microsoft Store (Windows) or use the web app; both are pending external certification or deployment (see [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md)). Direct-download installers are advanced/test artifacts unless independently signed.
+**Audience:** informed testers using Sojourner pre-release artifacts.  
+The signed Windows installer is the primary channel (ARCH-001 in [`ARCHITECTURE_INDEX.md`](./ARCHITECTURE_INDEX.md)); the web app continues alongside it. The first Sojourner release is **v1.0.0-alpha.1**, a GitHub **pre-release** whose installer, `Sojourner-v1.0.0-alpha.1-windows-x64.exe`, is Authenticode-signed by **MythologIQ Labs, LLC**.
 
-Unsigned or unnotarized prerelease artifacts can trigger platform security controls. Job Ranger does not instruct testers to disable SmartScreen, Smart App Control, Defender, Gatekeeper, quarantine protections, or other system security globally.
+Earlier releases were published as Job Ranger. Their GitHub Releases were removed on 2026-11-02 and their tags renamed to `job-ranger-v*` (for example `job-ranger-v1.2.0`). Those installers were unsigned. The unsigned tester paths below apply only to such historical or build-only artifacts. Sojourner does not instruct testers to disable SmartScreen, Smart App Control, Defender, Gatekeeper, quarantine protections, or other system security globally.
+
+## Upgrading from Job Ranger v1.2.0
+
+The Sojourner installer keeps Job Ranger's application ID, so it upgrades an existing Job Ranger v1.2.0 installation in place: the "Job Ranger" shortcuts and uninstall entry are replaced by "Sojourner", and the app keeps using the existing data folder `%APPDATA%\Job Ranger`. Uninstalling does not delete that folder. Create a `.jobranger` backup (Settings) before upgrading.
 
 ## Verify the download first
 
-Every Job Ranger release build publishes platform-specific SHA-256 evidence next to the installer artifacts:
+Every release build publishes platform-specific SHA-256 evidence next to the installer artifacts:
 
 - `windows-SHA256SUMS.txt` and `windows-release-manifest.json`;
 - `macos-SHA256SUMS.txt` and `macos-release-manifest.json`.
 
 The manifest identifies the tag, whether the build is a public release or tester-only prerelease, the artifact filename, byte size, SHA-256 digest, and the corresponding signing-verification evidence file.
 
-Releases after v1.2.0 also publish:
-- `windows-store-*` files for the Microsoft Store package candidate;
+Sojourner releases also publish:
+- `windows-signing.json`, the Authenticode verification of every Windows executable (signer `MythologIQ Labs, LLC`, timestamp, `signtool verify /pa`);
 - `web-*` files for the web build;
 - a GitHub artifact attestation for every artifact. Verify it with `gh attestation verify <file> --repo MythologIQ-Labs-LLC/sojourner`.
 
-The Store package attached to a GitHub Release is the unsigned submission artifact. It is not installable as-is and is not a substitute for the Store listing.
+A pushed release tag no longer builds the Microsoft Store package. It is built only on a manual run and is not a shipping channel.
 
 ### Windows
 
 In PowerShell:
 
 ```powershell
-Get-FileHash .\Job.Ranger-v1.2.0-windows-x64.exe -Algorithm SHA256
+Get-FileHash .\Sojourner-v1.0.0-alpha.1-windows-x64.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Sojourner-v1.0.0-alpha.1-windows-x64.exe | Format-List Status, SignerCertificate
 ```
 
-Compare the result with the matching entry in `windows-SHA256SUMS.txt` from the same GitHub Release.
+Compare the hash with the matching entry in `windows-SHA256SUMS.txt` from the same GitHub Release. The signature status must be `Valid`, and the signer subject must start with `CN="MythologIQ Labs, LLC"`.
 
 ### macOS
 
 In Terminal:
 
 ```bash
-shasum -a 256 ./Job.Ranger-v1.2.0-macos-arm64.dmg
+shasum -a 256 ./Sojourner-v<version>-macos-arm64.dmg
 ```
 
-Use the x64 filename instead on an Intel Mac. Compare the result with `macos-SHA256SUMS.txt` from the same GitHub Release.
+Native macOS packages are built only on manual dispatch; macOS users are served by the web app. Use the x64 filename instead on an Intel Mac. Compare the result with `macos-SHA256SUMS.txt` from the same GitHub Release.
 
 A matching checksum proves that the downloaded file matches the release asset. It does **not** convert an unsigned artifact into a signed one.
 
-## Windows 11 unsigned tester path
+## Windows 11 unsigned tester path (historical or build-only artifacts)
 
 1. Verify the SHA-256 checksum before running the installer.
 2. Attempt to launch the installer normally.
 3. If Windows Defender SmartScreen presents an OS-native option to inspect the warning and explicitly run the app anyway, a tester who independently trusts the GitHub Release may choose that per-file override.
 4. If **Smart App Control** blocks the installer or Windows provides no per-app/per-file override, stop. The unsigned tester build is not supported on that configuration.
 
-Do not turn off Smart App Control, SmartScreen, Defender, or other Windows security merely to run Job Ranger.
+Do not turn off Smart App Control, SmartScreen, Defender, or other Windows security merely to run Sojourner or Job Ranger.
 
-Microsoft documents Smart App Control as blocking unknown unsigned code by default when its intelligence service cannot establish trust. Signed public Job Ranger releases are the intended solution for those systems.
+Microsoft documents Smart App Control as blocking unknown unsigned code by default when its intelligence service cannot establish trust. Signed Sojourner releases are the solution for those systems.
 
 ## macOS unsigned or unnotarized tester path
 
@@ -68,11 +73,11 @@ Apple explicitly documents the Privacy & Security → Open Anyway flow as the bo
 
 ## Public releases
 
-A stable `vMAJOR.MINOR.PATCH` Job Ranger release is not allowed to publish through the release workflow unless platform trust verification passes:
+No Sojourner release, stable (`vMAJOR.MINOR.PATCH`) or pre-release (such as `v1.0.0-alpha.1`), publishes through the release workflow unless platform trust verification passes:
 
-- Windows: valid Authenticode signatures through Microsoft Azure Artifact Signing;
-- macOS: Developer ID signing, Apple notarization, stapled ticket, `codesign`, Gatekeeper assessment, and stapler verification.
+- Windows: valid, timestamped Authenticode signatures by `MythologIQ Labs, LLC` through Azure Artifact Signing, with `signtool verify /pa` passing for every executable;
+- macOS (manual dispatch only): Developer ID signing, Apple notarization, stapled ticket, `codesign`, Gatekeeper assessment, and stapler verification.
 
-If those credentials or checks are unavailable, the build remains a prerelease/tester artifact rather than being promoted as a normal public release.
+A run with publish off is an unsigned, tester-only workflow artifact and never reaches a GitHub Release. Tags containing `-alpha`, `-beta` or `-rc.` are published as GitHub pre-releases.
 
 See [`DISTRIBUTION_TRUST.md`](./DISTRIBUTION_TRUST.md) for the full release trust contract.

@@ -38,7 +38,7 @@ From a checkout of the exact release tag or a trusted copy of the verification s
 ```powershell
 ./scripts/verify-windows-distribution.ps1 `
   -RequireSigned `
-  -ArtifactPath "C:\Users\<you>\Downloads\Job.Ranger-v1.2.0-windows-x64.exe" `
+  -ArtifactPath "C:\Users\<you>\Downloads\Sojourner-v1.0.0-alpha.1-windows-x64.exe" `
   -ReportPath ".\windows-clean-machine-signing.json"
 ```
 
@@ -99,7 +99,7 @@ Download the architecture-appropriate DMG from the stable GitHub Release.
 Verify its SHA-256 against the published checksum file:
 
 ```bash
-shasum -a 256 ~/Downloads/Job.Ranger-v1.2.0-macos-arm64.dmg
+shasum -a 256 ~/Downloads/Sojourner-v<version>-macos-arm64.dmg
 ```
 
 (or the x64 filename on an Intel Mac).
@@ -117,7 +117,7 @@ From a checkout of the exact release tag or a trusted copy of the verification s
 ```bash
 bash scripts/verify-macos-distribution.sh \
   --require-trust \
-  --app "/Applications/Job Ranger.app" \
+  --app "/Applications/Sojourner.app" \
   --report ./macos-clean-machine-signing.txt
 ```
 
@@ -132,7 +132,7 @@ The command records and enforces:
 
 ### 5. First launch
 
-Launch `/Applications/Job Ranger.app` normally through Finder/Launchpad.
+Launch `/Applications/Sojourner.app` normally through Finder/Launchpad.
 
 Record:
 

@@ -8,15 +8,17 @@ Job Ranger separates **artifact provenance**, **platform installation trust**, a
 
 The accepted distribution architecture is defined in [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md).
 
+> **Superseded in part (2026-11-02).** ARCH-001 in [`ARCHITECTURE_INDEX.md`](./ARCHITECTURE_INDEX.md) makes the **signed Windows installer** the primary channel, with the PWA continuing alongside it; the Microsoft Store is not a shipping channel. Where this document says the Store and PWA are the supported targets, or treats the direct installer as advanced/test only, ARCH-001 wins. The first Sojourner release is `v1.0.0-alpha.1` (`Sojourner-v1.0.0-alpha.1-windows-x64.exe`, a GitHub pre-release signed by `MythologIQ Labs, LLC`).
+
 ## Historical v1.2.0 boundary
 
-Stable **v1.2.0** was published on 2026-10-05 from commit:
+Stable Job Ranger **v1.2.0** was published on 2026-10-05 from commit:
 
 `71f9b790a1f456321aee2c783f39f4a6784b83a9`
 
 It was promoted byte-for-byte from validated `v1.2.0-rc.5` artifacts and intentionally published unsigned/unnotarized under an explicit owner-approved exception.
 
-That release remains immutable. The forward distribution decision does not replace, mutate, or retroactively relabel its artifacts.
+On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits (`job-ranger-v1.2.0` is the commit above). The artifacts are no longer offered for download; the tags keep the source history, and `npm run test:release-upgrade` uses `job-ranger-v1.2.0` as its upgrade baseline until Sojourner has a stable tag.
 
 ## Forward release policy
 
@@ -129,9 +131,9 @@ Implemented in PR #142. Nothing here is shipped until a release, a Store listing
 
 | Artifact | Built by | Evidence published with the release |
 | --- | --- | --- |
-| Microsoft Store package `Job Ranger-v<version>-windows-store-x64.appx` | `windows-store-package.yml` (called by `release-build.yml`) | `windows-store-package.json`, `windows-store-AppxManifest.xml`, `windows-store-package-smoke.json`, `windows-store-install.json`, `windows-store-SHA256SUMS.txt`, `windows-store-release-manifest.json`, GitHub artifact attestation |
+| Microsoft Store package `Job Ranger-v<version>-windows-store-x64.appx` (keeps its historical identity; not a shipping channel) | `windows-store-package.yml` (called by `release-build.yml` only on a manual run with platform `windows-store`, never on a tag push) | `windows-store-package.json`, `windows-store-AppxManifest.xml`, `windows-store-package-smoke.json`, `windows-store-install.json`, `windows-store-SHA256SUMS.txt`, `windows-store-release-manifest.json`, GitHub artifact attestation |
 | Web build `job-ranger-web-v<version>.zip` | `pwa.yml` (called by `release-build.yml`) | `web-build-info.json` (build ID, commit, CSP, per-asset SHA-256), `web-pwa-e2e.json`, `web-SHA256SUMS.txt`, `web-release-manifest.json`, GitHub artifact attestation |
-| Direct NSIS installer (advanced/test) | `release-build.yml` | `windows-signing.json`, `windows-package-smoke.json`, `windows-SHA256SUMS.txt`, `windows-release-manifest.json` (`testerOnly: true` unless signed), GitHub artifact attestation |
+| Signed NSIS installer `Sojourner-v<version>-windows-x64.exe` (primary channel, ARCH-001) | `release-build.yml` | `windows-signing.json`, `windows-package-smoke.json`, `windows-SHA256SUMS.txt`, `windows-release-manifest.json` (`testerOnly: true` unless signed), GitHub artifact attestation |
 
 Verify any artifact:
 
