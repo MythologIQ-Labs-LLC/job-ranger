@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/MythologIQ-Labs-LLC/job-ranger/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/published%20release-v1.2.0-0f172a.svg" alt="Published release v1.2.0" /></a>
+  <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/published%20release-v1.2.0-0f172a.svg" alt="Published release v1.2.0" /></a>
   <img src="https://img.shields.io/badge/forward%20distribution-PWA%20only-2563eb.svg" alt="Forward distribution: PWA only" />
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-15803d.svg" alt="AGPL-3.0-only License" /></a>
 </p>
@@ -74,7 +74,7 @@ To record the walkthrough again locally, run `npm run demo:record`; regenerate t
 
 Sojourner now has a **development-only, opt-in local MCP stdio adapter** for a human-authorized local agent client. It can query bounded Career Evidence, active professional objectives, opportunities, publication receipts, deterministic post readiness and same-age analytics through Sojourner's **existing services**. It starts with **zero data scopes**, requires explicit local workspace path and scopes, and cannot edit records, approve posts, publish externally or send messages.
 
-This **is not yet a verified live ChatGPT plugin**. The read-only stdio adapter can now be launched through OpenAI's official Secure MCP Tunnel in a narrowly scoped single-user development trial, but the live tunnel association, ChatGPT connection and account authorization must still be demonstrated. It does not provide a public OAuth/HTTPS service. The app remains standalone and needs none of those services. See the [official Secure MCP Tunnel trial runbook](./docs/integrations/JOB_RANGER_SECURE_TUNNEL.md), [precise local adapter setup](./docs/integrations/JOB_RANGER_MCP_READONLY.md), [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md), and [tracking issue #173](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/173). Do not share a live database or enable a public tunnel to work around the missing authenticated transport.
+This **is not yet a verified live ChatGPT plugin**. The read-only stdio adapter can now be launched through OpenAI's official Secure MCP Tunnel in a narrowly scoped single-user development trial, but the live tunnel association, ChatGPT connection and account authorization must still be demonstrated. It does not provide a public OAuth/HTTPS service. The app remains standalone and needs none of those services. See the [official Secure MCP Tunnel trial runbook](./docs/integrations/JOB_RANGER_SECURE_TUNNEL.md), [precise local adapter setup](./docs/integrations/JOB_RANGER_MCP_READONLY.md), [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md), and [tracking issue #173](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/173). Do not share a live database or enable a public tunnel to work around the missing authenticated transport.
 
 ## Start here
 
@@ -129,8 +129,8 @@ It does **not** require a Sojourner account, a separate database server, Docker,
 The complete beginner-friendly steps are in [SELF_HOSTING.md](./docs/SELF_HOSTING.md).
 
 ~~~bash
-git clone https://github.com/MythologIQ-Labs-LLC/job-ranger.git
-cd job-ranger
+git clone https://github.com/MythologIQ-Labs-LLC/sojourner.git
+cd sojourner
 npm ci
 npm run selfhost:pwa
 ~~~
@@ -149,7 +149,7 @@ The implementation and persistence guarantees are documented in [PWA_RUNTIME.md]
 
 ### Historical v1.2.0 desktop release
 
-The [v1.2.0 GitHub Release](https://github.com/MythologIQ-Labs-LLC/job-ranger/releases/tag/v1.2.0) remains available as immutable release history. It contains Windows x64 and macOS x64/arm64 desktop packages promoted byte-for-byte from the validated rc.5 artifacts.
+The [v1.2.0 GitHub Release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) remains available as immutable release history. It contains Windows x64 and macOS x64/arm64 desktop packages promoted byte-for-byte from the validated rc.5 artifacts.
 
 Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the pending Microsoft Store channel or the current PWA work. Sojourner does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
 

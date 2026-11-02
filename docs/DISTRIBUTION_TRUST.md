@@ -137,7 +137,7 @@ Verify any artifact:
 
 ```bash
 sha256sum --check <platform>-SHA256SUMS.txt
-gh attestation verify <artifact> --repo MythologIQ-Labs-LLC/job-ranger
+gh attestation verify <artifact> --repo MythologIQ-Labs-LLC/sojourner
 ```
 
 Attestations are SLSA build-provenance statements signed through GitHub's OIDC identity for the exact workflow run, commit, and tag. They do not depend on Azure Artifact Signing or any purchased certificate.
