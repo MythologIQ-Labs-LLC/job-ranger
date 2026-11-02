@@ -33,13 +33,13 @@ if ($ArtifactPath -and $ArtifactPath.Count -gt 0) {
   }
 } else {
   # Every executable the installer puts on disk that we sign, plus the installer itself.
-  foreach ($relative in @("Job Ranger.exe", "resources/elevate.exe", "resources/sqlite3.exe")) {
+  foreach ($relative in @("Sojourner.exe", "resources/elevate.exe", "resources/sqlite3.exe")) {
     $candidate = Join-Path $PSScriptRoot "../release/win-unpacked/$relative"
     if (Test-Path -LiteralPath $candidate) {
       $targets += (Resolve-Path $candidate).Path
     }
   }
-  $targets += Get-ChildItem -Path (Join-Path $PSScriptRoot "../release") -Filter "Job*windows*.exe" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+  $targets += Get-ChildItem -Path (Join-Path $PSScriptRoot "../release") -Filter "Sojourner*windows*.exe" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
 }
 $targets = @($targets | Select-Object -Unique)
 

@@ -32,6 +32,12 @@ const { signtoolOptions: _unusedSigning, ...baseWin } = base.win;
 
 module.exports = {
   ...base,
+  // The Store package keeps its own historical identity (executable
+  // `app\Job Ranger.exe`, artifact `Job Ranger-v<version>-windows-store*.appx`,
+  // data root STORE_USER_DATA_FOLDER) while the direct-download installer is
+  // named Sojourner. The Store is not a shipping channel (ARCH-001); renaming
+  // this package needs its own Partner Center and data-root decision.
+  productName: "Job Ranger",
   win: {
     ...baseWin,
     target: [{ target: "appx", arch: ["x64"] }],

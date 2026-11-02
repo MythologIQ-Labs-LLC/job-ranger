@@ -5,10 +5,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$smokeRoot = Join-Path $env:RUNNER_TEMP "job-ranger-package-smoke-windows"
+$smokeRoot = Join-Path $env:RUNNER_TEMP "sojourner-package-smoke-windows"
 $trustRoot = Join-Path (Get-Location) "build\trust"
 $reportPath = Join-Path $trustRoot "windows-package-smoke.json"
-$exePath = (Resolve-Path "release\win-unpacked\Job Ranger.exe").Path
+$exePath = (Resolve-Path "release\win-unpacked\Sojourner.exe").Path
 $resourcesPath = (Resolve-Path "release\win-unpacked\resources").Path
 $scriptPath = Join-Path $resourcesPath "app.asar\electron-runtime\electron\src\package-smoke-cli.cjs"
 
@@ -25,7 +25,7 @@ $env:JOB_RANGER_PACKAGE_SMOKE_VERSION = $AppVersion
 try {
   $process = Start-Process -FilePath $exePath -ArgumentList @($scriptPath) -Wait -PassThru -NoNewWindow
   if ($process.ExitCode -ne 0) {
-    throw "Packaged Job Ranger smoke process exited with code $($process.ExitCode)."
+    throw "Packaged Sojourner smoke process exited with code $($process.ExitCode)."
   }
 } finally {
   Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue

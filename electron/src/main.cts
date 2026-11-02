@@ -16,7 +16,7 @@ import {
   detectDistributionChannel,
   electronRuntimeInfo,
   packageFamilyNameFromExecPath,
-  resolveStoreUserDataDirectory,
+  resolvePinnedUserDataDirectory,
   storeHostPath,
 } from "./distribution.cjs";
 import { initializeLegacyInstallIpc } from "./legacy-install-ipc.cjs";
@@ -28,14 +28,17 @@ const distributionChannel = detectDistributionChannel({
   env: process.env,
 });
 
-// Store (AppX) builds isolate their data root from historical direct-download
-// installations so the two never share a live database. An explicit
-// --user-data-dir (used by automated tests) always wins.
-if (
-  distributionChannel === "microsoft-store" &&
-  !app.commandLine.hasSwitch("user-data-dir")
-) {
-  app.setPath("userData", resolveStoreUserDataDirectory(app.getPath("appData")));
+// Pin the data root before anything reads userData: Store (AppX) builds isolate
+// theirs from direct-download installations, and packaged direct-download builds
+// keep the historical "Job Ranger" folder although the app is named Sojourner.
+// Development runs and an explicit --user-data-dir keep Electron's default.
+const pinnedUserDataDirectory = resolvePinnedUserDataDirectory({
+  channel: distributionChannel,
+  appDataDirectory: app.getPath("appData"),
+  hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
+});
+if (pinnedUserDataDirectory) {
+  app.setPath("userData", pinnedUserDataDirectory);
 }
 
 /** Path the OS file manager sees for a path inside Sojourner's data root. */

@@ -66,6 +66,11 @@ async function run() {
   const AppXTarget = require('app-builder-lib/out/targets/AppxTarget').default;
   const { Arch } = require('builder-util');
   const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  // AppX versions are four numeric parts: electron-builder drops a semver pre-release
+  // suffix (1.0.0-alpha.1 -> 1.0.0.0), the same rule as AppInfo.getVersionInWeirdWindowsForm.
+  const windowsVersion = `${pkg.version.split('.').slice(0, 3).map((part) => parseInt(part, 10)).join('.')}.0`;
+  assert.match(windowsVersion, /^\d+\.\d+\.\d+\.0$/);
+  assert.equal(config.productName, 'Job Ranger', 'the Store package keeps its own historical identity');
   const target = Object.create(AppXTarget.prototype);
   target.options = { ...config.win, ...config.appx };
   target.packager = {
@@ -75,7 +80,7 @@ async function run() {
       description: pkg.description,
       companyName: pkg.author,
       name: pkg.name,
-      getVersionInWeirdWindowsForm: () => `${pkg.version}.0`,
+      getVersionInWeirdWindowsForm: () => windowsVersion,
     },
     getResource: async (name) => (name ? path.join(repoRoot, 'build', name) : null),
     config,
@@ -91,7 +96,7 @@ async function run() {
   assert.doesNotMatch(manifest, /<Extensions>|startupTask|windows\.protocol|fileTypeAssociation/);
   assert.match(manifest, /EntryPoint="Windows\.FullTrustApplication"/);
   assert.match(manifest, /Executable="app\\Job Ranger\.exe"/);
-  assert.match(manifest, new RegExp(`Version="${pkg.version.replace(/\./g, '\\.')}\\.0"`));
+  assert.match(manifest, new RegExp(`Version="${windowsVersion.replace(/\./g, '\\.')}"`));
   assert.match(manifest, /MinVersion="10\.0\.17763\.0"/);
   assert.match(manifest, /Square310x310Logo="assets\\LargeTile\.png"/);
   assert.match(manifest, /<DisplayName>Job Ranger \(validation\)<\/DisplayName>/);

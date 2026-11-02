@@ -1,7 +1,7 @@
 ﻿{
     "appId":  "com.jobranger.app",
-    "productName":  "Job Ranger",
-    "copyright":  "Copyright © 2026 Job Ranger",
+    "productName":  "Sojourner",
+    "copyright":  "Copyright © 2026 MythologIQ Labs, LLC",
     "directories":  {
                         "output":  "release",
                         "buildResources":  "build"
@@ -66,8 +66,8 @@
                  "allowToChangeInstallationDirectory":  true,
                  "createDesktopShortcut":  true,
                  "createStartMenuShortcut":  true,
-                 "shortcutName":  "Job Ranger",
-                 "uninstallDisplayName":  "Job Ranger",
+                 "shortcutName":  "Sojourner",
+                 "uninstallDisplayName":  "Sojourner",
                  "perMachine":  false,
                  "allowElevation":  false,
                  "deleteAppDataOnUninstall":  false,

@@ -47,6 +47,31 @@ export function resolveLegacyDirectUserDataDirectory(appDataDirectory: string): 
   return path.join(appDataDirectory, LEGACY_DIRECT_USER_DATA_FOLDER);
 }
 
+/**
+ * The userData directory a build must use instead of Electron's default
+ * (`<appData>/<productName>`), or null to keep the default.
+ *
+ * - Microsoft Store builds use their isolated STORE_USER_DATA_FOLDER.
+ * - Packaged direct-download builds stay pinned to the historical
+ *   LEGACY_DIRECT_USER_DATA_FOLDER ("Job Ranger"). The installer is named
+ *   Sojourner, so without this pin Electron would open an empty
+ *   `<appData>/Sojourner` and existing Job Ranger v1.2.0 data would appear
+ *   lost (docs/ARCHITECTURE_INDEX.md: storage identity does not change
+ *   without a qualified migration).
+ * - Development and E2E runs keep Electron's default, and an explicit
+ *   --user-data-dir (used by automated tests) always wins.
+ */
+export function resolvePinnedUserDataDirectory(input: {
+  channel: RuntimeDistributionChannel;
+  appDataDirectory: string;
+  hasUserDataDirSwitch: boolean;
+}): string | null {
+  if (input.hasUserDataDirSwitch) return null;
+  if (input.channel === "microsoft-store") return resolveStoreUserDataDirectory(input.appDataDirectory);
+  if (input.channel === "direct-download") return resolveLegacyDirectUserDataDirectory(input.appDataDirectory);
+  return null;
+}
+
 export function electronRuntimeInfo(input: {
   channel: RuntimeDistributionChannel;
   appVersion: string;
