@@ -3,390 +3,219 @@
 </p>
 
 <p align="center">
-  <img src="public/ICON.png" alt="Sojourner emblem" width="96" height="96" />
-</p>
-
-# Sojourner: Employment Toolkit
-
-*Formerly Job Ranger. The GitHub repository is now `MythologIQ-Labs-LLC/sojourner`; compatibility identifiers (app ID, storage, `.jobranger` archives) and previously published release artifacts keep their historic names.*
-
-> **Architecture authority:** [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). The primary product is a signed Windows application; the browser PWA continues as the cross-platform channel.
-
-<p align="center">
-  <strong>A local-first Career Ops companion for understanding where you want to go, finding the right paths to employment, preparing truthful materials, and managing a focused search without turning your career into somebody else's cloud product.</strong>
+  <a href="#get-sojourner"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20web%20(PWA)-2563eb.svg" alt="Platforms: Windows and web (PWA)" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-15803d.svg" alt="License: AGPL-3.0-only" /></a>
+  <img src="https://img.shields.io/badge/data-stays%20on%20your%20device-0f766e.svg" alt="Your data stays on your device" />
+  <img src="https://img.shields.io/badge/account-not%20required-0f172a.svg" alt="No account required" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/published%20release-v1.2.0-0f172a.svg" alt="Published release v1.2.0" /></a>
-  <img src="https://img.shields.io/badge/forward%20distribution-Windows%20%2B%20PWA-2563eb.svg" alt="Forward distribution: signed Windows app and PWA" />
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-15803d.svg" alt="AGPL-3.0-only License" /></a>
+  <strong>Decide where you want to go, judge each opportunity on the evidence, and apply with materials that are true.</strong><br />
+  Sojourner is an open-source, local-first career companion from MythologIQ Labs, LLC.
 </p>
 
 <p align="center">
-  <strong>Open source · local first · no account required · no mass auto-apply</strong>
+  <a href="#see-it-in-action">Tour</a> ·
+  <a href="#get-sojourner">Get Sojourner</a> ·
+  <a href="#what-sojourner-does">Features</a> ·
+  <a href="#privacy-and-security">Privacy</a> ·
+  <a href="#development">Develop</a> ·
+  <a href="./HELP.md">Help</a>
 </p>
+
+---
+
+Job searching runs on clerical work: re-checking the same boards, rewriting the same facts, forgetting which resume went where. Sojourner takes that load off you without taking the decisions away from you. It is built for **quality over quantity**. A few well-understood opportunities that fit your direction, your evidence and your constraints beat a long queue of weak matches.
+
+- **Truthful by design.** Your resume and application materials draw only on facts you have confirmed. The Truth Gate blocks anything you have not.
+- **Honest about uncertainty.** Each listing gets separate verdicts for eligibility, evidence, career fit and preferences. Blockers and unknowns are named, not buried in one score.
+- **Yours, locally.** Your career data lives on your device. There is no Sojourner account, no telemetry, and no AI subscription required.
+- **You stay in charge.** Sojourner never applies to jobs for you, never sends messages for you, and never uploads anything without your explicit approval.
+
+## See it in action
 
 <p align="center">
-  Maintained by <strong>MythologIQ Labs, LLC</strong>.
+  <a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.mp4">
+    <img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-poster.png" alt="Sojourner walkthrough video poster: select to download the 82-second tour" width="85%" />
+  </a>
+  <br />
+  <sub><a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.mp4">Download the 82-second walkthrough</a> (MP4, 1600×900) · <a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.vtt">captions</a> · <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/blob/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-transcript.md">transcript</a></sub>
 </p>
 
-## What Sojourner can do for you
+Everything shown uses fictional sample data (Morgan Rivera, Harbor Health). No real person's career data appears.
 
-Sojourner is for people who want help making a **better job-search decision**, not merely sending more applications.
+### 1. Choose a direction
 
-It can help you:
+Target Tracks keep the path you are on separate from the one you are moving toward. Each track has its own roles, locations and constraints.
 
-- define the roles, environments, locations, compensation, schedules, and constraints that actually fit what you want next;
-- turn a resume, pasted history, or direct entry into a factual **Career Evidence** record you can review and correct;
-- discover opportunities and keep the original job evidence that Sojourner used;
-- evaluate a role using separate signals for eligibility, evidence coverage, career-track alignment, preferences, blockers, and unknowns;
-- build evidence-backed resumes and application materials without inventing qualifications;
-- track applications, contacts, milestones, reminders, interviews, offers, and the exact materials you submitted;
-- prepare for interviews using your real experience and the actual requirements of the role;
-- learn from recurring gaps and search outcomes without treating application count as progress;
-- keep the core workflow on your own machine and useful without an AI subscription or Sojourner account.
+<img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/screenshots/career-direction.png" alt="Sojourner Target Tracks with a selected career direction and a separate current track" width="100%" />
 
-Sojourner deliberately does **not** mass-apply, fabricate qualifications or relationships, silently upload your career history, or turn one opaque score into hiring truth.
+### 2. Judge a listing on the evidence
 
-### A typical workflow
+The opportunity assessment reports eligibility, evidence coverage, career alignment and preferences separately. It names the blockers and the unknowns instead of hiding them behind one opaque score.
 
-> **Person → Career Direction → Companies → People → Opportunities → Applications**
+<img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/screenshots/opportunity-assessment.png" alt="Sojourner opportunity assessment showing evidence and eligibility categories" width="100%" />
 
-You can enter anywhere in that flow. A resume is evidence about work you have done, not an instruction to keep doing the same thing forever.
+### 3. Keep a factual record of your experience
 
-### See it in action
+Career Evidence turns a resume, pasted history or direct entry into facts you can review, correct and trace back to their source.
 
-**New Sojourner media is captured and reviewed, but not yet published.** The [first-party recording, screenshot and website handoff record](./docs/marketing/SOJOURNER_MEDIA_HANDOFF.md) lists the captures, their provenance and where the approved files are kept. The linked video below remains a clearly labeled historical Job Ranger recording until a verified replacement is accepted.
+<img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/screenshots/career-evidence.png" alt="Sojourner Career Evidence review showing editable work history facts" width="100%" />
 
-These screenshots and the walkthrough video come from the production web build with fictional sample data (Morgan Rivera, Harbor Health). No real person's career data is shown.
+### 4. Prepare a resume that is true
 
-**[Watch the earlier Job Ranger walkthrough (WebM, recorded before the Sojourner rename)](./docs/assets/demo/job-ranger-demo.webm)**: choosing a direction, assessing a listing, checking Career Evidence, preparing a truthful resume, and tracking the application.
+Drafts are assembled only from confirmed facts. The Truth Gate checks every claim before you export an ATS-friendly PDF.
 
-**Choose a direction.** Target tracks keep your current path and the one you are moving toward separate, each with its own roles and constraints.
+<img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/screenshots/resume-truth-gate.png" alt="Sojourner resume builder showing verification of a truthful draft" width="100%" />
 
-![Target Tracks with the Practice operations target track open beside a paused current track](./docs/assets/screenshots/career-direction.png)
+### 5. Track what happens next
 
-**Judge a listing on the evidence.** The opportunity assessment reports eligibility, evidence, career alignment, and preferences separately, and names the blockers and unknowns instead of hiding them in one score.
+Each application keeps its status, notes, contacts, milestones and the exact resume version you sent. Sojourner records it; it never submits anything for you.
 
-![Opportunity assessment showing eligibility unclear, evidence partial, career aligned, and preferences mixed, with an Epic EHR blocker](./docs/assets/screenshots/opportunity-assessment.png)
+<img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/screenshots/deliberate-application.png" alt="Sojourner Applications view tracking a fictional job opportunity and its resume versions" width="100%" />
 
-**Apply deliberately.** A resume drafted from confirmed evidence passes the Truth Gate, and the exact exported PDF stays attached to the application you track.
+## Get Sojourner
 
-![Applications showing the job marked Applied with the submitted PDF listed under Submitted files](./docs/assets/screenshots/deliberate-application.png)
+Sojourner is a **Windows application first**. The same app also runs as a **progressive web app (PWA)** for other platforms.
 
-To record the walkthrough again locally, run `npm run demo:record`; regenerate these screenshots with `npm run demo:screenshots`.
-
-## Optional local MCP read-only prototype (development)
-
-Sojourner now has a **development-only, opt-in local MCP stdio adapter** for a human-authorized local agent client. It can query bounded Career Evidence, active professional objectives, opportunities, publication receipts, deterministic post readiness and same-age analytics through Sojourner's **existing services**. It starts with **zero data scopes**, requires explicit local workspace path and scopes, and cannot edit records, approve posts, publish externally or send messages.
-
-This **is not yet a verified live ChatGPT plugin**. The read-only stdio adapter can now be launched through OpenAI's official Secure MCP Tunnel in a narrowly scoped single-user development trial, but the live tunnel association, ChatGPT connection and account authorization must still be demonstrated. It does not provide a public OAuth/HTTPS service. The app remains standalone and needs none of those services. See the [official Secure MCP Tunnel trial runbook](./docs/integrations/JOB_RANGER_SECURE_TUNNEL.md), [precise local adapter setup](./docs/integrations/JOB_RANGER_MCP_READONLY.md), [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md), and [tracking issue #173](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/173). Do not share a live database or enable a public tunnel to work around the missing authenticated transport.
-
-## Start here
-
-Sojourner's **forward distribution model is a signed Windows installer first, with the PWA alongside it** for other environments. The unsigned installers published with v1.2.0 remain immutable historical release artifacts.
-
-| What you want to do | Best current path | Status |
+| Option | Best for | Status |
 | --- | --- | --- |
-| **Evaluate the current product today** | Run the current PWA locally | Implemented and tested in Chromium. Self-hosting currently requires Node.js/npm and a few terminal commands. |
-| **Use Sojourner as an ordinary Windows user** | Signed Windows installer (GitHub Release) | Release pipeline with MythologIQ Labs code signing is in place; the first signed release is pending. |
-| **Use Sojourner cross-platform without developer setup** | Production PWA/web origin | Implemented; public deployment and broader browser/device validation are still pending. |
-| **Inspect the last published desktop release** | v1.2.0 GitHub Release | Historical Windows/macOS binaries remain available and immutable, but they are unsigned/unnotarized. Signed Windows releases replace them going forward. |
+| **Windows installer** | Everyday use on Windows 10 and 11 | Every release is code-signed by **MythologIQ Labs, LLC**, and that signature is verified before publication. The first signed release is being prepared. Watch [Releases](https://github.com/MythologIQ-Labs-LLC/sojourner/releases) for it. |
+| **Run it locally in your browser** | Trying Sojourner today on any desktop with Chrome or Edge | Available now from source. See the quick start below. |
+| **Hosted web app** | Use without installing anything | Planned. It needs a production web origin and broader browser validation first. |
 
-For current local evaluation, use the [Self-hosting guide](./docs/SELF_HOSTING.md). For exact distribution architecture and trust boundaries, see [Distribution Architecture](./docs/design/DISTRIBUTION_ARCHITECTURE.md) and [Distribution Trust](./docs/DISTRIBUTION_TRUST.md).
+> The [v1.2.0 release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) (published as Job Ranger) is kept as immutable history. Its installers are **unsigned**. Please wait for the signed Windows release rather than turning off SmartScreen or other platform protections.
 
-## Release status
+### Quick start: run Sojourner locally
 
-The latest published GitHub release is **v1.2.0**, published October 5, 2026. It is preserved as immutable release history.
+You need [Node.js](https://nodejs.org/) 22.12 or newer and Git. The full beginner-friendly guide is in [SELF_HOSTING.md](./docs/SELF_HOSTING.md).
 
-The active development line is **v1.3.0 candidate preparation**. It contains the current PWA runtime, the signed Windows release pipeline, portable Sojourner archives between runtimes, Windows portability fixes, the corrected web layout, and the public demo/readme work. Those capabilities are implemented in the repository but are not a stable public release until the release gates are satisfied.
-
-### Forward distribution
-
-| Channel | Current state | Intended role |
-| --- | --- | --- |
-| **Signed Windows installer** | NSIS installer signed with MythologIQ Labs Azure Artifact Signing (publisher `MythologIQ Labs, LLC`) by the release workflow; first signed release pending | Primary product distribution |
-| **PWA / web runtime** | Implemented; Chromium-tested; local self-host path available; production origin not yet promoted | Cross-platform distribution |
-| **Microsoft Store** | AppX packaging exists as an engineering reference; not a shipping channel | Not planned |
-| **Historical unsigned GitHub binaries** | v1.2.0 release only | Superseded by signed Windows releases |
-| **Native macOS package** | Historical v1.2.0 artifacts only; future native distribution not planned | macOS served by the PWA |
-| **Native Linux package** | Not implemented as a supported product channel | Linux served by the PWA unless demand later justifies a separate package |
-
-A future production PWA may be delivered from a normal HTTPS website. That does not change the local-first authority model: browser delivery is not permission to make the server authoritative for Career Evidence or other personal career data.
-
-Sojourner uses status terms deliberately:
-
-| Status | Meaning |
-| --- | --- |
-| **Published / stable** | Present in a stable GitHub Release or promoted normal-user distribution channel. |
-| **Packaged candidate** | Built and validated as a release artifact, but not yet promoted as stable. |
-| **Implemented** | Present in the repository/current development line, but not necessarily publicly distributed. |
-| **Candidate / next** | Evidence-backed possible future work, not a commitment. |
-| **Deferred** | Intentionally inactive. |
-| **Historical** | Retained for provenance, compatibility, or release history. |
-
-For the reconciled factual state, see [System State](./docs/SYSTEM_STATE.md), [Changelog](./CHANGELOG.md), and [v1.3.0 candidate evidence](./docs/validation/RELEASE_CANDIDATE_V1.3.0.md).
-
-## Run the current PWA locally
-
-The current development line can run as a persistent local PWA in a Chromium desktop browser. This is the best way to evaluate the current product before the first signed Windows release or a production web origin is available.
-
-It does **not** require a Sojourner account, a separate database server, Docker, an AI subscription, or the historical unsigned desktop installer. Local self-hosting does currently require Node.js 22.12.0 or newer, npm, and either Git or a downloaded source archive.
-
-The complete beginner-friendly steps are in [SELF_HOSTING.md](./docs/SELF_HOSTING.md).
-
-~~~bash
+```bash
 git clone https://github.com/MythologIQ-Labs-LLC/sojourner.git
 cd sojourner
 npm ci
 npm run selfhost:pwa
-~~~
+```
 
-Then open **http://localhost:4174** and install the PWA from Chrome or Edge if desired.
+Open **http://localhost:4174** and, if you like, install it as an app from Chrome or Edge.
 
-Important persistence rules:
+- **Keep the same address.** Browser storage is tied to `http://localhost:4174`, so Sojourner refuses to fall back to another port.
+- **Updates replace the app, never your data.** Your workspace lives in your browser's private storage (OPFS).
+- **Back up before experiments.** Settings → **Create backup** writes a portable `.jobranger` file. It is also how you move to the Windows app or another browser.
+- **Recovery is built in.** If the workspace database is ever damaged, Sojourner leaves it untouched and offers to restore from a backup on the startup screen.
 
-- Keep using the exact http://localhost:4174 origin. Sojourner deliberately refuses silent port fallback because browser storage is origin-bound.
-- Application updates replace the application shell, not your Career Ops data. The PWA stores its SQLite database and managed artifacts in browser-local OPFS.
-- Before meaningful upgrades or experiments, export a portable .jobranger backup from Sojourner. The archive is the supported recovery and later localhost-to-production-origin migration path.
-- Do not clear this site's browser storage unless you intend to remove the local Sojourner profile.
-- Firefox, Safari, and broader real-device installability remain validation work before the PWA is promoted as the mainstream public channel.
+## What Sojourner does
 
-The implementation and persistence guarantees are documented in [PWA_RUNTIME.md](./docs/design/PWA_RUNTIME.md).
-
-### Historical v1.2.0 desktop release
-
-The [v1.2.0 GitHub Release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) remains available as immutable release history. It contains Windows x64 and macOS x64/arm64 desktop packages promoted byte-for-byte from the validated rc.5 artifacts.
-
-Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the signed Windows releases that replace them or with the current PWA work. Sojourner does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
-
-Historical package evidence and bounded tester guidance remain in [TESTER_INSTALLATION.md](./docs/TESTER_INSTALLATION.md), [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md), and [CLEAN_MACHINE_TRUST_VALIDATION.md](./docs/CLEAN_MACHINE_TRUST_VALIDATION.md).
-
-## What Sojourner is
-
-Job searching contains an absurd amount of clerical work. People repeatedly check the same sources, lose track of opportunities, rewrite the same career facts, forget which resume they submitted, and maintain increasingly haunted collections of tabs, notes, spreadsheets, and half-finished documents.
-
-Sojourner is designed around **quality over quantity**: understanding the person behind the resume, identifying career directions worth pursuing, finding companies and opportunities that fit those directions, and helping the user choose a useful path to employment rather than maximizing application throughput.
-
-The guiding progression is:
-
-> **Person → Career Direction → Companies → People → Opportunities → Applications**
-
-A user may enter anywhere in that chain. The resume is useful evidence about prior work, not a command to keep repeating it and not the sole definition of who the user is.
-
-Sojourner is designed to make the workflow coherent while preserving user authority:
-
-1. describe what kind of work, environment, constraints, and direction you actually want;
-2. build a factual Career Evidence record from a resume or direct entry;
-3. discover and monitor employers, sources, and opportunities that fit those directions;
-4. assess which opportunities deserve attention using explicit requirements, evidence, constraints, preferences, and unknowns;
-5. prepare evidence-backed resumes and application materials for opportunities the user intentionally chooses to pursue;
-6. track the exact materials, people, events, reminders, interviews, offers, and outcomes around each application;
-7. learn from recurring gaps and observed results without pretending correlation is destiny or application count is progress;
-8. keep the core workflow local and useful without an AI provider.
-
-Broader Career Ops company-targeting and relationship-path behavior has a completed bounded design contract under #121, but it is **not implemented on the current development line**.
-
-Sojourner does **not** autonomously mass-apply, invent qualifications or relationships, silently transmit career data to an inference provider, optimize for raw application volume, or treat one opaque score as hiring truth.
-
-## Current capabilities
-
-This is the current product line, not a comparison against obsolete releases.
-
-| Area | Current capability |
+| Area | What you get |
 | --- | --- |
-| **Career direction** | Multiple Target Tracks keep current, adjacent, stretch, and target directions separate with explicit role and constraint semantics. |
-| **Career Evidence** | Resume import and direct authoring feed a factual, reviewable evidence record with provenance, correction, merge/reject/supersede lineage, credentials, projects, achievements, and other supported experience. |
-| **Opportunity discovery** | Structured support for Greenhouse, Lever, SmartRecruiters, and Ashby, plus governed detected/browser-backed paths for recognized providers and explicit approval before monitoring discovered sources. |
-| **Opportunity assessment** | Eligibility, evidence coverage, career alignment, preference alignment, blockers, and unknowns remain separate instead of collapsing into one opaque score. |
-| **Resume preparation** | Deterministic ATS-oriented PDF generation, target-specific tailoring, Truth Gate, Parseability Gate, evidence provenance, versioning, and exact submitted-artifact history. |
-| **Application materials** | Evidence-grounded preparation with stale-state detection when supporting Career Evidence changes. |
-| **Applications** | Status, notes, contacts, milestones, reminders, follow-ups, submitted files, interview state, offers, and negotiation state. |
-| **Interview preparation** | Grounded in the tracked job, confirmed Career Evidence, requirement mappings, and the exact submitted resume. |
-| **Career Stories & Search Insights** | Evidence-linked stories plus recurring-gap and observed-outcome analysis without treating correlation as destiny. |
-| **Personal Brand (development main)** | Manual-first drafts, deterministic readiness, explicit exact-copy approval and publication receipts, local LinkedIn XLSX analytics preview plus confirmed saved/reconciled exports, attested historical post text and topic labels, observed-performance dashboards, and cautious cohorts. Neither a LinkedIn account connection, automatic posting/collection, causal career conclusions, nor a published release is implied. [Implementation contract](./docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md). |
-| **Backup & portability** | Verified backup/staged restore, JSON Resume interoperability, and a portable .jobranger archive for moving between supported desktop/PWA runtimes. |
-| **Local-first PWA** | Shared application core in a browser runtime using SQLite WASM + OPFS, browser document parsing, deterministic PDF output, service-worker integrity checks, and explicit update handling. |
-| **Signed Windows app** | Electron app with packaged SQLite, NSIS installer, packaged smoke test, and a release workflow that signs and verifies every published executable. A Microsoft Store AppX package also exists as an engineering reference. |
-| **Remote inference** | Deferred. Core product decisions and document generation do not require an AI subscription. |
-| **OCR for scanned/image-only resumes** | Deferred rather than silently uploading documents to a hosted OCR service. |
-| **Native macOS / Linux distribution** | Not part of the forward architecture. macOS and Linux are served by the PWA. |
-| **Autonomous mass auto-apply** | Explicit non-goal. Consequential external actions remain with the user. |
+| **Career direction** | Multiple Target Tracks (current, adjacent, stretch, target), each with explicit roles and constraints. A preference never silently turns into a requirement. |
+| **Career Evidence** | Resume import and direct entry feed a reviewable record of facts, with provenance, corrections, and merge/supersede history across roles, credentials, projects and achievements. |
+| **Opportunity discovery** | Structured job sources for Greenhouse, Lever, SmartRecruiters and Ashby, plus the public Remote OK and Arbeitnow feeds. Governed, browser-backed paths cover recognized portals such as Workday and iCIMS. A source is monitored only after you approve it. |
+| **Opportunity assessment** | Separate verdicts for eligibility, evidence coverage, career alignment and preferences, with blockers and unknowns stated plainly. |
+| **Resumes** | Deterministic, ATS-friendly PDFs; target-specific tailoring; the Truth Gate and Parseability Gate; versioning; and the exact file you sent, kept with each application. |
+| **Application materials** | Cover letters built from your evidence. They are flagged as stale when that evidence changes, and they copy to your clipboard only when ready. |
+| **Applications** | Status, notes, contacts, milestones, reminders, follow-ups, interviews, offers and negotiation, all recorded by you. |
+| **Interview preparation** | Grounded in the actual job, your confirmed evidence, the requirement mapping and the resume you submitted. |
+| **Stories and insights** | Evidence-linked career stories, recurring-gap analysis and observed outcomes, without treating correlation as destiny. |
+| **Personal Brand** | Manual-first LinkedIn post drafting with readiness checks and exact-copy approval, plus analytics from your own LinkedIn exports. There is no account connection and no automatic posting. |
+| **Backup and portability** | Verified backup and staged restore, JSON Resume interoperability, and portable `.jobranger` archives that move between the Windows app and the PWA. |
+| **Google Drive export** *(opt-in, off by default)* | Send one verified resume PDF to your own Drive, with approval each time and only the narrow `drive.file` permission. It is enabled once the Google OAuth client is provisioned ([#252](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/252)). |
 
-For release-by-release history, use [CHANGELOG.md](./CHANGELOG.md).
+**Not goals:** mass auto-apply, invented qualifications or relationships, silent uploads to AI providers, and a single score posing as hiring truth.
 
-## Core product principles
+## Principles
 
-### Quality over quantity
+1. **Quality over quantity.** Measure progress by qualified, intentional applications, not by volume.
+2. **Career Evidence is the authority.** Imported facts start as proposals. Only facts you confirm can support a claim.
+3. **Preferences are not constraints.** Remote preference, pay targets, commute and schedule keep their exact meaning.
+4. **Explain uncertainty.** Missing job data stays missing instead of becoming false precision.
+5. **Useful before AI.** The core workflow needs no AI provider. Any optional integration stays a narrow, disclosed adapter.
+6. **You decide.** Sojourner discovers, organizes, explains, prepares and reminds. Consequential actions remain yours.
 
-The product should optimize for **qualified, intentional progress**, not applications sent. A smaller number of well-understood opportunities that fit the user's direction, evidence, constraints, and preferences is preferable to a large queue of weak matches.
+## Privacy and security
 
-Automation should reduce clerical burden and the cost of making good decisions. It should not remove the user's judgment from consequential external actions or convert employers and professional networks into targets for automated volume.
+- **Local by default.** The Windows app keeps your workspace in local SQLite behind a typed IPC boundary. The PWA keeps it in browser-private storage (SQLite WASM on OPFS). Serving the PWA from a website never makes that server the owner of your career data.
+- **No telemetry, no account.** Nothing about you leaves your device unless you explicitly export or share it.
+- **Governed job fetching.** The desktop app fetches sources through a governed transport that pins each connection to vetted public addresses. The PWA may reach only an allowlist of job-board APIs, under a strict CSP with Trusted Types.
+- **Narrow integrations.** Google Drive export uses only the `drive.file` scope, and Google sign-in runs on a separate helper origin, isolated from your workspace.
+- **Signed Windows releases.** Installers and executables are Authenticode-signed by MythologIQ Labs, LLC, with each signature verified (`signtool verify /pa`, signer and timestamp) before publication.
 
-### Career Evidence is factual authority
+See [SECURITY.md](./SECURITY.md) to report a vulnerability, and [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md) for release provenance.
 
-Career Profile and Target Tracks describe intent. Career Evidence describes what is factually true about the user. Imported information begins as a proposal. Only user-confirmed or user-authored evidence can support factual application claims.
+## How it is built
 
-### Preferences are not constraints
+One Career Ops core with two runtime surfaces, so the Windows app and the PWA can never become different products with different career logic.
 
-Remote preference, compensation target, commute, schedule, employment arrangement, and similar choices retain explicit semantics. A preference does not silently become a blocker.
-
-### Explain uncertainty instead of scoring around it
-
-Sojourner separates eligibility, evidence coverage, career-track alignment, preference alignment, blockers, and unknowns. Missing job data stays missing instead of becoming fake precision.
-
-### Local first, useful before AI
-
-The core workflow works without an AI account or hosted Sojourner account. Optional external capabilities must be narrow adapters with explicit disclosure and may not become authorities over career truth.
-
-### User authority
-
-Sojourner can discover, organize, explain, prepare, remind, preserve, and analyze. Consequential external actions remain with the user.
-
-## Source support and acquisition trust
-
-Sojourner does not pretend every careers site is equally automatable.
-
-| Support level | Meaning |
-| --- | --- |
-| `supported` | A structured adapter exists and is the preferred path. |
-| `detected` | Sojourner recognizes a known provider/vendor portal and can attempt its governed extraction path. |
-| `browser-required` | A recognized portal requires a constrained rendered-browser path. |
-| `manual-review` | No reliable or sufficiently bounded automated path is claimed. |
-
-Current structured adapters are Greenhouse, Lever, SmartRecruiters, and Ashby. Recognized Workday, iCIMS, BambooHR, Taleo, Oracle Careers, Microsoft Careers, and known browser portals use detected or browser-backed paths where applicable.
-
-Arbitrary generic career-site hostnames remain manual-review/non-runnable. In the desktop runtime, governed acquisition uses connection-level address pinning: policy resolves the approved public address set, direct sockets connect only to approved addresses while TLS continues to verify the original hostname, redirects are independently pinned, and isolated browser HTTP/HTTPS traffic is routed through the governed transport. See [SECURITY.md](./SECURITY.md).
-
-Source discovery remains separate from source acquisition. A discovered opportunity or employer is not silently converted into a monitored trusted source; the user approves monitoring explicitly.
-
-## Current architecture
-
-Sojourner now has one Career Ops product core with two runtime surfaces rather than two independent products.
-
-~~~text
+```text
 React product UI
-  onboarding / targeting / jobs / applications / evidence
-  resume / interview prep / stories / insights / settings
-                         |
-                         v
-              typed runtime boundary
-                         |
-                         v
-               shared Career Ops core
-  repositories / migrations / domain services / validators
-  requirements / assessment / Truth Gate / Parseability Gate
-  application lifecycle / backup / interoperability
-                 |                    |
-                 v                    v
-        Electron adapters        PWA adapters
-        native SQLite            SQLite WASM + OPFS
-        managed files            browser-local artifacts
-        OS integration           browser document/PDF paths
-        governed acquisition     service worker + web security
-~~~
+  targeting · jobs · applications · evidence · resume · interview prep · insights · settings
+                              │
+                     typed runtime boundary
+                              │
+                   shared Career Ops core
+  repositories · migrations · domain services · validators
+  requirements · assessment · Truth Gate · Parseability Gate
+  application lifecycle · backup · interoperability
+                 │                               │
+        Windows (Electron)                  Web (PWA)
+        native SQLite                       SQLite WASM + OPFS
+        managed files                       browser-local artifacts
+        governed acquisition                service worker + strict CSP
+```
 
-The runtime adapters own platform mechanics; the shared core owns product truth. This avoids letting the Windows app and PWA quietly become different applications with different career logic.
+Architecture decisions are recorded in the [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md); the runtime and parity details are in [PWA_RUNTIME.md](./docs/design/PWA_RUNTIME.md) and [ARCHITECTURE_PLAN.md](./docs/ARCHITECTURE_PLAN.md).
 
-electron/src/** remains the checked-in privileged desktop implementation authority; electron-runtime/** is generated for development, tests, packaging, and execution. The PWA implementation and parity boundary are documented in [PWA_RUNTIME.md](./docs/design/PWA_RUNTIME.md), with the overall architecture in [ARCHITECTURE_PLAN.md](./docs/ARCHITECTURE_PLAN.md).
+## Project status
 
-## Privacy and security posture
+| | |
+| --- | --- |
+| **Development line** | v1.3.0 candidate, containing the signed Windows release pipeline, the PWA runtime, workspace recovery, Google Drive export (off by default), and the Sojourner rename. |
+| **Latest published release** | [v1.2.0](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) (October 5, 2026, as Job Ranger, unsigned), kept as immutable history. |
+| **Next release** | The first signed Windows installer, built and signed by the [release workflow](./.github/workflows/release-build.yml) only after owner approval. |
+| **Other platforms** | macOS and Linux are served by the PWA. Native packages are not planned. |
 
-Sojourner is local-first across both runtimes.
-
-The Windows desktop runtime keeps structured career/search state in local SQLite and uses typed IPC boundaries rather than exposing Node.js directly to the renderer. The PWA keeps its database and managed artifacts in browser-local storage using SQLite WASM + OPFS. Delivering the PWA from an HTTPS origin does not make that server authoritative for personal career data.
-
-Security boundaries include sandboxed renderer/browser surfaces, explicit runtime adapters, validated imports, governed acquisition rules, deterministic backup/export integrity, strict web CSP/Trusted Types, service-worker asset verification, and evidence-grounded factual claims.
-
-For ordinary-user distribution going forward:
-
-- **Windows:** trust comes from the MythologIQ Labs, LLC Authenticode signature on the installer and app, verified (`signtool verify /pa`, signer, timestamp) before each release is published.
-- **Cross-platform web/PWA:** trust comes from the controlled HTTPS origin, browser security boundary, deployment provenance, and service-worker/update integrity.
-- **Historical v1.2.0 binaries:** hashes and provenance remain useful evidence, but they are unsigned and are not equivalent to a signed release.
-
-Remote inference, telemetry, cloud account sync, or credential-bearing external services require explicit future governance and disclosure. See [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md) and [SECURITY.md](./SECURITY.md).
-
-## Product gaps and evaluated candidates
-
-Current dispositions live in [PRODUCT_GAP_REVIEW.md](./docs/PRODUCT_GAP_REVIEW.md).
-
-Examples still suitable for future evidence-backed consideration include:
-
-- broader discovery providers, especially government and niche sources;
-- easier capture of jobs encountered during normal browsing;
-- reusable application-question answers and bounded user-controlled form assistance;
-- implementation of the already-bounded Career Ops company/relationship-path design;
-- mock-interview practice and feedback;
-- calendar mirroring;
-- native Linux packaging only if real demand justifies a separate packaging, update, QA, and support surface.
-
-Native macOS distribution is not part of the forward architecture. macOS and Linux are expected to use the cross-platform PWA rather than requiring Sojourner to maintain separate native installers merely because packaging is technically possible.
+The factual snapshot lives in [SYSTEM_STATE.md](./docs/SYSTEM_STATE.md); history is in [CHANGELOG.md](./CHANGELOG.md); release gates are in [RELEASE_READINESS.md](./docs/RELEASE_READINESS.md).
 
 ## Development
 
-This section is for contributors, maintainers, and people intentionally self-hosting the current development line. It is not the intended long-term ordinary-user installation flow.
-
-### Prerequisites
-
-- Node.js `>=22.12.0`
-- npm
-- `sqlite3` on `PATH`, or `SQLITE3_PATH` set explicitly
-
-### Core commands
+Requirements: Node.js `>=22.12.0`, npm, and a `sqlite3` binary on `PATH` or named by `SQLITE3_PATH`. The desktop tests and the Electron app need it.
 
 ```bash
 npm ci
-npm run repo:health          # typecheck, desktop + web builds, full test suite
-npm run test:unit
-npm run test:e2e             # Electron Playwright
-npm run electron:dev
-npm run electron:build:win   # Windows NSIS installer (signed only by the release workflow)
-npm run electron:build:store # Microsoft Store AppX (engineering reference, Windows only)
+npm run repo:health          # typecheck, desktop and web builds, full test suite
+npm run test:e2e             # Windows (Electron) Playwright suite
+npm run test:pwa:e2e         # web (PWA) Playwright suite in Chromium
+npm run electron:dev         # run the desktop app with hot reload
+npm run dev:pwa              # run the PWA dev server
+npm run electron:build:win   # build the Windows installer (signed only by the release workflow)
 ```
 
-### Web/PWA runtime
+<details>
+<summary>More commands and developer tools</summary>
 
 ```bash
-npm run dev:pwa              # development server
-npm run build:pwa            # production build -> dist-pwa/
+npm run test:unit            # fast unit suites
+npm run build:pwa            # production PWA build -> dist-pwa/
 npm run preview:pwa          # serve an existing build at http://localhost:4174
-npm run selfhost:pwa         # build + serve the persistent localhost dogfood runtime
-npm run test:pwa:e2e         # browser suite (Playwright, Chromium)
 npm run test:pwa:engine      # shared-core suites on the SQLite WASM engine
+npm run demo:record          # re-record the walkthrough with the fictional fixture
+npm run demo:screenshots     # regenerate the tour screenshots
 ```
 
-## Release engineering
+**Local MCP reader (developer preview).** An opt-in, read-only MCP stdio adapter lets a local agent client you authorize query bounded Career Evidence, objectives, opportunities and post readiness from the Windows app's workspace. It starts with zero data scopes and cannot edit records, approve posts, publish or send messages. It is not a published ChatGPT plugin. See [the adapter guide](./docs/integrations/JOB_RANGER_MCP_READONLY.md) and [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md).
 
-GitHub Releases remain the immutable source of release/tag and artifact provenance. They are not, by themselves, the forward ordinary-user distribution strategy.
+</details>
 
-The current release line distinguishes:
+Start with the [documentation index](./docs/README.md) and the [repository workflow](./docs/REPOSITORY_WORKFLOW.md) before opening an issue or pull request.
 
-- **published history:** v1.2.0 remains immutable;
-- **current candidate:** v1.3.0 is in release-candidate preparation;
-- **Windows ordinary-user channel:** Microsoft Store after Partner Center submission/certification and clean acceptance;
-- **cross-platform ordinary-user channel:** the PWA after production-origin and browser/device validation;
-- **direct GitHub native binaries:** development, testing, archival, or informed advanced-user artifacts unless they independently satisfy the applicable public trust requirements.
+## Contributing
 
-The outstanding external distribution work is Store certification/listing and production PWA promotion/validation, not reviving native macOS as a required release target.
+Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md). Outside contributions require agreement to the [Contributor License Agreement](./CLA.md). You keep ownership, and MythologIQ Labs, LLC may distribute your contribution under AGPL-3.0-only and commercial terms.
 
-Every promoted release/channel must preserve exact source/build identity, checksums/manifests where applicable, runtime validation, upgrade/backup evidence, and honest status language. No v1.2.0 artifact is ever mutated.
-
-See [RELEASE_READINESS.md](./docs/RELEASE_READINESS.md), [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md), and [v1.3.0 candidate evidence](./docs/validation/RELEASE_CANDIDATE_V1.3.0.md).
-
-## Documentation hierarchy
-
-Start with [`docs/README.md`](./docs/README.md). The [October 10 documentation reconciliation](./docs/validation/DOCUMENTATION_RECONCILIATION_2026-10-10.md) checks the main-line product, roadmap, feature and governance claims against a pinned commit, refreshed on 2026-10-15. Active draft provider and remediation PRs are **not** released or merged functionality.
-
-## Governance, security, and attribution
-
-- [`GOVERNANCE.md`](./GOVERNANCE.md) — decision authority and truth/status language.
-- [`SECURITY.md`](./SECURITY.md) — security posture and reporting guidance.
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow.
-- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community expectations.
-- [`docs/BRANDING.md`](./docs/BRANDING.md) — canonical visual assets and usage.
-- [`TRADEMARKS.md`](./TRADEMARKS.md) — Sojourner name/mark usage and official-distribution identity.
-- [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) — third-party attribution and provenance.
+Governance and truth-in-status rules are in [GOVERNANCE.md](./GOVERNANCE.md). Brand assets and usage are in [BRANDING.md](./docs/BRANDING.md) and [TRADEMARKS.md](./TRADEMARKS.md). Third-party attribution is in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## License
 
-Sojourner's current development line is open source under the [GNU Affero General Public License v3.0 only (AGPL-3.0-only)](./LICENSE). Commercial use and paid distribution are permitted, while covered modified versions remain subject to AGPL source-sharing requirements. Historical versions already released under MIT, including v1.2.0, retain their prior MIT grants; see [`LICENSE_HISTORY.md`](./LICENSE_HISTORY.md). The Sojourner name and official-distribution identity remain governed separately by [`TRADEMARKS.md`](./TRADEMARKS.md). Third-party dependencies and adapted components retain their own obligations as recorded in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+Sojourner is open source under the [GNU Affero General Public License v3.0 only](./LICENSE). Commercial use and paid distribution are permitted, and covered modified versions remain subject to AGPL source-sharing. Versions released under MIT, including v1.2.0, keep their MIT grants ([LICENSE_HISTORY.md](./LICENSE_HISTORY.md)). The Sojourner name is governed separately by [TRADEMARKS.md](./TRADEMARKS.md).
+
+<sub>Sojourner was previously named Job Ranger. The repository, `MythologIQ-Labs-LLC/sojourner`, was renamed on 2026-11-02. Compatibility identifiers (the app ID, storage names and `.jobranger` archives) keep their original names so existing installations and backups keep working.</sub>
