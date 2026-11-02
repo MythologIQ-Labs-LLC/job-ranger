@@ -111,7 +111,14 @@ export async function startLoopbackReceiver(expectedState: string, timeoutMs: nu
       response.writeHead(status, RESPONSE_HEADERS);
       response.end(page);
     };
-    const url = new URL(request.url ?? "/", `http://${LOOPBACK_HOST}`);
+    // Any local process can reach this port during sign-in; a malformed request-target must never
+    // throw in the main process (review finding, #369).
+    let url: URL;
+    try {
+      url = new URL(request.url ?? "/", `http://${LOOPBACK_HOST}`);
+    } catch {
+      return respond(400, PAGES.failed);
+    }
     if (url.pathname !== "/") return respond(404, PAGES.failed);
     if (request.method !== "GET") return respond(405, PAGES.failed);
     if (settled) return respond(410, PAGES.failed);

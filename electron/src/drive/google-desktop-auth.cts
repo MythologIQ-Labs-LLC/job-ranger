@@ -240,8 +240,9 @@ export class GoogleDesktopAuth {
     }
     const refreshToken = typeof body.refresh_token === "string" && body.refresh_token ? body.refresh_token : null;
     const scopes = grantedScopes(body.scope);
+    // drive.file only: a grant that is missing it, or that carries any broader scope, is refused and revoked.
     if ((form.grant_type === "authorization_code" || body.scope !== undefined) &&
-        (!scopes.includes(GOOGLE_DRIVE_FILE_SCOPE))) {
+        (!scopes.includes(GOOGLE_DRIVE_FILE_SCOPE) || scopes.some((scope) => scope !== GOOGLE_DRIVE_FILE_SCOPE))) {
       await this.revokeToken(refreshToken ?? body.access_token);
       throw new DriveAuthError("insufficient_scope",
         "Google did not grant access to files Sojourner creates. Connect again and leave that permission selected.");

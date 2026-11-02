@@ -1,4 +1,5 @@
-import { app, ipcMain, safeStorage, shell } from "electron";
+import { app, ipcMain, safeStorage, shell, type IpcMainInvokeEvent } from "electron";
+import { isAppFrame } from "./drive/drive-sender.cjs";
 import type {
   DriveDesktopResult, DriveDesktopStatus, DriveDisconnectResult,
 } from "../../src/shared/google-drive-desktop.js";
@@ -34,6 +35,20 @@ export function validateArtifactVersion(value: unknown): number {
     throw new Error("Invalid resume PDF version.");
   }
   return value;
+}
+
+function handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!isAppFrame(event)) throw new Error("Google Drive actions are available only from the Sojourner window.");
+    return listener(event, ...args);
+  });
+}
+
+/** Registered when Drive could not start (for example a journal error), so the app still opens. */
+export function registerUnavailableDriveIpc(reason: string): void {
+  const status: DriveDesktopStatus = { available: false, phase: "not_connected", accountLabel: null,
+    credentialStorage: "none", message: `Google Drive export is unavailable: ${reason}` };
+  handle("drive:status", () => status);
 }
 
 async function settle<T>(work: () => Promise<T>): Promise<DriveDesktopResult<T>> {
@@ -133,21 +148,21 @@ export async function initializeDriveIpc(options: DriveIpcOptions): Promise<void
     }
   });
 
-  ipcMain.handle("drive:status", () => status());
-  ipcMain.handle("drive:connect", (_event, flowId: unknown) => settle(async () => {
+  handle("drive:status", () => status());
+  handle("drive:connect", (_event, flowId: unknown) => settle(async () => {
     const id = validateDriveUuid(flowId, "Google sign-in id");
     notice = null;
     flow.discardAll();
     await auth.connect(id);
     return status();
   }));
-  ipcMain.handle("drive:cancel-connect", (_event, flowId: unknown) => settle(async () => {
+  handle("drive:cancel-connect", (_event, flowId: unknown) => settle(async () => {
     if (!auth.cancelConnect(validateDriveUuid(flowId, "Google sign-in id"))) {
       throw new DriveAuthError("auth_cancelled", "That Google sign-in already ended, so there was nothing to cancel.");
     }
     return status();
   }));
-  ipcMain.handle("drive:disconnect", () => settle(async (): Promise<DriveDisconnectResult> => {
+  handle("drive:disconnect", () => settle(async (): Promise<DriveDisconnectResult> => {
     flow.discardAll();
     const { revoked } = await auth.disconnect();
     notice = revoked
@@ -155,20 +170,20 @@ export async function initializeDriveIpc(options: DriveIpcOptions): Promise<void
       : `Google Drive disconnected. Sojourner deleted its saved Google sign-in on this device, but Google did not confirm the revocation. ${MANUAL_REVOKE_HINT}`;
     return { revoked, status: await status() };
   }));
-  ipcMain.handle("drive:prepare-export", (_event, artifactId: unknown, version: unknown) => action(() =>
+  handle("drive:prepare-export", (_event, artifactId: unknown, version: unknown) => action(() =>
     flow.prepare(validateCareerEntityId(artifactId, "Resume artifact id"), validateArtifactVersion(version))));
-  ipcMain.handle("drive:discard-export", (_event, proposalId: unknown) => settle(async () => {
+  handle("drive:discard-export", (_event, proposalId: unknown) => settle(async () => {
     flow.discard(validateDriveUuid(proposalId, "Drive export review id"));
     return null;
   }));
-  ipcMain.handle("drive:confirm-export", (_event, proposalId: unknown) => action(() =>
+  handle("drive:confirm-export", (_event, proposalId: unknown) => action(() =>
     flow.confirm(validateDriveUuid(proposalId, "Drive export review id"))));
-  ipcMain.handle("drive:reconcile-exports", (_event, artifactId: unknown) => action(() =>
+  handle("drive:reconcile-exports", (_event, artifactId: unknown) => action(() =>
     flow.reconcile(validateCareerEntityId(artifactId, "Resume artifact id"))));
-  ipcMain.handle("drive:cancel-prepared-export", (_event, artifactId: unknown, operationId: unknown) => action(() =>
+  handle("drive:cancel-prepared-export", (_event, artifactId: unknown, operationId: unknown) => action(() =>
     flow.cancelPrepared(validateCareerEntityId(artifactId, "Resume artifact id"),
       validateDriveUuid(operationId, "Drive export operation id"))));
-  ipcMain.handle("drive:abandon-export", (_event, artifactId: unknown, operationId: unknown) => action(() =>
+  handle("drive:abandon-export", (_event, artifactId: unknown, operationId: unknown) => action(() =>
     flow.abandon(validateCareerEntityId(artifactId, "Resume artifact id"),
       validateDriveUuid(operationId, "Drive export operation id"))));
 }

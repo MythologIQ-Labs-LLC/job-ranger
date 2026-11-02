@@ -6,7 +6,7 @@ import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "./evidence-extension-ipc.cjs";
 import { initializeBackupIpc } from "./backup-ipc.cjs";
-import { initializeDriveIpc } from "./drive-ipc.cjs";
+import { initializeDriveIpc, registerUnavailableDriveIpc } from "./drive-ipc.cjs";
 import { applyPendingRestore } from "./backup-service.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
@@ -109,6 +109,12 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+  });
+
+  // The window only ever shows Sojourner's own page; links open in the system browser instead.
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    const current = mainWindow?.webContents.getURL() ?? "";
+    if (new URL(targetUrl, current || undefined).href.split("#")[0] !== current.split("#")[0]) event.preventDefault();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -292,13 +298,19 @@ app.whenReady().then(async () => {
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
-    // Google Drive export (#314): hidden unless this build has a Desktop OAuth client.
-    await initializeDriveIpc({
-      userDataDirectory,
-      databasePath: systemStatus.databasePath,
-      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
-      resumeService,
-    });
+    // Google Drive export (#314): hidden unless this build has a Desktop OAuth client. A Drive
+    // start-up failure must never stop Sojourner from opening; the feature is reported unavailable.
+    try {
+      await initializeDriveIpc({
+        userDataDirectory,
+        databasePath: systemStatus.databasePath,
+        sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+        resumeService,
+      });
+    } catch (error) {
+      console.error("Google Drive export could not start:", error instanceof Error ? error.message : error);
+      registerUnavailableDriveIpc("its local export journal could not be opened.");
+    }
     initializeBackupIpc({
       dataDirectory,
       userDataDirectory,

@@ -29,6 +29,9 @@ const artifactSuffix = identity.kind === "store" ? "windows-store" : "windows-st
 // Only the Store package target; the NSIS direct-download build keeps using
 // electron-builder.windows.cjs and is unaffected.
 const { signtoolOptions: _unusedSigning, ...baseWin } = base.win;
+// Google Drive export ships only in the signed NSIS build; never let a stale local
+// build/google-oauth client config reach the Store package.
+baseWin.extraResources = (baseWin.extraResources ?? []).filter((entry) => entry.from !== "build/google-oauth");
 
 module.exports = {
   ...base,

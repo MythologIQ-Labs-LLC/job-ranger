@@ -310,3 +310,58 @@ test("Drive stays off without a valid Desktop client; packaged builds read only 
     JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: CLIENT.clientId, JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: CLIENT.clientSecret,
   }, isPackaged: false }), { configured: true, client: CLIENT });
 });
+
+// Review findings on #369 (2026-11-02).
+function rawRequest(port, requestLine) {
+  const net = require("node:net");
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, "127.0.0.1", () => socket.write(`${requestLine}\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n`));
+    let data = "";
+    socket.setTimeout(2_000, () => { socket.destroy(); reject(new Error("no response")); });
+    socket.on("data", (chunk) => { data += chunk; });
+    socket.on("end", () => resolve(data.split("\r\n")[0]));
+    socket.on("error", reject);
+  });
+}
+
+test("a malformed request-target gets 400 and never throws in the main process; sign-in still completes", async () => {
+  const receiver = await startLoopbackReceiver("expected-state", 5_000);
+  const port = Number(new URL(receiver.redirectUri).port);
+  const uncaught = [];
+  const onUncaught = (error) => uncaught.push(error);
+  process.on("uncaughtException", onUncaught);
+  try {
+    for (const target of ["http://a:99999/", "http://[/"]) {
+      const status = await rawRequest(port, `GET ${target} HTTP/1.1`);
+      assert.match(status, /^HTTP\/1\.1 400 /, `${target} answered ${status}`);
+    }
+  } finally {
+    process.off("uncaughtException", onUncaught);
+  }
+  assert.equal(uncaught.length, 0);
+  assert.equal(await get(`${receiver.redirectUri}/?state=expected-state&code=real-code`), 200);
+  assert.equal(await receiver.code, "real-code");
+});
+
+test("a grant broader than drive.file is refused and revoked, not silently accepted", async () => {
+  const { auth, store, google } = harness();
+  google.state.grantedScope = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive";
+  await assert.rejects(auth.connect(), (error) => error.code === "insufficient_scope");
+  assert.equal(await store.load(), null);
+  assert.equal(google.state.revoked.length, 1);
+});
+
+test("Drive IPC answers only Sojourner's own top-level page", () => {
+  const { isAppFrame } = require(path.join(runtime, "drive-sender.cjs"));
+  const main = { url: "file:///C:/Program%20Files/Sojourner/resources/app.asar/dist/index.html" };
+  const ok = { senderFrame: main, sender: { mainFrame: main } };
+  assert.equal(isAppFrame(ok, false), true);
+  const child = { url: main.url };
+  assert.equal(isAppFrame({ senderFrame: child, sender: { mainFrame: main } }, false), false, "subframes are refused");
+  const remote = { url: "https://example.com/" };
+  assert.equal(isAppFrame({ senderFrame: remote, sender: { mainFrame: remote } }, false), false, "remote pages are refused");
+  const dev = { url: "http://localhost:5173/#/resume" };
+  assert.equal(isAppFrame({ senderFrame: dev, sender: { mainFrame: dev } }, false), false);
+  assert.equal(isAppFrame({ senderFrame: dev, sender: { mainFrame: dev } }, true), true, "the Vite dev server only in development");
+  assert.equal(isAppFrame({ senderFrame: null, sender: { mainFrame: main } }, false), false);
+});
