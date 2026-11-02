@@ -2,17 +2,11 @@
 
 Sojourner is a local-first application for discovering, evaluating, preparing for, and tracking job opportunities.
 
-This guide includes historical instructions for the **published v1.2.0 native installer** and newer web runtime notes. **Current delivery architecture is PWA-only**, governed by [the canonical architecture index](./docs/ARCHITECTURE_INDEX.md). Electron/Store packaging is retained for engineering testing and historical compatibility, **not** an upcoming supported user-facing release. No hosted PWA is yet verified as published.
+Sojourner is delivered first as a **signed Windows app**, and the same application also runs as a **web app (PWA)**, as set out in [the canonical architecture index](./docs/ARCHITECTURE_INDEX.md). No Sojourner release is published yet: the first is the signed Windows pre-release `v1.0.0-alpha.1`, and no hosted web app is published.
 
 ## Which version am I using?
 
-The latest stable public release is **v1.2.0**, available as direct-download installers for:
-
-- Windows x64;
-- macOS Apple Silicon (arm64);
-- macOS Intel (x64).
-
-v1.2.0 installers are unsigned. See the trust notes in the README and [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md).
+Settings → **This installation** shows the version and build you are running. Sojourner's first release is `v1.0.0-alpha.1`, a Windows installer signed by MythologIQ Labs, LLC. Earlier releases were published as **Job Ranger** (last: v1.2.0, unsigned); their download pages were retired on 2026-11-02. Installing Sojourner over Job Ranger v1.2.0 upgrades it in place and keeps your data.
 
 ### Runtime availability and historical test paths
 
@@ -20,7 +14,7 @@ v1.2.0 installers are unsigned. See the trust notes in the README and [`docs/TES
 | --- | --- | --- |
 | **Microsoft Store package** (engineering/historical only) | Package tests may exist; no Store release is planned | In the Store app's private storage on this PC |
 | **Web app** (Chrome or Edge on Windows, macOS, or Linux; Firefox and Safari are not yet validated) | No public site yet. You can self-host it locally at `http://localhost:4174`; see *Running the web app locally* below | In this browser profile's private storage for that exact address. Nothing is uploaded |
-| Previously published installers | Historical v1.2.0 artifacts; future native distribution discontinued | In your user profile's Sojourner folder |
+| **Windows app** (signed installer) | First release `v1.0.0-alpha.1` | In `%APPDATA%\Job Ranger` on this PC (the same folder Job Ranger used), plus any [storage location](#storage-location-windows-app) you choose for backups |
 
 Each installation keeps its own data. Move data between them with a portable `.jobranger` backup (see *Backup and restore*). Settings → **This installation** shows which one you are using, its version and build, and where its data lives.
 

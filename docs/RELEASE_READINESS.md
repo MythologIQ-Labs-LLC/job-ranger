@@ -1,6 +1,6 @@
 # Release Readiness Contract
 
-> **CURRENT ARCHITECTURE (2026-11-02):** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) governs product distribution. **ARCH-001: the signed Windows installer is the primary deliverable, and the PWA continues as the cross-environment channel.** Windows releases follow [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1) and section 7; PWA releases follow [Current PWA release acceptance](#current-pwa-release-acceptance-authoritative-effective-2026-10-16). Microsoft Store and native macOS checklists remain historical or engineering-test procedures, never release blockers, and no Windows signing or installer check may be demanded for a PWA-only publication.
+> **CURRENT ARCHITECTURE (2026-11-02):** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) governs product distribution. **ARCH-001: the signed Windows installer is the primary deliverable, and the PWA continues as the cross-environment channel.** Windows releases follow [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1) and section 7; PWA releases follow [Current PWA release acceptance](#current-pwa-release-acceptance-pwa-publication-only). Microsoft Store and native macOS checklists remain historical or engineering-test procedures, never release blockers, and no Windows signing or installer check may be demanded for a PWA-only publication.
 
 
 This document defines the minimum evidence required before Sojourner (historically Job Ranger) publishes a new user-installable release.
@@ -29,7 +29,7 @@ The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies se
 ### Candidate identification
 - [ ] `package.json` and the top-level `package-lock.json` entries are `1.0.0-alpha.1`; the tag is `v1.0.0-alpha.1` on the reviewed `main` commit, and that commit is recorded.
 - [ ] `electron-builder.json` keeps `appId` `com.jobranger.app` and `nsis.deleteAppDataOnUninstall: false`, names the product `Sojourner`, and carries `Copyright © 2026 MythologIQ Labs, LLC`.
-- [ ] The CHANGELOG `1.0.0-alpha.1` section describes only what is on the tagged commit. Windows Drive export and storage locations (PR #369) are listed as included only if merged before the tag.
+- [ ] The CHANGELOG `1.0.0-alpha.1` section describes only what is on the tagged commit (Windows Drive export #369 and storage locations #370 are on `main` since 2026-11-02).
 - [ ] Local gates pass on the tagged commit: `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run test:pwa:e2e`, `npm run test:release-upgrade` (baseline `job-ranger-v1.2.0`).
 
 ### Build, package and smoke (section 7)
@@ -54,9 +54,9 @@ The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies se
 - [ ] The GitHub Release is titled "Sojourner v1.0.0-alpha.1" and is marked **pre-release** (the workflow does this for `-alpha`, `-beta` and `-rc.` tags).
 - [ ] README "Get Sojourner" and `docs/SYSTEM_STATE.md` say the release exists only after the assets are uploaded and verified.
 
-## Current PWA release acceptance (authoritative; effective 2026-10-16)
+## Current PWA release acceptance (PWA publication only)
 
-This section replaces native distribution acceptance for **all future product releases**. It is governed by [ARCH-001–006](./ARCHITECTURE_INDEX.md). The native installation, signing, Store and notarization procedures further below are preserved **only for historical verification and internal engineering tests**. They MUST NOT be required for release of the PWA or Studio demo.
+This section governs publication of the **web app (PWA)** and the Studio-linked demo; it was first adopted on 2026-10-16 and its scope was narrowed on 2026-11-02 when [ARCH-001](./ARCHITECTURE_INDEX.md) made the signed Windows installer the primary release. It does **not** replace or relax the Windows release gates: a Windows release must pass [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1) and section 7, including signing verification. In the other direction, Windows installer, signing, Store and notarization checks MUST NOT be required for a PWA-only or Studio demo publication.
 
 ### PWA candidate identification
 - [ ] State exactly whether the candidate is a **bounded Studio-linked demonstration**, a fuller PWA public release, or an internal staging preview; distinguish deliberately excluded capabilities in public copy and UI.
@@ -85,9 +85,11 @@ This section replaces native distribution acceptance for **all future product re
 
 **Do not treat an Electron installer build, Store package test, native trust verifier, or historical GitHub Release as evidence that any of the preceding PWA acceptance gates passed.**
 
-## Historical native release verification (not a PWA release gate)
+## Historical native release verification and detailed release checklists
 
-## Release-blocking checklist (historical native artifact checklist)
+The numbered checklist below predates the 2026-11-02 decision. **Section 7 (Windows NSIS) is the current Windows release gate**, applied through [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1); sections 7a (Microsoft Store) and 8 (macOS) are historical or engineering-test procedures and are never release blockers; none of it is a PWA publication gate.
+
+## Release-blocking checklist
 
 ### 1. Scope and version
 
