@@ -81,12 +81,18 @@ export function registerCoreIpcHandlers(options: CoreIpcOptions): void {
     options.backend.runCompanyScrape(validateId(id, "Company id")),
   );
 
-  ipcMain.handle("discovery:discover", async (_event, request) =>
-    publicJobFeedDiscoveryProvider.discover(validateSourceDiscoveryRequest(request), {
+  ipcMain.handle("discovery:discover", async (_event, request) => {
+    const validated = validateSourceDiscoveryRequest(request);
+    const [existingCompanies, runtime] = await Promise.all([
+      options.backend.listCompanies(),
+      options.getRuntimeInfo(),
+    ]);
+    return publicJobFeedDiscoveryProvider.discover(validated, {
       fetchImpl: options.discoveryFetch(),
-      existingCompanies: await options.backend.listCompanies(),
-    }),
-  );
+      existingCompanies,
+      runtimeKind: runtime.kind,
+    });
+  });
 
   ipcMain.handle("jobs:list", () => options.backend.listJobs());
   ipcMain.handle("jobs:mark-seen", (_event, id: string) =>

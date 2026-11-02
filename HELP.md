@@ -124,6 +124,8 @@ Use **Companies** to:
 
 Discovery and monitoring remain separate. Finding a job at an employer does not silently convert the employer into a trusted monitored source.
 
+**Himalayas (issue #136; not in the published release):** desktop discovery also reads Himalayas. Sojourner fetches up to 100 of Himalayas's most recent public listings, unfiltered, and matches them to your target-role titles on your device, so no search terms, locations or other personal data are sent to Himalayas. Because only the most recent listings are read, Himalayas coverage is partial. Results credit and link back to Himalayas, and its country and time-zone restrictions are shown as published, not as promises of eligibility. The web app skips Himalayas and shows a warning saying so, because Himalayas does not allow browser cross-origin requests (CORS); no proxy or credential workaround is used. We Work Remotely RSS remains under separate assessment. See `docs/validation/source-discovery-tranche-2-candidate.md`.
+
 Arbitrary generic career-site hostnames remain manual-review/non-runnable in v1.2.0.
 
 ### 6. Source snapshots and diagnostics
@@ -278,7 +280,7 @@ There is a separate [local read-only MCP prototype](./docs/integrations/JOB_RANG
 
 ### Candidate providers and application handoff
 
-Himalayas discovery and We Work Remotely RSS are **draft-only**, not selectable main-line providers; WWR is held pending publisher-terms clarification. The candidate-controlled application handoff is also a separate unqualified draft. Neither should be followed as an instruction to connect, monitor or submit anything from the published product. Follow [System State](./docs/SYSTEM_STATE.md) for verified scope and the issue/PR evidence for current development disposition.
+Himalayas discovery runs in desktop discovery only and is not yet in a published release. We Work Remotely RSS is **draft-only**, not a selectable main-line provider, and is held pending publisher-terms clarification. The candidate-controlled application handoff is also a separate unqualified draft. Neither should be followed as an instruction to connect, monitor or submit anything from the published product. Follow [System State](./docs/SYSTEM_STATE.md) for verified scope and the issue/PR evidence for current development disposition.
 
 ## Source-support labels
 
