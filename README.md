@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/branding/sojourner-banner.png" alt="Sojourner: Employment Toolkit. Local-first tools for a more thoughtful job search." width="100%" />
+</p>
+
+<p align="center">
   <img src="public/ICON.png" alt="Sojourner emblem" width="96" height="96" />
 </p>
 
