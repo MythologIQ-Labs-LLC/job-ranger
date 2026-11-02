@@ -1,5 +1,7 @@
 # Plan: Phase 17 - Public discovery provider tranche: Himalayas (authorized scope) and We Work Remotely (HELD) (#136)
 
+> Historical plan record; vetoed iterations retained for provenance; implementation proceeds under the GOVERNANCE.md merge standard.
+
 **change_class**: feature
 
 **doc_tier**: standard
