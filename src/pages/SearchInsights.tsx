@@ -42,7 +42,7 @@ export function SearchInsights() {
         <span className="alpha-pill"><BarChart3 className="h-3.5 w-3.5" /> Search history</span>
         <h1 className="page-title mt-4">See what your saved search history actually shows.</h1>
         <p className="page-copy">
-          These are local observations from applications you tracked in Job Ranger. They are not market benchmarks, causal claims, or quotas for how many jobs a human being should fling into the internet.
+          These are local observations from applications you tracked in Sojourner. They are not market benchmarks, causal claims, or quotas for how many jobs a human being should fling into the internet.
         </p>
       </section>
 
@@ -90,7 +90,7 @@ export function SearchInsights() {
 
           <section className="panel panel-strong p-6">
             <div className="flex items-center gap-2"><Lightbulb className="h-5 w-5 text-[var(--color-primary)]" /><h2 className="text-xl font-semibold">Strategy signals</h2></div>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Job Ranger separates the observation from any suggested next step and leaves your evidence and target tracks untouched.</p>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Sojourner separates the observation from any suggested next step and leaves your evidence and target tracks untouched.</p>
             <div className="mt-4 space-y-4">
               {snapshot.strategySignals.map((signal) => (
                 <div key={signal.id} className="rounded-2xl border border-[var(--color-border)] p-4">
@@ -106,7 +106,7 @@ export function SearchInsights() {
           {(["target-track", "source-class", "source-type", "opportunity-category"] as const).map((dimension) => (
             <section key={dimension} className="panel panel-strong p-6">
               <h2 className="text-xl font-semibold">{dimensionLabels[dimension]}</h2>
-              <p className="mt-2 mb-4 text-sm text-[var(--color-text-secondary)]">Observed application state grouped only by data Job Ranger actually saved.</p>
+              <p className="mt-2 mb-4 text-sm text-[var(--color-text-secondary)]">Observed application state grouped only by data Sojourner actually saved.</p>
               <OutcomeTable groups={snapshot.outcomeGroups.filter((group) => group.dimension === dimension)} />
             </section>
           ))}

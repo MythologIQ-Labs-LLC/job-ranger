@@ -1,5 +1,5 @@
 /**
- * SQLite WASM engine for the Job Ranger web runtime.
+ * SQLite WASM engine for the Sojourner web runtime.
  *
  * It implements the same `SqliteEngineClient` port as the Electron sqlite3
  * CLI adapter, so every shared repository, migration, and domain service runs
@@ -209,7 +209,7 @@ export class WasmSqliteEngine {
             error instanceof Error && (error as { code?: string }).code?.startsWith("E")
               ? error
               : new SqliteStorageError(
-                  `Job Ranger could not save its database to browser storage: ${error instanceof Error ? error.message : String(error)}`,
+                  `Sojourner could not save its database to browser storage: ${error instanceof Error ? error.message : String(error)}`,
                   error,
                 );
           // Every change made since the last durable image is reverted, so
@@ -303,7 +303,7 @@ export function setActiveWasmSqliteEngine(engine: WasmSqliteEngine | null): void
 
 export function requireActiveWasmSqliteEngine(): WasmSqliteEngine {
   if (!activeEngine) {
-    throw new Error("The Job Ranger SQLite WASM engine has not been initialized");
+    throw new Error("The Sojourner SQLite WASM engine has not been initialized");
   }
   return activeEngine;
 }

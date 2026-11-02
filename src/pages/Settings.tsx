@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Database, Save, Settings2, SwatchBook } from "lucide-react";
 import { BackupRestorePanel } from "../components/BackupRestorePanel";
+import { DemoLimitations } from "../components/DemoLimitations";
 import { RuntimePanel } from "../components/RuntimePanel";
 import { useRuntimeInfo } from "../services/runtime";
 import { JsonResumePanel } from "../components/JsonResumePanel";
@@ -23,22 +24,61 @@ const fallbackSettings: RuntimeSettings = {
   minimizeToTray: false,
 };
 
+// Each section saves only its own fields, so saving one section neither persists
+// nor discards unsaved edits in the other.
+const runtimeFields = ["userAgent", "maxConcurrentScrapes", "scrapeTimeoutMs", "retryCount"] as const;
+const notificationFields = ["notificationsEnabled", "notifyOnNewJobs", "notifyOnMatchedJobs", "minimizeToTray"] as const;
+type SectionFields = typeof runtimeFields | typeof notificationFields;
+
+function pick(source: RuntimeSettings, fields: SectionFields): Partial<RuntimeSettings> {
+  return Object.fromEntries(fields.map((field) => [field, source[field]]));
+}
+
+function sectionDiffers(a: RuntimeSettings, b: RuntimeSettings, fields: SectionFields): boolean {
+  return fields.some((field) => a[field] !== b[field]);
+}
+
 export function Settings() {
   const { settings, systemStatus, updateSettings, refreshing } = useAppContext();
   const { theme, setTheme, themes } = useTheme();
   const runtime = useRuntimeInfo();
   const webRuntime = runtime?.kind === "web";
   const [form, setForm] = useState<RuntimeSettings>(settings ?? fallbackSettings);
+  const lastSaved = useRef<RuntimeSettings | null>(settings);
 
+  // Refresh each section from saved settings unless it has unsaved edits.
   useEffect(() => {
-    if (settings) {
-      setForm(settings);
-    }
+    if (!settings) return;
+    const previous = lastSaved.current;
+    lastSaved.current = settings;
+    setForm((current) => {
+      if (!previous) return settings;
+      const next = { ...current };
+      for (const fields of [runtimeFields, notificationFields]) {
+        if (!sectionDiffers(current, previous, fields)) Object.assign(next, pick(settings, fields));
+      }
+      return next;
+    });
   }, [settings]);
+
+  const saved = settings ?? fallbackSettings;
+  const notificationsDirty = sectionDiffers(form, saved, notificationFields);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    await updateSettings(form);
+    try {
+      await updateSettings(pick(form, runtimeFields));
+    } catch {
+      // updateSettings already shows the failure; the form keeps the unsaved values.
+    }
+  };
+
+  const saveNotifications = async () => {
+    try {
+      await updateSettings(pick(form, notificationFields));
+    } catch {
+      // updateSettings already shows the failure; the status stays "unsaved".
+    }
   };
 
   return (
@@ -49,6 +89,7 @@ export function Settings() {
           Themes are functional, not cosmetic flourishes. Pick the one that makes your review rhythm calmer, then tune the runtime so scrapes behave the way you expect.
         </p>
       </section>
+      <DemoLimitations />
 
       <div className="mt-8 space-y-8">
         <section className="grid grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -67,11 +108,17 @@ export function Settings() {
                 key={option.id}
                 type="button"
                 onClick={() => setTheme(option.id)}
+                aria-pressed={theme === option.id}
                 className={`theme-card text-left ${theme === option.id ? "theme-card-active" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{option.label}</h3>
                   {theme === option.id && <span className="soft-badge soft-badge-success">Active</span>}
+                </div>
+                <div className="theme-palette-preview mt-3 flex h-4 overflow-hidden rounded-md" aria-hidden="true">
+                  <span style={{ flex: 6, backgroundColor: option.colors.canvas }} />
+                  <span style={{ flex: 3, backgroundColor: option.colors.sidebar }} />
+                  <span style={{ flex: 1, backgroundColor: option.colors.primary }} />
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">{option.story}</p>
               </button>
@@ -92,8 +139,9 @@ export function Settings() {
           <form onSubmit={(event) => void handleSubmit(event)} className="panel panel-strong p-6">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium">User agent</label>
+                <label htmlFor="settings-user-agent" className="block text-sm font-medium">User agent</label>
                 <input
+                  id="settings-user-agent"
                   type="text"
                   value={form.userAgent}
                   onChange={(event) =>
@@ -103,8 +151,9 @@ export function Settings() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Max concurrent scrapes</label>
+                <label htmlFor="settings-max-concurrent" className="block text-sm font-medium">Max concurrent scrapes</label>
                 <input
+                  id="settings-max-concurrent"
                   type="number"
                   min={1}
                   max={10}
@@ -119,8 +168,9 @@ export function Settings() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Timeout (ms)</label>
+                <label htmlFor="settings-timeout" className="block text-sm font-medium">Timeout (ms)</label>
                 <input
+                  id="settings-timeout"
                   type="number"
                   min={1000}
                   step={1000}
@@ -135,8 +185,9 @@ export function Settings() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Retry count</label>
+                <label htmlFor="settings-retry-count" className="block text-sm font-medium">Retry count</label>
                 <input
+                  id="settings-retry-count"
                   type="number"
                   min={0}
                   max={5}
@@ -170,14 +221,14 @@ export function Settings() {
               <h2 className="text-2xl font-semibold">Notifications</h2>
             </div>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Control when Job Ranger alerts you about new opportunities.
+              Control when Sojourner alerts you about new opportunities.
             </p>
           </div>
           <div className="panel panel-strong p-6 space-y-4">
             {webRuntime && (
               <p className="text-sm text-[var(--color-text-secondary)]" data-testid="web-notification-limit">
-                Desktop notifications and the system tray are part of the Windows app. In the web app these preferences are
-                saved with your data but have no effect here.
+                The web app does not show desktop notifications or a system tray icon. These preferences are saved with your
+                data but have no effect here.
               </p>
             )}
             <label className="flex items-center gap-3 cursor-pointer">
@@ -222,6 +273,24 @@ export function Settings() {
               />
               <span className="text-sm">Minimize to system tray on close</span>
             </label>
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
+              <p
+                role="status"
+                aria-label="Notification settings save status"
+                className={`mr-auto text-sm ${notificationsDirty ? "text-[var(--color-warning)]" : "text-[var(--color-text-secondary)]"}`}
+              >
+                {notificationsDirty ? "Unsaved notification changes." : "All notification changes saved."}
+              </p>
+              <button
+                type="button"
+                disabled={refreshing || !notificationsDirty}
+                onClick={() => void saveNotifications()}
+                className="primary-button disabled:opacity-60"
+              >
+                <Save className="h-4 w-4" />
+                Save notification settings
+              </button>
+            </div>
           </div>
         </section>
 

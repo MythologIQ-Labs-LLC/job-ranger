@@ -94,10 +94,13 @@ function formatPay(value: number, basis: PayBasis): string {
 
 function detectPayBasis(job: AssessableJob): PayBasis | null {
   const salaryText = normalize(job.salaryText ?? "");
-  if (salaryText.includes("hour") || salaryText.includes("/hr") || salaryText.includes("hourly")) {
+  if (salaryText.includes("hour") || salaryText.includes("/hr") || /\bhr\b/.test(salaryText)) {
     return "hourly";
   }
-  if (salaryText.includes("year") || salaryText.includes("annual") || salaryText.includes("salary")) {
+  if (
+    salaryText.includes("year") || salaryText.includes("annual") || salaryText.includes("salary") ||
+    /\byr\b|\bannum\b/.test(salaryText)
+  ) {
     return "annual";
   }
   if (job.salaryMin !== null && job.salaryMin > 1000) return "annual";

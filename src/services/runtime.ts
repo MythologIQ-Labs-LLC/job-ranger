@@ -17,19 +17,34 @@ export function loadRuntimeInfo(): Promise<RuntimeInfo> {
   return cached;
 }
 
-export function useRuntimeInfo(): RuntimeInfo | null {
-  const [info, setInfo] = useState<RuntimeInfo | null>(null);
+export interface RuntimeInfoStatus {
+  info: RuntimeInfo | null;
+  /** Reading the runtime failed (or no runtime exists), so callers must not wait for it. */
+  failed: boolean;
+}
+
+export function useRuntimeInfoStatus(): RuntimeInfoStatus {
+  const [status, setStatus] = useState<RuntimeInfoStatus>({ info: null, failed: false });
   useEffect(() => {
-    if (!hasDesktopApi()) return;
+    if (!hasDesktopApi()) {
+      setStatus({ info: null, failed: true });
+      return;
+    }
     let active = true;
     void loadRuntimeInfo()
       .then((value) => {
-        if (active) setInfo(value);
+        if (active) setStatus({ info: value, failed: false });
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setStatus({ info: null, failed: true });
+      });
     return () => {
       active = false;
     };
   }, []);
-  return info;
+  return status;
+}
+
+export function useRuntimeInfo(): RuntimeInfo | null {
+  return useRuntimeInfoStatus().info;
 }
