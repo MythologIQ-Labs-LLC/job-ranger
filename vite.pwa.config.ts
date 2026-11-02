@@ -231,7 +231,7 @@ function shellManifestPlugin(): Plugin {
             buildId,
             flavor,
             commit,
-            sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/job-ranger",
+            sourceRepository: process.env.GITHUB_REPOSITORY ?? "MythologIQ-Labs-LLC/sojourner",
             workflowRun: process.env.GITHUB_RUN_ID ?? null,
             contentSecurityPolicy: buildContentSecurityPolicy(driveSecurity),
             // Exact deployed service-worker bytes are pinned independently of the

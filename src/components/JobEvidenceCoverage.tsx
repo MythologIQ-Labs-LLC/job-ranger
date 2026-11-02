@@ -306,7 +306,9 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
                     />
                     <FindingList
                       title="Unknown"
-                      items={assessment.preferenceAlignment.unknowns}
+                      items={assessment.preferenceAlignment.unknowns.filter(
+                        (item) => !assessment.eligibility.potentialBlockers.includes(item),
+                      )}
                     />
                   </div>
                 </div>
@@ -319,7 +321,7 @@ export function JobEvidenceCoveragePanel({ job, targetTrack, onPrepareResume }: 
                     Evidence coverage
                   </p>
                   <span className="soft-badge soft-badge-success">
-                    {coverage.directCount} direct
+                    {coverage.directCount} supported
                   </span>
                   <span className="soft-badge soft-badge-success">
                     {coverage.transferableCount} transferable
