@@ -108,7 +108,7 @@ export function CareerExplorationHandoff({ onTryDirection }: CareerExplorationHa
       await navigator.clipboard.writeText(rendered.brief);
       setCopyStatus("Brief copied locally. Paste it only into an assistant you trust.");
     } catch {
-      setError("Could not copy the brief. No information was submitted by Job Ranger.");
+      setError("Could not copy the brief. Sojourner did not send any information.");
     }
   };
 
@@ -116,14 +116,14 @@ export function CareerExplorationHandoff({ onTryDirection }: CareerExplorationHa
     <details className="panel panel-strong mt-6 px-5 py-5 sm:px-7" onToggle={(event) => {
       if (event.currentTarget.open && !loaded && !loading) void refreshEvidence();
     }}>
-      <summary className="cursor-pointer text-lg font-semibold text-[var(--color-text-primary)]">
-        <span className="inline-flex items-center gap-2">
+      <summary className="cursor-pointer text-[var(--color-text-primary)]">
+        <h2 id="career-exploration-heading" className="inline-flex items-center gap-2 text-xl font-semibold">
           <Compass className="h-5 w-5" aria-hidden="true" />
           Explore career possibilities with an assistant
-        </span>
+        </h2>
       </summary>
       <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-        Start from your goals, not just a previous job title. Job Ranger prepares a brief locally for
+        Start from your goals, not just a previous job title. Sojourner prepares a brief locally for
         ChatGPT or another assistant, but does not contact any model or upload your information.
         You can also sketch an idea yourself, without AI. Nothing becomes Career Evidence or a
         saved Target Track unless you review and save it separately.
@@ -237,9 +237,10 @@ export function CareerExplorationHandoff({ onTryDirection }: CareerExplorationHa
         <h3 className="text-lg font-semibold">Turn a promising idea into a track draft</h3>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
           After discussing possibilities with an assistant, or simply thinking on your own,
-          enter one direction you want to investigate. This will replace any unsaved changes in
-          the editor below with a new, <strong>paused and unsaved</strong> Target Track.
-          Review actual roles, constraints and requirements before you save or activate it.
+          enter one direction you want to investigate. This opens a new, <strong>paused and
+          unsaved</strong> Target Track in the track editor. If the editor has unsaved changes,
+          you will be asked before they are replaced. Review actual roles, constraints and
+          requirements before you save or activate it.
         </p>
         <label className="mt-4 block">
           <span className="metric-label">Direction I want to explore</span>

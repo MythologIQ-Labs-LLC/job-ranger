@@ -80,15 +80,15 @@ Where supported, choices preserve their meaning as:
 
 ### Optional: explore new directions with an assistant
 
-In the active development line, **Target Tracks → Explore career possibilities with an assistant** offers a local, manual bridge between Job Ranger and ChatGPT or another inference provider. This is a *clipboard handoff*, **not** a live ChatGPT connection, built-in AI model, or plugin.
+On the **Target Tracks** page, below the track editor, two exploration tools sit together: **Explore career possibilities with an assistant** and **Explore other ways to earn** (see [Economic pathway comparisons](#economic-pathway-comparisons-in-target-tracks)). The assistant tool is a local, manual bridge between Sojourner and ChatGPT or another assistant you choose. It is a *clipboard handoff*, **not** a live ChatGPT connection, built-in AI model, or plugin.
 
 1. Enter what you want to explore, preferences, and hard constraints. You can begin with no resume.
 2. Optionally choose up to six **confirmed** Career Evidence statements. Nothing is selected automatically. Preview the exact brief. Details inside selected statements are not automatically removed, so review them carefully.
-3. Explicitly approve and copy the exact brief, then decide where or whether to paste it. Job Ranger does **not** transmit anything or invoke the model. An external assistant may have different privacy or retention policies.
+3. Explicitly approve and copy the exact brief, then decide where or whether to paste it. Sojourner does **not** transmit anything or invoke a model. An external assistant may have different privacy or retention policies.
 4. Discuss alternative hypotheses, trade-offs and questions. Results are **ideas**, not eligibility, verified qualifications, job availability, or career truth.
-5. Enter one promising direction back in Job Ranger. This prepares a **paused, unsaved** Target Track draft without guessed job titles or constraints. Review and save explicitly using the existing Target Tracks editor.
+5. Enter one promising direction back in Sojourner. This opens a **paused, unsaved** Target Track draft in the editor without guessed job titles or constraints. If the editor has unsaved changes, Sojourner asks before replacing them. Review and save explicitly using the existing Target Tracks editor.
 
-Nothing in this manual handoff changes Career Evidence or applications, and the regular Job Ranger workflow remains entirely available without an external assistant. The opt-in live MCP integration is a separate development track.
+Nothing in this manual handoff changes Career Evidence or applications, and the regular Sojourner workflow remains entirely available without an external assistant. The [developer-only MCP reader](#optional-developer-only-mcp-reader) is separate and is not used by this handoff.
 
 ### 3. Career Evidence
 
