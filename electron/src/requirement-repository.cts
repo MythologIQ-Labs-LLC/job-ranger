@@ -167,45 +167,53 @@ export class RequirementRepository {
     return rows.map(mapEvidence);
   }
 
+  /**
+   * Replace a job's stored coverage in one sqlite3 transaction.
+   *
+   * Coverage is recomputed on read, so two callers can rewrite the same job at
+   * once (the Resume page loads coverage while a tailoring preview recomputes
+   * it). Requirement and mapping ids are deterministic, so interleaving a
+   * separate delete with per-row inserts made one caller fail with a UNIQUE or
+   * FOREIGN KEY error. A single BEGIN IMMEDIATE invocation serializes them.
+   */
   async replaceCoverage(coverage: JobEvidenceCoverage, sourceSnapshotId: string | null = null): Promise<void> {
-    await this.sqlite.exec(sql`
-      BEGIN IMMEDIATE;
-      DELETE FROM requirement_evidence_maps
-      WHERE job_requirement_id IN (
-        SELECT id FROM job_requirements WHERE job_id = ${coverage.jobId}
-      );
-      DELETE FROM job_requirements WHERE job_id = ${coverage.jobId};
-      COMMIT;
-    `);
-
-    for (const item of coverage.items) {
-      await this.insertRequirement(item.requirement, sourceSnapshotId);
-      await this.insertMapping(item.mapping);
-    }
+    await this.sqlite.transaction([
+      sql`
+        DELETE FROM requirement_evidence_maps
+        WHERE job_requirement_id IN (
+          SELECT id FROM job_requirements WHERE job_id = ${coverage.jobId}
+        );
+      `,
+      sql`DELETE FROM job_requirements WHERE job_id = ${coverage.jobId};`,
+      ...coverage.items.flatMap((item) => [
+        insertRequirementSql(item.requirement, sourceSnapshotId),
+        insertMappingSql(item.mapping),
+      ]),
+    ]);
   }
+}
 
-  private async insertRequirement(requirement: JobRequirement, sourceSnapshotId: string | null): Promise<void> {
-    await this.sqlite.exec(sql`
-      INSERT INTO job_requirements (
-        id, job_id, kind, text, normalized_term, importance, source_text, source_snapshot_id, created_at
-      ) VALUES (
-        ${requirement.id}, ${requirement.jobId}, ${requirement.kind}, ${requirement.text},
-        ${requirement.normalizedTerm}, ${requirement.importance}, ${requirement.sourceText},
-        ${sourceSnapshotId}, ${requirement.createdAt}
-      );
-    `);
-  }
+function insertRequirementSql(requirement: JobRequirement, sourceSnapshotId: string | null): string {
+  return sql`
+    INSERT INTO job_requirements (
+      id, job_id, kind, text, normalized_term, importance, source_text, source_snapshot_id, created_at
+    ) VALUES (
+      ${requirement.id}, ${requirement.jobId}, ${requirement.kind}, ${requirement.text},
+      ${requirement.normalizedTerm}, ${requirement.importance}, ${requirement.sourceText},
+      ${sourceSnapshotId}, ${requirement.createdAt}
+    );
+  `;
+}
 
-  private async insertMapping(mapping: RequirementEvidenceMap): Promise<void> {
-    await this.sqlite.exec(sql`
-      INSERT INTO requirement_evidence_maps (
-        id, job_requirement_id, evidence_id, classification, explanation,
-        created_by, user_confirmed, created_at, updated_at
-      ) VALUES (
-        ${mapping.id}, ${mapping.jobRequirementId}, ${mapping.evidenceId},
-        ${mapping.classification}, ${mapping.explanation}, ${mapping.createdBy},
-        ${mapping.userConfirmed}, ${mapping.createdAt}, ${mapping.updatedAt}
-      );
-    `);
-  }
+function insertMappingSql(mapping: RequirementEvidenceMap): string {
+  return sql`
+    INSERT INTO requirement_evidence_maps (
+      id, job_requirement_id, evidence_id, classification, explanation,
+      created_by, user_confirmed, created_at, updated_at
+    ) VALUES (
+      ${mapping.id}, ${mapping.jobRequirementId}, ${mapping.evidenceId},
+      ${mapping.classification}, ${mapping.explanation}, ${mapping.createdBy},
+      ${mapping.userConfirmed}, ${mapping.createdAt}, ${mapping.updatedAt}
+    );
+  `;
 }

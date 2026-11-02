@@ -38,7 +38,7 @@ test("first run boots the local-first runtime with production security and insta
     const href = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!.href;
     return (await fetch(href)).json();
   });
-  expect(manifest.name).toBe("Job Ranger");
+  expect(manifest.name).toBe("Sojourner: Employment Toolkit");
   expect(manifest.display).toBe("standalone");
   expect(manifest.icons.map((icon: { sizes: string }) => icon.sizes)).toEqual(
     expect.arrayContaining(["192x192", "512x512"]),
@@ -155,11 +155,11 @@ test("only one tab can write the local workspace at a time", async ({ context })
 
   const second = await context.newPage();
   await second.goto(server.url);
-  await expect(second.getByText("Job Ranger is open in another tab or window")).toBeVisible();
+  await expect(second.getByText("Sojourner is open in another tab or window")).toBeVisible();
 
   await first.close();
   await waitForRuntime(second);
-  await expect(second.getByText("Job Ranger is open in another tab or window")).toHaveCount(0);
+  await expect(second.getByText("Sojourner is open in another tab or window")).toHaveCount(0);
   const info = await second.evaluate(() => window.electronAPI.getRuntimeInfo());
   expect(info.kind).toBe("web");
 });

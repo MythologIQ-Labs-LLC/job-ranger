@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClipboardCopy, Save, BarChart3, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { CareerOutcomeJournal } from "../components/CareerOutcomeJournal";
+import { HistoricalLinkedInArchive } from "../components/HistoricalLinkedInArchive";
+import { LinkedInObservedDashboard } from "../components/LinkedInObservedDashboard";
+import { LinkedInApprovedContentCohorts } from "../components/LinkedInApprovedContentCohorts";
+import { LinkedInTopicAttestations } from "../components/LinkedInTopicAttestations";
+import { LinkedInTopicCohortSummary } from "../components/LinkedInTopicCohortSummary";
 import { getDesktopApi } from "../services/api";
 import {
   assessPersonalBrandDraft, derivedPostMetrics,
@@ -15,6 +20,9 @@ import {
 import type { CandidateEvidence } from "../shared/contracts";
 import { normalizeLinkedInAnalyticsExport, type LinkedInExportPreview } from "../shared/linkedin-analytics";
 import { readLinkedInXlsx } from "../browser/linkedin-xlsx";
+import type { SavedLinkedInExport } from "../shared/linkedin-import-ledger";
+import { reconcileLinkedInExports, type ReconciledValue } from "../shared/linkedin-reconciliation";
+import { matchLinkedInRankedPosts, canonicalLinkedInPostUrl, type RankedPostContentReport } from "../shared/linkedin-post-content";
 
 const baseInput: PersonalBrandDraftInput = {
   body: "",
@@ -68,6 +76,12 @@ function inputFromDraft(draft: PersonalBrandDraft): PersonalBrandDraftInput {
 function formatPercent(n: number | null): string {
   return n === null ? "Unavailable" : `${(n * 100).toFixed(2)}%`;
 }
+function displayLinkedInMetric(metric: ReconciledValue): string {
+  if (metric.state === "conflict") return "Conflicting";
+  if (metric.state === "missing") return "Unknown";
+  return metric.value!.toLocaleString();
+}
+
 export function PersonalBrand() {
   const [drafts, setDrafts] = useState<PersonalBrandDraft[]>([]);
   const [selected, setSelected] = useState<PersonalBrandDraft | null>(null);
@@ -79,6 +93,7 @@ export function PersonalBrand() {
   const [snapshots, setSnapshots] = useState<AnalyticsSnapshot[]>([]);
   const [cohortSnapshots, setCohortSnapshots] = useState<Record<string, AnalyticsSnapshot[]>>({});
   const [cohortRevision, setCohortRevision] = useState(0);
+  const [topicRevision, setTopicRevision] = useState(0);
   const [cohortLoading, setCohortLoading] = useState(false);
   const [cohortError, setCohortError] = useState<string | null>(null);
   const [cohortAge, setCohortAge] = useState<LearningWindowHours>(24);
@@ -88,6 +103,14 @@ export function PersonalBrand() {
   const [linkedinPreview, setLinkedinPreview] = useState<LinkedInExportPreview | null>(null);
   const [linkedinImportError, setLinkedinImportError] = useState<string | null>(null);
   const [linkedinImportBusy, setLinkedinImportBusy] = useState(false);
+  const [linkedinSaved, setLinkedinSaved] = useState<SavedLinkedInExport[]>([]);
+  const linkedinReconciliation = useMemo(() => reconcileLinkedInExports(linkedinSaved), [linkedinSaved]);
+  const [rankedPostLinkReport, setRankedPostLinkReport] = useState<RankedPostContentReport | null>(null);
+  const [rankedPostLinkError, setRankedPostLinkError] = useState<string | null>(null);
+  const [linkedinReviewed, setLinkedinReviewed] = useState(false);
+  const [linkedinDeleteId, setLinkedinDeleteId] = useState("");
+  const [linkedinDeleteConfirmed, setLinkedinDeleteConfirmed] = useState(false);
+  const [linkedinImportMessage, setLinkedinImportMessage] = useState("");
   const [publishedUrl, setPublishedUrl] = useState("");
   const [publishedLocal, setPublishedLocal] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -184,6 +207,19 @@ export function PersonalBrand() {
     void load();
     return () => { live = false; };
   }, [publications, cohortRevision]);
+
+  useEffect(() => {
+    let live = true;
+    setRankedPostLinkReport(null);
+    setRankedPostLinkError(null);
+    void matchLinkedInRankedPosts(linkedinReconciliation, publications, prepared, drafts)
+      .then(report => { if (live) setRankedPostLinkReport(report); })
+      .catch(cause => {
+        if (live) setRankedPostLinkError(
+          cause instanceof Error ? cause.message : "Unable to verify LinkedIn ranked post provenance.");
+      });
+    return () => { live = false; };
+  }, [linkedinReconciliation, publications, prepared, drafts]);
 
   const learning = useMemo(() => buildPersonalBrandLearningReport(
     publications.map((receipt) => ({
@@ -317,8 +353,55 @@ export function PersonalBrand() {
     setNotice("Timestamped analytics saved with manual provenance. Empty fields remain unavailable, not zero.");
   });
 
+  useEffect(() => {
+    let live = true;
+    void getDesktopApi().personalBrand.listLinkedInImports().then(items => {
+      if (live) setLinkedinSaved(items);
+    }).catch(cause => {
+      if (live) setLinkedinImportError(cause instanceof Error ? cause.message : "Could not load LinkedIn import history.");
+    });
+    return () => { live = false; };
+  }, []);
+
+  const saveLinkedInPreview = async (): Promise<void> => {
+    if (!linkedinPreview || !linkedinReviewed || linkedinImportBusy) return;
+    setLinkedinImportBusy(true);
+    setLinkedinImportError(null);
+    setLinkedinImportMessage("");
+    try {
+      const result = await getDesktopApi().personalBrand.saveLinkedInImport(linkedinPreview, true);
+      setLinkedinSaved(await getDesktopApi().personalBrand.listLinkedInImports());
+      setLinkedinImportMessage(result.alreadyPresent
+        ? "This exact normalized export was already saved. No duplicate records were created."
+        : "LinkedIn analytics saved in the local Sojourner database and included in backups.");
+      setLinkedinReviewed(false);
+    } catch (cause) {
+      setLinkedinImportError(cause instanceof Error ? cause.message : "Could not save LinkedIn analytics.");
+    } finally {
+      setLinkedinImportBusy(false);
+    }
+  };
+  const deleteLinkedInSaved = async (): Promise<void> => {
+    if (!linkedinDeleteId || !linkedinDeleteConfirmed || linkedinImportBusy) return;
+    setLinkedinImportBusy(true);
+    setLinkedinImportError(null);
+    try {
+      await getDesktopApi().personalBrand.deleteLinkedInImport(linkedinDeleteId, true);
+      setLinkedinSaved(await getDesktopApi().personalBrand.listLinkedInImports());
+      setLinkedinDeleteId("");
+      setLinkedinDeleteConfirmed(false);
+      setLinkedinImportMessage("Selected LinkedIn export removed from this Sojourner database.");
+    } catch (cause) {
+      setLinkedinImportError(cause instanceof Error ? cause.message : "Could not delete LinkedIn analytics.");
+    } finally {
+      setLinkedinImportBusy(false);
+    }
+  };
+
   const previewLinkedInWorkbook = async (file: File | null): Promise<void> => {
     setLinkedinPreview(null);
+    setLinkedinReviewed(false);
+    setLinkedinImportMessage("");
     setLinkedinImportError(null);
     if (!file) return;
     if (!/\.xlsx$/i.test(file.name) || file.size > 4 * 1024 * 1024) {
@@ -341,7 +424,7 @@ export function PersonalBrand() {
       <section className="panel panel-strong p-6 sm:p-8 space-y-3">
         <span className="alpha-pill"><BarChart3 className="h-3.5 w-3.5" /> Professional presence</span>
         <h1 className="page-title">Make the post useful. Then measure what happened.</h1>
-        <p className="page-copy">Job Ranger supports an intentional, manual LinkedIn workflow. It does not publish for you, invent career claims, or require AI or a social account connection.</p>
+        <p className="page-copy">Sojourner supports an intentional, manual LinkedIn workflow. It does not publish for you, invent career claims, or require AI or a social account connection.</p>
       </section>
       {error && <section role="alert" className="support-note mt-5 p-4 text-sm text-[var(--color-danger)]">{error}</section>}
       {notice && <section role="status" className="support-note mt-5 p-4 text-sm">{notice}</section>}
@@ -501,7 +584,7 @@ export function PersonalBrand() {
               <span>I personally reviewed the exact content, including all factual claims, supporting evidence, privacy, and wording. I understand that preparing a copy does not publish it.</span>
             </label>
             <div className="flex flex-wrap gap-3">
-              <button type="button" disabled={busy} className="secondary-button" onClick={() => void run(async () => { await save(); setNotice("Draft saved in the Job Ranger database."); })}><Save className="h-4 w-4" /> Save draft</button>
+              <button type="button" disabled={busy} className="secondary-button" onClick={() => void run(async () => { await save(); setNotice("Draft saved in the Sojourner database."); })}><Save className="h-4 w-4" /> Save draft</button>
               <button type="button" disabled={busy || !reviewed || readiness.status === "blocked" ||
                 (input.claimChecks.length > 0 && (evidenceLoading || Boolean(evidenceError) || staleEvidenceIds.length > 0))}
                 className="primary-button" onClick={copyPost}><ClipboardCopy className="h-4 w-4" /> Prepare and copy</button>
@@ -521,7 +604,7 @@ export function PersonalBrand() {
 
           <section className="panel panel-strong p-6 space-y-4">
             <h2 className="text-xl font-semibold">2. Record publication</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">After posting manually, record LinkedIn's actual permalink and publication time. Job Ranger labels this a user-confirmed receipt.</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">After posting manually, record LinkedIn's actual permalink and publication time. Sojourner labels this a user-confirmed receipt.</p>
             <label className="block text-sm font-semibold">LinkedIn post URL
               <input type="url" className="input-shell mt-2 w-full" value={publishedUrl} onChange={(e) => setPublishedUrl(e.target.value)} placeholder="https://www.linkedin.com/feed/update/..." />
             </label>
@@ -558,7 +641,7 @@ export function PersonalBrand() {
                   </a>
                 </p>
                 <p>LinkedIn can change its labels or navigation. Follow the linked official help article if the steps differ.</p>
-                <p><strong>Import preview available below:</strong> You can inspect an XLSX export locally. Previewed data is not yet saved to the Job Ranger database. Keep the original file unchanged. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
+                <p><strong>Import preview available below:</strong> You can inspect an XLSX export locally. Previewed data is not yet saved to the Sojourner database. Keep the original file unchanged. The fields below are manual, per-post observations, not an upload destination for account-wide totals.</p>
               </div>
             </details>
             <div className="rounded-xl border border-[var(--color-border)] p-4 space-y-3" data-testid="linkedin-xlsx-preview">
@@ -577,9 +660,10 @@ export function PersonalBrand() {
               </p>
               {linkedinImportBusy && <p role="status">Reading workbook locally...</p>}
               {linkedinImportError && <p role="alert" className="text-sm text-[var(--color-danger)]">{linkedinImportError}</p>}
+              {linkedinImportMessage && <p role="status" className="text-sm">{linkedinImportMessage}</p>}
               {linkedinPreview && (
                 <div className="space-y-3 text-sm" data-testid="linkedin-preview-results" role="region" aria-label="LinkedIn analytics workbook preview">
-                  <p className="font-semibold">Preview only, not saved: {linkedinPreview.period.start} through {linkedinPreview.period.end}</p>
+                  <p className="font-semibold">Export review: {linkedinPreview.period.start} through {linkedinPreview.period.end} (not saved unless confirmed)</p>
                   <dl className="grid grid-cols-2 gap-2 md:grid-cols-4">
                     <div><dt>Impressions</dt><dd className="font-semibold">{linkedinPreview.discovery.impressions.toLocaleString()}</dd></div>
                     <div><dt>Members reached</dt><dd className="font-semibold">{linkedinPreview.discovery.membersReached.toLocaleString()}</dd></div>
@@ -595,6 +679,12 @@ export function PersonalBrand() {
                       </ul>
                     </div>
                   )}
+                  <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" checked={linkedinReviewed} onChange={event => setLinkedinReviewed(event.target.checked)} />
+                    <span>I reviewed the reporting period, metrics and warnings. Save this snapshot without merging overlapping exports or attributing outcomes.</span>
+                  </label>
+                  <button type="button" className="primary-button" disabled={!linkedinReviewed || linkedinImportBusy}
+                    onClick={() => { void saveLinkedInPreview(); }}>Review and save LinkedIn export</button>
                   <div className="max-h-72 overflow-auto" tabIndex={0} aria-label="Sample of ranked post observations">
                     <table className="w-full text-left text-xs">
                       <caption className="text-left font-semibold mb-2">Top posts (sample; missing values are unknown)</caption>
@@ -611,6 +701,159 @@ export function PersonalBrand() {
                   </div>
                 </div>
               )}
+              <LinkedInObservedDashboard report={linkedinReconciliation} />
+              <section className="rounded-lg border border-[var(--color-border)] p-4 space-y-3" aria-label="LinkedIn historical reconciliation" data-testid="linkedin-reconciliation">
+                <h4 className="font-semibold">Historical analytics, reconciled across exports</h4>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Observational data from manually supplied exports, not a verified provider API.
+                  Every calendar day is counted once. If two exports disagree, the disputed number stays hidden.
+                  No attribution to career outcomes, and no prediction.
+                </p>
+                {linkedinReconciliation.period ? (
+                  <>
+                    <p className="text-sm">
+                      Period: <strong>{linkedinReconciliation.period.start} to {linkedinReconciliation.period.end}</strong>
+                      {" · "}{linkedinReconciliation.imports} saved export(s)
+                    </p>
+                    <dl className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                      <div><dt>Days observed</dt><dd className="font-semibold">{linkedinReconciliation.coverage.observedDays} of {linkedinReconciliation.coverage.calendarDays}</dd></div>
+                      <div><dt>Missing days</dt><dd className="font-semibold">{linkedinReconciliation.coverage.missingDays}</dd></div>
+                      <div><dt>Conflicted days</dt><dd className="font-semibold">{linkedinReconciliation.coverage.conflictedDays}</dd></div>
+                      <div><dt>Daily impressions total</dt><dd className="font-semibold">{linkedinReconciliation.totals.impressions === null ? "Withheld (incomplete or disputed)" : linkedinReconciliation.totals.impressions.toLocaleString()}</dd></div>
+                    </dl>
+                    <p className="text-xs text-[var(--color-text-secondary)]">
+                      Full-period daily engagements: {linkedinReconciliation.totals.engagements === null ? "Unavailable" : linkedinReconciliation.totals.engagements.toLocaleString()}.
+                      {" "}Daily new followers: {linkedinReconciliation.totals.newFollowers === null ? "Unavailable" : linkedinReconciliation.totals.newFollowers.toLocaleString()}.
+                      Totals require all calendar days and agreement between overlapping observations.
+                    </p>
+                    <div className="max-h-64 overflow-auto" tabIndex={0} aria-label="Recent reconciled LinkedIn dates">
+                      <table className="w-full text-left text-xs">
+                        <caption className="text-left font-semibold mb-2">Latest 14 calendar days, including missing or disputed entries</caption>
+                        <thead><tr>
+                          <th scope="col" className="pr-3">Date</th>
+                          <th scope="col" className="pr-3">Impressions</th>
+                          <th scope="col" className="pr-3">Engagements</th>
+                          <th scope="col">New followers</th>
+                        </tr></thead>
+                        <tbody>{linkedinReconciliation.daily.slice(-14).reverse().map(row => (
+                          <tr key={row.date}>
+                            <th scope="row" className="pr-3 py-1">{row.date}</th>
+                            <td className="pr-3">{displayLinkedInMetric(row.impressions)}</td>
+                            <td className="pr-3">{displayLinkedInMetric(row.engagements)}</td>
+                            <td>{displayLinkedInMetric(row.newFollowers)}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                    {linkedinReconciliation.warnings.length > 0 && (
+                      <details>
+                        <summary className="cursor-pointer text-sm font-semibold">Reconciliation limitations ({linkedinReconciliation.warnings.length})</summary>
+                        <ul className="list-disc pl-5 mt-2 text-xs space-y-1">
+                          {linkedinReconciliation.warnings.map(warning => <li key={warning}>{warning}</li>)}
+                        </ul>
+                      </details>
+                    )}
+                  </>
+                ) : <p className="text-sm">No saved LinkedIn exports yet. Export and review a workbook above to begin.</p>}
+              </section>
+              <section className="rounded-lg border border-[var(--color-border)] p-4 space-y-3"
+                data-testid="linkedin-post-content-enrichment" aria-label="LinkedIn ranked post and approved copy matches">
+                <h4 className="font-semibold">Ranked post content: confirmed matches only</h4>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  LinkedIn's XLSX lists URLs and metrics, not the text or comments.
+                  Sojourner displays an original post copy only when a matching human-confirmed
+                  publication receipt and its fingerprint-checked reviewed package agree.
+                  A copy match does not verify the live LinkedIn post, and post totals
+                  are not comparable unless observation windows are equivalent.
+                </p>
+                {rankedPostLinkError && <p role="alert" className="text-sm text-[var(--color-danger)]">{rankedPostLinkError}</p>}
+                {!rankedPostLinkReport && !rankedPostLinkError && <p role="status" className="text-sm">Checking source matches...</p>}
+                {rankedPostLinkReport && (
+                  <>
+                    <p className="text-sm">
+                      <strong>{rankedPostLinkReport.verifiedCopyCount}</strong> original approved copies matched
+                      {" · "}<strong>{rankedPostLinkReport.unmatchedCount}</strong> posts without a recorded publication
+                      {" · "}<strong>{rankedPostLinkReport.totalRanked}</strong> ranked posts in the latest saved export
+                    </p>
+                    {rankedPostLinkReport.totalRanked === 0 ? (
+                      <p className="text-sm">Save a LinkedIn analytics export to inspect ranked post matches.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                          Showing up to 12 posts from the latest imported workbook. Missing metrics are unknown, not zero.
+                        </p>
+                        {rankedPostLinkReport.rows.slice(0, 12).map(row => (
+                          <div key={row.url} className="rounded-lg border border-[var(--color-border)] p-3 space-y-1 text-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-semibold">{row.publishedOn} · {row.impressions === null ? "Impressions unavailable" : row.impressions.toLocaleString() + " impressions"}</span>
+                              {canonicalLinkedInPostUrl(row.url) && (
+                                <a className="underline break-all text-xs" href={row.url} target="_blank"
+                                  rel="noopener noreferrer">LinkedIn post</a>
+                              )}
+                            </div>
+                            <p className="text-xs">
+                              Engagements: {row.engagements === null ? "Unknown" : row.engagements.toLocaleString()}
+                              {" · "}Source match: <strong>{row.status.replaceAll("-", " ")}</strong>
+                            </p>
+                            <p className="text-xs text-[var(--color-text-secondary)]">{row.explanation}</p>
+                            {row.reviewedCopy !== null && (
+                              <details className="text-sm">
+                                <summary className="cursor-pointer font-medium">View original user-approved copy</summary>
+                                <p className="whitespace-pre-wrap break-words mt-2">{row.reviewedCopy}</p>
+                                {row.metadataCurrent && (
+                                  <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+                                    Current draft metadata: hook {row.hook?.replaceAll("_", " ") ?? "Not recorded"};
+                                    {" "}format {row.format ?? "Not recorded"};
+                                    {" "}objective {row.objective?.replaceAll("_", " ") ?? "Not recorded"}.
+                                  </p>
+                                )}
+                              </details>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <details className="text-xs">
+                      <summary className="cursor-pointer font-semibold">Coverage and provenance cautions ({rankedPostLinkReport.warnings.length})</summary>
+                      <ul className="list-disc pl-5 space-y-1 mt-2">
+                        {rankedPostLinkReport.warnings.map(warning => <li key={warning}>{warning}</li>)}
+                      </ul>
+                    </details>
+                  </>
+                )}
+              </section>
+              <HistoricalLinkedInArchive analytics={linkedinReconciliation} />
+              <LinkedInTopicAttestations publications={publications} onLabelsChanged={() => setTopicRevision(n => n + 1)} />
+              <div className="rounded-lg border border-[var(--color-border)] p-3 space-y-3" data-testid="linkedin-import-ledger">
+                <h4 className="font-semibold">Saved LinkedIn exports ({linkedinSaved.length})</h4>
+                <p className="text-xs text-[var(--color-text-secondary)]">Overlapping exports are separate observations, never summed together. Original .xlsx files are not stored; preserve your originals. Deleting an import does not modify career evidence or manually recorded post snapshots.</p>
+                {linkedinSaved.length > 0 && (
+                  <>
+                    <ul className="space-y-2 text-sm">
+                      {linkedinSaved.map(item => (
+                        <li key={item.id} className="break-words">
+                          {item.preview.period.start} to {item.preview.period.end} · imported {new Date(item.importedAt).toLocaleString()} · {item.preview.daily.length} daily rows · {item.contentSha256.slice(0, 12)}
+                        </li>
+                      ))}
+                    </ul>
+                    <label className="block text-sm font-medium">Select an import to delete
+                      <select className="input-shell mt-2 w-full" value={linkedinDeleteId}
+                        onChange={event => { setLinkedinDeleteId(event.target.value); setLinkedinDeleteConfirmed(false); }}>
+                        <option value="">No import selected</option>
+                        {linkedinSaved.map(item => <option key={item.id} value={item.id}>{item.preview.period.start} to {item.preview.period.end} · {item.contentSha256.slice(0, 12)}</option>)}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={linkedinDeleteConfirmed}
+                        onChange={event => setLinkedinDeleteConfirmed(event.target.checked)} />
+                      <span>I confirm deletion of the selected imported snapshot.</span>
+                    </label>
+                    <button className="secondary-button" type="button"
+                      disabled={!linkedinDeleteId || !linkedinDeleteConfirmed || linkedinImportBusy}
+                      onClick={() => { void deleteLinkedInSaved(); }}>Delete selected export</button>
+                  </>
+                )}
+              </div>
             </div>
             <label className="block text-sm font-semibold">Published post
               <select className="input-shell mt-2 w-full" value={postId} onChange={(e) => setPostId(e.target.value)}>
@@ -736,6 +979,8 @@ export function PersonalBrand() {
               </>
             )}
           </section>
+          {!cohortLoading && !cohortError && <LinkedInApprovedContentCohorts learning={learning} publications={publications} prepared={prepared} drafts={drafts} />}
+          {!cohortLoading && !cohortError && <LinkedInTopicCohortSummary learning={learning} publications={publications} prepared={prepared} drafts={drafts} refreshToken={topicRevision} />}
           <CareerOutcomeJournal publications={publications} />
         </div>
       )}

@@ -194,7 +194,7 @@ export function Onboarding({ profile, saveProfile }: OnboardingProps) {
             </span>
             <h1 className="page-title mt-4">Start with what you already have.</h1>
             <p className="page-copy">
-              You do not need a complete profile before Job Ranger becomes useful. Start from a resume, enter your background yourself, or just tell Job Ranger what kind of work you want. You can fill in the rest as the search develops.
+              You do not need a complete profile before Sojourner becomes useful. Start from a resume, enter your background yourself, or just tell Sojourner what kind of work you want. You can fill in the rest as the search develops.
             </p>
           </div>
           <button
@@ -221,7 +221,7 @@ export function Onboarding({ profile, saveProfile }: OnboardingProps) {
           </div>
           <h2 className="story-title mt-3">I already have a resume</h2>
           <p className="story-copy flex-1">
-            Import the document you already use. Job Ranger preserves the source, extracts career evidence locally, and asks you to review proposed facts before they become authoritative.
+            Import the document you already use. Sojourner preserves the source, extracts career evidence locally, and asks you to review proposed facts before they become authoritative.
           </p>
           <button
             type="button"
@@ -260,7 +260,7 @@ export function Onboarding({ profile, saveProfile }: OnboardingProps) {
           </div>
           <h2 className="story-title mt-3">I know what I want to look for</h2>
           <p className="story-copy">
-            Give Job Ranger enough direction to start. These are search goals and constraints, not claims about experience.
+            Give Sojourner enough direction to start. These are search goals and constraints, not claims about experience.
           </p>
 
           <div className="mt-5 space-y-4">

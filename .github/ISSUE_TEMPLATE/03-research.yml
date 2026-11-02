@@ -1,0 +1,30 @@
+name: Research or decision (not implementation)
+description: A bounded unanswered question; defaults to deferred until a decision is accepted
+title: "[Research] "
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision the evidence must inform
+      description: One concrete question, not a new implementation program.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and evidence needed
+      description: Include licensing, platform, privacy, cost, and user impact where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Exit criteria
+      description: The decision/ruling and existing issue or design document to update.
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Existing parent issue
+      description: Prefer a comment on the current issue if no distinct decision is needed.

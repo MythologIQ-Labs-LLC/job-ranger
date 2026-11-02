@@ -23,17 +23,24 @@ async function navigateTo(
     | "Filters"
     | "Settings",
 ) {
+  const career = ["Career Profile", "Resume"];
+  const search = ["Companies", "Filters"];
+  const group = career.includes(destination) ? "My Career" : search.includes(destination) ? "Search Tools" : null;
+  if (group) {
+    const toggle = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: group });
+    if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  }
   await page.getByRole("link", { name: destination, exact: true }).click();
 }
 
-test.describe("Job Ranger E2E Tests", () => {
+test.describe("Sojourner E2E Tests", () => {
   test("app launches and shows dashboard", async () => {
     const { page } = fixture;
 
-    await expect(page.getByRole("heading", { name: "Job Ranger", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sojourner", exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -43,18 +50,22 @@ test.describe("Job Ranger E2E Tests", () => {
     const { page } = fixture;
 
     await navigateTo(page, "Home");
-    const sourceAction = page.getByRole("link", { name: "Add a job source", exact: true }).first();
+    // With no sources yet, the primary next action leads to Companies.
+    const sourceAction = page.getByRole("link", { name: "Manage sources", exact: true }).first();
     await expect(sourceAction).toBeVisible();
     await sourceAction.click();
     await expect(
       page.getByRole("heading", {
-        name: "Find places to look, then choose what Job Ranger should monitor.",
+        name: "Find places to look, then choose what Sojourner should monitor.",
         exact: true,
       }),
     ).toBeVisible();
 
     await navigateTo(page, "Home");
+    // Search telemetry is secondary but must stay reachable: expand it, then follow its prompt.
     const filterAction = page.getByRole("link", { name: "Set up filters", exact: true });
+    await expect(filterAction).toBeHidden();
+    await page.getByText("Search activity and technical diagnostics", { exact: true }).click();
     await expect(filterAction).toBeVisible();
     await filterAction.click();
     await expect(
@@ -144,7 +155,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Companies");
     await expect(
       page.getByRole("heading", {
-        name: "Find places to look, then choose what Job Ranger should monitor.",
+        name: "Find places to look, then choose what Sojourner should monitor.",
         exact: true,
       }),
     ).toBeVisible();
@@ -168,7 +179,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Career Profile");
     await expect(
       page.getByRole("heading", {
-        name: "Tell Job Ranger what good work looks like for you.",
+        name: "Tell Sojourner what good work looks like for you.",
         exact: true,
       }),
     ).toBeVisible();
@@ -200,7 +211,7 @@ test.describe("Job Ranger E2E Tests", () => {
     await navigateTo(page, "Home");
     await expect(
       page.getByRole("heading", {
-        name: "Build a calmer review ritual around the jobs you actually want.",
+        name: "Your next steps",
         exact: true,
       }),
     ).toBeVisible();
@@ -311,8 +322,12 @@ test.describe("Job Ranger E2E Tests", () => {
 
     const company = page.getByText("Test Company", { exact: true });
     if ((await company.count()) > 0) {
-      await page.getByRole("button", { name: "Remove", exact: true }).click();
-      await expect(company).toHaveCount(0);
+      const row = page.getByRole("row").filter({ has: company });
+      await row.getByRole("button", { name: "Remove source Test Company", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Remove job source?", exact: true });
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole("button", { name: "Remove source", exact: true }).click();
+      await expect(row).toHaveCount(0);
     }
   });
 });

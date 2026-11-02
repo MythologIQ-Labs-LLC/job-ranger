@@ -6,6 +6,7 @@ import { Companies } from "./pages/Companies";
 import { Jobs } from "./pages/Jobs";
 import { Filters } from "./pages/Filters";
 import { Settings } from "./pages/Settings";
+import { Help } from "./pages/Help";
 import { Applications } from "./pages/Applications";
 import { SearchInsights } from "./pages/SearchInsights";
 import { PersonalBrand } from "./pages/PersonalBrand";
@@ -89,6 +90,7 @@ const router = createHashRouter([{
     { path: "companies", element: <Companies /> },
     { path: "filters", element: <Filters /> },
     { path: "settings", element: <Settings /> },
+    { path: "help", element: <Help /> },
   ],
 }]);
 

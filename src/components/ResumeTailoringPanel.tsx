@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, GitBranchPlus, RotateCcw, Target } from "lucide-react";
 import { getDesktopApi } from "../services/api";
 import type {
@@ -35,35 +35,51 @@ export function ResumeTailoringPanel({
   const [plan, setPlan] = useState<ResumeTailoringPlan | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Kept here rather than in the page banner: the page clears its banner when
+  // it reloads in the background, which would silently drop a failed preview.
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  // Identifies the latest preview request. Changing the draft or job, or leaving,
+  // invalidates any request still in flight so its late result is ignored.
+  const previewRequest = useRef(0);
 
   useEffect(() => {
     setPlan(null);
     setSelectedIds([]);
+    setPreviewError(null);
+    setBusy(false);
+    return () => {
+      previewRequest.current += 1;
+    };
   }, [source.projection.id, jobId]);
 
   const alreadyTailored =
     source.projection.sourceProjectionId !== null && source.projection.jobId === jobId;
 
   const preview = async () => {
+    const request = ++previewRequest.current;
+    const isCurrent = () => request === previewRequest.current;
     setBusy(true);
+    setPreviewError(null);
     try {
       const next = await getDesktopApi().resume.previewTailoring({
         sourceProjectionId: source.projection.id,
         jobId,
       });
+      if (!isCurrent()) return;
       setPlan(next);
       setSelectedIds(next.suggestedEvidenceIds);
       onMessage(
         `Tailoring preview found ${next.directCount} direct and ${next.transferableCount} transferable requirement match${next.directCount + next.transferableCount === 1 ? "" : "es"}.`,
       );
-    } catch (previewError) {
-      onError(
-        previewError instanceof Error
-          ? previewError.message
+    } catch (failure) {
+      if (!isCurrent()) return;
+      setPreviewError(
+        failure instanceof Error
+          ? failure.message
           : "Unable to prepare tailoring preview",
       );
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   };
 
@@ -133,6 +149,16 @@ export function ResumeTailoringPanel({
           </button>
         )}
       </div>
+
+      {previewError && (
+        <div
+          role="alert"
+          className="support-note mt-4 px-4 py-3 text-sm text-[var(--color-danger)]"
+        >
+          <p className="font-semibold">Tailoring preview failed. Nothing was changed.</p>
+          <p className="mt-1">{previewError}</p>
+        </div>
+      )}
 
       {plan && (
         <div className="mt-5 space-y-5">
@@ -209,7 +235,7 @@ export function ResumeTailoringPanel({
             <div className="support-note px-4 py-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
                 <AlertTriangle className="h-4 w-4 text-[var(--color-warning)]" />
-                Requirements Job Ranger will not claim
+                Requirements Sojourner will not claim
               </div>
               <div className="mt-3 space-y-3">
                 {plan.gaps.map((gap) => (
