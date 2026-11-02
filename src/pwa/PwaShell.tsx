@@ -1,10 +1,99 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import type { RuntimeBootState } from "./runtime/client";
 import { STORAGE_FAILURE_EVENT } from "./runtime/client";
 import { applyWaitingUpdate, UPDATE_FAILED_EVENT, UPDATE_READY_EVENT } from "./service-worker-registration";
 import { repairAppShell } from "./shell-repair";
 import { IS_DEMO_FLAVOR } from "../demo/flavor";
+import type { BackupRestoreSelection } from "../shared/backup";
+
+/**
+ * Shown when the workspace could not be opened but a backup can still be restored. The worker
+ * validates the selected backup and stages it; the damaged database is never read or written,
+ * and the next start swaps the backup in before anything opens the workspace.
+ */
+function RestoreFromBackup() {
+  const [selection, setSelection] = useState<BackupRestoreSelection | null>(null);
+  const [staging, setStaging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const summary = useRef<HTMLParagraphElement>(null);
+  // Only the latest choice counts: a second pick while the first is still validating wins.
+  const latestChoice = useRef(0);
+  const chooseButton = useRef<HTMLButtonElement>(null);
+  const api = (window as unknown as { electronAPI?: { backups: { selectRestore(): Promise<BackupRestoreSelection | null>; stageRestore(path: string): Promise<unknown> } } }).electronAPI;
+  const firstRender = useRef(true);
+  useEffect(() => {
+    // The control the user pressed disappears; keep keyboard focus with the panel (not on first show).
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    (selection ? summary.current : chooseButton.current)?.focus();
+  }, [selection]);
+  if (!api) return null;
+  // No busy state while the browser's file picker is open: some browsers never report a cancel.
+  const choose = async () => {
+    const choice = ++latestChoice.current;
+    setError(null);
+    try {
+      const result = await api.backups.selectRestore();
+      if (choice === latestChoice.current) setSelection(result);
+    } catch (cause) {
+      if (choice !== latestChoice.current) return;
+      setSelection(null);
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+  const restore = async () => {
+    if (!selection) return;
+    setStaging(true);
+    setError(null);
+    try {
+      await api.backups.stageRestore(selection.bundlePath);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setStaging(false);
+    }
+  };
+  return (
+    <div className="space-y-3 border-t border-[var(--color-border)] pt-4" data-testid="pwa-recovery-restore">
+      <h2 className="text-lg font-semibold">Restore from a backup</h2>
+      <p className="text-sm leading-6">
+        The workspace database stored in this browser is damaged. If you have a Sojourner backup (a <code>.jobranger</code> file),
+        you can restore it here. Nothing changes until you confirm.
+      </p>
+      {!selection ? (
+        <button ref={chooseButton} type="button" className="secondary-button" onClick={() => void choose()}>
+          Choose a backup file
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <p ref={summary} tabIndex={-1} className="text-sm leading-6" data-testid="pwa-recovery-selection">
+            Backup created {new Date(selection.summary.createdAt).toLocaleString()} · {selection.summary.artifactFileCount} managed
+            artifact{selection.summary.artifactFileCount === 1 ? "" : "s"}. It passed integrity checks.
+          </p>
+          {selection.warnings.map((warning, index) => (
+            <p key={index} className="text-sm leading-6 text-[var(--color-text-secondary)]">{warning}</p>
+          ))}
+          <p className="text-sm font-semibold leading-6">
+            Restoring permanently replaces the damaged workspace. Changes made after this backup was created are lost.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" className="primary-button" disabled={staging} onClick={() => void restore()}>
+              {staging ? "Restoring…" : "Replace this workspace with the backup and restart"}
+            </button>
+            <button type="button" className="secondary-button" disabled={staging} onClick={() => setSelection(null)}>
+              Choose a different file
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p aria-live="polite" className="text-sm leading-6 text-[var(--color-danger)]" data-testid="pwa-recovery-error">{error}</p>
+      )}
+    </div>
+  );
+}
 
 function BootScreen({ title, children, tone = "info" }: { title: string; children: ReactNode; tone?: "info" | "error" }) {
   return (
@@ -94,6 +183,7 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
           Repair app shell
         </button>
       </div>
+      {state.recoverableWithBackup && <RestoreFromBackup />}
     </BootScreen>
   );
 }

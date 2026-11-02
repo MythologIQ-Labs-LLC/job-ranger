@@ -17,7 +17,7 @@ The manifest identifies the tag, whether the build is a public release or tester
 Releases after v1.2.0 also publish:
 - `windows-store-*` files for the Microsoft Store package candidate;
 - `web-*` files for the web build;
-- a GitHub artifact attestation for every artifact. Verify it with `gh attestation verify <file> --repo MythologIQ-Labs-LLC/job-ranger`.
+- a GitHub artifact attestation for every artifact. Verify it with `gh attestation verify <file> --repo MythologIQ-Labs-LLC/sojourner`.
 
 The Store package attached to a GitHub Release is the unsigned submission artifact. It is not installable as-is and is not a substitute for the Store listing.
 
