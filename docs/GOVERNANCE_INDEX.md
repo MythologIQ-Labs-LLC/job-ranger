@@ -16,7 +16,7 @@ MUST be current at every cycle close. Drift signal: wrong version / wrong state 
 
 | Artifact | Path | Freshness marker |
 |----------|------|------------------|
-| Meta Ledger | `docs/META_LEDGER.md` | latest entry on main #94, Phase 16 seal; later Phase 17 VETOs/remediations exist on draft PR #232 only |
+| Meta Ledger | `docs/META_LEDGER.md` | latest entry #108, Phase 17 gate-loop remediation VETO; Phase 17 entries #95-#108 are VETO history only, with no Phase 17 PASS or seal |
 | System State | `docs/SYSTEM_STATE.md` | snapshot date 2026-10-15; main and published release distinguished |
 | Concept | `docs/CONCEPT.md` | stable |
 | Architecture Index | `docs/ARCHITECTURE_INDEX.md` | authoritative current decisions and supersession register |
@@ -63,7 +63,7 @@ Live until close; ages out at substantiate. Drift signal: shipped feature still 
 
 Live for plan duration; archived at substantiate. Drift signal: plan shipped but artifact still presents as open.
 
-Status below is quoted from the **main-branch** Meta Ledger through #94. All listed main-branch plans are historical; they remain in `docs/` and are due for archival (BACKLOG H1). **Active Phase 17 draft plan, remediation and review artifacts reside on PR #232, not on main.** Do not add or label those artifacts as merged, passed or sealed here until qualification and merger.
+Status below is quoted from the Meta Ledger through #108. All listed plans are historical; they remain in `docs/` and are due for archival (BACKLOG H1). The Phase 17 plan, remediation and review artifacts are retained as VETO history only. None of them passed or was sealed; do not label them as passed or sealed.
 
 | Artifact | Path | Plan |
 |----------|------|------|
@@ -86,6 +86,7 @@ Status below is quoted from the **main-branch** Meta Ledger through #94. All lis
 | Phase 15 mapper negation (G12) | `docs/plan-qor-phase15-mapper-negation.md` | PLAN #79, VETO #80-#83, remediate, user-approved override, PASS #84, implemented #85, sealed #86 |
 | Phase 16 mapper claim action (G13) | `docs/plan-qor-phase16-mapper-claim-action.md` | PLAN #87, VETO #88-#91, remediate (gate-loop), user-approved overrides, PASS #92, implemented #93, sealed #94 |
 | Application handoff readiness delta (#228) | `docs/plans/228-application-handoff.md` | not a Meta Ledger entry: no Qortara plan gate or audit PASS is recorded. Owner decision 2026-11-02: implementation proceeds under the `GOVERNANCE.md` merge standard. Copy baseline already on main via #270; plan covers only the remaining delta |
+| Phase 17 public discovery providers (#136) | `docs/plan-qor-phase17-provider-tranche.md` | PLAN #95, #97, #99; VETO #96, #98; iteration 4 VETO #100; remediation #101, #103, #105, #107 with VETO #102, #104, #106; remediation VETO #108; superseded gate per owner Option A #267. Historical record; implementation proceeds under the `GOVERNANCE.md` merge standard. WWR phase HELD on publisher terms |
 
 ## Tier 5 — Reference Material
 
