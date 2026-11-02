@@ -1,11 +1,13 @@
 import { GRAPH_APP_ROOT } from "./microsoft-config.cjs";
-import type { StorageEgress } from "./storage-egress.cjs";
+import { allowedStorageRequest, type StorageEgress } from "./storage-egress.cjs";
 import {
   authorizedRequest, DEFAULT_RETRY_POLICY, hashResponse, providerFailure, readChunk, STORAGE_FILE_NAME,
   StorageProviderError, streamToFile, transient,
   type RemoteEntry, type RemoteRef, type RetryPolicy, type StorageFolder, type StorageProvider, type UploadRequest,
 } from "./storage-provider.cjs";
 
+/** Listing pages of 200 followed at most (1000 files per folder). */
+export const ONEDRIVE_LIST_PAGES = 5;
 /** Simple PUT up to this size; larger files use an upload session. */
 export const ONEDRIVE_SIMPLE_UPLOAD_LIMIT = 4 * 1024 * 1024;
 /** Upload-session chunks must be multiples of 320 KiB: 16 x 320 KiB = 5 MiB. */
@@ -30,6 +32,21 @@ export interface OneDriveStorageOptions {
   accountLabel: string;
   egress: StorageEgress;
   retry?: RetryPolicy;
+}
+
+const SESSION_GRANT_MIN_MS = 15 * 60_000;
+const SESSION_GRANT_MAX_MS = 24 * 60 * 60_000;
+const SESSION_GRANT_DEFAULT_MS = 60 * 60_000;
+
+/**
+ * How long the egress may keep an upload-session URL open: until Graph's own
+ * expirationDateTime, bounded to 15 minutes .. 24 hours (60 minutes when Graph omits it).
+ * It is renewed after every accepted chunk, so a large archive on a slow link does not fail.
+ */
+export function sessionGrantMs(expirationDateTime: unknown, now = Date.now()): number {
+  const expires = typeof expirationDateTime === "string" ? Date.parse(expirationDateTime) : Number.NaN;
+  if (!Number.isFinite(expires)) return SESSION_GRANT_DEFAULT_MS;
+  return Math.min(SESSION_GRANT_MAX_MS, Math.max(SESSION_GRANT_MIN_MS, expires - now));
 }
 
 function itemPath(folder: StorageFolder, name?: string): string {
@@ -143,12 +160,12 @@ export class OneDriveProvider implements StorageProvider {
       body: JSON.stringify({ item: { "@microsoft.graph.conflictBehavior": "fail", name: request.name } }),
     });
     if (session.status === 409) return this.metadata(request.folder, request.name);
-    const body = await this.json<{ uploadUrl?: unknown }>(session, "starting an upload");
+    const body = await this.json<{ uploadUrl?: unknown; expirationDateTime?: unknown }>(session, "starting an upload");
     if (typeof body.uploadUrl !== "string") throw new StorageProviderError("invalid", "OneDrive did not return an upload session.");
     const uploadUrl = body.uploadUrl;
     const chunks = Math.ceil(request.size / ONEDRIVE_CHUNK_BYTES);
     const policy = this.options.retry ?? DEFAULT_RETRY_POLICY;
-    this.options.egress.grant(uploadUrl, "PUT", chunks * policy.attempts);
+    this.options.egress.grant(uploadUrl, "PUT", chunks * policy.attempts, sessionGrantMs(body.expirationDateTime));
     const sleep = policy.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
     try {
       let offset = 0;
@@ -174,6 +191,10 @@ export class OneDriveProvider implements StorageProvider {
         if (!response) throw new StorageProviderError("unavailable", "The OneDrive upload was interrupted. Sojourner will try again later.");
         if (response.status === 202) {
           offset += length;
+          const progress = await response.json().catch(() => null) as { expirationDateTime?: unknown } | null;
+          const remaining = Math.ceil((request.size - offset) / ONEDRIVE_CHUNK_BYTES);
+          this.options.egress.grant(uploadUrl, "PUT", Math.max(1, remaining) * policy.attempts,
+            sessionGrantMs(progress?.expirationDateTime));
           continue;
         }
         if (response.status === 200 || response.status === 201) {
@@ -238,12 +259,37 @@ export class OneDriveProvider implements StorageProvider {
 
   async list(folder: StorageFolder): Promise<{ entries: RemoteEntry[]; truncated: boolean }> {
     await this.ensureFolders();
-    const response = await this.call(`${itemPath(folder)}:/children?$top=200&$select=id,name,size,createdDateTime,file`);
-    const body = await this.json<{ value?: GraphItem[]; "@odata.nextLink"?: unknown }>(response, "listing files");
-    const entries = (body.value ?? []).map((item) => this.entry(item, folder)).filter((item): item is RemoteEntry => item !== null);
+    const entries: RemoteEntry[] = [];
+    let url: string | null = `${itemPath(folder)}:/children?$top=200&$select=id,name,size,createdDateTime,file`;
+    let truncated = false;
+    // Graph has no reliable ordering for app-folder children on every drive type, so all
+    // pages (bounded) are read and sorted here: the restore list always shows the newest.
+    for (let page = 0; url; page += 1) {
+      if (page >= ONEDRIVE_LIST_PAGES) {
+        truncated = true;
+        break;
+      }
+      const body: { value?: GraphItem[]; "@odata.nextLink"?: unknown } =
+        await this.json(await this.call(url), "listing files");
+      for (const item of body.value ?? []) {
+        const entry = this.entry(item, folder);
+        if (entry) entries.push(entry);
+      }
+      const next = body["@odata.nextLink"];
+      url = null;
+      if (typeof next === "string") {
+        let parsed: URL | null = null;
+        try { parsed = new URL(next); } catch { parsed = null; }
+        // Only a next page on the same app-folder path is followed; anything else stops the listing.
+        if (parsed && allowedStorageRequest(parsed, "GET") && parsed.pathname === new URL(itemPath(folder)).pathname + ":/children") {
+          url = parsed.href;
+        } else {
+          truncated = true;
+        }
+      }
+    }
     entries.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-    // Further pages are not followed: their links are outside the app-folder egress allowlist.
-    return { entries, truncated: typeof body["@odata.nextLink"] === "string" };
+    return { entries, truncated };
   }
 
   async resolve(folder: StorageFolder, key: string): Promise<RemoteEntry | null> {

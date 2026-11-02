@@ -30,6 +30,7 @@ function formatDate(value: string | null): string {
 const KIND_LABEL = { automatic: "Automatic backup", manual: "Manual backup", document: "Document" } as const;
 const STATUS_LABEL = {
   pending: "not finished", uploaded: "uploaded, not verified", verified: "verified", failed: "failed", deleted: "removed by retention",
+  replaced: "replaced since Sojourner saved it, not verified",
 } as const;
 
 function unwrap<T>(result: StorageResult<T>): T {
@@ -356,9 +357,12 @@ export function StorageLocationPanel() {
                     <li key={item.itemId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--color-border)] p-3 text-sm">
                       <span>
                         <span className="block font-medium break-all">{item.name}</span>
-                        <span className="block text-xs text-[var(--color-text-secondary)]">{formatDate(item.createdAt)} · {formatBytes(item.size)}</span>
+                        <span className="block text-xs text-[var(--color-text-secondary)]">
+                          {formatDate(item.createdAt)} · {formatBytes(item.size)}{item.openable ? "" : ` · ${item.status ? STATUS_LABEL[item.status] : "not copied by Sojourner"}`}
+                        </span>
                       </span>
-                      <button type="button" className="secondary-button disabled:opacity-60" disabled={busy}
+                      <button type="button" className="secondary-button disabled:opacity-60" disabled={busy || !item.openable}
+                        title={item.openable ? undefined : "Only PDF and JSON documents Sojourner copied here and verified can be opened."}
                         aria-label={`${listing.provider === "local" ? "Open" : "Download"} ${item.name}`} onClick={() => openDocument(item)}>
                         <FileText className="h-4 w-4" aria-hidden="true" />
                         {listing.provider === "local" ? "Open" : "Download"}

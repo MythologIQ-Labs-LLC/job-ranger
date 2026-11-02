@@ -56,6 +56,8 @@ function createFakeOneDrive(options = {}) {
       /** Expire every access token (the next Graph call answers 401). */
       expireAccess: false,
       denyAuthorization: false,
+      /** Next-page links point outside the app folder (items/{id}/children). */
+      foreignNextLink: false,
       refresh: null,
       lastAuthorizeParams: null,
     },
@@ -172,7 +174,8 @@ function createFakeOneDrive(options = {}) {
       }
       session.received = Buffer.concat([session.received, body]);
       if (session.received.length < session.size) {
-        return json(202, { nextExpectedRanges: [`${session.received.length}-`] });
+        return json(202, { nextExpectedRanges: [`${session.received.length}-`],
+          expirationDateTime: new Date((options.clock?.() ?? Date.now()) + 3_600_000).toISOString() });
       }
       state.sessions.delete(upload[1]);
       if (folderItems(session.folder).has(session.name)) return graphError(409, "nameAlreadyExists");
@@ -220,7 +223,18 @@ function createFakeOneDrive(options = {}) {
       if (!items) return graphError(404, "itemNotFound");
       if (method === "GET" && !action) return json(200, { id: `folder-${folder}`, name: folder, folder: { childCount: items.size } });
       if (method === "GET" && action === "children") {
-        return json(200, { value: [...items.values()].map((item) => itemView(folder, item, options.contentBaseUrl)) });
+        // Paged like Graph: $top items per page and an @odata.nextLink with a $skiptoken.
+        const top = Math.max(1, Math.min(200, Number(url.searchParams.get("$top")) || 200));
+        const skip = Number(url.searchParams.get("$skiptoken")) || 0;
+        const all = [...items.values()];
+        const page = all.slice(skip, skip + top).map((item) => itemView(folder, item, options.contentBaseUrl));
+        const body = { value: page };
+        if (skip + top < all.length) {
+          body["@odata.nextLink"] = state.faults.foreignNextLink
+            ? `https://graph.microsoft.com/v1.0/me/drive/items/folder-${folder}/children?$skiptoken=${skip + top}`
+            : `https://graph.microsoft.com/v1.0/me/drive/special/approot:/${folder}:/children?$top=${top}&$skiptoken=${skip + top}`;
+        }
+        return json(200, body);
       }
       return graphError(400, "invalidRequest");
     }
@@ -244,7 +258,7 @@ function createFakeOneDrive(options = {}) {
       if (items.has(name)) return graphError(409, "nameAlreadyExists");
       const id = base64Url(randomBytes(12));
       state.sessions.set(id, { folder, name, size: Number(headers["x-expected-size"] ?? 0) || null, received: Buffer.alloc(0), baseUrl: options.contentBaseUrl });
-      return json(200, { uploadUrl: `${options.uploadBaseUrl ?? CONTENT_UPLOAD}/up/${id}`, expirationDateTime: new Date(Date.now() + 3_600_000).toISOString() });
+      return json(200, { uploadUrl: `${options.uploadBaseUrl ?? CONTENT_UPLOAD}/up/${id}`, expirationDateTime: new Date((options.clock?.() ?? Date.now()) + 3_600_000).toISOString() });
     }
     return graphError(400, "invalidRequest");
   }
@@ -325,6 +339,8 @@ function createFakeOneDrive(options = {}) {
 
   return {
     state, handle, fetch: fakeFetch, listen, completeBrowserSignIn,
+    /** Tests: put a file into a folder directly (as another device or the person would). */
+    put: (folder, name, bytes) => store(folder, name, bytes),
     files: (folder) => [...(state.folders.get(folder)?.values() ?? [])],
   };
 }

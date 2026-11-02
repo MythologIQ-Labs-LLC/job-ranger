@@ -26,6 +26,9 @@ const RESPONSE_HEADERS = {
   Connection: "close",
 } as const;
 
+/** Port pairs tried when another program already holds [::1] on the chosen port. */
+export const LOOPBACK_BIND_ATTEMPTS = 5;
+
 export interface OAuthLoopback {
   redirectUri: string;
   /** Resolves with the authorization code, or rejects with a StorageAuthError. */
@@ -48,6 +51,8 @@ export async function startOAuthLoopback(input: {
   expectedState: string;
   timeoutMs: number;
   providerName: string;
+  /** Tests only: ports to try first, one per bind attempt (0 = any free port). */
+  testPorts?: readonly number[];
 }): Promise<OAuthLoopback> {
   const pages = {
     success: staticPage(`${input.providerName} connected`, "You can close this tab and return to Sojourner. Nothing was uploaded."),
@@ -114,20 +119,35 @@ export async function startOAuthLoopback(input: {
     });
   });
 
-  const ipv4 = http.createServer(onRequest);
-  const port = await listen(ipv4, "127.0.0.1", 0);
-  servers.push(ipv4);
-  if ((ipv4.address() as AddressInfo).address !== "127.0.0.1") {
-    ipv4.close();
-    throw new StorageAuthError("auth_failed", "Sojourner could not open a local-only sign-in receiver.");
-  }
-  const ipv6 = http.createServer(onRequest);
-  try {
-    await listen(ipv6, "::1", port);
-    servers.push(ipv6);
-  } catch {
-    // No IPv6 loopback (or the port is taken there): browsers then fall back to 127.0.0.1.
-    ipv6.close();
+  // IPv4 and IPv6 loopback on the SAME port: a browser may resolve "localhost" to either,
+  // so another local program must not hold [::1]:port while Sojourner holds 127.0.0.1:port.
+  // If [::1] is taken, both are retried on a fresh port; only a machine without an IPv6
+  // loopback at all continues on 127.0.0.1 alone.
+  let port = 0;
+  for (let attempt = 0; ; attempt += 1) {
+    const ipv4 = http.createServer(onRequest);
+    port = await listen(ipv4, "127.0.0.1", input.testPorts?.[attempt] ?? 0);
+    if ((ipv4.address() as AddressInfo).address !== "127.0.0.1") {
+      ipv4.close();
+      throw new StorageAuthError("auth_failed", "Sojourner could not open a local-only sign-in receiver.");
+    }
+    const ipv6 = http.createServer(onRequest);
+    try {
+      await listen(ipv6, "::1", port);
+      servers.push(ipv4, ipv6);
+      break;
+    } catch (error) {
+      ipv6.close();
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EADDRNOTAVAIL" || code === "EAFNOSUPPORT" || code === "EINVAL") {
+        servers.push(ipv4);
+        break;
+      }
+      ipv4.close();
+      if (attempt + 1 >= LOOPBACK_BIND_ATTEMPTS) {
+        throw new StorageAuthError("auth_failed", "Sojourner could not open a private local sign-in receiver. Try connecting again.");
+      }
+    }
   }
   timer = setTimeout(() => finish(new StorageAuthError("timeout",
     `${input.providerName} sign-in was not finished in time. Try connecting again.`)), input.timeoutMs);

@@ -16,7 +16,7 @@ import {
 import { MicrosoftCredentialStore } from "./storage/microsoft-credential-store.cjs";
 import { createStorageEgress, microsoftBrowserUrl } from "./storage/storage-egress.cjs";
 import { StorageConfigStore } from "./storage/storage-config.cjs";
-import { carryOverStatements, STORAGE_RECORDS_TABLE, StorageRecords } from "./storage/storage-records.cjs";
+import { carryOverStorageRecords, StorageRecords } from "./storage/storage-records.cjs";
 import { StorageService, testTimings, type GoogleAuthPort } from "./storage/storage-service.cjs";
 import { readChangeCounter, WorkspaceChangeMonitor } from "./storage/workspace-change-monitor.cjs";
 
@@ -161,13 +161,9 @@ export async function initializeStorageIpc(options: {
   });
 
   // Storage records describe files at the locations, not the workspace: keep them across a restore.
-  const live = new SqliteClient(options.databasePath, options.sqliteBinaryPath);
-  options.backupService.addRestoreCarryOver(async (stagedDatabasePath) => {
-    const table = await live.queryOne<{ name: string }>(
-      `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${STORAGE_RECORDS_TABLE}';`);
-    if (!table) return;
-    await new SqliteClient(stagedDatabasePath, options.sqliteBinaryPath).exec(carryOverStatements(options.databasePath));
-  });
+  options.backupService.addRestoreCarryOver((stagedDatabasePath) => carryOverStorageRecords({
+    liveDatabasePath: options.databasePath, stagedDatabasePath, sqliteBinaryPath: options.sqliteBinaryPath,
+  }));
   await service.start();
   onDocumentExported((filePath, displayName) => service.queueDocument(filePath, displayName));
 

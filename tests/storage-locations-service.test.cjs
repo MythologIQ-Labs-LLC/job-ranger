@@ -22,6 +22,8 @@ const { MicrosoftCredentialStore, MICROSOFT_CREDENTIAL_FILE } = load("storage/mi
 const { resolveMicrosoftClientConfig, resolveMicrosoftTestOrigin, MICROSOFT_SCOPE_PARAMETER } = load("storage/microsoft-config.cjs");
 const { createStorageEgress } = load("storage/storage-egress.cjs");
 const { createFakeOneDrive } = require("./support/fake-onedrive.cjs");
+const { createFakeGoogleStorage } = require("./support/fake-google-storage.cjs");
+const { carryOverStorageRecords } = load("storage/storage-records.cjs");
 
 const CLIENT_ID = "6aea1e3a-0000-4000-8000-000000000001";
 let sqliteBinaryPath;
@@ -275,11 +277,13 @@ async function service(options = {}) {
   const storage = new StorageService({
     enabled: true, userDataDirectory: userData, defaultLocalFolder: location, backups,
     producer: { runtime: "electron", channel: "development", appVersion: "1.3.0", buildId: "test" },
-    config, records, monitor, google: unconfigured, googleUnavailableReason: "Google is not set up.",
-    microsoft: unconfigured, microsoftUnavailableReason: "OneDrive is not set up.",
-    egress: createStorageEgress({ fetch: async () => { throw new Error("no network in this test"); } }),
+    config, records, monitor, google: options.google ?? unconfigured, googleUnavailableReason: options.google ? null : "Google is not set up.",
+    microsoft: options.microsoft ?? unconfigured, microsoftUnavailableReason: options.microsoft ? null : "OneDrive is not set up.",
+    egress: createStorageEgress({ fetch: options.fetch ?? (async () => { throw new Error("no network in this test"); }) }),
+    retry: { attempts: 3, baseDelayMs: 1, maxDelayMs: 5 },
     timings: { debounceMs: options.debounceMs ?? 150, maxDelayMs: 5_000, retryDelaysMs: [100, 200], pollMs: 30 },
   });
+  if (options.beforeStart) await options.beforeStart(userData);
   await storage.start();
   const backupFiles = () => (fs.existsSync(path.join(location, "Backups")) ? fs.readdirSync(path.join(location, "Backups")).sort() : []);
   return { storage, counter, records, db, location, userData, config, backupFiles,
@@ -430,8 +434,15 @@ test("restore from the location downloads to a temporary file, checks the record
   const selection = await storage.prepareRestore(item.itemId);
   assert.deepEqual(selection.validatedBytes, fs.readFileSync(path.join(location, "Backups", backupFiles()[0])));
   assert.deepEqual(fs.readdirSync(userData).filter((name) => name.includes("storage-work")), [], "the temporary download is removed");
-  fs.appendFileSync(path.join(location, "Backups", backupFiles()[0]), "tampered");
+  // Same size, different bytes: caught by the recorded SHA-256.
+  const archivePath = path.join(location, "Backups", backupFiles()[0]);
+  const tampered = fs.readFileSync(archivePath);
+  tampered[tampered.length - 1] ^= 0xff;
+  fs.writeFileSync(archivePath, tampered);
   await assert.rejects(storage.prepareRestore(item.itemId), /changed since Sojourner verified it/);
+  // A different size: no longer Sojourner's recorded copy at all.
+  fs.appendFileSync(archivePath, "tampered");
+  await assert.rejects(storage.prepareRestore(item.itemId), /replaced the backup Sojourner saved/);
   await assert.rejects(storage.prepareRestore("Backups:../../etc/passwd"), /no longer at the storage location/);
   await assert.rejects(storage.prepareRestore("Elsewhere:x"), /Invalid storage item/);
   storage.stop();
@@ -455,5 +466,120 @@ test("switching location keeps old copies and history; unconfigured clouds canno
   const onedrive = status.providers.find((provider) => provider.provider === "onedrive");
   assert.equal(onedrive.configured, false);
   assert.match(onedrive.unavailableReason, /not set up/);
+  storage.stop();
+});
+
+// ------------------------------------------------------------------ security review fixes
+
+function cloudPort(account, token) {
+  return {
+    configured: true, connecting: false, account: async () => account,
+    getAccessToken: async () => token(), invalidateAccessToken: () => undefined,
+    connect: async () => account, cancelConnect: () => false, disconnect: async () => ({ revoked: true }),
+    credentialStorage: () => "encrypted", credentialUnavailable: () => false,
+  };
+}
+
+test("records never store the account e-mail; history adds it at display time from the live sign-in", async () => {
+  const google = createFakeGoogleStorage();
+  const email = google.state.account.email;
+  google.state.accessTokens.set("valid-token", google.state.account.permissionId);
+  const { storage, db } = await service({
+    debounceMs: 60_000, fetch: google.fetch,
+    google: cloudPort({ accountId: google.state.account.permissionId, label: email }, () => "valid-token"),
+  });
+  await storage.select("google");
+  await storage.backUp("manual");
+  const rows = await db.queryAll(`SELECT * FROM ${STORAGE_RECORDS_TABLE};`);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].status, "verified");
+  for (const [column, value] of Object.entries(rows[0])) {
+    assert.equal(String(value).toLowerCase().includes(email.toLowerCase()), false, `${column} must not hold the account e-mail`);
+  }
+  assert.equal(rows[0].location_label, "Google Drive > Sojourner");
+  const [entry] = await storage.history();
+  assert.equal(entry.locationLabel, `Google Drive > Sojourner (${email})`);
+  storage.stop();
+});
+
+test("start removes temporary archives an interrupted run left in the user-data folder", async () => {
+  const { storage, userData } = await service({
+    debounceMs: 60_000,
+    beforeStart: async (dir) => {
+      fs.mkdirSync(path.join(dir, ".job-ranger-storage-work-crashed", "nested"), { recursive: true });
+      fs.writeFileSync(path.join(dir, ".job-ranger-storage-work-crashed", "backup.jobranger"), randomBytes(4096));
+      fs.writeFileSync(path.join(dir, ".job-ranger-storage-work-abc.jobranger"), randomBytes(4096));
+      fs.writeFileSync(path.join(dir, "keep-me.txt"), "not Sojourner's work file");
+    },
+  });
+  assert.deepEqual(fs.readdirSync(userData).filter((name) => name.startsWith(".job-ranger-storage-work-")), []);
+  assert.ok(fs.existsSync(path.join(userData, "keep-me.txt")));
+  storage.stop();
+});
+
+test("Open launches only Sojourner's own verified PDF or JSON copies, and only while they still match", async () => {
+  const { storage, location } = await service({ debounceMs: 60_000 });
+  await storage.select("local");
+  const source = path.join(tempDir("sojourner-export-"), "resume-v2.pdf");
+  fs.writeFileSync(source, "%PDF-1.7 own document");
+  storage.queueDocument(source, "resume-v2.pdf");
+  const documents = path.join(location, "Documents");
+  await until(() => fs.existsSync(documents) && fs.readdirSync(documents).length === 1);
+  fs.writeFileSync(path.join(documents, "invoice.exe"), "MZ not a document");
+  fs.writeFileSync(path.join(documents, "shortcut.lnk"), "link");
+  fs.writeFileSync(path.join(documents, "someone-else.pdf"), "%PDF foreign");
+  const listing = await storage.list();
+  const own = listing.documents.find((item) => item.name.endsWith("resume-v2.pdf"));
+  assert.equal(own.openable, true);
+  for (const name of ["invoice.exe", "shortcut.lnk", "someone-else.pdf"]) {
+    assert.equal(listing.documents.find((item) => item.name === name).openable, false, name);
+  }
+  const opened = [];
+  const io = { openPath: async (target) => { opened.push(target); }, chooseSavePath: async () => null };
+  await storage.openDocument(own.itemId, io);
+  assert.deepEqual(opened, [path.join(documents, own.name)]);
+  for (const name of ["invoice.exe", "shortcut.lnk", "someone-else.pdf"]) {
+    await assert.rejects(storage.openDocument(`Documents:${name}`, io), /opens only the PDF and JSON documents it copied/);
+  }
+  // Same size, different bytes: refused by the hash check before launching.
+  fs.writeFileSync(path.join(documents, own.name), "%PDF-1.7 own documenX");
+  await assert.rejects(storage.openDocument(own.itemId, io), /changed since Sojourner copied it/);
+  assert.equal(opened.length, 1);
+  storage.stop();
+});
+
+test("restore carry-over empties archived records when this device never used storage locations", async () => {
+  sqliteBinaryPath ??= await resolveSqliteBinary();
+  const liveDir = tempDir("sojourner-live-");
+  const livePath = path.join(liveDir, "jobscout.sqlite3");
+  const live = new SqliteClient(livePath, sqliteBinaryPath);
+  await live.exec("CREATE TABLE workspace (id INTEGER);");
+  const staged = await openRecords();
+  await staged.records.insertPending({ id: "foreign-record", provider: "local", locationKey: "D:\\Other", locationLabel: "D:\\Other",
+    remotePath: "Backups/x.jobranger", name: "x.jobranger", size: 1, sha256: "d".repeat(64), kind: "automatic" });
+  await carryOverStorageRecords({ liveDatabasePath: livePath, stagedDatabasePath: staged.databasePath, sqliteBinaryPath });
+  assert.deepEqual(await staged.db.queryAll(`SELECT id FROM ${STORAGE_RECORDS_TABLE};`), []);
+  assert.equal(await live.queryOne(`SELECT name FROM sqlite_master WHERE name = '${STORAGE_RECORDS_TABLE}';`), null,
+    "the live database is only read");
+});
+
+test("OneDrive: a file that replaced Sojourner's copy under the same name is shown unverified and is not restorable", async () => {
+  const onedrive = createFakeOneDrive({ clientId: CLIENT_ID });
+  onedrive.state.accessTokens.add("ms-token");
+  const { storage } = await service({
+    debounceMs: 60_000, fetch: onedrive.fetch,
+    microsoft: cloudPort({ accountId: "fakedrive0123456789", label: "OneDrive (personal account)" }, () => "ms-token"),
+  });
+  await storage.select("onedrive");
+  const outcome = await storage.backUp("manual");
+  let listing = await storage.list();
+  assert.equal(listing.backups[0].status, "verified");
+  assert.equal(listing.backups[0].restorable, true);
+  onedrive.state.folders.get("Backups").delete(outcome.name);
+  onedrive.put("Backups", outcome.name, Buffer.from("a different file with the same name"));
+  listing = await storage.list();
+  assert.equal(listing.backups[0].status, "replaced");
+  assert.equal(listing.backups[0].restorable, false);
+  await assert.rejects(storage.prepareRestore(listing.backups[0].itemId), /replaced the backup Sojourner saved/);
   storage.stop();
 });

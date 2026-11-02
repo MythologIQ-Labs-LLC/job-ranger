@@ -2,7 +2,7 @@ import type {
   StorageProviderKind, StorageRecordKind, StorageRecordStatus,
 } from "../../../src/shared/storage-locations.js";
 import { FEATURE_MIGRATIONS } from "../feature-migrations.cjs";
-import { sql, type SqliteClient } from "../sqlite.cjs";
+import { sql, SqliteClient } from "../sqlite.cjs";
 
 /**
  * SQLite record of every backup and document copy Sojourner made at a storage location
@@ -209,4 +209,28 @@ export function carryOverStatements(liveDatabasePath: string): string {
     "COMMIT;",
     "DETACH DATABASE live_storage;",
   ].join("\n");
+}
+
+async function hasRecordsTable(db: SqliteClient): Promise<boolean> {
+  return (await db.queryOne<{ name: string }>(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${STORAGE_RECORDS_TABLE}';`)) !== null;
+}
+
+/**
+ * BackupService restore carry-over for the storage records. With live records, the staged
+ * table is replaced by them. Without a live table (storage locations never used on this
+ * device), the staged table is emptied: records that arrived inside an archive describe
+ * another device's copies and must never drive retention or verification here.
+ */
+export async function carryOverStorageRecords(input: {
+  liveDatabasePath: string;
+  stagedDatabasePath: string;
+  sqliteBinaryPath: string;
+}): Promise<void> {
+  const staged = new SqliteClient(input.stagedDatabasePath, input.sqliteBinaryPath);
+  if (await hasRecordsTable(new SqliteClient(input.liveDatabasePath, input.sqliteBinaryPath, { readOnly: true }))) {
+    await staged.exec(carryOverStatements(input.liveDatabasePath));
+    return;
+  }
+  if (await hasRecordsTable(staged)) await staged.transaction([`DELETE FROM ${STORAGE_RECORDS_TABLE};`]);
 }

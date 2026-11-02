@@ -119,6 +119,43 @@ function message(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+/**
+ * The label stored in a record. Records live in the workspace database, so they travel in
+ * every backup: they never carry the account e-mail. Cloud labels name the provider only;
+ * the account is added at display time from the live sign-in.
+ */
+export function recordLabel(kind: StorageProviderKind, locationKey: string): string {
+  if (kind === "google") return "Google Drive > Sojourner";
+  if (kind === "onedrive") return "OneDrive > Apps > Sojourner";
+  return locationKey;
+}
+
+/** Documents Sojourner opens or saves from a location: only the kinds it exports. */
+export const OPENABLE_DOCUMENT_EXTENSIONS = [".pdf", ".json"] as const;
+
+export function openableDocumentName(name: string): boolean {
+  const lower = name.toLowerCase();
+  return OPENABLE_DOCUMENT_EXTENSIONS.some((extension) => lower.endsWith(extension));
+}
+
+interface RecordMatch {
+  record: StorageRecord;
+  /** Same remote item (id; locally the path) and size: the copy Sojourner recorded. */
+  exact: boolean;
+}
+
+/**
+ * Matches a file at the location to the record of the copy Sojourner made. A file found
+ * only by path (same name, different item id or size) was replaced after Sojourner copied
+ * it, so it is never treated as Sojourner's verified copy.
+ */
+export function matchRecord(kind: StorageProviderKind, entry: RemoteEntry, records: readonly StorageRecord[]): RecordMatch | null {
+  const samePath = records.filter((record) => record.remotePath === entry.remotePath);
+  const exact = samePath.find((record) => (kind === "local" || record.remoteId === entry.remoteId) && record.size === entry.size);
+  if (exact) return { record: exact, exact: true };
+  return samePath[0] ? { record: samePath[0], exact: false } : null;
+}
+
 function itemKey(provider: StorageProviderKind, entry: RemoteEntry): string {
   return provider === "google" ? entry.remoteId : entry.name;
 }
@@ -169,6 +206,7 @@ export class StorageService {
 
   /** Applies migration 1011, recovers local records and starts watching for changes. */
   async start(): Promise<void> {
+    await this.removeWorkFiles();
     await this.options.records.initialize();
     const config = await this.options.config.load();
     if (!this.options.enabled) return;
@@ -184,6 +222,24 @@ export class StorageService {
       }).catch(() => undefined);
     }
     this.schedule();
+  }
+
+  /**
+   * Removes temporary archives and downloads an earlier session left behind (a quit-flush
+   * timeout, a crash or a power loss mid-backup can leave up to a full archive each).
+   */
+  async removeWorkFiles(): Promise<void> {
+    let names: string[] = [];
+    try {
+      names = await fs.readdir(this.options.userDataDirectory);
+    } catch {
+      return;
+    }
+    for (const name of names) {
+      if (name.startsWith(STORAGE_WORK_PREFIX)) {
+        await fs.rm(path.join(this.options.userDataDirectory, name), { recursive: true, force: true }).catch(() => undefined);
+      }
+    }
   }
 
   stop(): void {
@@ -397,7 +453,8 @@ export class StorageService {
     size: number; sha256: string; kind: StorageRecordKind }): Promise<StorageRecord> {
     const id = randomUUID();
     const record = await this.options.records.insertPending({
-      id, provider: provider.kind, locationKey: await provider.locationKey(), locationLabel: await provider.locationLabel(),
+      id, provider: provider.kind, locationKey: await provider.locationKey(),
+      locationLabel: recordLabel(provider.kind, await provider.locationKey()),
       remotePath: `${input.folder}/${input.name}`, name: input.name, size: input.size, sha256: input.sha256, kind: input.kind,
     });
     let ref;
@@ -674,20 +731,20 @@ export class StorageService {
       const provider = await this.activeProvider();
       const key = await provider.locationKey();
       const records = await this.options.records.forLocation(provider.kind, key);
-      const byRemote = new Map<string, StorageRecord>();
-      for (const record of records) {
-        if (record.remoteId) byRemote.set(`${record.remotePath}|${record.remoteId}`, record);
-        byRemote.set(record.remotePath, byRemote.get(record.remotePath) ?? record);
-      }
       const annotate = (entry: RemoteEntry): StorageLocationItem => {
-        const record = byRemote.get(`${entry.remotePath}|${entry.remoteId}`) ??
-          (provider.kind === "google" ? undefined : byRemote.get(entry.remotePath));
-        const bad = record ? record.status !== "verified" : false;
+        const match = matchRecord(provider.kind, entry, records);
+        const record = match?.record ?? null;
+        // Sojourner's copy, verified: the exact item it recorded, in the verified state.
+        const verified = match !== null && match.exact && record?.status === "verified";
+        // Known bad: Sojourner's copy that never verified, or a file that replaced it.
+        const bad = match !== null && !verified;
         return {
           itemId: `${entry.folder}:${itemKey(provider.kind, entry)}`,
           name: entry.name, size: entry.size, createdAt: entry.createdAt ?? record?.createdAt ?? null, folder: entry.folder,
-          kind: record?.kind ?? null, status: record?.status ?? null,
+          kind: record?.kind ?? null,
+          status: match === null ? null : match.exact ? record!.status : "replaced",
           restorable: entry.folder === "Backups" && entry.name.toLowerCase().endsWith(ARCHIVE_EXTENSION) && !bad,
+          openable: entry.folder === "Documents" && verified && record?.kind === "document" && openableDocumentName(entry.name),
         };
       };
       const backups = await provider.list("Backups");
@@ -714,8 +771,14 @@ export class StorageService {
         currentKey = null;
       }
     }
+    const google = await this.options.google.account().catch(() => null);
+    const microsoft = await this.options.microsoft.account().catch(() => null);
+    const label = (record: StorageRecord): string => {
+      const account = record.provider === "google" ? google : record.provider === "onedrive" ? microsoft : null;
+      return account && account.accountId === record.locationKey ? `${record.locationLabel} (${account.label})` : record.locationLabel;
+    };
     return (await this.options.records.history()).map((record) => ({
-      id: record.id, provider: record.provider, locationLabel: record.locationLabel, name: record.name, size: record.size,
+      id: record.id, provider: record.provider, locationLabel: label(record), name: record.name, size: record.size,
       kind: record.kind, status: record.status, createdAt: record.createdAt, error: record.error,
       current: currentKey === `${record.provider}:${record.locationKey}`,
     }));
@@ -732,10 +795,8 @@ export class StorageService {
     return entry;
   }
 
-  private async recordFor(provider: StorageProvider, entry: RemoteEntry): Promise<StorageRecord | null> {
-    const records = await this.options.records.forLocation(provider.kind, await provider.locationKey());
-    return records.find((record) => record.remotePath === entry.remotePath &&
-      (provider.kind === "local" || record.remoteId === entry.remoteId)) ?? null;
+  private async recordFor(provider: StorageProvider, entry: RemoteEntry): Promise<RecordMatch | null> {
+    return matchRecord(provider.kind, entry, await this.options.records.forLocation(provider.kind, await provider.locationKey()));
   }
 
   /**
@@ -751,7 +812,11 @@ export class StorageService {
       if (entry.folder !== "Backups" || !entry.name.toLowerCase().endsWith(ARCHIVE_EXTENSION)) {
         throw new Error("Only a Sojourner backup (.jobranger) can be restored.");
       }
-      const record = await this.recordFor(provider, entry);
+      const match = await this.recordFor(provider, entry);
+      if (match && !match.exact) {
+        throw new Error("This file replaced the backup Sojourner saved under that name, so Sojourner will not restore from it.");
+      }
+      const record = match?.record ?? null;
       if (record && record.status !== "verified") {
         throw new Error("This backup was never verified, so Sojourner will not restore from it.");
       }
@@ -780,18 +845,28 @@ export class StorageService {
     this.requireEnabled();
     const provider = await this.activeProvider();
     const entry = await this.resolveItem(provider, itemId);
+    const match = await this.recordFor(provider, entry);
+    const record = match?.record ?? null;
+    if (entry.folder !== "Documents" || !openableDocumentName(entry.name) || !match || !match.exact ||
+        !record || record.kind !== "document" || record.status !== "verified") {
+      throw new Error("Sojourner opens only the PDF and JSON documents it copied to this location and verified.");
+    }
     if (provider instanceof LocalFolderProvider) {
-      await io.openPath(provider.absolutePath(entry));
+      const target = provider.absolutePath(entry);
+      const observed = await hashFile(target);
+      if (observed.size !== record.size || observed.sha256 !== record.sha256) {
+        throw new Error("This document changed since Sojourner copied it, so Sojourner did not open it.");
+      }
+      await io.openPath(target);
       return { savedTo: null };
     }
     const target = await io.chooseSavePath(entry.name);
     if (!target) return { savedTo: null };
     return this.enqueue(async () => {
-      const record = await this.recordFor(provider, entry);
       const temporary = `${target}.sojourner-download-${randomUUID()}`;
       try {
         const downloaded = await provider.download(entry, temporary, STORAGE_DOWNLOAD_LIMIT);
-        if (record && (downloaded.size !== record.size || downloaded.sha256 !== record.sha256)) {
+        if (downloaded.size !== record.size || downloaded.sha256 !== record.sha256) {
           throw new Error("This document changed since Sojourner copied it, so it was not saved.");
         }
         await fs.rename(temporary, target);

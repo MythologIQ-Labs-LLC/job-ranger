@@ -15,7 +15,8 @@ const {
 } = load("storage/storage-egress.cjs");
 const { LocalFolderProvider, validateLocalFolder, PARTIAL_PREFIX, authorizedRequest } = load("storage/storage-provider.cjs");
 const { GoogleStorageProvider, GOOGLE_MULTIPART_LIMIT } = load("storage/google-storage-provider.cjs");
-const { OneDriveProvider, ONEDRIVE_SIMPLE_UPLOAD_LIMIT } = load("storage/onedrive-provider.cjs");
+const { OneDriveProvider, ONEDRIVE_SIMPLE_UPLOAD_LIMIT, sessionGrantMs } = load("storage/onedrive-provider.cjs");
+const { startOAuthLoopback } = load("storage/oauth-loopback.cjs");
 const { createFakeGoogleStorage } = require("./support/fake-google-storage.cjs");
 const { createFakeOneDrive } = require("./support/fake-onedrive.cjs");
 
@@ -386,4 +387,92 @@ test("OneDrive refreshes on 401, retries 429 and 5xx, lists, verifies and delete
   assert.equal(await provider.probe(ref), "absent");
   onedrive.state.faults.graph.push("status:503", "status:503", "status:503", "status:503");
   await assert.rejects(provider.list("Backups"), /could not complete/);
+});
+
+// ------------------------------------------------------------------ security review fixes
+
+test("a slow OneDrive upload session stays open: the grant is renewed after every accepted chunk", async () => {
+  const onedrive = createFakeOneDrive();
+  let clock = Date.now();
+  // Every chunk takes 50 minutes on this "slow link"; the first grant alone lasts about 60.
+  const slowFetch = async (url, init) => {
+    const response = await onedrive.fetch(url, init);
+    if (String(url).includes("/up/")) clock += 50 * 60_000;
+    return response;
+  };
+  const egress = createStorageEgress({ fetch: slowFetch, now: () => clock });
+  onedrive.state.accessTokens.add("ms-token");
+  const provider = new OneDriveProvider({
+    token: async () => "ms-token", invalidate: () => undefined, accountId: "fakedrive0123456789",
+    accountLabel: "OneDrive", egress, retry: fastRetry,
+  });
+  const file = sampleFile(2 * 5 * 1024 * 1024 + 1024);
+  const ref = await provider.upload(request(file).value);
+  assert.equal(onedrive.state.counts.chunks, 3);
+  assert.equal(await provider.verify(ref, file), true);
+  assert.equal(sessionGrantMs(new Date(Date.now() + 48 * 3_600_000).toISOString()), 24 * 3_600_000, "bounded to a day");
+  assert.equal(sessionGrantMs(new Date(Date.now() - 1000).toISOString()), 15 * 60_000, "never shorter than 15 minutes");
+  assert.equal(sessionGrantMs(undefined), 60 * 60_000);
+});
+
+test("the OneDrive listing follows app-folder pages and returns the newest backups first", async () => {
+  const onedrive = createFakeOneDrive();
+  const { provider } = oneDriveProvider(onedrive);
+  await provider.ensureFolders();
+  for (let index = 0; index < 450; index += 1) {
+    onedrive.put("Backups", `Sojourner-backup-automatic-${String(index).padStart(4, "0")}.jobranger`, Buffer.from(String(index)));
+  }
+  const listed = await provider.list("Backups");
+  assert.equal(listed.entries.length, 450);
+  assert.equal(listed.truncated, false);
+  assert.equal(listed.entries[0].name, "Sojourner-backup-automatic-0449.jobranger", "newest first");
+  onedrive.state.faults.foreignNextLink = true;
+  const foreign = await provider.list("Backups");
+  assert.equal(foreign.entries.length, 200, "a next page outside the app folder is not followed");
+  assert.equal(foreign.truncated, true);
+  assert.ok(onedrive.state.requests.every((item) => !item.path.includes("/items/")));
+});
+
+test("a folder reached through a junction into the user-data folder is refused", async (t) => {
+  const userData = tempDir("sojourner-userdata-");
+  fs.mkdirSync(path.join(userData, "data"), { recursive: true });
+  const outside = tempDir("sojourner-junction-");
+  const link = path.join(outside, "looks-outside");
+  try {
+    fs.symlinkSync(path.join(userData, "data"), link, "junction");
+  } catch {
+    t.skip("junctions or symbolic links are not available here");
+    return;
+  }
+  await assert.rejects(validateLocalFolder(path.join(link, "Sojourner"), userData), /outside Sojourner's own data folder/);
+  await assert.rejects(validateLocalFolder(link, userData), /outside Sojourner's own data folder/);
+  assert.equal(fs.existsSync(path.join(userData, "data", "Sojourner")), false, "nothing is created inside the data folder");
+  // A real folder elsewhere is accepted.
+  assert.ok(await validateLocalFolder(path.join(outside, "Real", "Sojourner"), userData));
+});
+
+test("the sign-in receiver never runs IPv4-only while another program holds [::1] on its port", async (t) => {
+  const http = require("node:http");
+  const squatter = http.createServer((_request, response) => response.end("squatter"));
+  try {
+    await new Promise((resolve, reject) => {
+      squatter.once("error", reject);
+      squatter.listen({ port: 0, host: "::1" }, resolve);
+    });
+  } catch {
+    t.skip("no IPv6 loopback on this machine");
+    return;
+  }
+  const squatted = squatter.address().port;
+  try {
+    const loopback = await startOAuthLoopback({ expectedState: "s", timeoutMs: 5_000, providerName: "OneDrive", testPorts: [squatted] });
+    const port = Number(new URL(loopback.redirectUri).port);
+    assert.notEqual(port, squatted, "a fresh port pair was chosen");
+    assert.match(loopback.redirectUri, /^http:\/\/localhost:\d+$/);
+    const answer = await fetch(`http://[::1]:${port}/?state=s&code=abc`);
+    assert.equal(answer.status, 200, "the IPv6 side belongs to Sojourner's receiver");
+    assert.equal(await loopback.code, "abc");
+  } finally {
+    squatter.close();
+  }
 });

@@ -228,24 +228,49 @@ function inside(parent: string, child: string): boolean {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+/** The real (native) path of `target`, resolving junctions, links and 8.3 names of its nearest existing ancestor. */
+export async function realLocation(target: string): Promise<string> {
+  const resolved = path.resolve(target);
+  const pending: string[] = [];
+  let current = resolved;
+  for (;;) {
+    try {
+      const real = await fs.realpath(current);
+      return pending.length ? path.join(real, ...pending.reverse()) : real;
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) return resolved;
+      pending.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+function overlaps(a: string, b: string): boolean {
+  return inside(a, b) || inside(b, a);
+}
+
 /**
  * Validates a folder for "This computer": an absolute, existing (or creatable) real
- * directory that is not inside Sojourner's own user-data folder, so a restore can never
- * remove the backups it restores from.
+ * directory that is not inside Sojourner's own user-data folder (and does not contain
+ * it), so a restore can never remove the backups it restores from. The check runs on the
+ * lexical path and on the native real path (junctions, symbolic links and 8.3 short names
+ * resolved) both before the folder is created and after.
  */
 export async function validateLocalFolder(folder: string, userDataDirectory: string): Promise<string> {
   if (typeof folder !== "string" || !folder.trim() || !path.isAbsolute(folder) || folder.length > 1024 || /[\x00-\x1f]/.test(folder)) {
     throw new StorageProviderError("invalid", "Choose a folder on this computer.");
   }
   const resolved = path.resolve(folder);
-  if (inside(userDataDirectory, resolved) || inside(resolved, userDataDirectory)) {
-    throw new StorageProviderError("invalid", "Choose a folder outside Sojourner's own data folder.");
-  }
+  const refuse = () => new StorageProviderError("invalid", "Choose a folder outside Sojourner's own data folder.");
+  const realUserData = await realLocation(userDataDirectory);
+  if (overlaps(userDataDirectory, resolved) || overlaps(realUserData, await realLocation(resolved))) throw refuse();
   await fs.mkdir(resolved, { recursive: true });
   const stat = await fs.lstat(resolved);
   if (!stat.isDirectory() || stat.isSymbolicLink()) {
     throw new StorageProviderError("invalid", "The storage folder must be a normal folder, not a link.");
   }
+  if (overlaps(realUserData, await fs.realpath(resolved))) throw refuse();
   return resolved;
 }
 

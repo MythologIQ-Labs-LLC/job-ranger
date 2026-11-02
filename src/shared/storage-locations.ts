@@ -86,10 +86,15 @@ export interface StorageLocationItem {
   folder: "Backups" | "Documents";
   /** Sojourner on this device recorded it; null for a file another device created. */
   kind: StorageRecordKind | null;
-  /** Recorded status on this device; null when not recorded here. */
-  status: StorageRecordStatus | null;
+  /**
+   * Recorded status on this device; "replaced" when a different file now has the name of
+   * a copy Sojourner made (never treated as verified); null when not recorded here.
+   */
+  status: StorageRecordStatus | "replaced" | null;
   /** Only backups that are not known-bad may be restored (they are validated again). */
   restorable: boolean;
+  /** Only Sojourner's own verified PDF or JSON document copies can be opened or saved. */
+  openable: boolean;
 }
 
 export interface StorageLocationListing {
