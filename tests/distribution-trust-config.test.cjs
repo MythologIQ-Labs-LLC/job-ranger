@@ -75,9 +75,9 @@ async function run() {
     assert.ok(signer.ARTIFACT_SIGNING.ExcludeCredentials.includes(credential), `${credential} is excluded`);
   }
   assert.ok(!signer.ARTIFACT_SIGNING.ExcludeCredentials.includes("AzureCliCredential"), "the Azure CLI credential stays allowed");
-  assert.deepEqual(signer.signToolArgs("out/Job Ranger.exe", "client/dlib.dll", "metadata.json"), [
+  assert.deepEqual(signer.signToolArgs("out/Sojourner.exe", "client/dlib.dll", "metadata.json"), [
     "sign", "/v", "/fd", "SHA256", "/tr", "http://timestamp.acs.microsoft.com", "/td", "SHA256",
-    "/dlib", "client/dlib.dll", "/dmdf", "metadata.json", "out/Job Ranger.exe",
+    "/dlib", "client/dlib.dll", "/dmdf", "metadata.json", "out/Sojourner.exe",
   ]);
   assert.equal(signer.resolveSigning({}), null);
   assert.throws(() => signer.signFile("x.exe", {}), /not configured/);
@@ -134,7 +134,8 @@ async function run() {
   let gatedSteps = 0;
   let signingLines = 0;
   for (const job of jobs) {
-    const jobGated = /^  [\w-]+:\n    needs: [\w-]+\n    if: github\.event_name == 'push' \|\| inputs\.publish\n/.test(job);
+    const jobGated =
+      /^  [\w-]+:\n    needs: [\w-]+\n    if: (?:github\.event_name == 'push' \|\| inputs\.publish|github\.event_name == 'workflow_dispatch' && inputs\.publish)\n/.test(job);
     for (const step of job.split(/\n(?=      - )/).slice(1)) {
       if (/gh release|gh api[^\n]*releases|action-gh-release|attest|git push|git tag/.test(step)) {
         assert.ok(jobGated || step.includes("\n        if: env.PUBLISH_RELEASE == 'true'\n"), `ungated publishing step:\n${step.slice(0, 200)}`);
@@ -160,6 +161,22 @@ async function run() {
   assert.match(workflow, /node scripts\/windows-sign\.cjs build\/sqlite\/sqlite3\.exe/);
   assert.match(workflow, /verify-windows-distribution\.ps1 -RequireSigned:\$requireSigned/);
   assert.match(workflow, /\[0-9\]\+\$ && "\$PUBLISH_RELEASE" == "true" \]\]/);
+  // Sojourner releases (#363): titled Sojourner, alpha/beta/rc tags are GitHub pre-releases, and the
+  // signed direct-download installer is Sojourner-v<version>-windows-x64.exe.
+  assert.doesNotMatch(workflow, /--title "Job Ranger/);
+  assert.equal((workflow.match(/--title "Sojourner \$tag"/g) || []).length, 6);
+  assert.equal(
+    (workflow.match(/\n          if \[\[ "\$tag" == \*-alpha\* \|\| "\$tag" == \*-beta\* \|\| "\$tag" == \*-rc\.\* \]\]; then\n            create_args=\(--title "Sojourner \$tag" --generate-notes --prerelease\)\n/g) || []).length,
+    2,
+    "alpha, beta and rc tags create pre-releases",
+  );
+  assert.doesNotMatch(workflow, /release\/Job\*windows\*\.exe/);
+  assert.match(workflow, /subject-path: release\/Sojourner\*windows\*\.exe\n/);
+  // A pushed v* tag never builds or publishes the Microsoft Store package; it stays available
+  // through a manual dispatch with platform windows-store only.
+  assert.match(workflow, /\n  store-package:\n    if: github\.event_name == 'workflow_dispatch' && inputs\.platform == 'windows-store'\n/);
+  assert.match(workflow, /\n  publish-store-package:\n    needs: store-package\n    if: github\.event_name == 'workflow_dispatch' && inputs\.publish\n/);
+  assert.match(workflow, /\non:\n  push:\n    tags:\n      - "v\*"\n  workflow_dispatch:\n/, "triggers are unchanged");
   assert.equal((workflow.match(/\n          persist-credentials: false\n/g) || []).length, 2);
   assert.equal((workflow.match(/name: Keep build-only candidate as a workflow artifact\n        if: env\.PUBLISH_RELEASE != 'true'\n/g) || []).length, 2);
 

@@ -16,7 +16,7 @@ on:
         default: false
         type: boolean
       platform:
-        description: "Which release assets to build (macOS native builds are historical/manual only)"
+        description: "Which release assets to build (macOS native builds are historical/manual only; the Microsoft Store package builds only when windows-store is chosen, never with all or a tag push)"
         required: true
         default: windows
         type: choice
@@ -185,7 +185,7 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: release/Job*windows*.exe
+          subject-path: release/Sojourner*windows*.exe
 
       - name: Ensure GitHub release exists
         if: env.PUBLISH_RELEASE == 'true'
@@ -199,10 +199,11 @@ jobs:
             exit 0
           fi
 
-          if [[ "$tag" == *-rc.* || "$tag" == *-beta* ]]; then
-            create_args=(--title "Job Ranger $tag" --generate-notes --prerelease)
+          # Alpha, beta and release-candidate tags (v1.0.0-alpha.1) are GitHub pre-releases.
+          if [[ "$tag" == *-alpha* || "$tag" == *-beta* || "$tag" == *-rc.* ]]; then
+            create_args=(--title "Sojourner $tag" --generate-notes --prerelease)
           else
-            create_args=(--title "Job Ranger $tag" --generate-notes)
+            create_args=(--title "Sojourner $tag" --generate-notes)
           fi
 
           if ! gh release create "$tag" "${create_args[@]}"; then
@@ -216,8 +217,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.release_tag.outputs.tag }}" \
-            release/Job*windows*.exe \
-            release/Job*windows*.exe.blockmap \
+            release/Sojourner*windows*.exe \
+            release/Sojourner*windows*.exe.blockmap \
             release/latest.yml \
             build/trust/windows-signing.json \
             build/trust/windows-package-smoke.json \
@@ -233,8 +234,8 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: |
-            release/Job*windows*.exe
-            release/Job*windows*.exe.blockmap
+            release/Sojourner*windows*.exe
+            release/Sojourner*windows*.exe.blockmap
             build/trust/windows-signing.json
             build/trust/windows-package-smoke.json
             build/trust/windows-SHA256SUMS.txt
@@ -367,10 +368,11 @@ jobs:
             exit 0
           fi
 
-          if [[ "$tag" == *-rc.* || "$tag" == *-beta* ]]; then
-            create_args=(--title "Job Ranger $tag" --generate-notes --prerelease)
+          # Alpha, beta and release-candidate tags (v1.0.0-alpha.1) are GitHub pre-releases.
+          if [[ "$tag" == *-alpha* || "$tag" == *-beta* || "$tag" == *-rc.* ]]; then
+            create_args=(--title "Sojourner $tag" --generate-notes --prerelease)
           else
-            create_args=(--title "Job Ranger $tag" --generate-notes)
+            create_args=(--title "Sojourner $tag" --generate-notes)
           fi
 
           if ! gh release create "$tag" "${create_args[@]}"; then
@@ -384,8 +386,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.release_tag.outputs.tag }}" \
-            release/Job*macos*.dmg \
-            release/Job*macos*.zip \
+            release/Sojourner*macos*.dmg \
+            release/Sojourner*macos*.zip \
             build/trust/macos-signing.txt \
             build/trust/macos-package-smoke.json \
             build/trust/macos-SHA256SUMS.txt \
@@ -400,15 +402,17 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: |
-            release/Job*macos*.dmg
-            release/Job*macos*.zip
+            release/Sojourner*macos*.dmg
+            release/Sojourner*macos*.zip
             build/trust/macos-signing.txt
             build/trust/macos-package-smoke.json
             build/trust/macos-SHA256SUMS.txt
             build/trust/macos-release-manifest.json
 
+  # The Microsoft Store package is not a shipping channel (ARCH-001): a pushed v* tag never
+  # builds or publishes it. It runs only on a manual dispatch with platform windows-store.
   store-package:
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows-store'
+    if: github.event_name == 'workflow_dispatch' && inputs.platform == 'windows-store'
     uses: ./.github/workflows/windows-store-package.yml
     with:
       ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -416,7 +420,7 @@ jobs:
 
   publish-store-package:
     needs: store-package
-    if: github.event_name == 'push' || inputs.publish
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -443,7 +447,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Job Ranger $tag" --generate-notes --prerelease
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
           gh release upload "$tag" store/release/Job*windows-store*.appx store/build/trust/windows-store-* --clobber
 
   web:
@@ -481,5 +485,5 @@ jobs:
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Job Ranger $tag" --generate-notes --prerelease
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
           gh release upload "$tag" web/release/job-ranger-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber

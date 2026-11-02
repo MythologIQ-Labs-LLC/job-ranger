@@ -5,9 +5,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PLATFORM_PATTERNS = {
-  windows: /^Job.*windows.*\.exe$/i,
+  // The direct-download app is named Sojourner (Sojourner-v<version>-windows-x64.exe);
+  // the Store package keeps its historical Job Ranger identity (electron-builder.store.cjs).
+  windows: /^Sojourner.*windows.*\.exe$/i,
   "windows-store": /^Job.*windows-store.*\.appx$/i,
-  macos: /^Job.*macos.*\.(?:dmg|zip)$/i,
+  macos: /^Sojourner.*macos.*\.(?:dmg|zip)$/i,
   // The demo flavor's archive (job-ranger-web-demo-v*.zip) is never the web release artifact.
   web: /^job-ranger-web-v\d[^/\\]*\.zip$/i,
 };
