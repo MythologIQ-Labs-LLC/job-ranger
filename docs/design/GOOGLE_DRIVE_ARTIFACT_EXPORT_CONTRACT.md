@@ -1,10 +1,38 @@
 # Sojourner Google Drive career artifact export (#314)
 
-**Implementation candidate updated 2026-10-28. Not released or live-provider qualified.** This branch now includes a real, behind-configuration **PWA** path for exported truth-gated resume PDFs: `resume:read-verified-artifact-for-export` reads only previously verified managed PDFs and checks the stored SHA-256; browser-only GIS authorization requests `drive.file`; Drive `about.get` verifies account binding; the user reviews file, digest, Google account and My Drive root destination before one-click approval; IndexedDB journals operation and approval IDs before POST; Drive v3 multipart upload uses app-private operation metadata; `files.get` metadata and binary readback must match before the UI claims verified. A failed/ambiguous upload never silently retries. Default unconfigured and fictional-demo PWA builds do not enable this capability or the Google network CSP. Individual PDF multipart uploads are intentionally capped at **5 MB**; larger/resumable documents are outside this candidate.
+**Normative PWA Drive export contract (PRs #315 + #356, merged as one unit). Updated 2026-11-02. Off by default; not released or live-provider qualified.** Google authorization for this contract is specified in [the isolated OAuth helper document](../security/SOJOURNER_DRIVE_OAUTH_ISOLATION.md). Live Google acceptance remains pending #252. The sections after the divider are the original proposal, retained for history.
 
-Existing `src/shared/artifact-export-approval.ts` and `artifact-export-journal.ts` remain the authority and state-machine boundary, not merely comments or an isolated document design. Credential tokens remain private in the browser authorization controller. Root-folder alias resolution is performed before upload for exact parent readback.
+## PWA contract
 
-**Qualification outstanding:** exact-branch automated tests, adversarial review of IPC/artifact authentication and journal recovery, real Google Web OAuth client configuration (#252), actual PWA browser OAuth+Drive file creation/readback on an approved HTTPS origin, and post-merge main acceptance. No public deployment or Studio publication is authorized here. Do not mark #314 closed without a real account and file proof.
+**Scope and default.** The PWA can save one exported, truth-gated resume PDF at a time to the top level of the user's My Drive. The capability exists only in a standard-flavor build configured with `VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN` (`src/pwa/build/drive-build-config.ts`). An unconfigured build, and the demo flavor whatever its configuration, renders no Drive UI, adds no Google endpoint to its CSP and makes no Google request (`tests/pwa/drive-default.spec.ts`). There is no automatic or background syncing. Individual PDF multipart uploads are capped at **5 MB**.
+
+**Authorization.** Authorization happens only on the separately hosted OAuth helper origin (#264), requesting `https://www.googleapis.com/auth/drive.file` only. Google's sign-in script never runs on the Career Ops origin: there is no main-origin GIS loader, and no CSP option allows `accounts.google.com` there (`tests/pwa-drive-csp.test.mjs`). The access token is held only in volatile memory by `IsolatedDriveAuthorization`.
+
+**Consent and data.** `resume:read-verified-artifact-for-export` reads only a previously verified managed PDF and checks its stored SHA-256. Drive `about.get` binds the Google account (`permissionId`). The user reviews file, size, digest, Google account and destination, then approves exactly that PDF with one click (`src/shared/artifact-export-approval.ts`). The account is verified again at confirmation; a change refuses the upload. Nothing other than the approved PDF bytes and their Drive metadata (name, MIME type, parent, the app-private operation marker, the reserved file ID) leaves the device.
+
+**Durable journal and idempotent upload.** `src/shared/artifact-export-journal.ts` (record schema **v2**) and its IndexedDB store `src/pwa/drive/drive-journal-idb.ts` are the state-machine authority. The sequence for one approval is:
+
+1. Reserve one Drive file ID with `files.generateIds?count=1&space=drive&type=files`. This is read-only; nothing is created.
+2. Journal the operation as `prepared`, with approval ID, account, artifact, digest and the `reservedFileId`. A prepared row may be cancelled by the user.
+3. Resolve the `root` alias to its opaque folder ID (read-only), then durably commit `uploading`. The journal refuses `prepared -> uploading` for a row without a reserved ID.
+4. Send one multipart `files.create` with `id = reservedFileId`. A **409** means a file with that ID already exists (an earlier attempt of this operation landed): it is verified, never re-created.
+5. Read back metadata (name, MIME type, parent, operation marker, size) and bytes. Only a SHA-256 match with the approved digest is shown as verified, with a validated Drive link.
+
+**Recovery.** Every unresolved operation (`prepared`, `uploading`, `accepted_unverified`, `unknown_remote_outcome`, `verification_failed`) blocks a new upload of the same artifact to the same Google account, across reloads and tabs. A failed or ambiguous upload is never retried automatically. "Check prior Drive exports" reconciles read-only, using the verified account that journaled the row:
+
+- With a reserved ID, a strongly consistent `files.get(reservedFileId)` decides. A 200 response leads to metadata and byte verification, then `verified`. Only an explicit **404** allows `uploading | unknown_remote_outcome -> failed` with resolution `reserved_id_absent`. This clears a crash before POST, or a request that failed before sending bytes. Any other answer (network, 401, 403, 5xx) leaves the row blocked.
+- Schema-v1 rows, written before reserved IDs existed, fall back to the eventually consistent `appProperties` search. An empty result never clears anything.
+- A row that cannot be resolved can be moved to the terminal `abandoned` state only by an explicit user action, after a warning that Drive may already hold a copy and a new export may create a second one. The receipt is kept and nothing in Drive is deleted.
+
+States: `prepared -> uploading -> accepted_unverified -> verified`, plus `cancelled` (prepared only), `unknown_remote_outcome`, `verification_failed`, `failed` and `abandoned`. `failed` requires a recorded resolution: `provider_rejected` (a definitive 4xx other than 408/409 on create) or `reserved_id_absent` (a confirmed 404 of the reserved ID). `abandoned` requires `user_abandoned`. `validateJournalRecord`, `advanceExportReceipt` and `checkJournalTransition` enforce these rules, and the IndexedDB `compareAndSwap` re-checks them inside its transaction. The reserved ID is immutable, and any remote ID must equal it.
+
+**Compatibility.** The IndexedDB database name and version (`job-ranger.drive-artifact-export-journal.v1`, version 1) are unchanged. Every read goes through `upgradeJournalRecord`, which upgrades v1 rows to v2 with `reservedFileId: null`. A v1 `failed` row, which only a provider rejection could produce, becomes `provider_rejected`. A v1 row is rewritten as v2 on its next legal transition. A v1 `prepared` row can be cancelled but never uploaded.
+
+**Residual risk.** A 404 for the reserved ID proves the create had not landed at the time of the read. A request that is still in flight elsewhere (for example from a tab that has not unloaded yet) could land later. A new export uses a new reserved ID, so the worst outcome is a second, unverified copy in Drive, never an overwritten file or a false "verified".
+
+**Tests.** `tests/artifact-export-approval.test.mjs`, `tests/artifact-export-journal.test.mjs`, `tests/google-drive-transport.test.mjs`, `tests/pwa/drive-journal-concurrency.spec.ts` (real IndexedDB, including v1 rows) and `tests/pwa/drive-export-component.spec.ts` (the real component in a configured build against a routed helper and Drive).
+
+**Qualification outstanding:** real Google Web OAuth client and helper deployment (#252), actual browser OAuth and Drive file creation and readback on an approved HTTPS origin pair, independent adversarial review, and post-merge main acceptance. No public deployment or Studio publication is authorized here. Do not close #314 without a real account and file proof.
 
 ---
 

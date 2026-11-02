@@ -3,10 +3,17 @@
  * No OAuth, permission to upload, local journal, persistence or automatic retries here.
  * Caller MUST consume an approval and durably reserve an operation before calling.
  * Network and provider outcomes are never silently retried after an ambiguous POST.
+ *
+ * Idempotency (#314): before any upload the caller reserves a Drive file ID with
+ * files.generateIds and journals it. files.create is sent with that ID, so a second
+ * create for the same operation is refused by Google (409) instead of producing a
+ * duplicate, and files.get on the reserved ID (strongly consistent, unlike the
+ * appProperties search) later proves whether the create landed (200) or not (404).
  */
 export const DRIVE_FILE_UPLOAD_LIMIT = 5 * 1024 * 1024;
 const UPLOAD_ENDPOINT = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,parents,size,appProperties,webViewLink";
 const FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files";
+const GENERATE_IDS_ENDPOINT = `${FILES_ENDPOINT}/generateIds?count=1&space=drive&type=files`;
 const ID = /^[A-Za-z0-9_-]{1,160}$/;
 const OPERATION = /^[A-Za-z0-9_-]{1,100}$/;
 const HASH = /^[0-9a-f]{64}$/;
@@ -34,13 +41,15 @@ export interface ApprovedDriveFile {
   destinationId: string;
   bytes: Blob;
   approvedSha256: string;
+  /** From reserveDriveFileId, durably journaled before the caller commits "uploading". */
+  reservedFileId: string;
 }
 
 export type DriveUploadOutcome =
   | { status: "verified"; remoteId: string; name: string; sha256: string; openUrl: string }
   | { status: "verification_failed"; remoteId: string; reason: string }
   | { status: "unknown_remote_outcome"; remoteId: string | null; reason: string }
-  /** Google definitively refused the create request (4xx other than 408): no file was created. */
+  /** Google definitively refused the create request (4xx other than 408/409): no file was created. */
   | { status: "rejected"; remoteId: null; category: DriveTransportError["category"]; reason: string };
 
 type Fetch = typeof fetch;
@@ -57,7 +66,8 @@ function validate(input: ApprovedDriveFile): void {
       input.name.length > 180 || input.name.trim() !== input.name ||
       !input.name.toLowerCase().endsWith(ext) || /[\\/\x00-\x1f\x7f]/.test(input.name) ||
       !(input.bytes instanceof Blob) || input.bytes.size === 0 ||
-      input.bytes.size > DRIVE_FILE_UPLOAD_LIMIT || !HASH.test(input.approvedSha256)) {
+      input.bytes.size > DRIVE_FILE_UPLOAD_LIMIT || !HASH.test(input.approvedSha256) ||
+      typeof input.reservedFileId !== "string" || !ID.test(input.reservedFileId)) {
     throw new DriveTransportError("invalid", "The approved Drive export is invalid or exceeds the 5 MB upload limit.");
   }
 }
@@ -76,12 +86,78 @@ function rejectedPost(status: number): DriveUploadOutcome {
   return { status: "rejected", remoteId: null, category: "invalid",
     reason: "Google Drive rejected the upload request. Nothing was created in Drive; your local document is unchanged." };
 }
+function validToken(accessToken: unknown): accessToken is string {
+  return typeof accessToken === "string" && accessToken.length > 0 &&
+    accessToken.length <= 8192 && !/[\r\n]/.test(accessToken);
+}
+
+/**
+ * Reserve one Drive file ID for a single approved export (files.generateIds). Read-only:
+ * nothing is created in Drive. The caller must journal the ID before any upload.
+ */
+export async function reserveDriveFileId(accessToken: string, http: Fetch = fetch): Promise<string> {
+  if (!validToken(accessToken)) {
+    throw new DriveTransportError("invalid", "Google Drive authorization is missing or invalid. Nothing was uploaded.");
+  }
+  let response: Response;
+  try {
+    response = await http(GENERATE_IDS_ENDPOINT, {
+      headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", redirect: "error",
+    });
+  } catch {
+    throw new DriveTransportError("invalid", "Google Drive could not reserve a file for this export. Nothing was uploaded.");
+  }
+  if (!response.ok) {
+    throw new DriveTransportError(response.status === 429 ? "quota" : "action_needed",
+      "Google Drive did not reserve a file for this export. Nothing was uploaded.");
+  }
+  let body: { ids?: unknown };
+  try { body = await response.json(); } catch {
+    throw new DriveTransportError("invalid", "Google Drive returned an invalid file reservation. Nothing was uploaded.");
+  }
+  const ids = body?.ids;
+  if (!Array.isArray(ids) || ids.length !== 1 || typeof ids[0] !== "string" || !ID.test(ids[0])) {
+    throw new DriveTransportError("invalid", "Google Drive returned an invalid file reservation. Nothing was uploaded.");
+  }
+  return ids[0];
+}
+
+/**
+ * Strongly consistent probe of one reserved file ID. "absent" is returned ONLY for an
+ * explicit 404 from files.get, which (for an app-reserved ID, checked with the same
+ * verified account that journaled it) proves the create never landed. Every other
+ * answer, including network failures, 401/403 and 5xx, is "unknown".
+ */
+export async function inspectReservedDriveFile(
+  accessToken: string, reservedFileId: string, http: Fetch = fetch,
+): Promise<"found" | "absent" | "unknown"> {
+  if (!validToken(accessToken) || typeof reservedFileId !== "string" || !ID.test(reservedFileId)) {
+    throw new DriveTransportError("invalid", "Invalid Drive export reconciliation request.");
+  }
+  let response: Response;
+  try {
+    response = await http(`${FILES_ENDPOINT}/${encodeURIComponent(reservedFileId)}?fields=id&supportsAllDrives=false`, {
+      headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", redirect: "error",
+    });
+  } catch { return "unknown"; }
+  if (response.status === 404) return "absent";
+  if (!response.ok) return "unknown";
+  try {
+    const data = await response.json();
+    return data && data.id === reservedFileId ? "found" : "unknown";
+  } catch { return "unknown"; }
+}
+
 function safeOpenUrl(id: string): string {
   if (!ID.test(id)) throw new DriveTransportError("invalid", "Google Drive returned an invalid file identifier.");
   return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
 }
 
-/** A single Drive files.create POST followed by provider metadata and byte readback. */
+/**
+ * A single Drive files.create POST with the reserved file ID, followed by provider
+ * metadata and byte readback. A 409 means a file with the reserved ID already exists
+ * (an earlier attempt of this operation landed): it is verified, never re-created.
+ */
 export async function uploadApprovedDriveFile(
   input: ApprovedDriveFile, http: Fetch = fetch,
   beforePost?: () => Promise<void>,
@@ -120,6 +196,7 @@ export async function uploadApprovedDriveFile(
   }
   const boundary = `sojourner_${crypto.randomUUID().replaceAll("-", "")}`;
   const metadata = {
+    id: input.reservedFileId,
     name: input.name,
     mimeType: input.mimeType,
     parents: [destinationId],
@@ -149,25 +226,25 @@ export async function uploadApprovedDriveFile(
   } catch {
     // Browser/network errors after sending bytes cannot prove Google did not create a file.
     return { status: "unknown_remote_outcome", remoteId: null,
-      reason: "The upload connection was interrupted. Check Drive before approving another export." };
+      reason: "The upload connection was interrupted. Check prior Drive exports before approving another export." };
   }
-  if (!created.ok) {
+  if (!created.ok && created.status !== 409) {
     if (created.status >= 500 || created.status === 408) {
       return { status: "unknown_remote_outcome", remoteId: null,
-        reason: "Google Drive did not confirm whether it created the file. Check Drive before another export." };
+        reason: "Google Drive did not confirm whether it created the file. Check prior Drive exports before another export." };
     }
     return rejectedPost(created.status);
   }
-  let file: { id?: unknown };
-  try { file = await created.json(); } catch {
-    return { status: "unknown_remote_outcome", remoteId: null,
-      reason: "Google accepted the request but returned no usable file receipt. Do not automatically upload again." };
+  if (created.ok) {
+    // The reserved ID is authoritative; a parseable receipt must agree with it.
+    let file: { id?: unknown } | null = null;
+    try { file = await created.json(); } catch { file = null; }
+    if (file && typeof file === "object" && file.id !== undefined && file.id !== input.reservedFileId) {
+      return { status: "unknown_remote_outcome", remoteId: null,
+        reason: "Google did not confirm the reserved file identifier. Do not automatically upload again." };
+    }
   }
-  if (!file || typeof file.id !== "string" || !ID.test(file.id)) {
-    return { status: "unknown_remote_outcome", remoteId: null,
-      reason: "Google did not return a valid file identifier. Do not automatically upload again." };
-  }
-  const remoteId = file.id;
+  const remoteId = input.reservedFileId;
   const url = `${FILES_ENDPOINT}/${encodeURIComponent(remoteId)}`;
   let details: Response;
   try {
@@ -210,9 +287,11 @@ export async function uploadApprovedDriveFile(
 }
 
 /**
- * Reconcile an ambiguous POST using the app-private operation marker.
- * A zero-result search cannot prove that an earlier upload never completed;
- * NEVER use this result to launch an automatic second POST.
+ * FALLBACK ONLY for schema-v1 journal rows, which predate reserved file IDs: reconcile
+ * an ambiguous POST using the app-private operation marker. The appProperties search is
+ * eventually consistent, so a zero-result search cannot prove that an earlier upload
+ * never completed; NEVER use this result to launch an automatic second POST or to mark
+ * an operation failed. Rows with a reserved ID use inspectReservedDriveFile instead.
  */
 export async function findCreatedDriveFile(
   accessToken: string, operationId: string, http: Fetch = fetch,

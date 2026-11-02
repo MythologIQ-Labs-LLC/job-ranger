@@ -75,4 +75,29 @@ describe("Google Drive artifact export, local-only security contract", () => {
     const unknown = advanceExportReceipt(receipt, "unknown_remote_outcome");
     assert.throws(() => advanceExportReceipt(unknown, "uploading"), /reconciliation/);
   });
+  it("failed requires proof that Drive holds no file; abandoned requires an explicit user resolution", () => {
+    const uploading = { operationId: "op:1", proposalId: "prop:1", status: "uploading",
+      bytesSha256: hash, remoteId: null, verifiedSha256: null };
+    assert.throws(() => advanceExportReceipt(uploading, "failed"), /proof/);
+    assert.throws(() => advanceExportReceipt(uploading, "failed", null, null, "user_abandoned"), /proof/);
+    assert.equal(advanceExportReceipt(uploading, "failed", null, null, "provider_rejected").resolution, "provider_rejected");
+    assert.equal(advanceExportReceipt(uploading, "failed", null, null, "reserved_id_absent").status, "failed");
+    const unknown = advanceExportReceipt(uploading, "unknown_remote_outcome");
+    // An ambiguous POST can only fail on a confirmed 404 of its reserved Drive file ID.
+    assert.throws(() => advanceExportReceipt(unknown, "failed", null, null, "provider_rejected"), /proof/);
+    assert.equal(advanceExportReceipt(unknown, "failed", null, null, "reserved_id_absent").status, "failed");
+    assert.throws(() => advanceExportReceipt(unknown, "abandoned"), /explicit user/);
+    assert.equal(advanceExportReceipt(unknown, "abandoned", null, null, "user_abandoned").status, "abandoned");
+    const accepted = advanceExportReceipt(uploading, "accepted_unverified", "file:1");
+    assert.throws(() => advanceExportReceipt(accepted, "failed", null, null, "reserved_id_absent"), /transition/);
+    const mismatch = advanceExportReceipt(accepted, "verification_failed", "file:1");
+    assert.equal(advanceExportReceipt(mismatch, "abandoned", "file:1", null, "user_abandoned").status, "abandoned");
+    assert.throws(() => advanceExportReceipt(mismatch, "verified", "file:1", hash, "user_abandoned"), /resolution/);
+    const prepared = { ...uploading, status: "prepared" };
+    assert.throws(() => advanceExportReceipt(prepared, "abandoned", null, null, "user_abandoned"), /transition/);
+    const abandoned = advanceExportReceipt(unknown, "abandoned", null, null, "user_abandoned");
+    for (const next of ["uploading", "verified", "failed", "cancelled", "unknown_remote_outcome"]) {
+      assert.throws(() => advanceExportReceipt(abandoned, next, "file:1", hash, "reserved_id_absent"), /transition/);
+    }
+  });
 });

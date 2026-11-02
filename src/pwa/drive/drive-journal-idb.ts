@@ -3,25 +3,22 @@
  * No access tokens, refresh tokens or document bytes are stored here.
  * IndexedDB enforces unique operation and approval IDs transactionally.
  * Compatibility name is intentionally stable across the Job Ranger rebrand.
+ *
+ * Record schema v2 (reserved Drive file ID, terminal resolution) needs no
+ * IndexedDB object-store change, so the database version stays 1 and other open
+ * tabs are never blocked by an upgrade. Every read passes through
+ * upgradeJournalRecord, so v1 rows still load; a v1 row is rewritten as v2 on its
+ * next legal transition.
  */
-import { blocksFreshArtifactExport, validateJournalRecord } from "../../shared/artifact-export-journal.ts";
+import { blocksFreshArtifactExport, checkJournalTransition, upgradeJournalRecord, validateJournalRecord } from "../../shared/artifact-export-journal.ts";
 import type { DurableExportJournalStore, ExportJournalRecord } from "../../shared/artifact-export-journal.ts";
-import { advanceExportReceipt } from "../../shared/artifact-export-approval.ts";
 import type { ExportStatus } from "../../shared/artifact-export-approval.ts";
 
 const DB_NAME = "job-ranger.drive-artifact-export-journal.v1";
 const STORE = "exports";
 const VERSION = 1;
 const ERROR = "Sojourner could not safely save the Google Drive export receipt. No upload is authorized.";
-
-function sameIdentity(left: ExportJournalRecord, right: ExportJournalRecord): boolean {
-  return left.schemaVersion === right.schemaVersion &&
-    left.operationId === right.operationId && left.approvalId === right.approvalId &&
-    left.accountId === right.accountId && left.destinationId === right.destinationId &&
-    left.artifactId === right.artifactId && left.artifactRevision === right.artifactRevision &&
-    left.bytesSha256 === right.bytesSha256 && left.fileName === right.fileName &&
-    left.mimeType === right.mimeType;
-}
+const ID = /^[A-Za-z0-9_:-]{1,160}$/;
 
 export class BrowserDriveExportJournal implements DurableExportJournalStore {
   private db: Promise<IDBDatabase> | null = null;
@@ -87,8 +84,9 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
           store.transaction.abort();
           return;
         }
-        done(request.result.some((entry: ExportJournalRecord) =>
-          blocksFreshArtifactExport(entry, accountId, artifactId)));
+        // A corrupt row throws here, aborting the transaction: fail closed.
+        done(request.result.some((entry: unknown) =>
+          blocksFreshArtifactExport(upgradeJournalRecord(entry), accountId, artifactId)));
       };
     });
   }
@@ -103,7 +101,7 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
       const request = store.getAll(undefined, 10_001);
       request.onsuccess = () => {
         if (request.result.length > 10_000) { store.transaction.abort(); return; }
-        done((request.result as ExportJournalRecord[]).filter(entry =>
+        done((request.result as unknown[]).map(upgradeJournalRecord).filter(entry =>
           blocksFreshArtifactExport(entry, accountId, artifactId)));
       };
     });
@@ -111,8 +109,9 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
 
   async insertIfAbsent(record: ExportJournalRecord): Promise<boolean> {
     validateJournalRecord(record);
-    if (record.status !== "prepared" || record.remoteId || record.verifiedSha256) {
-      throw new Error("Only an unused prepared export can be journaled.");
+    if (record.status !== "prepared" || record.remoteId || record.verifiedSha256 ||
+        !record.reservedFileId || record.resolution !== null) {
+      throw new Error("Only an unused prepared export with a reserved Drive file ID can be journaled.");
     }
     return this.transaction<boolean>("readwrite", (store, done) => {
       // Read and reserve in ONE IndexedDB readwrite transaction. Such transactions
@@ -123,8 +122,8 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
           store.transaction.abort(); // Fail closed if the journal is too large.
           return;
         }
-        if (scan.result.some((prior: ExportJournalRecord) =>
-          blocksFreshArtifactExport(prior, record.accountId, record.artifactId))) {
+        if (scan.result.some((prior: unknown) =>
+          blocksFreshArtifactExport(upgradeJournalRecord(prior), record.accountId, record.artifactId))) {
           done(false);
           return;
         }
@@ -148,27 +147,21 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
     return this.transaction<boolean>("readwrite", (store, done) => {
       const request = store.get(operationId);
       request.onsuccess = () => {
-        const previous = request.result as ExportJournalRecord | undefined;
-        if (!previous || previous.status !== expected || !sameIdentity(previous, next) ||
-            Date.parse(next.updatedAt) < Date.parse(previous.updatedAt)) {
+        let previous: ExportJournalRecord | null = null;
+        try {
+          previous = request.result === undefined ? null : upgradeJournalRecord(request.result);
+        } catch { previous = null; }
+        if (!previous || previous.status !== expected) {
           done(false);
           return;
         }
         // Storage must independently reject forged status jumps, not just rely
         // on callers using advanceDurableExport. Never allow remote uncertainty
-        // to be erased by a direct compareAndSwap invocation.
-        try {
-          const checked = advanceExportReceipt({
-            operationId: previous.operationId, proposalId: previous.approvalId,
-            status: previous.status, bytesSha256: previous.bytesSha256,
-            remoteId: previous.remoteId, verifiedSha256: previous.verifiedSha256,
-          }, next.status, next.remoteId, next.verifiedSha256);
-          if (checked.remoteId !== next.remoteId ||
-              checked.verifiedSha256 !== next.verifiedSha256) {
-            done(false);
-            return;
-          }
-        } catch {
+        // to be erased by a direct compareAndSwap invocation: "failed" needs
+        // provider or reserved-ID evidence, "abandoned" an explicit user resolution,
+        // and no upload may start without a journaled reserved Drive file ID.
+        try { checkJournalTransition(previous, next); }
+        catch {
           done(false);
           return;
         }
@@ -179,16 +172,18 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
   }
 
   async findOperation(operationId: string): Promise<ExportJournalRecord | null> {
+    if (!ID.test(operationId)) throw new Error("Invalid Drive journal lookup.");
     return this.transaction<ExportJournalRecord | null>("readonly", (store, done) => {
       const request = store.get(operationId);
-      request.onsuccess = () => done((request.result as ExportJournalRecord | undefined) ?? null);
+      request.onsuccess = () => done(request.result === undefined ? null : upgradeJournalRecord(request.result));
     });
   }
 
   async findApproval(approvalId: string): Promise<ExportJournalRecord | null> {
+    if (!ID.test(approvalId)) throw new Error("Invalid Drive journal lookup.");
     return this.transaction<ExportJournalRecord | null>("readonly", (store, done) => {
       const request = store.index("approvalId").get(approvalId);
-      request.onsuccess = () => done((request.result as ExportJournalRecord | undefined) ?? null);
+      request.onsuccess = () => done(request.result === undefined ? null : upgradeJournalRecord(request.result));
     });
   }
 }

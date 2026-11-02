@@ -1,6 +1,6 @@
 # Sojourner isolated Google OAuth helper — candidate integration (#264 / PR #356)
 
-**Status: IMPLEMENTED BEHIND CONFIGURATION; UNQUALIFIED. NOT APPROVED FOR PUBLIC DEPLOYMENT OR MERGE.**
+**Status: normative authorization design for the PWA Drive export ([contract](../design/GOOGLE_DRIVE_ARTIFACT_EXPORT_CONTRACT.md)); PRs #315 and #356 merge as one unit. Implemented behind configuration and off by default. Unqualified against live Google (#252). NOT APPROVED FOR PUBLIC DEPLOYMENT.**
 
 Sojourner's browser-only Career Ops workspace stores sensitive career information. An allowed third-party Google Identity Services (GIS) script has page-origin privileges even if CSP limits the external script URL. This candidate moves the GIS library into a separate, dedicated HTTPS origin, without placing Career Ops OPFS, IndexedDB, or its service worker under that origin.
 
@@ -36,6 +36,12 @@ The helper origin is the only switch that enables Drive in the main PWA. With it
 
 The main PWA opens the helper after the user's first click. The helper initializes GIS only on its own separate origin and calls `requestAccessToken()` synchronously from the user's **second** click. An authorization response is not upload consent; existing verified-account, exact-artifact approval, durable journal and upload-readback controls still apply.
 
+## What the token is used for after authorization
+
+The helper's grant only lets the main PWA call the Drive v3 endpoints that the CSP allows. Every use is inside an explicit user action: `about.get` for account binding, `files.generateIds` to reserve one file ID per approved export, `files.get` on the `root` alias, one `files.create` that carries the reserved ID, and metadata and byte readback. "Check prior Drive exports" uses `files.get` on the reserved ID, with the `appProperties` search only as a fallback for schema-v1 rows. The reserved ID, the approval and the operation are journaled in IndexedDB before the durable `uploading` state, so a crash before POST, or a request that failed before sending bytes, is settled later by a strongly consistent `files.get`: 200 means verify, and only 404 allows `failed`. A row that cannot be settled stays blocked until the user explicitly abandons it after a warning.
+
+A 404 is trusted only when the probing token belongs to the same verified Drive account (`permissionId`) that journaled the row. Rows of other accounts are never probed or changed. No token, reserved ID or journal row is sent anywhere except to Google's Drive API with the user's own token. See the [contract](../design/GOOGLE_DRIVE_ARTIFACT_EXPORT_CONTRACT.md) for the state machine and v1 compatibility.
+
 ## Nonce custody and third-party script ordering
 
 The helper must **not** include a parser-loaded Google GIS script in its HTML. The module `helper.mjs` first obtains the `nonce` from the fragment and calls `history.replaceState` to clear it. Only after validating the exact configured application origin, expected client-ID format, one-time nonce and live opener does it create a GIS script element. The script URL comes from the narrow `sojourner-google-gis` Trusted Types policy, under CSP `require-trusted-types-for 'script'; trusted-types sojourner-google-gis`.
@@ -63,7 +69,7 @@ Then run complete PWA Playwright tests using the repository-pinned browser, and 
 2. Confirm the helper origin's live CSP/COOP headers and authorized Google Web OAuth JavaScript origin; do not assume the generated `_headers` file is deployed by every host.
 3. Check helper-open popup and Google's nested account popup on Chromium/Firefox/Safari where supported, including popup blocking, closed windows, privacy protections and browser restarts.
 4. Forge wrong origin, wrong popup source, wrong/random/stale nonce, replay, wrong scope, malformed/expired token, changed opener navigation, reload, timeout, helper origin misconfiguration and cross-origin policy separation. Token must never be logged, placed in a URL, or persisted to storage.
-5. Complete a real Google consent with an owner-controlled Web OAuth client and `drive.file` grant. Verify Drive account binding, explicit PDF digest approval, upload, metadata/bytes readback, and recovery from ambiguous requests.
+5. Complete a real Google consent with an owner-controlled Web OAuth client and `drive.file` grant. Verify Drive account binding, explicit PDF digest approval, upload, metadata/bytes readback, and recovery from ambiguous requests (reserved-ID 404 releases the block, 409 on a repeated create is verified rather than duplicated, and abandonment shows its warning).
 6. Inspect main demo build to ensure no working Google UI, no Google network calls, and no misleading OAuth/Drive marketing claims.
 7. Run independent security review and record exact SHA, origin pair, response headers, browser, test receipts, threat model and owner decision.
 

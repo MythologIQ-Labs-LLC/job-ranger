@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, DRIVE_OPERATION_PROPERTY, DriveTransportError } from "../src/pwa/drive/google-drive-transport.ts";
+import {
+  uploadApprovedDriveFile, findCreatedDriveFile, verifyRecoveredDriveFile, reserveDriveFileId,
+  inspectReservedDriveFile, DRIVE_OPERATION_PROPERTY, DriveTransportError,
+} from "../src/pwa/drive/google-drive-transport.ts";
 
 const secret = "NEVER_LOG_A_PROVIDER_TOKEN";
 const document = new Blob(["Sojourner verified PDF test bytes"], { type: "application/pdf" });
@@ -13,6 +16,7 @@ const good = async () => ({
   mimeType: "application/pdf",
   bytes: document,
   approvedSha256: await digest(document),
+  reservedFileId: "driveFile_123",
 });
 const remote = {
   id: "driveFile_123", name: "Sojourner-Resume.pdf",
@@ -54,6 +58,7 @@ test("only one authorized POST creates the approved app-owned file, followed by 
     assert.equal(req.url.includes(secret), false);
   }
   const multipart = await requests[0].options.body.text();
+  assert.match(multipart, /"id":"driveFile_123"/, "the create carries the reserved file ID");
   assert.match(multipart, /"parents":\["folder_123"\]/);
   assert.match(multipart, /"sojournerExportOperation":"op_314_verified_1"/);
   assert.match(multipart, /Sojourner verified PDF test bytes/);
@@ -95,6 +100,9 @@ test("reject invalid filename, destination, MIME and changed document before any
     { destinationId: "https://drive.google.com/evil" },
     { operationId: "O'Reilly" },
     { approvedSha256: "0".repeat(64) },
+    { reservedFileId: undefined },
+    { reservedFileId: "" },
+    { reservedFileId: "bad/id" },
   ];
   for (const changed of invalid) {
     const input = { ...await good(), ...changed };
@@ -139,7 +147,7 @@ test("unknown remote result after connection loss, server error or invalid ackno
   for (const responses of [
     [new Error("connection lost")],
     [new Response("", { status: 503 })],
-    [new Response("not json")],
+    [json({ id: "otherFile_999" })],
     [json({ id: "https://evil.example/file" })],
   ]) {
     const { requests, fetchMock } = driver(responses);
@@ -365,6 +373,95 @@ test("ambiguous POST is reported only after the caller's durable boundary succee
   assert.deepEqual(outcome, {
     status: "unknown_remote_outcome",
     remoteId: null,
-    reason: "The upload connection was interrupted. Check Drive before approving another export.",
+    reason: "The upload connection was interrupted. Check prior Drive exports before approving another export.",
   });
+});
+
+test("a 409 for the reserved ID means an earlier attempt already created it: verify, never re-create", async () => {
+  const { requests, fetchMock } = driver([
+    json({ error: { code: 409, message: "A file already exists with the provided ID." } }, 409),
+    json(remote), new Response(document),
+  ]);
+  const result = await uploadApprovedDriveFile(await good(), fetchMock);
+  assert.equal(result.status, "verified");
+  assert.equal(result.remoteId, "driveFile_123");
+  assert.deepEqual(requests.map(x => x.options.method ?? "GET"), ["POST", "GET", "GET"]);
+  assert.ok(requests[1].url.startsWith("https://www.googleapis.com/drive/v3/files/driveFile_123?"));
+
+  // An existing file that does not match the approved export is reported, not trusted.
+  const foreign = driver([new Response("", { status: 409 }), json({ ...remote, appProperties: {} }), new Response(document)]);
+  const mismatch = await uploadApprovedDriveFile(await good(), foreign.fetchMock);
+  assert.equal(mismatch.status, "verification_failed");
+  assert.equal(mismatch.remoteId, "driveFile_123");
+  assert.equal(foreign.requests.filter(x => x.options.method === "POST").length, 1);
+});
+
+test("a 2xx without a usable receipt is verified through the reserved file ID", async () => {
+  const { requests, fetchMock } = driver([new Response("not json"), json(remote), new Response(document)]);
+  const result = await uploadApprovedDriveFile(await good(), fetchMock);
+  assert.equal(result.status, "verified");
+  assert.equal(requests.filter(x => x.options.method === "POST").length, 1);
+});
+
+test("files.generateIds reserves exactly one valid ID with a read-only request", async () => {
+  const { requests, fetchMock } = driver([json({ kind: "drive#generatedIds", space: "drive", ids: ["reserved_ABC-1"] })]);
+  assert.equal(await reserveDriveFileId(secret, fetchMock), "reserved_ABC-1");
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://www.googleapis.com/drive/v3/files/generateIds?count=1&space=drive&type=files");
+  assert.equal(requests[0].options.method ?? "GET", "GET");
+  assert.equal(requests[0].options.headers.Authorization, `Bearer ${secret}`);
+  assert.equal(requests[0].options.redirect, "error");
+  assert.equal(requests[0].url.includes(secret), false);
+  for (const response of [
+    json({ ids: [] }), json({ ids: ["a", "b"] }), json({ ids: ["bad/id"] }), json({ ids: [42] }), json({}),
+    new Response("not json"), new Response("", { status: 401 }), new Response("", { status: 429 }),
+    new Response("", { status: 503 }), new Error("offline"),
+  ]) {
+    const failing = driver([response]);
+    await assert.rejects(reserveDriveFileId(secret, failing.fetchMock), (error) =>
+      error instanceof DriveTransportError && /Nothing was uploaded/.test(error.message) && !error.message.includes(secret));
+  }
+  let calls = 0;
+  for (const token of ["", "bad\ntoken", 42]) {
+    await assert.rejects(reserveDriveFileId(token, async () => { calls++; throw new Error("unexpected"); }), DriveTransportError);
+  }
+  assert.equal(calls, 0);
+});
+
+test("only an explicit 404 for the reserved ID proves absence; everything else is unknown", async () => {
+  const cases = [
+    [json({ id: "driveFile_123" }), "found"],
+    [json({ error: { code: 404 } }, 404), "absent"],
+    [json({ id: "different" }), "unknown"],
+    [new Response("not json"), "unknown"],
+    [new Response("", { status: 401 }), "unknown"],
+    [new Response("", { status: 403 }), "unknown"],
+    [new Response("", { status: 500 }), "unknown"],
+    [new Response("", { status: 503 }), "unknown"],
+    [new Error("offline"), "unknown"],
+  ];
+  for (const [response, expected] of cases) {
+    const { requests, fetchMock } = driver([response]);
+    assert.equal(await inspectReservedDriveFile(secret, "driveFile_123", fetchMock), expected, String(expected));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].options.method ?? "GET", "GET");
+    assert.equal(requests[0].url, "https://www.googleapis.com/drive/v3/files/driveFile_123?fields=id&supportsAllDrives=false");
+    assert.equal(requests[0].url.includes(secret), false);
+  }
+  for (const id of ["", "a/b", "x".repeat(161), null]) {
+    await assert.rejects(inspectReservedDriveFile(secret, id, async () => { throw new Error("unexpected"); }), DriveTransportError);
+  }
+});
+
+test("a crash or pre-send failure after the uploading boundary is recoverable through the reserved ID", async () => {
+  // 1. fetch throws before any bytes leave: the outcome is ambiguous to the transport...
+  let durable = false;
+  const outcome = await uploadApprovedDriveFile(await good(), async () => { throw new TypeError("Failed to fetch"); },
+    async () => { durable = true; });
+  assert.equal(durable, true);
+  assert.equal(outcome.status, "unknown_remote_outcome");
+  // 2. ...but a later strongly consistent files.get of the reserved ID settles it without a POST.
+  const probe = driver([json({}, 404)]);
+  assert.equal(await inspectReservedDriveFile(secret, (await good()).reservedFileId, probe.fetchMock), "absent");
+  assert.equal(probe.requests.some(x => x.options.method === "POST"), false);
 });
