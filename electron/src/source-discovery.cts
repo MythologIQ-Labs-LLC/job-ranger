@@ -6,7 +6,8 @@ import type {
   SourceDiscoveryResult,
 } from "../../src/shared/source-discovery.js";
 import { getSourceProfile } from "../../src/shared/contracts.js";
-import { fetchDiscoveryJson } from "./source-discovery-fetch.cjs";
+import { fetchDiscoveryJson, fetchDiscoveryXml } from "./source-discovery-fetch.cjs";
+import { parseWwrFeed, type WwrNormalizedJob } from "./wwr-discovery.cjs";
 import {
   fetchHimalayasJobs,
   himalayasLocation,
@@ -17,6 +18,7 @@ import { detectSourceFromUrl } from "./scrapers.cjs";
 
 const REMOTE_OK_ENDPOINT = "https://remoteok.com/api";
 const ARBEITNOW_ENDPOINT = "https://www.arbeitnow.com/api/job-board-api?page=1";
+const WWR_RSS_ENDPOINT = "https://weworkremotely.com/remote-jobs.rss";
 const MIB = 1024 * 1024;
 /** Body caps, each several times the size observed live. */
 const REMOTE_OK_MAX_BYTES = 4 * MIB;
@@ -329,6 +331,41 @@ function arbeitnowCandidates(
     });
 }
 
+function wwrLocation(job: WwrNormalizedJob): string {
+  if (job.country) return "Remote · " + job.country;
+  if (job.region && !/^anywhere in the world$/i.test(job.region)) {
+    return "Remote · " + job.region;
+  }
+  return "Remote · eligibility unspecified";
+}
+
+function wwrCandidates(
+  jobs: readonly WwrNormalizedJob[],
+  request: SourceDiscoveryRequest,
+): SourceDiscoveryCandidate[] {
+  return jobs.filter((job) => roleMatchScore(job.title, request.roleTitles) >= 0.5)
+    .map((job) => ({
+      id: stableId("wwr\n" + job.url),
+      providerId: "public-job-feeds" as const,
+      providerName: "We Work Remotely",
+      employerName: job.employerName,
+      opportunityTitle: job.title,
+      opportunityUrl: job.url,
+      applyUrl: null,
+      location: wwrLocation(job),
+      employmentType: job.employmentType,
+      publishedAt: job.publishedAt,
+      sourceUrl: null,
+      sourceType: null,
+      sourceSupportLevel: null,
+      sourceLabel: null,
+      canMonitor: false,
+      duplicateCompanyId: null,
+      provenanceUrl: job.url,
+      summary: snippet(job.summary) || "We Work Remotely listing. Review location eligibility at the source.",
+    }));
+}
+
 function himalayasCandidates(
   jobs: readonly HimalayasNormalizedJob[],
   request: SourceDiscoveryRequest,
@@ -390,10 +427,13 @@ export async function discoverPublicJobFeeds(
   // The Himalayas public API explicitly disallows browser CORS. Do not try to
   // bypass it with a hidden proxy or let blocked requests delay PWA discovery.
   const skipHimalayas = context.runtimeKind === "web";
-  const [remoteOk, arbeitnow, himalayas] = await Promise.allSettled([
+  const [remoteOk, arbeitnow, himalayas, wwr] = await Promise.allSettled([
     fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl, REMOTE_OK_MAX_BYTES),
     fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl, ARBEITNOW_MAX_BYTES),
     skipHimalayas ? Promise.resolve(null) : fetchHimalayasJobs(context.fetchImpl),
+    context.runtimeKind === "web"
+      ? Promise.resolve(null)
+      : fetchDiscoveryXml(WWR_RSS_ENDPOINT, context.fetchImpl),
   ]);
 
   let candidates: SourceDiscoveryCandidate[] = [];
@@ -431,6 +471,20 @@ export async function discoverPublicJobFeeds(
       ? himalayas.reason instanceof Error ? himalayas.reason.message : String(himalayas.reason)
       : "no response";
     warnings.push(`Himalayas was unavailable for this discovery run: ${reason}`);
+  }
+
+  if (context.runtimeKind === "web") {
+    warnings.push("We Work Remotely RSS browser access is unverified; no cross-origin feed request was attempted.");
+  } else if (wwr.status === "fulfilled" && typeof wwr.value === "string") {
+    try {
+      candidates.push(...wwrCandidates(parseWwrFeed(wwr.value), request));
+      providerSuccesses += 1;
+    } catch (error) {
+      warnings.push("We Work Remotely returned invalid RSS: " + (error instanceof Error ? error.message : String(error)));
+    }
+  } else {
+    const reason = wwr.status === "rejected" && wwr.reason instanceof Error ? wwr.reason.message : "unknown failure";
+    warnings.push("We Work Remotely was unavailable for this discovery run: " + reason);
   }
 
   const seen = new Set<string>();

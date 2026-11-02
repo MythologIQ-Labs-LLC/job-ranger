@@ -48,3 +48,20 @@
 - `tests/pwa/source-discovery-web-boundary.spec.ts` (PWA production build) checks that discovery shows the exact Himalayas skip warning and makes no request to `himalayas.app`.
 
 **CI evidence:** not established until exact-head workflow results are independently observed. Green source-contract tests do not prove provider availability.
+
+## We Work Remotely RSS phase-2 implementation candidate (dependent WIP)
+
+- First-party source: https://weworkremotely.com/remote-job-rss-feed; all-jobs feed at https://weworkremotely.com/remote-jobs.rss.
+- WWR's RSS page expressly allows use of the public feed with attribution. Its separate https://weworkremotely.com/api-terms-and-guidelines restricts job-search services and bypassing its application interface. **This unresolved terms-scope conflict is a release blocker**, not a grant of broader rights.
+- Candidate fetches only one first-party HTTPS RSS feed with a strict byte limit, publisher-only redirects, timeout, and denial of DTD/entity declarations. No page scraping, new library, API key, or external proxy.
+- Normalizer accepts valid RSS 2.0 item elements with title as Employer: Position, direct publisher link, date, region, country, type and description; ignores headquarters state. Rejects unsafe/offsite links, unsupported entities, malformed nesting, duplicate listing links and oversize feeds.
+- Location prefers country over potentially misleading broad region; missing country plus Anywhere in the World yields **eligibility unspecified** rather than invented unrestricted access.
+- Every result remains an opportunity-only lead. The existing per-provider result interleaving prevents monopolization of the limit.
+- PWA browser CORS is **unverified**; this feed is skipped there with a warning. No cloud proxy, CORS bypass or silent feature-parity claim.
+- Not shipped or Qortara-qualified. Pending: complete exact-head suites; live RSS schema/size check; terms signoff; independent source security review; measured incremental employer/title/eligibility coverage vs Remote OK, Arbeitnow and Himalayas.
+
+### Regression cases
+
+`tests/wwr-discovery.test.cjs` covers CDATA, entities, invalid XML and DTDs, offsite links, duplicate jobs, field projection, country restrictions, redirect host and size boundaries, HTTP 429, runtime skip and independent failure isolation. The Electron source-discovery E2E fixture asserts attribution and no source approval.
+
+No live provider availability, legal permission or employment eligibility is inferred from synthetic test successes.

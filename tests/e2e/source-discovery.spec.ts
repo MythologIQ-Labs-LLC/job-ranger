@@ -125,6 +125,17 @@ test.beforeAll(async () => {
           ],
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
+      if (url === "https://weworkremotely.com/remote-jobs.rss") {
+        return new Response(
+          '<rss version="2.0"><channel>' +
+            '<item><title>WWR Discovery: Customer Success Manager</title>' +
+            '<link>https://weworkremotely.com/remote-jobs/wwr-discovery-csm</link>' +
+            '<region>Anywhere in the World</region><country>United States</country>' +
+            '<type>Full-Time</type><description>Customer outcomes and onboarding.</description>' +
+            '</item></channel></rss>',
+          { status: 200, headers: { "content-type": "application/rss+xml" } },
+        );
+      }
       return originalFetch(input, init);
     };
   });
@@ -192,6 +203,13 @@ test("discovers opportunities, dismisses a lead, and approves a monitorable empl
     expect([...requested.searchParams.keys()]).toEqual(["limit"]);
     expect(requested.searchParams.get("limit")).toBe("20");
   }
+
+  const wwrCard = page.locator("article").filter({ hasText: "WWR Discovery" });
+  await expect(wwrCard).toBeVisible();
+  await expect(wwrCard.getByText("Found via We Work Remotely", { exact: true })).toBeVisible();
+  await expect(wwrCard.getByText("Remote · United States", { exact: true })).toBeVisible();
+  await expect(wwrCard.getByText("Opportunity only", { exact: true })).toBeVisible();
+  await expect(wwrCard.getByRole("button", { name: "Approve & monitor source" })).toHaveCount(0);
 
   await opportunityOnlyCard
     .getByRole("button", {
