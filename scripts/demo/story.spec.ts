@@ -175,6 +175,14 @@ async function prepareResume(page: Page, mark: Mark): Promise<void> {
   await hold(page, 700);
 }
 
+/** Scrolls Applications so the status filters, the tracked job and its linked resume file all show. */
+async function showLinkedResume(page: Page): Promise<void> {
+  await scrollToElement(page, page.getByText("Focus your applications", { exact: true }), 24);
+  const file = page.locator("main").getByText(/^PDF v1 · /).first();
+  await expect(file).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("combobox", { name: `Application status for ${DEMO_JOB_TITLE}` })).toBeInViewport({ ratio: 1 });
+}
+
 async function organizedApplication(page: Page, mark: Mark): Promise<void> {
   mark("application");
   await nav(page, "Applications", { route: "#/applications", heading: "Keep track of what happens after a job looks promising.", content: [DEMO_JOB_TITLE] });
@@ -185,6 +193,7 @@ async function organizedApplication(page: Page, mark: Mark): Promise<void> {
   await glideClick(page, page.getByRole("button", { name: /Application details/ }).first());
   await expect(page.getByText("Submitted files", { exact: false }).filter({ visible: true }).first()).toBeVisible();
   await waitForLayoutStable(page);
+  await showLinkedResume(page);
   await shot(page, "03-deliberate-application.png");
   await hold(page, 2000);
   mark("closing");
