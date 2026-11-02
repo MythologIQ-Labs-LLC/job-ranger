@@ -95,7 +95,7 @@ async function run() {
   assert.match(manifest, /MinVersion="10\.0\.17763\.0"/);
   assert.match(manifest, /Square310x310Logo="assets\\LargeTile\.png"/);
   assert.match(manifest, /<DisplayName>Job Ranger \(validation\)<\/DisplayName>/);
-  assert.match(manifest, /Publisher='CN=Job Ranger Package Validation'/);
+  assert.match(manifest, /Publisher=(["'])CN=Job Ranger Package Validation\1/);
 
   // --- Canonical-derived assets with Store/PWA-required dimensions ---
   const expectedAssets = {
