@@ -274,6 +274,18 @@ Original published post permalinks and manually confirmed facts matter. LinkedIn
 
 The current Target Tracks page includes an exploratory comparison of user-authored employment, contract, self-employment, training and blended-income scenarios. Enter your own assumptions and examine the arithmetic. Outputs are **hypotheses**, not verified income forecasts or recommendations to change careers. No live labor-market feed or authoritative salary validation is implied.
 
+### Save a resume PDF to Google Drive (optional, Windows app)
+
+When a Windows build includes Sojourner's Google sign-in configuration, each verified resume PDF on the Resume page has a **Save PDF to Google Drive** panel. Builds without it show nothing, and Sojourner never contacts Google. This is not yet in a published release and has not been tested against a live Google account.
+
+1. Select **Connect Google Drive**. Your web browser opens Google's sign-in page. Sojourner asks only for access to files it creates (`drive.file`); it cannot see your other Drive files. Connecting uploads nothing.
+2. Select **Review PDF for Drive**. Check the file, its size and digest, the Google account and the destination (the top level of My Drive).
+3. Select **Confirm and upload this PDF**. Sojourner uploads exactly that PDF, reads it back from Drive, and shows **Open in Google Drive** only when the copy matches your local file byte for byte. Every upload needs this approval; nothing is synced automatically.
+
+If an upload is interrupted, Sojourner keeps it blocked so that it never creates a second copy silently. **Check prior Drive exports** asks Google whether the file arrived and settles it; an unused reservation can be cancelled, and an attempt that cannot be settled can be abandoned after a warning. Your local resume never changes.
+
+Sojourner keeps your Google sign-in encrypted by Windows on this device, so you do not have to connect again after a restart. If Windows encryption is unavailable, the sign-in lasts only until you close the app. **Disconnect Google Drive** deletes the saved sign-in and asks Google to revoke Sojourner's access; if Google cannot confirm that, remove Sojourner at myaccount.google.com/permissions. Only the approved PDF and Google sign-in requests leave your device. The browser app uses a separate sign-in flow; see the [Drive export contract](./docs/design/GOOGLE_DRIVE_ARTIFACT_EXPORT_CONTRACT.md).
+
 ### Optional developer-only MCP reader
 
 There is a separate [local read-only MCP prototype](./docs/integrations/JOB_RANGER_MCP_READONLY.md) for technically proficient users developing a trusted agent integration. It is not built into the stable v1.2.0 installer, cannot submit applications or change Career Evidence through its read-only interface, and is not proof of a live ChatGPT integration.
