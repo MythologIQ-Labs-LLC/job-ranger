@@ -64,11 +64,24 @@ function jsonResponse(body) {
   });
 }
 
+/** Route by exact parsed hostname, never by URL substring. */
+function hostOf(url) {
+  return new URL(String(url)).hostname;
+}
+
 function successfulFetch(url) {
-  const value = String(url);
-  if (value.includes("remoteok.com")) return Promise.resolve(jsonResponse(remoteRows));
-  if (value.includes("arbeitnow.com")) return Promise.resolve(jsonResponse(arbeitnowRows));
-  throw new Error(`Unexpected URL ${value}`);
+  const host = hostOf(url);
+  if (host === "remoteok.com") return Promise.resolve(jsonResponse(remoteRows));
+  if (host === "www.arbeitnow.com") return Promise.resolve(jsonResponse(arbeitnowRows));
+  throw new Error(`Unexpected URL ${String(url)}`);
+}
+
+/** A JSON-looking body of exactly `bytes` bytes. */
+function sizedResponse(bytes) {
+  return new Response(new Uint8Array(bytes).fill(0x20), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 (async () => {
@@ -125,7 +138,7 @@ function successfulFetch(url) {
 
   const partialResult = await discoverPublicJobFeeds(request, {
     fetchImpl: async (url) => {
-      if (String(url).includes("remoteok.com")) throw new Error("feed offline");
+      if (hostOf(url) === "remoteok.com") throw new Error("feed offline");
       return jsonResponse(arbeitnowRows);
     },
     existingCompanies: [],
@@ -144,6 +157,22 @@ function successfulFetch(url) {
   assert.equal(unavailableResult.candidates.length, 0);
   assert.ok(unavailableResult.warnings.some((warning) => /Remote OK was unavailable/.test(warning)));
   assert.ok(unavailableResult.warnings.some((warning) => /Arbeitnow was unavailable/.test(warning)));
+
+  // Each feed's body is capped independently; an oversized feed does not hide the others.
+  const MIB = 1024 * 1024;
+  const remoteOkTooLarge = await discoverPublicJobFeeds(request, {
+    fetchImpl: async (url) => (hostOf(url) === "remoteok.com" ? sizedResponse(4 * MIB + 1) : successfulFetch(url)),
+    existingCompanies: [],
+  });
+  assert.ok(remoteOkTooLarge.warnings.some((warning) => /Remote OK was unavailable.*too large/.test(warning)));
+  assert.ok(remoteOkTooLarge.candidates.some((candidate) => candidate.employerName === "Beta GmbH"));
+
+  const arbeitnowTooLarge = await discoverPublicJobFeeds(request, {
+    fetchImpl: async (url) => (hostOf(url) === "www.arbeitnow.com" ? sizedResponse(8 * MIB + 1) : successfulFetch(url)),
+    existingCompanies: [],
+  });
+  assert.ok(arbeitnowTooLarge.warnings.some((warning) => /Arbeitnow was unavailable.*too large/.test(warning)));
+  assert.ok(arbeitnowTooLarge.candidates.some((candidate) => candidate.employerName === "Acme"));
 
   console.log("source discovery provider passed");
 })().catch((error) => {

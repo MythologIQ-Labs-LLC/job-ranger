@@ -1,5 +1,5 @@
 /**
- * Deterministic, text-based ATS resume PDF writer for the Job Ranger web
+ * Deterministic, text-based ATS resume PDF writer for the Sojourner web
  * runtime (pdf-lib; no embedded scripts or images).
  *
  * Input is the same prepared, Truth-Gate-approved projection the Electron
@@ -269,7 +269,7 @@ async function unicodeEngine(
   if (unsupported.size > 0) {
     const [label, chars] = Array.from(unsupported)[0];
     throw new ResumePdfEncodingError(
-      `The web resume renderer does not yet lay out right-to-left or Indic scripts. ${label} contains ${chars.slice(0, 8).join(" ")}. Export this resume from the Windows app, which renders these scripts.`,
+      `The web resume renderer does not yet lay out right-to-left or Indic scripts. ${label} contains ${chars.slice(0, 8).join(" ")}. Remove or transliterate that text to export a PDF from the web app.`,
     );
   }
 
@@ -295,7 +295,7 @@ async function unicodeEngine(
   if (missing.size > 0) {
     const [label, chars] = Array.from(missing)[0];
     throw new ResumePdfEncodingError(
-      `The web resume renderer supports ${SUPPORTED_SCRIPTS} text. ${label} contains characters it cannot render (${Array.from(chars).slice(0, 8).join(" ")}). Edit the text, or export this resume from the Windows app.`,
+      `The web resume renderer supports ${SUPPORTED_SCRIPTS} text. ${label} contains characters it cannot render (${Array.from(chars).slice(0, 8).join(" ")}). Edit the text to export a PDF from the web app.`,
     );
   }
 
@@ -430,7 +430,7 @@ export async function renderResumePdfBytes(
   } else {
     const chars = unencodableCharacters(firstUnencodable.bold ? bold : regular, firstUnencodable.text);
     throw new ResumePdfEncodingError(
-      `The web resume renderer supports Latin-script text (Windows-1252) without its font set. ${firstUnencodable.label} contains characters it cannot encode (${chars.slice(0, 8).join(" ")}). Edit the text, or export this resume from the Windows app.`,
+      `The web resume renderer supports Latin-script text (Windows-1252) without its font set. ${firstUnencodable.label} contains characters it cannot encode (${chars.slice(0, 8).join(" ")}). Edit the text to export a PDF from the web app.`,
     );
   }
 
@@ -496,8 +496,8 @@ export async function renderResumePdfBytes(
   document.setTitle(`${fullName} - Resume`, { showInWindowTitleBar: false });
   document.setAuthor(fullName);
   document.setSubject("Resume");
-  document.setCreator("Job Ranger");
-  document.setProducer("Job Ranger web runtime (pdf-lib)");
+  document.setCreator("Sojourner");
+  document.setProducer("Sojourner web runtime (pdf-lib)");
   document.setCreationDate(fixedDate);
   document.setModificationDate(fixedDate);
   return document.save({ useObjectStreams: false });

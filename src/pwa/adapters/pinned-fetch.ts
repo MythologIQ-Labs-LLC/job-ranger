@@ -24,7 +24,7 @@ function assertAllowed(url: string): string {
   const parsed = validateAcquisitionUrlSyntax(url);
   if (parsed.protocol !== "https:" || !isAllowedAcquisitionOrigin(parsed.toString())) {
     throw new BrowserAcquisitionError(
-      `The web app can only read supported public job-board APIs; ${parsed.hostname} needs the browser-rendered source support in the Windows app (cross-origin access unavailable).`,
+      `The web app can only read supported public job-board APIs; ${parsed.hostname} cannot be read from a browser tab (cross-origin access unavailable).`,
     );
   }
   return parsed.toString();
@@ -53,7 +53,7 @@ export function createPinnedFetch(): typeof fetch {
     } catch (error) {
       if ((error as { name?: string })?.name === "AbortError") throw error;
       throw new BrowserAcquisitionError(
-        "The browser blocked this cross-origin request or the network is unavailable. This source may require the Windows app.",
+        "The browser blocked this cross-origin request or the network is unavailable. This source may not be readable from a browser tab.",
       );
     }
     if (response.url) assertAllowed(response.url);
@@ -65,6 +65,6 @@ export function createPinnedFetch(): typeof fetch {
 /** Socket-level pinned requests do not exist in browsers; fail explicitly. */
 export const executePinnedAddressRequest = async (): Promise<never> => {
   throw new BrowserAcquisitionError(
-    "Connection-level DNS pinning is only available in the Windows app; the web runtime uses the browser network policy.",
+    "Connection-level DNS pinning is not available in the web app; it uses the browser network policy.",
   );
 };

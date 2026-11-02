@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SRC=public/ICON.png
-BG="#fdf9f6"
+BG="#fdf1dd"
 mkdir -p public/pwa build/appx
 
 icon() { convert "$SRC" -filter Lanczos -resize "${2}x${2}" -strip "PNG32:$1"; }

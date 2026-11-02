@@ -1,0 +1,59 @@
+name: Bug or reliability regression
+description: A reproducible behavior, data-integrity or safety defect
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Keep personal career data, credentials, and security exploits out of public reports. Security reports use SECURITY.md.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Career Evidence / Truth Gate
+        - Resume and tailoring
+        - Jobs / source discovery
+        - Applications
+        - Personal Brand
+        - Local storage / backup / recovery
+        - PWA / desktop / packaging
+        - UI / accessibility
+        - Security / integrations
+        - Tooling / governance
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior and user impact
+      description: State what happens, not the presumed cause.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include version, runtime, exact steps, and sanitized data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior and acceptance evidence
+      description: Define a testable end state, including safe failure behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reproduction and regression evidence
+      description: Logs or runs with exact SHA, frequency and environment, or explicitly say not yet reproduced.
+    validations:
+      required: false
+  - type: input
+    id: parent
+    attributes:
+      label: Existing parent or related issue
+      description: Use an existing issue if this is one slice of a larger program.
+      placeholder: "#194"
