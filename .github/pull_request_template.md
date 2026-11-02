@@ -30,6 +30,12 @@ Choose **exactly one** state above. Drafts are not release-ready simply because 
 
 No green claim without recorded evidence. Tests on an earlier head do not qualify this head.
 
+## Contributor License Agreement
+
+Outside contributors only. Keep this line, or delete it if you work for or under contract to MythologIQ Labs, LLC:
+
+> I have read the Sojourner Contributor License Agreement (CLA.md, version 1.0) and agree to its terms.
+
 ## Merge and closeout
 
 - [ ] Merge base checked against current main; conflicts and combined behavior qualified
