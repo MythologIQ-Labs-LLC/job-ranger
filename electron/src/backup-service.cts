@@ -18,6 +18,7 @@ import {
   JOB_RANGER_BACKUP_VERSION,
 } from "../../src/shared/backup.js";
 import { sql, SqliteClient } from "./sqlite.cjs";
+import { describeNulText, describeRepairFailures, findNulText, repairNulText } from "./nul-text.cjs";
 import { migrations as coreMigrations } from "./migrations.cjs";
 import { FEATURE_MIGRATIONS } from "./feature-migrations.cjs";
 import {
@@ -632,6 +633,12 @@ export class BackupService {
     }
 
     const warnings: string[] = [];
+    const nulText = await findNulText(backupSqlite);
+    if (nulText.length > 0) {
+      warnings.push(
+        `Some text in this backup contains NUL characters (U+0000), which Job Ranger shows as \uFFFD; it will be restored that way: ${describeNulText(nulText)}.`,
+      );
+    }
     if (manifest.appVersion !== this.options.appVersion) {
       warnings.push(
         `This backup was created by Job Ranger ${manifest.appVersion}; the database migrations are compatible with ${this.options.appVersion}, but the restored data will be upgraded on startup if needed.`,
@@ -681,6 +688,15 @@ export class BackupService {
           : sql`UPDATE resume_artifacts SET managed_path = ${targetPath} WHERE id = ${managed.id};`;
       });
       await stagedSqlite.transaction(rebaseStatements);
+      // Text holding NUL (for example from the web app) is restored with NUL as U+FFFD, as the
+      // app now stores it everywhere; the desktop engine would otherwise read it back cut off at
+      // the NUL (#297). validateBackup already listed these values as a warning.
+      const unrepaired = await repairNulText(stagedSqlite, await findNulText(stagedSqlite));
+      if (unrepaired.length > 0) {
+        throw new Error(
+          `This backup contains text with NUL characters (U+0000) that could not be stored as \uFFFD: ${describeRepairFailures(unrepaired)}. Nothing was restored.`,
+        );
+      }
       const integrity = await stagedSqlite.queryOne<IntegrityRow>("PRAGMA integrity_check;");
       if (!integrity || integrity.integrity_check !== "ok") {
         throw new Error("Staged restore database failed integrity verification after path rebasing");

@@ -8,7 +8,8 @@ const PLATFORM_PATTERNS = {
   windows: /^Job.*windows.*\.exe$/i,
   "windows-store": /^Job.*windows-store.*\.appx$/i,
   macos: /^Job.*macos.*\.(?:dmg|zip)$/i,
-  web: /^job-ranger-web-.*\.zip$/i,
+  // The demo flavor's archive (job-ranger-web-demo-v*.zip) is never the web release artifact.
+  web: /^job-ranger-web-v\d[^/\\]*\.zip$/i,
 };
 
 function parseBoolean(value) {

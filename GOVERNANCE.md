@@ -106,6 +106,18 @@ The documentation hierarchy is defined in `docs/README.md`.
 
 Current source-of-truth documents must be reconciled after material changes. Historical phase plans remain historical and are not rewritten merely to make old decisions look current.
 
+### Documentation reconciliation at change boundaries
+
+For a material feature, security, architecture, distribution, or governance change, review the **actual merged source and tests** before updating its public claim. Update only the affected authoritative surfaces, but consider the root README and HELP, `docs/SYSTEM_STATE.md`, active roadmap, `docs/FEATURE_INDEX.md`, `docs/GOVERNANCE_INDEX.md`, CHANGELOG, design/ADR, and validation evidence.
+
+- Record a source SHA and the difference between **published**, **implemented on main**, **draft/unqualified**, **held**, and **deferred**. A pull request or passed unit test alone never promotes a capability.
+- When a roadmap task moves into main, replace stale “not started” language with bounded implementation facts and leave unfinished acceptance criteria open.
+- Keep governance ledger indexes aligned to **the ledger actually merged into that branch**; do not transplant VETO, remediation, or seal records from another draft branch. Never declare approval by editing a status document.
+- Record validation methods and limitations honestly. A documentation-only reconciliation does not pass software CI, independent governance audit, or platform release gates.
+- During active concurrent development, use an isolated documentation branch rather than editing the same in-flight governance/implementation branch; reconcile again before release admission.
+
+The latest dated reconciliation is indexed under `docs/validation/`. Documentation authority and the precedence of conflicting files are defined in [the documentation index](./docs/README.md).
+
 ### Documentation drift
 
 A current document that describes completed work as future work, or unreleased work as shipped, is a defect.

@@ -1,0 +1,43 @@
+{
+  "schema_version": 3,
+  "plan": "CONTRIBUTING.md",
+  "claims": [
+    {
+      "id": "governance-heading",
+      "kind": "line-equals",
+      "commit": "296cac2f55cacc95a564c4c18dbd35033af2a9a2",
+      "path": "GOVERNANCE.md",
+      "line": 1,
+      "text": "# Governance",
+      "purpose": "Confirm the immutable governance heading at line one"
+    },
+    {
+      "id": "pr-authority-text",
+      "kind": "text-present",
+      "commit": "296cac2f55cacc95a564c4c18dbd35033af2a9a2",
+      "path": "GOVERNANCE.md",
+      "text": "Issues and pull requests are proposals until merged or otherwise explicitly accepted.",
+      "purpose": "Confirm the exact authority qualification in governance"
+    },
+    {
+      "id": "sentinel-absent",
+      "kind": "text-absent",
+      "commit": "296cac2f55cacc95a564c4c18dbd35033af2a9a2",
+      "path": "GOVERNANCE.md",
+      "text": "LOCAL_EVIDENCE_SAMPLE_SENTINEL_THAT_MUST_NOT_EXIST_267",
+      "purpose": "Illustrate exact absence checks on an existing file"
+    },
+    {
+      "id": "governance-line-count",
+      "kind": "file-lines",
+      "commit": "296cac2f55cacc95a564c4c18dbd35033af2a9a2",
+      "path": "GOVERNANCE.md",
+      "predicate": {
+        "operator": "equals",
+        "value": 203
+      },
+      "purpose": "Demonstrate immutable complete-file line counting"
+    }
+  ],
+  "judgments": []
+}

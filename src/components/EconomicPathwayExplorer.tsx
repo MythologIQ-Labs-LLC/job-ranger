@@ -56,7 +56,7 @@ export function EconomicPathwayExplorer() {
       <h2 id="economic-pathway-heading" className="mt-2 text-xl font-semibold">Explore other ways to earn</h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-text-secondary)]">
         Compare two paths you choose, including continued employment, changing industries, contract work,
-        or working for yourself. Job Ranger performs arithmetic using only your estimates.
+        or working for yourself. Sojourner performs arithmetic using only your estimates.
         It does not predict employer failure, customer demand, future income, or recommend a path.
       </p>
       <p className="mt-3 text-sm font-semibold text-[var(--color-warning)]">

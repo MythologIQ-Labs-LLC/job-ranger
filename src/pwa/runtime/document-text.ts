@@ -1,5 +1,5 @@
 /**
- * Browser-safe, local-only document text extraction for the Job Ranger web
+ * Browser-safe, local-only document text extraction for the Sojourner web
  * runtime. This is the web counterpart of the Electron runtime's native
  * Anydoc parser. It never sends documents anywhere and never runs OCR.
  *
