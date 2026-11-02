@@ -142,9 +142,9 @@ gh attestation verify <artifact> --repo MythologIQ-Labs-LLC/job-ranger
 
 Attestations are SLSA build-provenance statements signed through GitHub's OIDC identity for the exact workflow run, commit, and tag. They do not depend on Azure Artifact Signing or any purchased certificate.
 
-### Azure Artifact Signing (optional)
+### Azure Artifact Signing (required for Windows releases)
 
-The release workflow signs the direct NSIS installer only when the repository variable `JOB_RANGER_REQUIRE_WINDOWS_SIGNING` is `1`; in that case it fails closed if the Azure configuration is incomplete. Without it, the installer is published as an advanced/test artifact. Store and web releases never depend on it.
+Every publishing run of the release workflow signs the NSIS installer, following the [Windows code signing standard](https://github.com/MythologIQ-Labs-LLC/Myth-Tech-Forge/blob/main/docs/WINDOWS_CODE_SIGNING_STANDARD.md). The Windows job enters the `release` environment (owner approval), signs in to Azure with GitHub OIDC, and signs through SignTool and the Artifact Signing client (`scripts/windows-sign.cjs`). It fails closed if signing is not configured, and `scripts/verify-windows-distribution.ps1 -RequireSigned` fails it unless every executable is validly signed by `MythologIQ Labs, LLC` and timestamped. Build-only runs are never signed. Web releases do not depend on it.
 
 ### Microsoft Store channel
 
