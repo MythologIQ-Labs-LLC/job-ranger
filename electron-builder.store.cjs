@@ -28,7 +28,7 @@ const artifactSuffix = identity.kind === "store" ? "windows-store" : "windows-st
 
 // Only the Store package target; the NSIS direct-download build keeps using
 // electron-builder.windows.cjs and is unaffected.
-const { azureSignOptions: _unusedAzure, ...baseWin } = base.win;
+const { signtoolOptions: _unusedSigning, ...baseWin } = base.win;
 
 module.exports = {
   ...base,
