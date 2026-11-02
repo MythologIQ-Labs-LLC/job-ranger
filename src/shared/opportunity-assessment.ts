@@ -269,8 +269,9 @@ export function buildOpportunityAssessment(
     const unsupported =
       item.mapping.classification === "gap" || item.mapping.classification === "ambiguous";
     if (requirementCanBlock(item.requirement.kind, item.requirement.text) && unsupported) {
+      const requirement = item.requirement.text.trim().replace(/[\s.,;:]+$/, "");
       potentialBlockers.push(
-        `${item.requirement.text} (${item.mapping.classification === "gap" ? "no confirmed support" : "support needs confirmation"}).`,
+        `${requirement} (${item.mapping.classification === "gap" ? "no confirmed support" : "support needs confirmation"}).`,
       );
     }
   }

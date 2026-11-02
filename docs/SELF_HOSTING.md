@@ -21,8 +21,8 @@ Firefox and Safari are not yet part of the evidence-backed public PWA compatibil
 Open a terminal or PowerShell window and run:
 
 ```bash
-git clone https://github.com/MythologIQ-Labs-LLC/job-ranger.git
-cd job-ranger
+git clone https://github.com/MythologIQ-Labs-LLC/sojourner.git
+cd sojourner
 npm ci
 npm run selfhost:pwa
 ```
@@ -37,7 +37,7 @@ Keep that terminal window open while you use Job Ranger.
 
 ## Option B: no Git
 
-1. Open the [Job Ranger repository](https://github.com/MythologIQ-Labs-LLC/job-ranger).
+1. Open the [Job Ranger repository](https://github.com/MythologIQ-Labs-LLC/sojourner).
 2. Choose **Code → Download ZIP**.
 3. Extract the ZIP.
 4. Open a terminal or PowerShell window in the extracted `job-ranger` folder.
@@ -63,7 +63,7 @@ To stop the local server, return to the terminal and press `Ctrl+C`.
 To start it again later:
 
 ```bash
-cd job-ranger
+cd sojourner
 npm run selfhost:pwa
 ```
 
