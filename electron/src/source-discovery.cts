@@ -7,13 +7,23 @@ import type {
 } from "../../src/shared/source-discovery.js";
 import { getSourceProfile } from "../../src/shared/contracts.js";
 import { fetchDiscoveryJson } from "./source-discovery-fetch.cjs";
-import { normalizeHimalayasResponse, type HimalayasNormalizedJob } from "./himalayas-discovery.cjs";
+import {
+  fetchHimalayasJobs,
+  himalayasLocation,
+  type HimalayasNormalizedJob,
+} from "./himalayas-discovery.cjs";
 import type { RuntimeKind } from "../../src/shared/runtime.js";
 import { detectSourceFromUrl } from "./scrapers.cjs";
 
 const REMOTE_OK_ENDPOINT = "https://remoteok.com/api";
 const ARBEITNOW_ENDPOINT = "https://www.arbeitnow.com/api/job-board-api?page=1";
-const HIMALAYAS_SEARCH_ENDPOINT = "https://himalayas.app/jobs/api/search";
+const MIB = 1024 * 1024;
+/** Body caps, each several times the size observed live. */
+const REMOTE_OK_MAX_BYTES = 4 * MIB;
+const ARBEITNOW_MAX_BYTES = 8 * MIB;
+/** Shown in the web app, which skips Himalayas rather than working around its CORS policy. */
+export const HIMALAYAS_WEB_WARNING =
+  "Himalayas was skipped: the web app cannot reach its public API because Himalayas does not allow browser cross-origin requests (CORS). No proxy or credential workaround is used.";
 const STRUCTURED_MONITORABLE_TYPES = new Set<CompanySourceType>([
   "greenhouse",
   "lever",
@@ -319,18 +329,6 @@ function arbeitnowCandidates(
     });
 }
 
-function himalayasLocation(job: HimalayasNormalizedJob): string {
-  const regions = job.locationRestrictions;
-  const timezones = job.timezoneRestrictions;
-  if (!regions) return "Remote · eligibility unspecified";
-  if (regions.length === 0 && timezones?.length === 0) return "Worldwide remote";
-
-  const parts = ["Remote", regions.length ? regions.join(", ") : "countries unrestricted"];
-  if (timezones?.length) parts.push(`${timezones.join(", ")} time zone`);
-  else if (timezones === null) parts.push("time zone eligibility unspecified");
-  return parts.join(" · ");
-}
-
 function himalayasCandidates(
   jobs: readonly HimalayasNormalizedJob[],
   request: SourceDiscoveryRequest,
@@ -356,14 +354,6 @@ function himalayasCandidates(
       provenanceUrl: job.opportunityUrl,
       summary: snippet(job.summary) || "Himalayas listing. Review eligibility at the source.",
     }));
-}
-
-function himalayasQuery(role: string): string {
-  const url = new URL(HIMALAYAS_SEARCH_ENDPOINT);
-  url.searchParams.set("q", role);
-  url.searchParams.set("sort", "recent");
-  url.searchParams.set("page", "1");
-  return url.toString();
 }
 
 /**
@@ -399,17 +389,11 @@ export async function discoverPublicJobFeeds(
 
   // The Himalayas public API explicitly disallows browser CORS. Do not try to
   // bypass it with a hidden proxy or let blocked requests delay PWA discovery.
-  const himalayasRoles = request.roleTitles.slice(0, 3);
+  const skipHimalayas = context.runtimeKind === "web";
   const [remoteOk, arbeitnow, himalayas] = await Promise.allSettled([
-    fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl),
-    fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl),
-    context.runtimeKind === "web"
-      ? Promise.resolve(null)
-      : Promise.allSettled(
-          himalayasRoles.map((role) =>
-            fetchDiscoveryJson<unknown>(himalayasQuery(role), context.fetchImpl),
-          ),
-        ),
+    fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl, REMOTE_OK_MAX_BYTES),
+    fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl, ARBEITNOW_MAX_BYTES),
+    skipHimalayas ? Promise.resolve(null) : fetchHimalayasJobs(context.fetchImpl),
   ]);
 
   let candidates: SourceDiscoveryCandidate[] = [];
@@ -433,30 +417,20 @@ export async function discoverPublicJobFeeds(
     );
   }
 
-  if (context.runtimeKind === "web") {
-    warnings.push("Himalayas is unavailable in the browser: its public JSON API does not permit cross-origin requests (CORS). No proxy or credential workaround is used.");
-  } else if (himalayas.status === "fulfilled" && Array.isArray(himalayas.value)) {
-    let succeeded = false;
-    for (const outcome of himalayas.value) {
-      if (outcome.status === "rejected") {
-        const reason = outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-        warnings.push(`Himalayas search unavailable: ${reason}`);
-        continue;
-      }
-      try {
-        const normalized = normalizeHimalayasResponse(outcome.value);
-        candidates.push(...himalayasCandidates(normalized, request));
-        succeeded = true;
-      } catch (error) {
-        warnings.push(`Himalayas search returned invalid data: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-    if (succeeded) providerSuccesses += 1;
-    if (request.roleTitles.length > himalayasRoles.length) {
-      warnings.push("Himalayas search covered only the first three target-role titles to limit API requests.");
-    }
+  if (skipHimalayas) {
+    warnings.push(HIMALAYAS_WEB_WARNING);
+  } else if (himalayas.status === "fulfilled" && himalayas.value) {
+    providerSuccesses += 1;
+    candidates.push(...himalayasCandidates(himalayas.value.jobs, request));
+    warnings.push(
+      `Himalayas coverage is limited to its ${himalayas.value.jobs.length} most recent listings. Sojourner matched them to your target-role titles on this device and sent no search terms to Himalayas.`,
+      ...himalayas.value.warnings,
+    );
   } else {
-    warnings.push("Himalayas search was unavailable for this discovery run.");
+    const reason = himalayas.status === "rejected"
+      ? himalayas.reason instanceof Error ? himalayas.reason.message : String(himalayas.reason)
+      : "no response";
+    warnings.push(`Himalayas was unavailable for this discovery run: ${reason}`);
   }
 
   const seen = new Set<string>();

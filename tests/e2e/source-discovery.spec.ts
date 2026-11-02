@@ -75,6 +75,7 @@ test.beforeAll(async () => {
       ],
     };
 
+    (globalThis as unknown as { himalayasRequests: string[] }).himalayasRequests = [];
     globalThis.fetch = async (input, init) => {
       const url =
         typeof input === "string"
@@ -94,19 +95,34 @@ test.beforeAll(async () => {
           headers: { "content-type": "application/json" },
         });
       }
-      if (url.startsWith("https://himalayas.app/jobs/api/search?")) {
+      const parsed = new URL(url);
+      if (parsed.hostname === "himalayas.app") {
+        (globalThis as unknown as { himalayasRequests: string[] }).himalayasRequests.push(url);
+      }
+      if (parsed.hostname === "himalayas.app" && parsed.pathname === "/jobs/api") {
         return new Response(JSON.stringify({
-          jobs: [{
-            guid: "h-e2e-1",
-            companyName: "Himalayas Discovery",
-            title: "Customer Success Manager",
-            applicationLink: "https://himalayas.app/jobs/h-e2e-1",
-            locationRestrictions: ["United States"],
-            timezoneRestrictions: ["UTC-05:00"],
-            employmentType: "Full Time",
-            excerpt: "Help enterprise customers reach successful outcomes.",
-            pubDate: 1791504000000,
-          }],
+          jobs: [
+            {
+              guid: "h-e2e-1",
+              companyName: "Himalayas Discovery",
+              title: "Customer Success Manager",
+              applicationLink: "https://himalayas.app/companies/himalayas-discovery/jobs/h-e2e-1",
+              locationRestrictions: ["United States"],
+              timezoneRestrictions: [-5, -4],
+              employmentType: "Full Time",
+              excerpt: "Help enterprise customers reach successful outcomes.",
+              pubDate: 1791504000,
+            },
+            {
+              guid: "h-e2e-2",
+              companyName: "Unrelated Himalayas Employer",
+              title: "Backend Engineer",
+              applicationLink: "https://himalayas.app/companies/unrelated/jobs/h-e2e-2",
+              locationRestrictions: [],
+              timezoneRestrictions: [],
+              pubDate: 1791504000,
+            },
+          ],
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
       return originalFetch(input, init);
@@ -159,9 +175,23 @@ test("discovers opportunities, dismisses a lead, and approves a monitorable empl
   const himalayasCard = page.locator("article").filter({ hasText: "Himalayas Discovery" });
   await expect(himalayasCard).toBeVisible();
   await expect(himalayasCard.getByText("Found via Himalayas", { exact: true })).toBeVisible();
-  await expect(himalayasCard.getByText("Remote · United States · UTC-05:00 time zone", { exact: true })).toBeVisible();
+  await expect(himalayasCard.getByText("Remote · United States · UTC-5, UTC-4 time zone", { exact: true })).toBeVisible();
   await expect(himalayasCard.getByText("Opportunity only", { exact: true })).toBeVisible();
   await expect(himalayasCard.getByRole("button", { name: "Approve & monitor source" })).toHaveCount(0);
+  // The unfiltered list is matched to the track locally; a non-matching listing is not shown.
+  await expect(page.locator("article").filter({ hasText: "Unrelated Himalayas Employer" })).toHaveCount(0);
+
+  // Himalayas received only the fixed page size: no role title, location or other user value.
+  const himalayasRequests = await fixture.electronApp.evaluate(
+    () => (globalThis as unknown as { himalayasRequests: string[] }).himalayasRequests,
+  );
+  expect(himalayasRequests.length).toBeGreaterThan(0);
+  for (const raw of himalayasRequests) {
+    const requested = new URL(raw);
+    expect(requested.origin + requested.pathname).toBe("https://himalayas.app/jobs/api");
+    expect([...requested.searchParams.keys()]).toEqual(["limit"]);
+    expect(requested.searchParams.get("limit")).toBe("20");
+  }
 
   await opportunityOnlyCard
     .getByRole("button", {
