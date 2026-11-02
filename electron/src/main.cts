@@ -6,6 +6,9 @@ import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
 import { initializeEvidenceExtensionIpc } from "./evidence-extension-ipc.cjs";
 import { initializeBackupIpc } from "./backup-ipc.cjs";
+import { initializeDriveIpc, registerUnavailableDriveIpc, type DriveIpcHandles } from "./drive-ipc.cjs";
+import { initializeStorageIpc } from "./storage-ipc.cjs";
+import type { StorageService } from "./storage/storage-service.cjs";
 import { applyPendingRestore } from "./backup-service.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
@@ -63,6 +66,8 @@ let backend: JobScoutBackend | null = null;
 let careerBackend: CareerBackend | null = null;
 let requirementBackend: RequirementBackend | null = null;
 let isQuitting = false;
+let storageService: StorageService | null = null;
+let quitFlushDone = false;
 
 function discoveryFetchImpl(): typeof fetch {
   // Production uses the DNS-pinned transport. Electron E2E replaces the main
@@ -111,6 +116,12 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+  });
+
+  // The window only ever shows Sojourner's own page; links open in the system browser instead.
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    const current = mainWindow?.webContents.getURL() ?? "";
+    if (new URL(targetUrl, current || undefined).href.split("#")[0] !== current.split("#")[0]) event.preventDefault();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -289,24 +300,54 @@ app.whenReady().then(async () => {
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
-    await initializeResumeIpc({
+    const resumeService = await initializeResumeIpc({
       dataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
-    initializeBackupIpc({
+    // Google Drive export (#314): hidden unless this build has a Desktop OAuth client. A Drive
+    // start-up failure must never stop Sojourner from opening; the feature is reported unavailable.
+    let drive: DriveIpcHandles | null = null;
+    try {
+      drive = await initializeDriveIpc({
+        userDataDirectory,
+        databasePath: systemStatus.databasePath,
+        sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+        resumeService,
+      });
+    } catch (error) {
+      console.error("Google Drive export could not start:", error instanceof Error ? error.message : error);
+      registerUnavailableDriveIpc("its local export journal could not be opened.");
+    }
+    const producer = {
+      runtime: "electron" as const,
+      channel: distributionChannel,
+      appVersion: app.getVersion(),
+      buildId: process.env.JOB_RANGER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
+    };
+    const backupService = initializeBackupIpc({
       dataDirectory,
       userDataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
       appVersion: app.getVersion(),
-      producer: {
-        runtime: "electron",
-        channel: distributionChannel,
-        appVersion: app.getVersion(),
-        buildId: process.env.JOB_RANGER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
-      },
+      producer,
     });
+    // Storage location (#249): automatic backups and exported documents to a folder,
+    // Google Drive or OneDrive. The working database always stays local. A failure here
+    // never blocks startup; the Settings section then stays hidden.
+    try {
+      storageService = await initializeStorageIpc({
+        userDataDirectory,
+        databasePath: systemStatus.databasePath,
+        sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+        backupService,
+        producer,
+        drive,
+      });
+    } catch {
+      storageService = null;
+    }
 
     registerCoreIpcHandlers({
       backend,
@@ -359,7 +400,19 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  // Unbacked workspace changes are backed up to the storage location before quitting
+  // (bounded, so a provider outage cannot keep Sojourner from closing).
+  if (storageService && !quitFlushDone) {
+    event.preventDefault();
+    quitFlushDone = true;
+    const service = storageService;
+    void service.needsQuitFlush()
+      .then((needed) => (needed ? service.flushForQuit(120_000) : service.stop()))
+      .catch(() => undefined)
+      .finally(() => app.quit());
+    return;
+  }
   isQuitting = true;
   void backend?.dispose();
 });

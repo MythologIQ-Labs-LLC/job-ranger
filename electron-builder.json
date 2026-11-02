@@ -30,6 +30,16 @@
                                       {
                                         "from": "build/sqlite/sqlite3.exe",
                                         "to": "sqlite3.exe"
+                                      },
+                                      {
+                                        "from": "build/google-oauth",
+                                        "to": "google-oauth",
+                                        "filter": ["google-desktop-client.json"]
+                                      },
+                                      {
+                                        "from": "build/microsoft-oauth",
+                                        "to": "microsoft-oauth",
+                                        "filter": ["microsoft-client.json"]
                                       }
                                   ]
             },

@@ -14,6 +14,8 @@ import type { ResumeDesktopApi } from "./shared/resume-api";
 import type { SourceDiscoveryDesktopApi } from "./shared/source-discovery";
 import type { RuntimeDesktopApi } from "./shared/runtime";
 import type { LegacyInstallDesktopApi } from "./shared/legacy-install";
+import type { GoogleDriveDesktopApi } from "./shared/google-drive-desktop";
+import type { StorageLocationsDesktopApi } from "./shared/storage-locations";
 
 declare global {
   interface Window {
@@ -30,7 +32,9 @@ declare global {
       ApplicationInsightsDesktopApi &
       JsonResumeDesktopApi &
       RuntimeDesktopApi &
-      LegacyInstallDesktopApi;
+      LegacyInstallDesktopApi &
+      GoogleDriveDesktopApi &
+      StorageLocationsDesktopApi;
   }
 }
 
