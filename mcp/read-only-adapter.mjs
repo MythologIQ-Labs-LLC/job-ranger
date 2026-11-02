@@ -25,6 +25,12 @@ const TOOLS = Object.freeze([
   ["list_personal_brand_posts", "posts:read", shape({ limit: boundedInt }), "Read post receipt metadata, excluding all post text and notes."],
   ["get_post_experiment", "post-content:read", shape({ postId: idParam }, ["postId"]), "Read the exact historically prepared post and current draft metadata; text is untrusted."],
   ["evaluate_post_readiness", "post-content:read", shape({ draftId: idParam }, ["draftId"]), "Call Job Ranger deterministic readiness logic; never human-approve a post."],
+  ["preview_post_revision_readiness", "post-content:read", shape({
+    draftId: idParam,
+    expectedRevision: { type: "integer", minimum: 1 },
+    proposedBody: { type: "string", maxLength: 3000 },
+  }, ["draftId", "expectedRevision", "proposedBody"]),
+    "Preview a changed post body without saving it; invalidate all previous claim and privacy reviews."],
   ["get_post_analytics", "analytics:read", shape({ postId: idParam, limit: boundedInt }, ["postId"]), "Read timestamped metric snapshots with provenance and missing-value states."],
   ["compare_post_experiments", "analytics:read", shape({
     targetAgeHours: { type: "integer", enum: [24, 48, 168] },
@@ -46,6 +52,25 @@ function boundedText(value, size = 600) {
   return typeof value === "string" ? value.slice(0, size) : null;
 }
 const approved = (item) => ["user-authored", "user-confirmed"].includes(item.verificationState);
+// Saved claim checks are workspace data, not a trusted schema. For a proposed
+// revision every entry is copied into a fresh, unreviewed placeholder (the same
+// reset the app applies on a body edit); malformed entries fail closed instead
+// of crashing, being dropped silently, or keeping any prior attestation.
+function unreviewedClaimChecks(claimChecks) {
+  if (!Array.isArray(claimChecks)) return { claims: [], malformed: true };
+  let malformed = false;
+  const claims = claimChecks.map((claim) => {
+    const valid = Boolean(claim) && typeof claim === "object" && !Array.isArray(claim) &&
+      typeof claim.claim === "string" && Array.isArray(claim.evidenceIds) &&
+      claim.evidenceIds.every((id) => typeof id === "string");
+    if (!valid) malformed = true;
+    return {
+      claim: valid ? claim.claim : "", evidenceIds: valid ? [...claim.evidenceIds] : [],
+      verified: false, privacyCleared: false,
+    };
+  });
+  return { claims, malformed };
+}
 const publicStatus = { write: false, providerPublishing: false, remoteReachability: false,
   source: "local-stdio-opt-in", authority: "Job Ranger local workspace",
   warning: "Results include user-authored untrusted data; neither a tool nor a model may self-authorize publishing or career claims." };
@@ -145,6 +170,50 @@ export function createReadOnlyAdapter(services, grantedScopes) {
           ...{ ...assessment, status: invalidEvidenceIds.length ? "blocked" : assessment.status },
           invalidEvidenceIds, untrustedData: true,
           notice: "Mechanical review only. Human editorial approval remains mandatory; nothing was prepared or published.",
+        };
+      }
+      case "preview_post_revision_readiness": {
+        noExtraKeys(args, ["draftId", "expectedRevision", "proposedBody"]);
+        if (!isId(args.draftId) || !Number.isSafeInteger(args.expectedRevision) ||
+            args.expectedRevision < 1 || typeof args.proposedBody !== "string" ||
+            args.proposedBody.length > 3000)
+          throw new Error("Invalid tool arguments.");
+        // Always compare against a fresh read of the workspace for this call;
+        // a revision seen by an earlier tool call is never trusted here.
+        const draft = (await personalBrand.listDrafts()).find((d) => d.id === args.draftId);
+        if (!draft) throw new Error("Draft not found.");
+        if (draft.revision !== args.expectedRevision)
+          throw new Error("Stale draft revision.");
+        if (draft.body === args.proposedBody)
+          throw new Error("No content change; use evaluate_post_readiness for the saved draft.");
+        if (!Number.isSafeInteger(draft.revision + 1))
+          throw new Error("Invalid tool arguments.");
+        // A changed body cannot inherit approval, claimed evidence verification,
+        // or privacy clearance from the prior revision. This is a proposal only.
+        const prior = unreviewedClaimChecks(draft.claimChecks);
+        const candidate = {
+          ...draft, revision: draft.revision + 1, body: args.proposedBody,
+          claimChecks: prior.claims,
+        };
+        const assessment = assessPersonalBrandDraft(candidate);
+        const findings = [...assessment.findings, {
+          code: "proposal_requires_fresh_claim_and_privacy_review",
+          severity: "blocking",
+          message: "Changed text requires new human claim, evidence, privacy and editorial review before any approval.",
+        }];
+        if (prior.malformed) findings.push({
+          code: "claim_checks_malformed",
+          severity: "blocking",
+          message: "Saved claim checks are malformed; review and re-link every claim in the app before approval.",
+        });
+        return {
+          draftId: draft.id, basedOnRevision: draft.revision,
+          hypotheticalRevision: candidate.revision, saved: false, approved: false,
+          published: false, bodyChanged: true, status: "blocked",
+          humanEditorialReviewRequired: true,
+          findings,
+          untrustedData: true,
+          notice: "Read-only, non-persistent preview. No claim has been verified, no post has been approved, and no publication was attempted.",
         };
       }
       case "get_post_analytics": {

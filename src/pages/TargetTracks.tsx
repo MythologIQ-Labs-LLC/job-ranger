@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Compass, Plus, Save, Trash2 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { CareerExplorationHandoff } from "../components/CareerExplorationHandoff";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EconomicPathwayExplorer } from "../components/EconomicPathwayExplorer";
 import { LineListTextarea } from "../components/LineListTextarea";
@@ -47,6 +48,15 @@ const ONE_PER_LINE = "One per line.";
 
 function cloneEmpty(): CareerTargetTrackInput {
   return structuredClone(emptyTargetTrackInput);
+}
+
+// Key-order-independent comparison, so an unchanged draft is never reported as
+// edited merely because a field was rebuilt in a different order.
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+      : item);
 }
 
 function StrengthSelect({
@@ -118,10 +128,18 @@ export function TargetTracks() {
   const [draft, setDraft] = useState<CareerTargetTrackInput>(cloneEmpty);
   const [saved, setSaved] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [pendingDirection, setPendingDirection] = useState<string | null>(null);
 
   const editingTrack = useMemo(
     () => targetTracks.tracks.find((track) => track.id === editingId) ?? null,
     [editingId, targetTracks.tracks],
+  );
+  // Unsaved means the editor differs from what is persisted for the selected
+  // track, or (for a new track) from an empty form, including an earlier
+  // explored direction that was never saved.
+  const hasUnsavedChanges = useMemo(
+    () => canonical(draft) !== canonical(editingTrack ? toTargetTrackInput(editingTrack) : cloneEmpty()),
+    [draft, editingTrack],
   );
 
   useEffect(() => {
@@ -151,6 +169,21 @@ export function TargetTracks() {
     setEditingId(track.id);
     setDraft(toTargetTrackInput(track));
     setSaved(false);
+  };
+  // A hypothesis is not a persisted search intent. Even an explicit user
+  // selection starts a *paused, unsaved* draft with no inferred constraints.
+  const applyDirection = (direction: string) => {
+    setInitialized(true);
+    setEditingId(null);
+    setDraft({ ...cloneEmpty(), name: direction, direction, isActive: false });
+    setSaved(false);
+    document.getElementById("target-track-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  // Never discard unsaved editor work silently: ask first, and leave the
+  // draft untouched if the person cancels.
+  const exploreDirection = (direction: string) => {
+    if (hasUnsavedChanges) setPendingDirection(direction);
+    else applyDirection(direction);
   };
 
   const updateConstraints = <K extends keyof CareerTargetTrackInput["constraints"]>(
@@ -237,7 +270,7 @@ export function TargetTracks() {
           </div>
         </aside>
 
-        <div className="panel panel-strong p-6 sm:p-8">
+        <div id="target-track-editor" className="panel panel-strong p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="metric-label">{editingTrack ? "Edit track" : "New track"}</span>
@@ -355,7 +388,19 @@ export function TargetTracks() {
           </div>
         </div>
       </section>
+      {/* Exploration tools sit together below the editor, each under its own heading. */}
+      <CareerExplorationHandoff onTryDirection={exploreDirection} />
       <EconomicPathwayExplorer />
+      <ConfirmDialog
+        open={pendingDirection !== null}
+        onClose={() => setPendingDirection(null)}
+        onConfirm={() => { if (pendingDirection !== null) applyDirection(pendingDirection); }}
+        title="Replace unsaved track changes?"
+        message={`Starting a draft for "${pendingDirection ?? ""}" will discard the unsaved changes in the track editor${draft.name.trim() ? ` ("${draft.name.trim()}")` : ""}. Saved target tracks are not affected.`}
+        confirmLabel="Discard changes and start draft"
+        cancelLabel="Keep editing"
+        variant="warning"
+      />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTargetId(null)}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, Copy, FileText, Plus, Trash2 } from "lucide-react";
 import type { ApplicationMaterialProjection } from "../shared/application-materials";
+import { evaluateApplicationHandoff, type ApplicationHandoffBlockReason } from "../shared/application-handoff";
 import { getDesktopApi } from "../services/api";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -12,6 +13,15 @@ function materialText(material: ApplicationMaterialProjection): string {
   return material.sections.map((section) => section.text).join("\n\n");
 }
 
+// Completes "Cover letter version N was not copied: ..." for each fail-closed readiness reason.
+const copyBlockedReasons: Record<ApplicationHandoffBlockReason, string> = {
+  "missing-material": "this version no longer exists. Reopen application materials to see current versions.",
+  "unsupported-kind": "it is not a cover letter.",
+  "stale-evidence": "its supporting Career Evidence changed. Create a new version from current evidence.",
+  "empty-material": "it has no text to copy. Create a new version from current evidence.",
+  "missing-evidence-links": "its Career Evidence links are incomplete. Create a new version from current evidence.",
+};
+
 export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterialsPanelProps) {
   const [open, setOpen] = useState(false);
   const [materials, setMaterials] = useState<ApplicationMaterialProjection[]>([]);
@@ -22,25 +32,27 @@ export function ApplicationMaterialsPanel({ applicationId }: ApplicationMaterial
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const selectedMaterial = materials.find((material) => material.id === deleteMaterialId) ?? null;
 
-  // Sojourner never sends applications; copying is the manual handoff. Evidence state is
-  // re-read at copy time, so a cached list never lets a stale version be copied.
+  // Sojourner never sends applications or changes their status; copying is the manual handoff.
+  // Evidence state is re-read at copy time and checked by the pure readiness contract, so a
+  // cached list never lets a stale, empty or incompletely linked version be copied.
   const copy = async (material: ApplicationMaterialProjection) => {
     let current: ApplicationMaterialProjection | undefined;
     try {
       const latest = await getDesktopApi().applicationMaterials.list(applicationId);
       setMaterials(latest);
-      current = latest.find((item) => item.id === material.id);
+      current = latest.find((item) => item.id === material.id && item.applicationId === applicationId);
     } catch {
       setCopyNotice(`Cover letter version ${material.version} was not copied because its evidence could not be re-checked.`);
       return;
     }
-    if (!current || current.staleEvidenceIds.length > 0) {
-      setCopyNotice(`Cover letter version ${material.version} was not copied: its supporting Career Evidence changed. Create a new version from current evidence.`);
+    const readiness = evaluateApplicationHandoff(current ?? null);
+    if (!readiness.ready) {
+      setCopyNotice(`Cover letter version ${material.version} was not copied: ${copyBlockedReasons[readiness.reason]}`);
       return;
     }
     try {
-      await navigator.clipboard.writeText(materialText(current));
-      setCopyNotice(`Cover letter version ${current.version} copied. Review it before you send it.`);
+      await navigator.clipboard.writeText(readiness.text);
+      setCopyNotice(`Cover letter version ${material.version} copied. Review it before you send it.`);
     } catch {
       setCopyNotice("Copy was unavailable. Select the cover letter text below and copy it manually.");
     }
