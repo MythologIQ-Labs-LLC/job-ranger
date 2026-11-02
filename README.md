@@ -52,7 +52,7 @@ You can enter anywhere in that flow. A resume is evidence about work you have do
 
 ### See it in action
 
-**Updated Sojourner media is in production, not published yet.** The [first-party recording, screenshot and website handoff checklist](./docs/marketing/SOJOURNER_MEDIA_HANDOFF.md) tracks the new captures, provenance and owner review. The linked video below remains a clearly labeled historical Job Ranger recording until a verified replacement is accepted.
+**New Sojourner media is captured and reviewed, but not yet published.** The [first-party recording, screenshot and website handoff record](./docs/marketing/SOJOURNER_MEDIA_HANDOFF.md) lists the captures, their provenance and where the approved files are kept. The linked video below remains a clearly labeled historical Job Ranger recording until a verified replacement is accepted.
 
 These screenshots and the walkthrough video come from the production web build with fictional sample data (Morgan Rivera, Harbor Health). No real person's career data is shown.
 

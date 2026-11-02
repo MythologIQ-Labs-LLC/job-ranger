@@ -2,11 +2,13 @@
 
 Status: **CAPTURED AND INDEPENDENTLY REVIEWED (media READY) / NOT APPROVED FOR PUBLICATION**. Owner request: 2026-10-29; capture 2026-10-30. Tracking: #354 (site assets), #295 (recording), #339 (name/launch), #315 (Google Drive export).
 
-This is the evidence-backed manifest for captured, reviewed Sojourner PWA media. The image and video binaries are preserved outside public Git and are **not yet approved for publication**. The prior Job Ranger WebM and screenshots remain historical assets until the owner authorizes replacement and approves the website storage destination.
+This is the evidence-backed manifest for captured, reviewed Sojourner PWA media. The approved binaries are on the orphan, assets-only branch [`media/sojourner-website-assets-2026-10-30`](https://github.com/MythologIQ-Labs-LLC/sojourner/tree/media/sojourner-website-assets-2026-10-30), pinned at `863a5509a4b0ebeb1935f238b776b8c5ceb44b66`. That branch is never merged into `main`. Retrieve each file as `https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/<path>`, using the paths and SHA-256 values in its `media-manifest.json`. The repository was renamed from `job-ranger` on 2026-11-02, and the old URL still resolves.
+
+Public publication on the website is **not yet approved**. Website integration belongs only to the owner's designated website session. The prior Job Ranger WebM and screenshots remain historical assets on `main` until the owner authorizes replacement.
 
 ## Product and source-of-truth
 
-- Product: **Sojourner: Employment Toolkit**. Browser/PWA only; Electron tooling exists only for development/test.
+- Product: **Sojourner: Employment Toolkit**. Since 2026-11-02 the primary deliverable is a signed Windows application, and the browser PWA continues ([`../ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md) ARCH-001). These captures show the PWA, which uses the same interface as the Windows app.
 - Primary story: a local-first job-search companion for career direction, evidence-backed opportunity assessment, truthful resumes and deliberate application tracking.
 - First-party capture scripts: `scripts/demo/story.spec.ts`, `scripts/demo/screenshots.spec.ts`, `scripts/demo/fixture.ts`, `scripts/demo/ready.ts`.
 - Commands: `npm run demo:record`; `npm run demo:screenshots`. Both build the PWA and use `scripts/demo/playwright.demo.config.ts`; honor `JOB_RANGER_PW_CHROMIUM` when a compatible supplemental browser is required.
