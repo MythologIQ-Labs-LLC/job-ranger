@@ -197,11 +197,7 @@ Career Stories provide reusable evidence-linked narratives for interviews/applic
 
 Sojourner can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
 
-Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Sojourner says so, and you can select and copy the text manually.
-
-**Development candidate, not in the published v1.2.0 release:** a user-controlled **Copy cover letter** action is being implemented for a single selected saved version. It checks current evidence-link freshness before attempting to copy the text, does not submit an application, and does not mark it applied. If clipboard permission fails or evidence changes, it must show an error. This feature remains unqualified pending the formal Qortara audit and Electron/PWA verification.
-
-**Development candidate, not in the published v1.2.0 release:** a **Copy cover letter** action is being implemented for one explicitly selected saved draft. It rechecks current evidence-link freshness before asking the browser to copy the text, never submits an employer application and never marks it applied. If clipboard permission fails or evidence changed, the application screen must show the failure instead of claiming success. This candidate is still subject to Qortara approval and Electron/PWA verification.
+Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy, and a version with no text or with incomplete Career Evidence links is refused too. Copying never submits an application or changes its status. If the browser or operating system denies clipboard access, Sojourner says so, and you can select and copy the text manually.
 
 ### 13. Search Insights
 

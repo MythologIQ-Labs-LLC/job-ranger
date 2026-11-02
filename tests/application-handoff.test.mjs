@@ -46,6 +46,7 @@ test('missing or broken evidence references block unsupported material', () => {
   assert.deepEqual(evaluateApplicationHandoff(material({ selectedEvidenceIds: [] })), { ready: false, reason: 'missing-evidence-links' });
   assert.deepEqual(evaluateApplicationHandoff(material({ selectedEvidenceIds: ['e-2'] })), { ready: false, reason: 'missing-evidence-links' });
   assert.deepEqual(evaluateApplicationHandoff(material({ selectedEvidenceIds: ['e-1', 'e-1'] })), { ready: false, reason: 'missing-evidence-links' });
+  assert.deepEqual(evaluateApplicationHandoff(material({ selectedEvidenceIds: ['e-1', 'e-2'] })), { ready: false, reason: 'missing-evidence-links' });
   assert.deepEqual(evaluateApplicationHandoff(material({ sections: sample.sections.map(s => s.id === 'evidence' ? { ...s, evidenceUpdatedAtById: {} } : s) })), { ready: false, reason: 'missing-evidence-links' });
   assert.deepEqual(evaluateApplicationHandoff(material({ sections: sample.sections.map(s => s.id === 'evidence' ? { ...s, evidenceIds: [] } : s) })), { ready: false, reason: 'missing-evidence-links' });
   assert.deepEqual(evaluateApplicationHandoff(material({ sections: [...sample.sections, { id: 'extra', label: 'evidence', text: 'Unsupported statement', evidenceIds: ['e-2'], evidenceUpdatedAtById: { 'e-2': '2026-10-09' } }] })), { ready: false, reason: 'missing-evidence-links' });
