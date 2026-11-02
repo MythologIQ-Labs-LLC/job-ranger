@@ -11,6 +11,7 @@ import {
   validateResumeTailoringPreviewRequest,
 } from "./resume-validators.cjs";
 import { validateCareerEntityId } from "./career-validators.cjs";
+import { notifyDocumentExported } from "./storage/document-exports.cjs";
 
 interface ResumeIpcOptions {
   dataDirectory: string;
@@ -51,7 +52,10 @@ export async function initializeResumeIpc(
     const request: ResumeExportRequest = validateResumeExportRequest(rawRequest);
     const prepared = await service.prepareRender(request.projectionId);
     await renderResumePdf(prepared);
-    return service.finalizeRenderedPdf(prepared, request);
+    const result = await service.finalizeRenderedPdf(prepared, request);
+    // Windows storage location (#249): copy the verified PDF there when one is set up.
+    if (result.artifact) notifyDocumentExported(result.artifact.managedPath, `resume-v${result.artifact.version}.pdf`);
+    return result;
   });
   ipcMain.handle("resume:read-verified-artifact-for-export", (_event, artifactId: string) =>
     service.readVerifiedArtifactForExport(validateCareerEntityId(artifactId, "Resume artifact id")),

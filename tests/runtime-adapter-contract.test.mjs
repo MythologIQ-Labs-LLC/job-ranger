@@ -59,6 +59,7 @@ const electronAllowed = new Set([
   "interview-prep-ipc.cts",
   "legacy-install-ipc.cts",
   "drive-ipc.cts",
+  "storage-ipc.cts",
 ]);
 for (const file of readdirSync(electronSource).filter((name) => name.endsWith(".cts"))) {
   const source = readFileSync(path.join(electronSource, file), "utf8");

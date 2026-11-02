@@ -16,6 +16,8 @@ export const FEATURE_MIGRATIONS = {
   personalBrandLinkedInTopics: { version: 1009, name: "personal_brand_linkedin_topic_attestations" },
   /** Windows Google Drive export journal (#314); electron/src/drive/drive-export-journal.cts. */
   googleDriveExportJournal: { version: 1010, name: "google_drive_export_journal" },
+  /** Windows storage location backup and document records (#249); electron/src/storage/storage-records.cts. */
+  storageLocationRecords: { version: 1011, name: "storage_location_records" },
 } as const;
 
 export const FEATURE_MIGRATION_VERSIONS: ReadonlySet<number> = new Set(

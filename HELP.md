@@ -238,6 +238,24 @@ v1.2.0 backups are folders. In the Windows app, restore one by selecting the `ma
 
 **Web app storage:** browsers can clear site data under storage pressure unless they grant *persistent storage*. Use Settings → **This installation** → **Request persistent storage**, install the web app if your browser offers it, and export backups regularly.
 
+#### Storage location (Windows app)
+
+Settings > **Storage location** keeps copies of your workspace backups and exported documents in one place you choose. Your working data always stays on this computer; the location holds copies you can restore. This is not yet in a published release, and the cloud choices have not been tested against live accounts.
+
+- **This computer** saves to a folder, by default `Documents\Sojourner`. Select **Choose folder** to use another one (for example a USB drive or a folder another backup tool watches). It cannot be inside Sojourner's own data folder.
+- **Google Drive** saves to a **Sojourner** folder in your My Drive. Select **Connect Google Drive**; your browser opens Google's sign-in page. Sojourner can see only files it created there.
+- **OneDrive** saves to **Apps > Sojourner** in your OneDrive (personal, work or school account). Select **Connect OneDrive**; your browser opens Microsoft's sign-in page. Sojourner can see only its own app folder.
+
+A choice that this build of Sojourner was not set up for is shown greyed out with the reason.
+
+What happens: about 10 minutes after you change something (at most an hour after the first change), and when you quit with unsaved changes, Sojourner saves a full backup (`Sojourner-backup-automatic-....jobranger`) to `Backups`. **Back up now** saves a manual one. When you export a resume PDF or a JSON Resume file, a copy goes to `Documents`. Every copy is read back and checked before Sojourner counts it. The status line shows the last successful backup, the location and any error; failed backups are retried automatically and stay visible until one succeeds.
+
+**Automatic backups to keep** (default 20): Sojourner removes older *automatic* backups it created at that location. Manual backups, documents and files Sojourner did not create are never removed.
+
+**Restore from this location** lists the backups and documents there. Choose **Restore...** on a backup to check it: Sojourner downloads it, runs the same integrity checks as any backup, shows its date and contents, and asks you to confirm that it replaces your current workspace after a restart. Documents open (This computer) or download to a folder you choose (cloud). A backup Sojourner never verified is not offered.
+
+Switching to another location keeps the old copies where they are; new copies go to the new location, and **Show backup history** lists both. **Disconnect** stops copying to that provider and deletes the saved sign-in on this computer. For Google, Sojourner also asks Google to revoke its access; disconnecting Google here also disconnects Google Drive resume export. Microsoft does not let apps revoke their own access, so remove Sojourner at account.live.com/consent/Manage (personal) or myapps.microsoft.com (work or school) if you want to. Sign-ins are kept encrypted by Windows; if encryption is unavailable they last only until you close Sojourner. See the [storage location contract](./docs/design/STORAGE_LOCATIONS.md).
+
 ### 15. JSON Resume interoperability
 
 JSON Resume import/export is a portability adapter, not Sojourner's canonical data model.
@@ -335,7 +353,7 @@ Sojourner is local first.
 
 The desktop app keeps structured career/search state behind the Electron/SQLite boundary, including Career Profile, Target Tracks, Applications, Career Evidence/provenance, job source snapshots, requirements/mappings, resumes, lifecycle records, Career Stories, application materials, and insights state.
 
-Managed source/resume artifacts are stored in Sojourner's local data/artifact directory rather than uploaded to a hosted Sojourner account.
+Managed source/resume artifacts are stored in Sojourner's local data/artifact directory rather than uploaded to a hosted Sojourner account. If you choose a Google Drive or OneDrive storage location in the Windows app, copies of your backups and exported documents go to your own account there; nothing goes to a Sojourner server.
 
 Core functionality does not require a remote inference provider.
 

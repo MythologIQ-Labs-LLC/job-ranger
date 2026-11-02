@@ -67,7 +67,13 @@ async function settle<T>(work: () => Promise<T>): Promise<DriveDesktopResult<T>>
  * told `available: false` and hides the feature; no Google request is ever made then.
  * The journal migration (1010) is applied either way.
  */
-export async function initializeDriveIpc(options: DriveIpcOptions): Promise<void> {
+/** The Google sign-in the Windows storage location shares with Drive export (#249). */
+export interface DriveIpcHandles {
+  auth: GoogleDesktopAuth;
+  store: DriveCredentialStore;
+}
+
+export async function initializeDriveIpc(options: DriveIpcOptions): Promise<DriveIpcHandles> {
   const runtime = {
     env: process.env,
     isPackaged: app.isPackaged,
@@ -186,4 +192,5 @@ export async function initializeDriveIpc(options: DriveIpcOptions): Promise<void
   handle("drive:abandon-export", (_event, artifactId: unknown, operationId: unknown) => action(() =>
     flow.abandon(validateCareerEntityId(artifactId, "Resume artifact id"),
       validateDriveUuid(operationId, "Drive export operation id"))));
+  return { auth, store };
 }
