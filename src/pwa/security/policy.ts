@@ -26,26 +26,35 @@ export function isAllowedAcquisitionOrigin(url: string): boolean {
   }
 }
 
+/**
+ * Google Drive export (#314) is enabled only together with the separately hosted
+ * OAuth helper origin (#264). Google's sign-in script never runs on this origin:
+ * no option adds accounts.google.com to script-src, style-src, frame-src or
+ * connect-src. The configured build only gains the two Drive API paths it calls
+ * with an access token obtained through the helper popup.
+ */
 export interface PwaSecurityOptions { googleOAuthEnabled?: boolean; isolatedGoogleOAuthOrigin?: string; }
 
+function driveExportEnabled(options: PwaSecurityOptions): boolean {
+  return options.googleOAuthEnabled === true && Boolean(options.isolatedGoogleOAuthOrigin);
+}
+
 export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): string {
-  const isolated = options.googleOAuthEnabled === true && Boolean(options.isolatedGoogleOAuthOrigin);
-  const google = options.googleOAuthEnabled === true && !isolated;
-  const googleApis = options.googleOAuthEnabled === true;
+  const driveApis = driveExportEnabled(options);
   return [
     "default-src 'none'",
     // 'wasm-unsafe-eval' permits compiling the bundled SQLite WebAssembly
     // module only; JavaScript eval stays forbidden.
-    google ? "script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client" : "script-src 'self' 'wasm-unsafe-eval'",
+    "script-src 'self' 'wasm-unsafe-eval'",
     "worker-src 'self'",
-    google ? "style-src 'self' https://accounts.google.com/gsi/style" : "style-src 'self'",
+    "style-src 'self'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${google ? " https://accounts.google.com/gsi/" : ""}${googleApis ? " https://www.googleapis.com/drive/v3/ https://www.googleapis.com/upload/drive/v3/" : ""}`,
+    `connect-src 'self' ${ACQUISITION_ORIGINS.join(" ")}${driveApis ? " https://www.googleapis.com/drive/v3/ https://www.googleapis.com/upload/drive/v3/" : ""}`,
     "manifest-src 'self'",
     "media-src 'none'",
     "object-src 'none'",
-    google ? "frame-src https://accounts.google.com/gsi/" : "frame-src 'none'",
+    "frame-src 'none'",
     // window.open() is not governed by CSP; the helper popup needs no child-src entry.
     "child-src 'self'",
     "base-uri 'none'",
@@ -53,7 +62,7 @@ export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): st
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
     "require-trusted-types-for 'script'",
-    google ? "trusted-types job-ranger-script-url job-ranger-google-gis" : "trusted-types job-ranger-script-url",
+    "trusted-types job-ranger-script-url",
   ].join("; ");
 }
 
@@ -65,7 +74,8 @@ export function buildSecurityHeaders(options: PwaSecurityOptions = {}): Record<s
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Cross-Origin-Opener-Policy": options.googleOAuthEnabled ? "same-origin-allow-popups" : "same-origin",
+    // The helper popup must keep window.opener to post its one-time grant back.
+    "Cross-Origin-Opener-Policy": driveExportEnabled(options) ? "same-origin-allow-popups" : "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Permissions-Policy":
       "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()",

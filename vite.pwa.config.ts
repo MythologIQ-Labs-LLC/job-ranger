@@ -54,9 +54,10 @@ const buildId = pwaBuildId({
   override: process.env.JOB_RANGER_BUILD_ID,
 });
 
-// Only a public Web OAuth client ID is embedded; never a token or client secret. Drive is enabled only
-// through the isolated OAuth helper origin, and never in the demo flavor (drive-build-config.ts).
-const { googleWebClientId, googleOAuthHelperOrigin, driveSecurity } = resolveDriveBuildConfig({
+// Drive is enabled only through the isolated OAuth helper origin, and never in the demo flavor
+// (drive-build-config.ts). Only the helper origin is embedded: the Google Web OAuth client ID belongs
+// to the helper build (scripts/build-drive-oauth-helper.mjs), because Google sign-in never runs here.
+const { googleOAuthHelperOrigin, driveSecurity } = resolveDriveBuildConfig({
   flavor,
   clientId: process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID,
   helperOrigin: process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN,
@@ -272,7 +273,6 @@ export default defineConfig({
     __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
     __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
     __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
-    __JOB_RANGER_GOOGLE_WEB_CLIENT_ID__: JSON.stringify(googleWebClientId),
     __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__: JSON.stringify(googleOAuthHelperOrigin),
   },
   worker: {

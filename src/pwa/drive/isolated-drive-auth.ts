@@ -4,7 +4,7 @@
  * and tokens exist only in this browser session's private fields.
  */
 import { DriveHelperResponseGate } from "./oauth-helper-response-contract.ts";
-import type { DriveAuthView } from "./google-web-auth";
+import type { DriveAuthView } from "./drive-auth-view.ts";
 
 const EXPIRY_SKEW = 30_000;
 const RESPONSE_TIMEOUT = 180_000;

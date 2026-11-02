@@ -27,9 +27,11 @@ test("isolated PWA mode does not load Google's script into the career workspace"
   assert.equal(buildSecurityHeaders({
     googleOAuthEnabled: true, isolatedGoogleOAuthOrigin: helper,
   })["Cross-Origin-Opener-Policy"], "same-origin-allow-popups");
-  const legacy = buildContentSecurityPolicy({ googleOAuthEnabled: true });
-  assert.ok(legacy.includes("https://accounts.google.com/gsi/client"),
-    "legacy behavior only persists when isolated mode is unconfigured");
+  // The former same-origin GIS fallback is gone (#315/#356): without a helper origin the
+  // policy is the unconfigured one, never a Google script allowance.
+  const unpaired = buildContentSecurityPolicy({ googleOAuthEnabled: true });
+  assert.ok(!unpaired.includes("accounts.google.com"));
+  assert.equal(unpaired, buildContentSecurityPolicy());
 });
 
 test("isolated popup accepts one exact-source authorization and forgets session", async () => {
