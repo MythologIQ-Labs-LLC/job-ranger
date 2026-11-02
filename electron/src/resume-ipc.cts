@@ -53,6 +53,9 @@ export async function initializeResumeIpc(
     await renderResumePdf(prepared);
     return service.finalizeRenderedPdf(prepared, request);
   });
+  ipcMain.handle("resume:read-verified-artifact-for-export", (_event, artifactId: string) =>
+    service.readVerifiedArtifactForExport(validateCareerEntityId(artifactId, "Resume artifact id")),
+  );
   ipcMain.handle(
     "resume:compare-versions",
     (_event, fromArtifactId: string, toArtifactId: string) =>
