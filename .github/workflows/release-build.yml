@@ -219,7 +219,6 @@ jobs:
           gh release upload "${{ steps.release_tag.outputs.tag }}" \
             release/Sojourner*windows*.exe \
             release/Sojourner*windows*.exe.blockmap \
-            release/latest.yml \
             build/trust/windows-signing.json \
             build/trust/windows-package-smoke.json \
             build/trust/windows-SHA256SUMS.txt \
