@@ -1,22 +1,24 @@
-# Job Ranger local read-only MCP prototype
+# Sojourner local read-only MCP prototype
 
-**Development-only status (2026-10-08).** This is an opt-in local [Model Context Protocol](https://modelcontextprotocol.io/) **stdio server**, not an installed ChatGPT plugin, a remote MCP endpoint, or a feature of the published Job Ranger v1.2.0 installer. Do **not** expose it through a public no-auth tunnel, browser endpoint, or unknown remote tool host. An independent **official, outbound-only Secure MCP Tunnel development pathway** is documented in [the owner-only trial guide](./JOB_RANGER_SECURE_TUNNEL.md); it has not been confirmed live in ChatGPT.
+**Development-only status (2026-10-08).** This is an opt-in local [Model Context Protocol](https://modelcontextprotocol.io/) **stdio server**, not an installed ChatGPT plugin, a remote MCP endpoint, or a feature of the published v1.2.0 installer (released under the former name Job Ranger). Do **not** expose it through a public no-auth tunnel, browser endpoint, or unknown remote tool host. An independent **official, outbound-only Secure MCP Tunnel development pathway** is documented in [the owner-only trial guide](./JOB_RANGER_SECURE_TUNNEL.md); it has not been confirmed live in ChatGPT.
+
+**Platform boundary: Windows desktop data only, not the PWA.** The server reads the local SQLite database (`jobscout.sqlite3`) that the Windows desktop (Electron) build of Sojourner writes. It is **not available for the Progressive Web App**: PWA and demo workspaces live in the browser's origin-private storage (OPFS), which this process cannot open, and nothing in the PWA starts or connects to it. Under [ARCH-002](../ARCHITECTURE_INDEX.md) the Electron build is an internal engineering harness rather than a supported end-user distribution, so this adapter stays a development prototype.
 
 The baseline application works independently of this adapter and never needs a ChatGPT subscription or a model.
 
 ## What it does
 
-A human-authorized **local MCP client** can request small, permission-filtered projections from Job Ranger's existing data and deterministic services: active professional target tracks, confirmed Career Evidence, active opportunities with application status, manually recorded social-post receipts, exact approved post text (an independent permission), recorded analytics, readiness findings, and comparable-age observations. It cannot modify Career Evidence, create drafts, record post metrics, publish posts, submit job applications, or access unrelated Viable data.
+A human-authorized **local MCP client** can request small, permission-filtered projections from Sojourner's existing data and deterministic services: active professional target tracks, confirmed Career Evidence, active opportunities with application status, manually recorded social-post receipts, exact approved post text (an independent permission), recorded analytics, readiness findings, and comparable-age observations. It cannot modify Career Evidence, create drafts, record post metrics, publish posts, submit job applications, or access unrelated Viable data.
 
 Every tool response includes a startup snapshot timestamp. No post performance is treated as proof of interview/job attribution, and missing metrics remain unavailable.
 
 ## Prerequisites
 
-- Source checkout of the **current development branch** of Job Ranger; published v1.2.0 does not contain this functionality.
+- Source checkout of the **current development branch** of Sojourner (repository `job-ranger`); published v1.2.0 does not contain this functionality.
 - Node.js **22.12 or newer**, npm dependencies installed from the repository lockfile (`npm ci`), and a working `sqlite3` command (set `SQLITE3_PATH` if needed).
-- An existing **native** Job Ranger data directory containing `jobscout.sqlite3` created by a normal Job Ranger session. This prototype cannot access browser-origin OPFS/PWA data directly. It will not discover a path for you or launch Job Ranger.
-- Explicit user consent to run a local MCP host and share selected data with a chosen local client. Local clients that themselves call online inference providers may send tool responses to those providers. Job Ranger does not control their retention or privacy policies.
-- For a live native database, take a normal Job Ranger backup first. The adapter opens the source using `sqlite3 -readonly` and creates a disposable, transaction-consistent local SQLite snapshot, including committed WAL content.
+- An existing **native** (Windows desktop) Sojourner data directory containing `jobscout.sqlite3` created by a normal desktop session. This prototype cannot access browser-origin OPFS/PWA data. It will not discover a path for you or launch Sojourner.
+- Explicit user consent to run a local MCP host and share selected data with a chosen local client. Local clients that themselves call online inference providers may send tool responses to those providers. Sojourner does not control their retention or privacy policies.
+- For a live native database, take a normal Sojourner backup first. The adapter opens the source using `sqlite3 -readonly` and creates a disposable, transaction-consistent local SQLite snapshot, including committed WAL content.
 
 ## Launch
 
@@ -56,7 +58,7 @@ To refresh changed Career Evidence or new post metrics, **restart the process**.
 | `get_post_analytics` | `analytics:read` | Actual timestamped observations and source states |
 | `compare_post_experiments` | `analytics:read` | Same non-causal cohort comparisons as UI |
 
-The proposal preview requires a saved draft ID, its current expected revision, and no more than 3,000 characters of changed proposed text. A stale revision is rejected. The adapter reuses the existing deterministic readiness assessment but **always blocks** approval of changed copy until a human rechecks factual claims, linked evidence, privacy and editorial suitability. It neither repeats proposed text in its response nor writes it to the workspace. Existing claim checks are never silently carried forward to the proposed revision. The source snapshot remains unchanged.
+The proposal preview requires a saved draft ID, its current expected revision, and no more than 3,000 characters of changed proposed text. Each call compares the expected revision against a fresh read of the drafts in the startup snapshot, never a revision seen by an earlier call; a stale revision or missing draft is rejected. The adapter reuses the existing deterministic readiness assessment but **always blocks** approval of changed copy until a human rechecks factual claims, linked evidence, privacy and editorial suitability. As in the app when a body is edited, existing claim checks are carried forward only as unreviewed placeholders: their verified and privacy-cleared flags are cleared, so a claim reviewed for the old text never counts as support for the new text. Malformed saved claim checks (not a list, non-text claims, or non-text evidence IDs) produce a blocking `claim_checks_malformed` finding. The preview neither repeats proposed text in its response nor writes it to the workspace. The source snapshot remains unchanged.
 
 There is **no** `create_post`, `update_evidence`, `publish_post`, or other write tool. Lists are deliberately limited (20 records maximum per tool response), and human/private descriptions, application notes, source documents and contact details are not exposed. Post text and Career Evidence contain untrusted user-authored or third-party content; clients should treat them as data, not instructions.
 
