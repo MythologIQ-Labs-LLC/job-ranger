@@ -76,6 +76,13 @@ export function safeStorageEncryption(): CredentialEncryption {
   };
 }
 
+/** %USERPROFILE%\Documents\Sojourner; a non-packaged E2E run may point it at a temporary folder. */
+function defaultLocalFolder(runtime: { env: Record<string, string | undefined>; isPackaged: boolean }): string {
+  const override = runtime.env.JOB_RANGER_STORAGE_TEST_DEFAULT_FOLDER;
+  if (!runtime.isPackaged && override && path.isAbsolute(override)) return override;
+  return path.join(app.getPath("documents"), "Sojourner");
+}
+
 /**
  * Windows storage locations (#249) wired into IPC. The main process holds the Microsoft
  * public-client sign-in, reuses #369's Google sign-in, writes backups with the existing
@@ -123,7 +130,7 @@ export async function initializeStorageIpc(options: {
   const service = new StorageService({
     enabled,
     userDataDirectory: options.userDataDirectory,
-    defaultLocalFolder: path.join(app.getPath("documents"), "Sojourner"),
+    defaultLocalFolder: defaultLocalFolder(runtime),
     backups: options.backupService,
     producer: options.producer,
     config: new StorageConfigStore(options.userDataDirectory),
@@ -183,7 +190,7 @@ export async function initializeStorageIpc(options: {
     const selection = await dialog.showOpenDialog({
       title: "Choose the folder for Sojourner backups and documents",
       properties: ["openDirectory", "createDirectory"],
-      defaultPath: path.join(app.getPath("documents"), "Sojourner"),
+      defaultPath: defaultLocalFolder(runtime),
     });
     if (selection.canceled || selection.filePaths.length === 0) return null;
     return service.setLocalFolder(selection.filePaths[0]);
