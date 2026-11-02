@@ -14,7 +14,7 @@ Settings → **This installation** shows the version and build you are running. 
 | --- | --- | --- |
 | **Microsoft Store package** (engineering/historical only) | Package tests may exist; no Store release is planned | In the Store app's private storage on this PC |
 | **Web app** (Chrome or Edge on Windows, macOS, or Linux; Firefox and Safari are not yet validated) | No public site yet. You can self-host it locally at `http://localhost:4174`; see *Running the web app locally* below | In this browser profile's private storage for that exact address. Nothing is uploaded |
-| **Windows app** (signed installer) | First release `v1.0.0-alpha.1` | In `%APPDATA%\Job Ranger` on this PC (the same folder Job Ranger used), plus any [storage location](#storage-location-windows-app) you choose for backups |
+| **Windows app** (signed installer) | First release `v1.0.0-alpha.1` | In `%APPDATA%\job-ranger` on this PC (the same folder Job Ranger used), plus any [storage location](#storage-location-windows-app) you choose for backups |
 
 Each installation keeps its own data. Move data between them with a portable `.jobranger` backup (see *Backup and restore*). Settings → **This installation** shows which one you are using, its version and build, and where its data lives.
 

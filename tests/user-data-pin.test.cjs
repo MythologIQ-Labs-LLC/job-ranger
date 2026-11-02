@@ -11,9 +11,10 @@ const appData = path.join("C:", "Users", "a", "AppData", "Roaming");
 const pin = (channel, hasUserDataDirSwitch = false) =>
   distribution.resolvePinnedUserDataDirectory({ channel, appDataDirectory: appData, hasUserDataDirSwitch });
 
-// Packaged direct-download (NSIS) builds: the historical "Job Ranger" folder, not <appData>/Sojourner.
-assert.equal(distribution.LEGACY_DIRECT_USER_DATA_FOLDER, "Job Ranger");
-assert.equal(pin("direct-download"), path.join(appData, "Job Ranger"));
+// Packaged direct-download (NSIS) builds: the folder Job Ranger v1.2.0 really used
+// (%APPDATA%\job-ranger, observed on a real v1.2.0 install), not <appData>/Sojourner.
+assert.equal(distribution.LEGACY_DIRECT_USER_DATA_FOLDER, "job-ranger");
+assert.equal(pin("direct-download"), path.join(appData, "job-ranger"));
 
 // Store builds keep their isolated data root.
 assert.equal(pin("microsoft-store"), path.join(appData, "Job Ranger Store"));
@@ -32,8 +33,17 @@ assert.equal(distribution.detectDistributionChannel({ windowsStore: undefined, i
 assert.equal(distribution.detectDistributionChannel({ windowsStore: true, isPackaged: true, env: {} }), "microsoft-store");
 assert.equal(distribution.detectDistributionChannel({ windowsStore: undefined, isPackaged: false, env: {} }), "development");
 
+// Electron derives the default userData folder from the packaged package.json, so the
+// metadata that produced %APPDATA%\job-ranger must not drift: name stays "job-ranger" and
+// no productName is introduced there or through electron-builder extraMetadata.
+const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+assert.equal(pkg.name, "job-ranger", "package.json name keys the historical data folder");
+assert.equal(pkg.productName, undefined, "a package.json productName would move Electron's default data folder");
+
 // The rename is real (the pin would be pointless otherwise) and the NSIS upgrade identity is unchanged.
 const builder = JSON.parse(fs.readFileSync(path.join(repoRoot, "electron-builder.json"), "utf8").replace(/^﻿/, ""));
+assert.equal(builder.extraMetadata?.productName, undefined, "extraMetadata must not inject a productName");
+assert.equal(builder.extraMetadata?.name, undefined, "extraMetadata must not rename the packaged app");
 assert.equal(builder.productName, "Sojourner");
 assert.equal(builder.appId, "com.jobranger.app", "appId keys the NSIS in-place upgrade from Job Ranger");
 assert.equal(builder.nsis.deleteAppDataOnUninstall, false);

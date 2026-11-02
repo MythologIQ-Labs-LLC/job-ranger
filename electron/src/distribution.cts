@@ -8,14 +8,20 @@ import { ELECTRON_CAPABILITIES } from "../../src/shared/runtime.js";
 /**
  * Folder name (under the per-user roaming AppData directory) used by Microsoft
  * Store (AppX) builds. It deliberately differs from the historical direct-download
- * folder ("Job Ranger") so the Store package never shares a live SQLite database
+ * folder ("job-ranger") so the Store package never shares a live SQLite database
  * with a side-by-side NSIS installation. Under AppX file-system virtualization a
  * folder created by the package is private to that package.
  */
 export const STORE_USER_DATA_FOLDER = "Job Ranger Store";
 
-/** Folder used by historical direct-download (NSIS) installations, including v1.2.0. */
-export const LEGACY_DIRECT_USER_DATA_FOLDER = "Job Ranger";
+/**
+ * Folder used by historical direct-download (NSIS) installations, including Job Ranger
+ * v1.2.0. Electron names userData after the packaged package.json `productName` or,
+ * failing that, `name`; electron-builder's `productName` only names the executable and
+ * installer. package.json has never carried a productName, so every Job Ranger install
+ * kept its data in `%APPDATA%\job-ranger` (verified on a real v1.2.0 install, 2026-11-02).
+ */
+export const LEGACY_DIRECT_USER_DATA_FOLDER = "job-ranger";
 
 const CHANNEL_OVERRIDE_ENV = "JOB_RANGER_DISTRIBUTION_CHANNEL_OVERRIDE";
 
@@ -53,11 +59,12 @@ export function resolveLegacyDirectUserDataDirectory(appDataDirectory: string): 
  *
  * - Microsoft Store builds use their isolated STORE_USER_DATA_FOLDER.
  * - Packaged direct-download builds stay pinned to the historical
- *   LEGACY_DIRECT_USER_DATA_FOLDER ("Job Ranger"). The installer is named
- *   Sojourner, so without this pin Electron would open an empty
- *   `<appData>/Sojourner` and existing Job Ranger v1.2.0 data would appear
- *   lost (docs/ARCHITECTURE_INDEX.md: storage identity does not change
- *   without a qualified migration).
+ *   LEGACY_DIRECT_USER_DATA_FOLDER ("job-ranger"), where Job Ranger v1.2.0 kept
+ *   its data. The pin makes that independent of package metadata: if a
+ *   productName were ever added, Electron would otherwise open an empty
+ *   `<appData>/<productName>` and existing data would appear lost
+ *   (docs/ARCHITECTURE_INDEX.md: storage identity does not change without a
+ *   qualified migration).
  * - Development and E2E runs keep Electron's default, and an explicit
  *   --user-data-dir (used by automated tests) always wins.
  */

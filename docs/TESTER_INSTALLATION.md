@@ -7,7 +7,7 @@ Earlier releases were published as Job Ranger. Their GitHub Releases were remove
 
 ## Upgrading from Job Ranger v1.2.0
 
-The Sojourner installer keeps Job Ranger's application ID, so it upgrades an existing Job Ranger v1.2.0 installation in place: the "Job Ranger" shortcuts and uninstall entry are replaced by "Sojourner", and the app keeps using the existing data folder `%APPDATA%\Job Ranger`. Uninstalling does not delete that folder. Create a `.jobranger` backup (Settings) before upgrading.
+The Sojourner installer keeps Job Ranger's application ID, so it upgrades an existing Job Ranger v1.2.0 installation in place: the "Job Ranger" shortcuts and uninstall entry are replaced by "Sojourner", and the app keeps using the existing data folder `%APPDATA%\job-ranger`. Uninstalling does not delete that folder. Create a `.jobranger` backup (Settings) before upgrading.
 
 ## Verify the download first
 

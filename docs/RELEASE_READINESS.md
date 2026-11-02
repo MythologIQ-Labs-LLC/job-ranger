@@ -45,9 +45,9 @@ The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies se
 
 ### Upgrade from Job Ranger v1.2.0 data
 - [ ] Automated: `npm run test:release-upgrade` passes from `job-ranger-v1.2.0` (all baseline directories open unchanged, migrations apply, backups restore).
-- [ ] On a Windows machine with Job Ranger v1.2.0 installed and real-looking data in `%APPDATA%\Job Ranger`: create a `.jobranger` backup, run the Sojourner installer, and confirm it upgrades in place (one entry, "Sojourner", in Installed apps; the "Job Ranger" shortcuts are replaced by "Sojourner"; the install folder is the existing one or the old executable is gone).
-- [ ] First launch of Sojourner shows the existing Career Profile, Career Evidence, Target Tracks, applications and resumes; Settings → This installation reports the data location `%APPDATA%\Job Ranger`, and no new `%APPDATA%\Sojourner` workspace is used.
-- [ ] Uninstalling Sojourner leaves `%APPDATA%\Job Ranger` in place; reinstalling opens the same data.
+- [ ] On a Windows machine with Job Ranger v1.2.0 installed and real-looking data in `%APPDATA%\job-ranger`: create a `.jobranger` backup, run the Sojourner installer, and confirm it upgrades in place (one entry, "Sojourner", in Installed apps; the "Job Ranger" shortcuts are replaced by "Sojourner"; the install folder is the existing one or the old executable is gone).
+- [ ] First launch of Sojourner shows the existing Career Profile, Career Evidence, Target Tracks, applications and resumes; Settings → This installation reports the data location `%APPDATA%\job-ranger`, and no new `%APPDATA%\Sojourner` workspace is used.
+- [ ] Uninstalling Sojourner leaves `%APPDATA%\job-ranger` in place; reinstalling opens the same data.
 - [ ] A clean-machine install (no Job Ranger) launches normally, and SmartScreen / Smart App Control behavior is recorded (section 10).
 
 ### Publication (section 11)
@@ -183,7 +183,7 @@ For documentation-only remediation, code tests may reuse fresh evidence from the
 - [ ] `windows-package-smoke.json` reports `passed` for the required non-software scenario and is included in release evidence.
 - [ ] The Windows trust verifier executes successfully in the native release runner.
 - [ ] Installer launch/upgrade is exercised on a clean supported Windows system before stable publication.
-- [ ] Existing user data survives installer upgrade, including an upgrade from Job Ranger v1.2.0 (data folder `%APPDATA%\Job Ranger`, pinned by `resolvePinnedUserDataDirectory` in `electron/src/distribution.cts`).
+- [ ] Existing user data survives installer upgrade, including an upgrade from Job Ranger v1.2.0 (data folder `%APPDATA%\job-ranger`, pinned by `resolvePinnedUserDataDirectory` in `electron/src/distribution.cts`).
 - [ ] Every published installer carries valid, timestamped Authenticode signatures by `MythologIQ Labs, LLC` (`verify-windows-distribution.ps1 -RequireSigned`), and observed SmartScreen / Smart App Control behavior is recorded on a clean supported machine. Only build-only candidates are unsigned; their release manifest marks them `testerOnly`.
 - [ ] A GitHub artifact attestation exists for the installer.
 

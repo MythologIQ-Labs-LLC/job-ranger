@@ -33,7 +33,7 @@ const distributionChannel = detectDistributionChannel({
 
 // Pin the data root before anything reads userData: Store (AppX) builds isolate
 // theirs from direct-download installations, and packaged direct-download builds
-// keep the historical "Job Ranger" folder although the app is named Sojourner.
+// keep the historical "job-ranger" folder (Job Ranger v1.2.0) although the app is named Sojourner.
 // Development runs and an explicit --user-data-dir keep Electron's default.
 const pinnedUserDataDirectory = resolvePinnedUserDataDirectory({
   channel: distributionChannel,

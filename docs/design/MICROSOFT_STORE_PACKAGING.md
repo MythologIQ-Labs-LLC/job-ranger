@@ -54,10 +54,10 @@ The Store owns installation and updates. Job Ranger contains **no app-managed up
 
 | Installation | Data root seen by the app | Physical location |
 | --- | --- | --- |
-| Historical direct download (NSIS, ≤ v1.2.0) | `%APPDATA%\Job Ranger\data` | Same |
-| Microsoft Store | `%APPDATA%\Job Ranger Store\data` | `%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Roaming\Job Ranger Store\data` (AppX file-system virtualization) |
+| Historical direct download (NSIS, ≤ v1.2.0) | `%APPDATA%\job-ranger\data` | Same |
+| Microsoft Store | `%APPDATA%\job-ranger Store\data` | `%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Roaming\Job Ranger Store\data` (AppX file-system virtualization) |
 
-The Store build deliberately uses a **different folder name**. Under AppX virtualization, writes to files that *already exist* in the real `%APPDATA%` go to the real file, while *new* files go to the package's private location. If the Store app reused `%APPDATA%\Job Ranger`, it would update the NSIS database in place while new resumes and source artifacts landed in private storage. That would leave both installations with database rows pointing at files they cannot see, and uninstalling the Store app would orphan them. A separate folder created by the package is entirely private to the package.
+The Store build deliberately uses a **different folder name**. Under AppX virtualization, writes to files that *already exist* in the real `%APPDATA%` go to the real file, while *new* files go to the package's private location. If the Store app reused `%APPDATA%\job-ranger`, it would update the NSIS database in place while new resumes and source artifacts landed in private storage. That would leave both installations with database rows pointing at files they cannot see, and uninstalling the Store app would orphan them. A separate folder created by the package is entirely private to the package.
 
 "Show file" and "Open Job Ranger Data Folder" map virtual paths to the physical `LocalCache` path (`storeHostPath`), so Explorer opens the real location.
 
