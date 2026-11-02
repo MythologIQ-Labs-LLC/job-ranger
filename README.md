@@ -36,10 +36,10 @@ Job searching runs on clerical work: re-checking the same boards, rewriting the 
 
 <p align="center">
   <a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.mp4">
-    <img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-poster.png" alt="Sojourner walkthrough video: play the 82-second tour" width="85%" />
+    <img src="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-poster.png" alt="Sojourner walkthrough video poster: select to download the 82-second tour" width="85%" />
   </a>
   <br />
-  <sub><a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.mp4">Watch the 82-second walkthrough</a> (MP4) · <a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.vtt">captions</a> · <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/blob/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-transcript.md">transcript</a></sub>
+  <sub><a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.mp4">Download the 82-second walkthrough</a> (MP4, 1600×900) · <a href="https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough.vtt">captions</a> · <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/blob/863a5509a4b0ebeb1935f238b776b8c5ceb44b66/video/sojourner-walkthrough-transcript.md">transcript</a></sub>
 </p>
 
 Everything shown uses fictional sample data (Morgan Rivera, Harbor Health). No real person's career data appears.
