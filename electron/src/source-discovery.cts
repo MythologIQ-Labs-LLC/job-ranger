@@ -7,10 +7,23 @@ import type {
 } from "../../src/shared/source-discovery.js";
 import { getSourceProfile } from "../../src/shared/contracts.js";
 import { fetchDiscoveryJson } from "./source-discovery-fetch.cjs";
+import {
+  fetchHimalayasJobs,
+  himalayasLocation,
+  type HimalayasNormalizedJob,
+} from "./himalayas-discovery.cjs";
+import type { RuntimeKind } from "../../src/shared/runtime.js";
 import { detectSourceFromUrl } from "./scrapers.cjs";
 
 const REMOTE_OK_ENDPOINT = "https://remoteok.com/api";
 const ARBEITNOW_ENDPOINT = "https://www.arbeitnow.com/api/job-board-api?page=1";
+const MIB = 1024 * 1024;
+/** Body caps, each several times the size observed live. */
+const REMOTE_OK_MAX_BYTES = 4 * MIB;
+const ARBEITNOW_MAX_BYTES = 8 * MIB;
+/** Shown in the web app, which skips Himalayas rather than working around its CORS policy. */
+export const HIMALAYAS_WEB_WARNING =
+  "Himalayas was skipped: the web app cannot reach its public API because Himalayas does not allow browser cross-origin requests (CORS). No proxy or credential workaround is used.";
 const STRUCTURED_MONITORABLE_TYPES = new Set<CompanySourceType>([
   "greenhouse",
   "lever",
@@ -35,6 +48,7 @@ const STOP_WORDS = new Set([
 interface DiscoveryContext {
   fetchImpl: typeof fetch;
   existingCompanies: Company[];
+  runtimeKind?: RuntimeKind;
   now?: () => string;
 }
 
@@ -315,6 +329,55 @@ function arbeitnowCandidates(
     });
 }
 
+function himalayasCandidates(
+  jobs: readonly HimalayasNormalizedJob[],
+  request: SourceDiscoveryRequest,
+): SourceDiscoveryCandidate[] {
+  return jobs.filter((job) => roleMatchScore(job.title, request.roleTitles) >= 0.5)
+    .map((job) => ({
+      id: stableId(`himalayas\n${job.guid}`),
+      providerId: "public-job-feeds" as const,
+      providerName: "Himalayas",
+      employerName: job.companyName,
+      opportunityTitle: job.title,
+      opportunityUrl: job.opportunityUrl,
+      applyUrl: null,
+      location: himalayasLocation(job),
+      employmentType: job.employmentType,
+      publishedAt: job.publishedAt,
+      sourceUrl: null,
+      sourceType: null,
+      sourceSupportLevel: null,
+      sourceLabel: null,
+      canMonitor: false,
+      duplicateCompanyId: null,
+      provenanceUrl: job.opportunityUrl,
+      summary: snippet(job.summary) || "Himalayas listing. Review eligibility at the source.",
+    }));
+}
+
+/**
+ * Keep one prolific feed from consuming the entire user-visible result limit.
+ * Preserve each feed's order while taking one result per source per round.
+ */
+function balanceProviderResults(items: SourceDiscoveryCandidate[]): SourceDiscoveryCandidate[] {
+  const providers = new Map<string, SourceDiscoveryCandidate[]>();
+  for (const item of items) {
+    const group = providers.get(item.providerName) ?? [];
+    group.push(item);
+    providers.set(item.providerName, group);
+  }
+  const groups = Array.from(providers.values());
+  const depth = groups.reduce((largest, group) => Math.max(largest, group.length), 0);
+  const ordered: SourceDiscoveryCandidate[] = [];
+  for (let index = 0; index < depth; index += 1) {
+    for (const group of groups) {
+      if (group[index]) ordered.push(group[index]);
+    }
+  }
+  return ordered;
+}
+
 export async function discoverPublicJobFeeds(
   request: SourceDiscoveryRequest,
   context: DiscoveryContext,
@@ -324,9 +387,13 @@ export async function discoverPublicJobFeeds(
     "Location is shown from provider data but is not used as a hard discovery filter in this first provider because feed location fields are inconsistent.",
   ];
 
-  const [remoteOk, arbeitnow] = await Promise.allSettled([
-    fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl),
-    fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl),
+  // The Himalayas public API explicitly disallows browser CORS. Do not try to
+  // bypass it with a hidden proxy or let blocked requests delay PWA discovery.
+  const skipHimalayas = context.runtimeKind === "web";
+  const [remoteOk, arbeitnow, himalayas] = await Promise.allSettled([
+    fetchDiscoveryJson<RemoteOkJob[]>(REMOTE_OK_ENDPOINT, context.fetchImpl, REMOTE_OK_MAX_BYTES),
+    fetchDiscoveryJson<ArbeitnowResponse>(ARBEITNOW_ENDPOINT, context.fetchImpl, ARBEITNOW_MAX_BYTES),
+    skipHimalayas ? Promise.resolve(null) : fetchHimalayasJobs(context.fetchImpl),
   ]);
 
   let candidates: SourceDiscoveryCandidate[] = [];
@@ -350,8 +417,24 @@ export async function discoverPublicJobFeeds(
     );
   }
 
+  if (skipHimalayas) {
+    warnings.push(HIMALAYAS_WEB_WARNING);
+  } else if (himalayas.status === "fulfilled" && himalayas.value) {
+    providerSuccesses += 1;
+    candidates.push(...himalayasCandidates(himalayas.value.jobs, request));
+    warnings.push(
+      `Himalayas coverage is limited to its ${himalayas.value.jobs.length} most recent listings. Sojourner matched them to your target-role titles on this device and sent no search terms to Himalayas.`,
+      ...himalayas.value.warnings,
+    );
+  } else {
+    const reason = himalayas.status === "rejected"
+      ? himalayas.reason instanceof Error ? himalayas.reason.message : String(himalayas.reason)
+      : "no response";
+    warnings.push(`Himalayas was unavailable for this discovery run: ${reason}`);
+  }
+
   const seen = new Set<string>();
-  candidates = candidates
+  candidates = balanceProviderResults(candidates)
     .filter((candidate) => {
       const key = `${normalize(candidate.employerName)}\n${normalize(candidate.opportunityTitle)}\n${normalize(candidate.opportunityUrl)}`;
       if (seen.has(key)) return false;

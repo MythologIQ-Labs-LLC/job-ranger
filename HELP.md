@@ -78,6 +78,18 @@ Where supported, choices preserve their meaning as:
 - **Preferred** — meaningful but not automatically disqualifying;
 - **Target** — desired or aspirational value.
 
+### Optional: explore new directions with an assistant
+
+On the **Target Tracks** page, below the track editor, two exploration tools sit together: **Explore career possibilities with an assistant** and **Explore other ways to earn** (see [Economic pathway comparisons](#economic-pathway-comparisons-in-target-tracks)). The assistant tool is a local, manual bridge between Sojourner and ChatGPT or another assistant you choose. It is a *clipboard handoff*, **not** a live ChatGPT connection, built-in AI model, or plugin.
+
+1. Enter what you want to explore, preferences, and hard constraints. You can begin with no resume.
+2. Optionally choose up to six **confirmed** Career Evidence statements. Nothing is selected automatically. Preview the exact brief. Details inside selected statements are not automatically removed, so review them carefully.
+3. Explicitly approve and copy the exact brief, then decide where or whether to paste it. Sojourner does **not** transmit anything or invoke a model. An external assistant may have different privacy or retention policies.
+4. Discuss alternative hypotheses, trade-offs and questions. Results are **ideas**, not eligibility, verified qualifications, job availability, or career truth.
+5. Enter one promising direction back in Sojourner. This opens a **paused, unsaved** Target Track draft in the editor without guessed job titles or constraints. If the editor has unsaved changes, Sojourner asks before replacing them. Review and save explicitly using the existing Target Tracks editor.
+
+Nothing in this manual handoff changes Career Evidence or applications, and the regular Sojourner workflow remains entirely available without an external assistant. The [developer-only MCP reader](#optional-developer-only-mcp-reader) is separate and is not used by this handoff.
+
 ### 3. Career Evidence
 
 Career Evidence is Sojourner's factual career record.
@@ -111,6 +123,8 @@ Use **Companies** to:
 - explicitly approve a discovered employer source before monitoring.
 
 Discovery and monitoring remain separate. Finding a job at an employer does not silently convert the employer into a trusted monitored source.
+
+**Himalayas (issue #136; not in the published release):** desktop discovery also reads Himalayas. Sojourner fetches up to 100 of Himalayas's most recent public listings, unfiltered, and matches them to your target-role titles on your device, so no search terms, locations or other personal data are sent to Himalayas. Because only the most recent listings are read, Himalayas coverage is partial. Results credit and link back to Himalayas, and its country and time-zone restrictions are shown as published, not as promises of eligibility. The web app skips Himalayas and shows a warning saying so, because Himalayas does not allow browser cross-origin requests (CORS); no proxy or credential workaround is used. We Work Remotely RSS remains under separate assessment. See `docs/validation/source-discovery-tranche-2-candidate.md`.
 
 Arbitrary generic career-site hostnames remain manual-review/non-runnable in v1.2.0.
 
@@ -197,7 +211,7 @@ Career Stories provide reusable evidence-linked narratives for interviews/applic
 
 Sojourner can prepare versioned evidence-grounded application materials. If supporting Career Evidence changes, prior drafts remain historical and are marked stale rather than silently rewritten.
 
-Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy. If the browser or operating system denies clipboard access, Sojourner says so, and you can select and copy the text manually.
+Use **Copy text** on a cover-letter version to paste it into an employer's application yourself. Stale versions cannot be copied; their text stays visible for review, and **Create cover letter** makes a new version from current evidence that you can copy. Evidence is re-checked at the moment you copy, and a version with no text or with incomplete Career Evidence links is refused too. Copying never submits an application or changes its status. If the browser or operating system denies clipboard access, Sojourner says so, and you can select and copy the text manually.
 
 ### 13. Search Insights
 
@@ -266,7 +280,7 @@ There is a separate [local read-only MCP prototype](./docs/integrations/JOB_RANG
 
 ### Candidate providers and application handoff
 
-Himalayas discovery and We Work Remotely RSS are **draft-only**, not selectable main-line providers; WWR is held pending publisher-terms clarification. The candidate-controlled application handoff is also a separate unqualified draft. Neither should be followed as an instruction to connect, monitor or submit anything from the published product. Follow [System State](./docs/SYSTEM_STATE.md) for verified scope and the issue/PR evidence for current development disposition.
+Himalayas discovery runs in desktop discovery only and is not yet in a published release. We Work Remotely RSS is **draft-only**, not a selectable main-line provider, and is held pending publisher-terms clarification. The candidate-controlled application handoff is also a separate unqualified draft. Neither should be followed as an instruction to connect, monitor or submit anything from the published product. Follow [System State](./docs/SYSTEM_STATE.md) for verified scope and the issue/PR evidence for current development disposition.
 
 ## Source-support labels
 
