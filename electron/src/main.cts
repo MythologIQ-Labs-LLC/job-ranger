@@ -331,15 +331,20 @@ app.whenReady().then(async () => {
       producer,
     });
     // Storage location (#249): automatic backups and exported documents to a folder,
-    // Google Drive or OneDrive. The working database always stays local.
-    storageService = await initializeStorageIpc({
-      userDataDirectory,
-      databasePath: systemStatus.databasePath,
-      sqliteBinaryPath: systemStatus.sqliteBinaryPath,
-      backupService,
-      producer,
-      drive,
-    });
+    // Google Drive or OneDrive. The working database always stays local. A failure here
+    // never blocks startup; the Settings section then stays hidden.
+    try {
+      storageService = await initializeStorageIpc({
+        userDataDirectory,
+        databasePath: systemStatus.databasePath,
+        sqliteBinaryPath: systemStatus.sqliteBinaryPath,
+        backupService,
+        producer,
+        drive,
+      });
+    } catch {
+      storageService = null;
+    }
 
     registerCoreIpcHandlers({
       backend,
