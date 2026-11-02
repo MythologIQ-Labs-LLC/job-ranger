@@ -34,7 +34,14 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 // demo flavor builds into its own directory so it can never overwrite, or be
 // deployed as, the standard workspace build.
 const flavor = parsePwaFlavor(process.env[PWA_FLAVOR_ENV]);
-const outDir = path.join(root, pwaOutDirName(flavor));
+// Test-only override (scripts/build-pwa-drive-e2e.mjs): a configured-Drive standard build goes to its
+// own directory so the default dist-pwa/ stays unconfigured. Never used for a release artifact.
+const DRIVE_E2E_OUT_DIR = "dist-pwa-drive-e2e";
+const outDirOverride = (process.env.SOJOURNER_PWA_TEST_OUT_DIR ?? "").trim();
+if (outDirOverride && (outDirOverride !== DRIVE_E2E_OUT_DIR || flavor !== "standard")) {
+  throw new Error(`SOJOURNER_PWA_TEST_OUT_DIR may only be "${DRIVE_E2E_OUT_DIR}" for the standard flavor.`);
+}
+const outDir = path.join(root, outDirOverride || pwaOutDirName(flavor));
 const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
 
 function gitCommit(): string {
