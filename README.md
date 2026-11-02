@@ -4,9 +4,9 @@
 
 # Sojourner: Employment Toolkit
 
-*Formerly Job Ranger. The GitHub repository, compatibility identifiers, and previously published release artifacts retain their historic names.*
+*Formerly Job Ranger. The GitHub repository is now `MythologIQ-Labs-LLC/sojourner`; compatibility identifiers (app ID, storage, `.jobranger` archives) and previously published release artifacts keep their historic names.*
 
-> **Architecture authority:** [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). The supported future product is the browser/PWA; Electron is retained for engineering validation, not native product distribution.
+> **Architecture authority:** [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). The primary product is a signed Windows application; the browser PWA continues as the cross-platform channel.
 
 <p align="center">
   <strong>A local-first Career Ops companion for understanding where you want to go, finding the right paths to employment, preparing truthful materials, and managing a focused search without turning your career into somebody else's cloud product.</strong>
@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/published%20release-v1.2.0-0f172a.svg" alt="Published release v1.2.0" /></a>
-  <img src="https://img.shields.io/badge/forward%20distribution-PWA%20only-2563eb.svg" alt="Forward distribution: PWA only" />
+  <img src="https://img.shields.io/badge/forward%20distribution-Windows%20%2B%20PWA-2563eb.svg" alt="Forward distribution: signed Windows app and PWA" />
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-15803d.svg" alt="AGPL-3.0-only License" /></a>
 </p>
 
@@ -78,14 +78,14 @@ This **is not yet a verified live ChatGPT plugin**. The read-only stdio adapter 
 
 ## Start here
 
-Sojourner's **forward distribution model is the PWA plus the Microsoft Store**. The native installers published with v1.2.0 remain immutable historical release artifacts; they are not the product's long-term ordinary-user installation strategy.
+Sojourner's **forward distribution model is a signed Windows installer first, with the PWA alongside it** for other environments. The unsigned installers published with v1.2.0 remain immutable historical release artifacts.
 
 | What you want to do | Best current path | Status |
 | --- | --- | --- |
 | **Evaluate the current product today** | Run the current PWA locally | Implemented and tested in Chromium. Self-hosting currently requires Node.js/npm and a few terminal commands. |
-| **Use Sojourner as an ordinary Windows user** | Microsoft Store package | Implemented and validated in CI; Partner Center submission/certification is still pending. |
+| **Use Sojourner as an ordinary Windows user** | Signed Windows installer (GitHub Release) | Release pipeline with MythologIQ Labs code signing is in place; the first signed release is pending. |
 | **Use Sojourner cross-platform without developer setup** | Production PWA/web origin | Implemented; public deployment and broader browser/device validation are still pending. |
-| **Inspect the last published desktop release** | v1.2.0 GitHub Release | Historical Windows/macOS binaries remain available and immutable, but they are unsigned/unnotarized and are not the forward mainstream channel. |
+| **Inspect the last published desktop release** | v1.2.0 GitHub Release | Historical Windows/macOS binaries remain available and immutable, but they are unsigned/unnotarized. Signed Windows releases replace them going forward. |
 
 For current local evaluation, use the [Self-hosting guide](./docs/SELF_HOSTING.md). For exact distribution architecture and trust boundaries, see [Distribution Architecture](./docs/design/DISTRIBUTION_ARCHITECTURE.md) and [Distribution Trust](./docs/DISTRIBUTION_TRUST.md).
 
@@ -93,15 +93,16 @@ For current local evaluation, use the [Self-hosting guide](./docs/SELF_HOSTING.m
 
 The latest published GitHub release is **v1.2.0**, published October 5, 2026. It is preserved as immutable release history.
 
-The active development line is **v1.3.0 candidate preparation**. It contains the current PWA runtime, Microsoft Store packaging, portable Sojourner archives between runtimes, Windows portability fixes, the corrected web layout, and the public demo/readme work. Those capabilities are implemented in the repository but are not a stable public release until the release gates are satisfied.
+The active development line is **v1.3.0 candidate preparation**. It contains the current PWA runtime, the signed Windows release pipeline, portable Sojourner archives between runtimes, Windows portability fixes, the corrected web layout, and the public demo/readme work. Those capabilities are implemented in the repository but are not a stable public release until the release gates are satisfied.
 
 ### Forward distribution
 
 | Channel | Current state | Intended role |
 | --- | --- | --- |
-| **PWA / web runtime** | Implemented; Chromium-tested; local self-host path available; production origin not yet promoted | Primary cross-platform distribution |
-| **Microsoft Store** | AppX packaging implemented and validated in CI; certification/listing pending | Primary native Windows distribution |
-| **Direct native GitHub binaries** | Historical v1.2.0 release plus advanced/test artifacts where useful | Not the preferred ordinary-user path |
+| **Signed Windows installer** | NSIS installer signed with MythologIQ Labs Azure Artifact Signing (publisher `MythologIQ Labs, LLC`) by the release workflow; first signed release pending | Primary product distribution |
+| **PWA / web runtime** | Implemented; Chromium-tested; local self-host path available; production origin not yet promoted | Cross-platform distribution |
+| **Microsoft Store** | AppX packaging exists as an engineering reference; not a shipping channel | Not planned |
+| **Historical unsigned GitHub binaries** | v1.2.0 release only | Superseded by signed Windows releases |
 | **Native macOS package** | Historical v1.2.0 artifacts only; future native distribution not planned | macOS served by the PWA |
 | **Native Linux package** | Not implemented as a supported product channel | Linux served by the PWA unless demand later justifies a separate package |
 
@@ -122,7 +123,7 @@ For the reconciled factual state, see [System State](./docs/SYSTEM_STATE.md), [C
 
 ## Run the current PWA locally
 
-The current development line can run as a persistent local PWA in a Chromium desktop browser. This is the best way to evaluate the current product before a production web origin or Microsoft Store listing is promoted.
+The current development line can run as a persistent local PWA in a Chromium desktop browser. This is the best way to evaluate the current product before the first signed Windows release or a production web origin is available.
 
 It does **not** require a Sojourner account, a separate database server, Docker, an AI subscription, or the historical unsigned desktop installer. Local self-hosting does currently require Node.js 22.12.0 or newer, npm, and either Git or a downloaded source archive.
 
@@ -151,7 +152,7 @@ The implementation and persistence guarantees are documented in [PWA_RUNTIME.md]
 
 The [v1.2.0 GitHub Release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.2.0) remains available as immutable release history. It contains Windows x64 and macOS x64/arm64 desktop packages promoted byte-for-byte from the validated rc.5 artifacts.
 
-Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the pending Microsoft Store channel or the current PWA work. Sojourner does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
+Those binaries are **unsigned/unnotarized** and are no longer the forward ordinary-user distribution strategy. They should not be confused with the signed Windows releases that replace them or with the current PWA work. Sojourner does not recommend disabling Smart App Control, SmartScreen, Defender, Gatekeeper, or equivalent platform protections globally.
 
 Historical package evidence and bounded tester guidance remain in [TESTER_INSTALLATION.md](./docs/TESTER_INSTALLATION.md), [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md), and [CLEAN_MACHINE_TRUST_VALIDATION.md](./docs/CLEAN_MACHINE_TRUST_VALIDATION.md).
 
@@ -200,10 +201,10 @@ This is the current product line, not a comparison against obsolete releases.
 | **Personal Brand (development main)** | Manual-first drafts, deterministic readiness, explicit exact-copy approval and publication receipts, local LinkedIn XLSX analytics preview plus confirmed saved/reconciled exports, attested historical post text and topic labels, observed-performance dashboards, and cautious cohorts. Neither a LinkedIn account connection, automatic posting/collection, causal career conclusions, nor a published release is implied. [Implementation contract](./docs/design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md). |
 | **Backup & portability** | Verified backup/staged restore, JSON Resume interoperability, and a portable .jobranger archive for moving between supported desktop/PWA runtimes. |
 | **Local-first PWA** | Shared application core in a browser runtime using SQLite WASM + OPFS, browser document parsing, deterministic PDF output, service-worker integrity checks, and explicit update handling. |
-| **Windows Store package** | AppX packaging, isolated Store data root, historical desktop-data import, manifest validation, install, and packaged smoke are implemented; Store certification/listing remains external. |
+| **Signed Windows app** | Electron app with packaged SQLite, NSIS installer, packaged smoke test, and a release workflow that signs and verifies every published executable. A Microsoft Store AppX package also exists as an engineering reference. |
 | **Remote inference** | Deferred. Core product decisions and document generation do not require an AI subscription. |
 | **OCR for scanned/image-only resumes** | Deferred rather than silently uploading documents to a hosted OCR service. |
-| **Native macOS / Linux distribution** | Not part of the forward mainstream architecture. Cross-platform delivery is through the PWA. |
+| **Native macOS / Linux distribution** | Not part of the forward architecture. macOS and Linux are served by the PWA. |
 | **Autonomous mass auto-apply** | Explicit non-goal. Consequential external actions remain with the user. |
 
 For release-by-release history, use [CHANGELOG.md](./CHANGELOG.md).
@@ -293,9 +294,9 @@ Security boundaries include sandboxed renderer/browser surfaces, explicit runtim
 
 For ordinary-user distribution going forward:
 
-- **Windows:** trust comes from Microsoft Store certification and Microsoft-managed package signing.
+- **Windows:** trust comes from the MythologIQ Labs, LLC Authenticode signature on the installer and app, verified (`signtool verify /pa`, signer, timestamp) before each release is published.
 - **Cross-platform web/PWA:** trust comes from the controlled HTTPS origin, browser security boundary, deployment provenance, and service-worker/update integrity.
-- **Historical/direct native binaries:** hashes and provenance remain useful evidence, but an unsigned GitHub binary is not equivalent to a Store-certified package.
+- **Historical v1.2.0 binaries:** hashes and provenance remain useful evidence, but they are unsigned and are not equivalent to a signed release.
 
 Remote inference, telemetry, cloud account sync, or credential-bearing external services require explicit future governance and disclosure. See [DISTRIBUTION_TRUST.md](./docs/DISTRIBUTION_TRUST.md) and [SECURITY.md](./SECURITY.md).
 
@@ -333,8 +334,8 @@ npm run repo:health          # typecheck, desktop + web builds, full test suite
 npm run test:unit
 npm run test:e2e             # Electron Playwright
 npm run electron:dev
-npm run electron:build:win   # direct-download NSIS (advanced/test channel)
-npm run electron:build:store # Microsoft Store AppX (Windows only)
+npm run electron:build:win   # Windows NSIS installer (signed only by the release workflow)
+npm run electron:build:store # Microsoft Store AppX (engineering reference, Windows only)
 ```
 
 ### Web/PWA runtime
