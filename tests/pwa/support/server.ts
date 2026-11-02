@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { buildSecurityHeaders } from "../../../src/pwa/security/policy";
+import { buildSecurityHeaders, type PwaSecurityOptions } from "../../../src/pwa/security/policy";
 
 const types: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -21,10 +21,13 @@ export interface PwaServer {
   close(): Promise<void>;
 }
 
-/** Static server that mirrors the production hosting contract (dist-pwa/_headers, pretty-URL redirects). */
-export async function startPwaServer(initialRoot: string): Promise<PwaServer> {
+/**
+ * Static server that mirrors the production hosting contract (dist-pwa/_headers, pretty-URL redirects).
+ * `security` must match the build being served (a configured-Drive build ships Drive-enabled headers).
+ */
+export async function startPwaServer(initialRoot: string, security: PwaSecurityOptions = {}): Promise<PwaServer> {
   let root = initialRoot;
-  const headers = buildSecurityHeaders();
+  const headers = buildSecurityHeaders(security);
   const server: Server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://localhost");
