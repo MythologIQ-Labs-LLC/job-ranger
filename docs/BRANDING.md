@@ -26,17 +26,17 @@ The current favicon uses the same visual source as the runtime icon.
 
 Use for documentation or presentation contexts that need the Job Ranger name and brand mark together.
 
-### README banner
+### README banner (legacy, replacement required)
 
 `docs/assets/branding/job-ranger-banner.png`
 
-This is the canonical wide repository banner and should remain at the top of the root `README.md`.
+Historical Job Ranger artwork only. Do not place this outdated banner at the top of the Sojourner README. Replace with `docs/assets/branding/sojourner-banner.png` after graphic approval (tracking issue #365).
 
-### Social preview
+### Social preview (legacy, replacement required)
 
 `docs/assets/branding/job-ranger-social-preview.png`
 
-Use as the repository's GitHub social-preview image and for link-sharing contexts where a wide preview card is appropriate.
+Historical Job Ranger artwork only. Replace with `docs/assets/branding/sojourner-social-preview.png` (tracking issue #365). GitHub's actual Social preview setting must also be updated separately.
 
 GitHub's repository social preview is configured separately in repository settings; committing this file does not automatically set that UI-level property.
 
@@ -88,7 +88,7 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 ## Legacy Job Ranger Asset Source of Truth
 
-Until a complete Sojourner visual identity is reviewed and implemented, the existing app and historic assets use this hierarchy:
+The historical assets below remain as provenance; they are **not current Sojourner presentation assets**. Until #365 is completed, do not represent a Job Ranger image as current Sojourner art. The legacy hierarchy was:
 
 1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-job-ranger-icon.sh`.
 2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
