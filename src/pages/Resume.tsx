@@ -14,6 +14,7 @@ import { isDemoListing } from "../shared/demo-listing";
 import { useCareerProfile } from "../career/storage";
 import { getDesktopApi } from "../services/api";
 import { useRuntimeInfo } from "../services/runtime";
+import { GoogleDriveResumeExport } from "../components/GoogleDriveResumeExport";
 import type {
   CandidateEvidenceReviewItem,
   TrackedApplication,
@@ -55,7 +56,8 @@ function artifactGateLabel(artifact: ResumeArtifactRecord): string {
 }
 
 export function Resume() {
-  const revealLabel = useRuntimeInfo()?.capabilities.revealInFileManager === false ? "Download file" : "Show file";
+  const runtime = useRuntimeInfo();
+  const revealLabel = runtime?.capabilities.revealInFileManager === false ? "Download file" : "Show file";
   const [searchParams] = useSearchParams();
   const jobId = searchParams.get("job");
   const { profile } = useCareerProfile();
@@ -277,7 +279,7 @@ export function Resume() {
               <input className="input-shell mt-2" value={contact.links.join(", ")} onChange={(e) => setContact({ ...contact, links: e.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="Portfolio, LinkedIn, GitHub, or other relevant links" />
             </label>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
               <label><span className="metric-label">Format</span><select className="select-shell mt-2" value={context} onChange={(e) => setContext(e.target.value as ResumeCreateInput["context"])}><option value="private-sector">Private sector</option><option value="hybrid">Hybrid / career change</option><option value="federal">Federal</option><option value="academic">Academic CV</option></select></label>
               <label><span className="metric-label">Template</span><select className="select-shell mt-2" value={templateId} onChange={(e) => setTemplateId(e.target.value as ResumeTemplateId)}><option value="ats-standard-v1">ATS-safe standard</option><option value="ats-compact-v1">ATS-safe compact</option></select></label>
               <label><span className="metric-label">Page size</span><select className="select-shell mt-2" value={pageFormat} onChange={(e) => setPageFormat(e.target.value as ResumeCreateInput["pageFormat"])}><option value="letter">Letter</option><option value="a4">A4</option></select></label>
@@ -360,7 +362,7 @@ export function Resume() {
               </div>
 
               {active.artifacts.length > 0 && <div className="mt-6"><h3 className="font-semibold">Exported versions</h3><div className="mt-3 space-y-2">{active.artifacts.map((artifact) => (
-                <div key={artifact.id} className="panel panel-muted flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 text-sm"><div><strong>PDF v{artifact.version}</strong><span className="ml-2 text-[var(--color-text-muted)]">{artifact.pageCount ?? "?"} page{artifact.pageCount === 1 ? "" : "s"} · {artifactGateLabel(artifact)}</span></div><button type="button" className="surface-link-button font-semibold text-[var(--color-primary)]" onClick={() => void getDesktopApi().showItemInFolder(artifact.managedPath)}>{revealLabel}</button></div>
+                <div key={artifact.id} className="panel panel-muted flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 text-sm"><div><strong>PDF v{artifact.version}</strong><span className="ml-2 text-[var(--color-text-muted)]">{artifact.pageCount ?? "?"} page{artifact.pageCount === 1 ? "" : "s"} · {artifactGateLabel(artifact)}</span></div><button type="button" className="surface-link-button font-semibold text-[var(--color-primary)]" onClick={() => void getDesktopApi().showItemInFolder(artifact.managedPath)}>{revealLabel}</button>{runtime?.kind === "web" && <GoogleDriveResumeExport artifactId={artifact.id} version={artifact.version} />}</div>
               ))}</div></div>}
 
               {diff && <div className="support-note mt-5 px-4 py-3 text-sm text-[var(--color-text-secondary)]"><p className="font-semibold text-[var(--color-text-primary)]">Latest version difference</p><p className="mt-2">{diff.addedStatements.length} added · {diff.removedStatements.length} removed · {diff.unchangedStatements.length} unchanged</p></div>}
