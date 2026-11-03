@@ -182,15 +182,8 @@ async function run() {
 
   // A pushed v* tag publishes only the signed Windows release, after owner approval: the web/PWA
   // build and its publication run only from a manual dispatch (PWA publication has its own gate).
-  assert.match(workflow, /
-  web:
-(?:    #.*
-)*    if: github\.event_name == 'workflow_dispatch' && /);
-  assert.match(workflow, /
-  publish-web:
-    needs: web
-    if: github\.event_name == 'workflow_dispatch' && inputs\.publish
-/);
+  assert.match(workflow, /\n  web:\n(?:    #.*\n)*    if: github\.event_name == 'workflow_dispatch' && /);
+  assert.match(workflow, /\n  publish-web:\n    needs: web\n    if: github\.event_name == 'workflow_dispatch' && inputs\.publish\n/);
 
   console.log("Distribution trust configuration tests passed!");
 }
