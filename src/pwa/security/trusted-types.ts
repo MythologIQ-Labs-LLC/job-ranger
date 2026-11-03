@@ -2,10 +2,10 @@
  * The only Trusted Types policy in the Sojourner web runtime. It mints
  * TrustedScriptURL values solely for same-origin JavaScript files belonging
  * to this deployment (the runtime worker and the service worker). The CSP
- * (`trusted-types job-ranger-script-url; require-trusted-types-for 'script'`)
+ * (`trusted-types sojourner-script-url; require-trusted-types-for 'script'`)
  * forbids every other script-URL or HTML sink.
  */
-export const TRUSTED_TYPES_POLICY_NAME = "job-ranger-script-url";
+export const TRUSTED_TYPES_POLICY_NAME = "sojourner-script-url";
 
 interface ScriptUrlPolicy {
   createScriptURL(url: string): unknown;

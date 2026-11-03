@@ -12,7 +12,7 @@
  */
 
 export const PWA_FLAVORS = Object.freeze(["standard", "demo"]);
-export const PWA_FLAVOR_ENV = "JOB_RANGER_PWA_FLAVOR";
+export const PWA_FLAVOR_ENV = "SOJOURNER_PWA_FLAVOR";
 const DEMO_BUILD_SUFFIX = ".demo";
 
 /** Unset/empty means "standard"; anything other than a known flavor fails closed. */
@@ -74,7 +74,7 @@ export function pwaOutDirName(flavor) {
 
 /** Release archive name. The demo archive is deliberately distinct from the standard one. */
 export function pwaArchiveName(version, flavor) {
-  return parsePwaFlavor(flavor) === "demo" ? `job-ranger-web-demo-v${version}.zip` : `job-ranger-web-v${version}.zip`;
+  return parsePwaFlavor(flavor) === "demo" ? `sojourner-web-demo-v${version}.zip` : `sojourner-web-v${version}.zip`;
 }
 
 /** Trust-evidence file written next to the archive under build/trust/. */

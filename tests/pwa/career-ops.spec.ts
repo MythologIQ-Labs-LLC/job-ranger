@@ -110,7 +110,7 @@ test("healthcare operations Career Ops workflow runs end to end in the browser",
   const [artifact] = await page.evaluate(() => window.electronAPI.career.listSourceArtifacts());
   expect(artifact.originalName).toBe("morgan-rivera-resume.docx");
   expect(artifact.extractionState).not.toMatch(/failed|malformed|unsupported/);
-  expect(artifact.parserId).toBe("job-ranger-web-document-parser");
+  expect(artifact.parserId).toBe("sojourner-web-document-parser");
   const evidenceItems = await page.evaluate(() => window.electronAPI.career.listEvidence());
   const imported = evidenceItems.filter((item) => item.sources.some((source) => source.artifact?.id === artifact.id || JSON.stringify(source).includes(artifact.id)));
   expect(imported.length).toBeGreaterThan(0);
@@ -207,7 +207,7 @@ test("healthcare operations Career Ops workflow runs end to end in the browser",
     { projectionId: resume.projection.id, applicationId: application.id },
   );
   expect(exported.parseabilityGate.passed).toBe(true);
-  expect(exported.parseabilityGate.parserId).toBe("job-ranger-web-document-parser");
+  expect(exported.parseabilityGate.parserId).toBe("sojourner-web-document-parser");
   expect(exported.linkedApplicationId).toBe(application.id);
   const afterExport = await page.evaluate((id) => window.electronAPI.applicationLifecycle.get(id), application.id);
   const submitted = afterExport.artifacts.find((item) => item.resumeArtifactId === exported.artifact.id);

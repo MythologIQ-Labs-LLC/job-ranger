@@ -1,11 +1,11 @@
 // Packages the production web/PWA build (dist-pwa/) into a deterministic,
-// provenance-friendly release archive: release/job-ranger-web-v<version>.zip
+// provenance-friendly release archive: release/sojourner-web-v<version>.zip
 // plus build/trust/web-build-info.json (build identity, CSP, asset SHA-256s).
 // Source maps are excluded from the deployable archive.
 //
-// The demo flavor (`--flavor demo` or JOB_RANGER_PWA_FLAVOR=demo) packages
+// The demo flavor (`--flavor demo` or SOJOURNER_PWA_FLAVOR=demo) packages
 // dist-pwa-demo/ into the deliberately distinct
-// release/job-ranger-web-demo-v<version>.zip + build/trust/web-demo-build-info.json,
+// release/sojourner-web-demo-v<version>.zip + build/trust/web-demo-build-info.json,
 // and refuses a build whose recorded flavor differs from the requested one.
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";

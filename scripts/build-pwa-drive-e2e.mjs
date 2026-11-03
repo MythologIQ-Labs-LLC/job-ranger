@@ -23,7 +23,7 @@ const env = {
   [PWA_FLAVOR_ENV]: "standard",
   SOJOURNER_PWA_TEST_OUT_DIR: "dist-pwa-drive-e2e",
   VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN: DRIVE_E2E_HELPER_ORIGIN,
-  VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID: "sojourner-drive-e2e.apps.googleusercontent.com",
+  VITE_SOJOURNER_GOOGLE_WEB_CLIENT_ID: "sojourner-drive-e2e.apps.googleusercontent.com",
 };
 const result = spawnSync(process.execPath, [viteBin, "build", "--config", "vite.pwa.config.ts"], {
   cwd: root, stdio: "inherit", env,

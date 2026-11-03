@@ -10,7 +10,7 @@ test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
 async function openSettings(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(`${server.url}#/settings`);
   await waitForRuntime(page);
 }

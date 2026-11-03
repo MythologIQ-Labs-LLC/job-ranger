@@ -11,17 +11,21 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "../index.css";
 import { WebRuntimeClient, setActiveWebRuntimeClient, type RuntimeBootState } from "./runtime/client";
-import { registerJobRangerServiceWorker } from "./service-worker-registration";
+import { registerSojournerServiceWorker } from "./service-worker-registration";
 import { PwaBootGate, PwaRuntimeBanners } from "./PwaShell";
 import { trustedScriptUrl } from "./security/trusted-types";
 import runtimeWorkerUrl from "./runtime/worker-main.ts?worker&url";
 import { DEMO_RESET_REQUEST_EVENT, IS_DEMO_FLAVOR } from "../demo/flavor";
 import { completeDemoSession, demoSessionId, restartDemoSession } from "../demo/session";
 import type { PageToWorkerMessage } from "./runtime/protocol";
+import { migrateLegacyStorageKeys } from "../browser-storage-migration";
+
+// Standard flavor: copy preferences saved under the legacy (pre-rename) keys before anything reads them.
+if (!IS_DEMO_FLAVOR) migrateLegacyStorageKeys();
 
 const worker = new Worker(trustedScriptUrl(runtimeWorkerUrl), {
   type: "module",
-  name: "job-ranger-runtime",
+  name: "sojourner-runtime",
 });
 const client = new WebRuntimeClient(worker);
 setActiveWebRuntimeClient(client);
@@ -46,7 +50,7 @@ if (IS_DEMO_FLAVOR) {
 await import("../../electron/src/preload.cjs");
 const { App } = await import("../App");
 
-void registerJobRangerServiceWorker();
+void registerSojournerServiceWorker();
 
 function PwaRoot() {
   const [state, setState] = useState<RuntimeBootState>(client.bootState);

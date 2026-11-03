@@ -48,7 +48,7 @@ export class SqliteStorageError extends Error {
   constructor(message: string, cause: unknown) {
     super(message);
     this.name = "SqliteStorageError";
-    this.code = "EJOBRANGERSTORAGE";
+    this.code = "ESOJOURNERSTORAGE";
     (this as { cause?: unknown }).cause = cause;
   }
 }

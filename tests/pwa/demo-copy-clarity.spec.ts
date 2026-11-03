@@ -19,7 +19,7 @@ test.beforeAll(async () => {
   profile = mkdtempSync(path.join(os.tmpdir(), "sojourner-copy-"));
   context = await chromium.launchPersistentContext(profile, {
     viewport: { width: 1600, height: 900 },
-    executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined,
+    executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined,
   });
   await prepareDemoContext(context);
   page = context.pages()[0] ?? (await context.newPage());

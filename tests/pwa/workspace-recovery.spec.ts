@@ -7,7 +7,7 @@ import { startPwaServer, type PwaServer } from "./support/server";
 import { distPwa, healthcareProfile, waitForRuntime } from "./support/fixtures";
 
 // #194: when the workspace database is damaged, Sojourner refuses to open it (and leaves it as
-// found) but still lets the user restore a .jobranger backup from the error screen.
+// found) but still lets the user restore a .sojourner backup from the error screen.
 
 let server: PwaServer;
 test.beforeAll(async () => { server = await startPwaServer(distPwa); });
@@ -50,11 +50,11 @@ test("a damaged workspace can be replaced from a backup on the error screen", as
   const profile = mkdtempSync(path.join(os.tmpdir(), "sojourner-recovery-"));
   const context = await chromium.launchPersistentContext(profile, {
     acceptDownloads: true,
-    executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined,
+    executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined,
   });
   let archive: string | null = null;
   try {
-    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
     const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(server.url);
     await waitForRuntime(page);
@@ -64,7 +64,7 @@ test("a damaged workspace can be replaced from a backup on the error screen", as
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Create backup" }).click();
     const saved = await download;
-    archive = path.join(profile, "..", `recovery-${Date.now()}.jobranger`);
+    archive = path.join(profile, "..", `recovery-${Date.now()}.sojourner`);
     await saved.saveAs(archive);
 
     const file = await databasePath(page);
@@ -104,9 +104,9 @@ test("a damaged workspace can be replaced from a backup on the error screen", as
 test("a file that is not a valid backup is refused and the workspace stays untouched", async () => {
   test.setTimeout(120_000);
   const profile = mkdtempSync(path.join(os.tmpdir(), "sojourner-recovery-bad-"));
-  const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined });
+  const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined });
   try {
-    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
     const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(server.url);
     await waitForRuntime(page);
@@ -119,8 +119,8 @@ test("a file that is not a valid backup is refused and the workspace stays untou
     await expect(recovery).toBeVisible({ timeout: 30_000 });
     const chooser = page.waitForEvent("filechooser");
     await recovery.getByRole("button", { name: "Choose a backup file" }).click();
-    await (await chooser).setFiles({ name: "not-a-backup.jobranger", mimeType: "application/octet-stream", buffer: Buffer.from("garbage") });
-    await expect(recovery.getByTestId("pwa-recovery-error")).toContainText("This file is not a Job Ranger archive");
+    await (await chooser).setFiles({ name: "not-a-backup.sojourner", mimeType: "application/octet-stream", buffer: Buffer.from("garbage") });
+    await expect(recovery.getByTestId("pwa-recovery-error")).toContainText("This file is not a Sojourner archive");
     await expect(recovery.getByRole("button", { name: /Replace this workspace/ })).toHaveCount(0);
     // Still on the error screen; nothing was restored, opened or rewritten.
     expect(await fileDigest(page, file)).toBe(damaged);

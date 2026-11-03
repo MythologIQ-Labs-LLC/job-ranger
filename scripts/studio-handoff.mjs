@@ -14,7 +14,7 @@ import { PWA_FLAVORS, buildIdMatchesFlavor, parsePwaFlavor } from "./pwa-flavor.
 export const DEMO_IDLE_RESET_HOURS = 8;
 
 export const STUDIO_HANDOFF_FILE = "studio-handoff.json";
-const PRODUCT = "job-ranger-web";
+const PRODUCT = "sojourner-web";
 const HASH = /^[a-f0-9]{64}$/;
 
 function fail(message) {
@@ -70,8 +70,8 @@ export function createStudioHandoff(buildInfo) {
   const demo = flavor === "demo";
   return {
     schemaVersion: 1,
-    kind: "job-ranger-studio-handoff",
-    product: "job-ranger",
+    kind: "sojourner-studio-handoff",
+    product: "sojourner",
     ...(legacy ? {} : { flavor }),
     build: { version, buildId, commit },
     entry: {
@@ -108,7 +108,7 @@ export function createStudioHandoff(buildInfo) {
         }
       : {}),
     studio: {
-      pagePath: "/side-projects/job-ranger",
+      pagePath: "/side-projects/sojourner",
       ctaLabel: demo ? "Try the Sojourner demo in your browser" : "Try Sojourner in your browser",
       autoEnableCta: false,
       requiresOwnerApproval: true,
@@ -158,7 +158,7 @@ export async function inspectStudioPwaBuild(directory, expectedBuildId, expected
   assertStudioHandoff(handoff, buildInfo);
 
   const html = (await read("index.html")).toString("utf8");
-  if (!html.includes('name="job-ranger-build" content="' + expected + '"')) fail("HTML build identity mismatch");
+  if (!html.includes('name="sojourner-build" content="' + expected + '"')) fail("HTML build identity mismatch");
   const swBytes = await read("sw.js");
   const sw = swBytes.toString("utf8");
   if (!sw.includes('const BUILD_ID = ' + JSON.stringify(expected) + ";")) fail("service-worker build identity mismatch");
@@ -228,7 +228,7 @@ export async function inspectLiveStudioPwa(origin, expectedBuildId, expectedBuil
   const rootBytes = new Uint8Array(await root.arrayBuffer());
   if (rootBytes.byteLength > 2 * 1024 * 1024) fail("live HTML exceeds verification size limit");
   const html = new TextDecoder().decode(rootBytes);
-  if (!html.includes('name="job-ranger-build" content="' + expected + '"')) {
+  if (!html.includes('name="sojourner-build" content="' + expected + '"')) {
     fail("live HTML build identity mismatch");
   }
   const swBytes = new Uint8Array(await (await get("/sw.js")).arrayBuffer());

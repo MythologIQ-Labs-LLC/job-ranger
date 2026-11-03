@@ -1,4 +1,4 @@
-// Cross-platform `JOB_RANGER_PWA_FLAVOR=demo vite <command> --config vite.pwa.config.ts`
+// Cross-platform `SOJOURNER_PWA_FLAVOR=demo vite <command> --config vite.pwa.config.ts`
 // (npm scripts run under cmd.exe on Windows, where inline environment
 // assignments do not work).
 //

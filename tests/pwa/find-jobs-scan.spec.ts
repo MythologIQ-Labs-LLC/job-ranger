@@ -8,7 +8,7 @@ test.afterAll(async () => { await server.close(); });
 
 async function seed(page: Page) {
   await page.context().addInitScript(() =>
-    localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"),
+    localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"),
   );
   await page.route("https://boards-api.greenhouse.io/**", async route => route.fulfill({
     status: 200,

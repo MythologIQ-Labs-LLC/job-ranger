@@ -240,7 +240,7 @@ test("schema-v1 rows written before reserved file IDs still load, keep blocking,
     };
     // Write the raw v1 row directly, as the #315 candidate stored it.
     await new Promise<void>((resolve, reject) => {
-      const open = indexedDB.open("job-ranger.drive-artifact-export-journal.v1", 1);
+      const open = indexedDB.open("sojourner.drive-artifact-export-journal.v1", 1);
       open.onsuccess = () => {
         const tx = open.result.transaction("exports", "readwrite");
         tx.objectStore("exports").put(legacy);

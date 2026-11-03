@@ -10,7 +10,7 @@ let server: PwaServer;
 test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
-const onboardingDismissed = () => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true");
+const onboardingDismissed = () => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true");
 const emptyState = (page: Page) => page.getByTestId("jobs-empty-state");
 const listingCount = (page: Page) => page.getByRole("status").filter({ hasText: /captured listings/i });
 

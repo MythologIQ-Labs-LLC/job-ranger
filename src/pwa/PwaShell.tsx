@@ -59,8 +59,8 @@ function RestoreFromBackup() {
     <div className="space-y-3 border-t border-[var(--color-border)] pt-4" data-testid="pwa-recovery-restore">
       <h2 className="text-lg font-semibold">Restore from a backup</h2>
       <p className="text-sm leading-6">
-        The workspace database stored in this browser is damaged. If you have a Sojourner backup (a <code>.jobranger</code> file),
-        you can restore it here. Nothing changes until you confirm.
+        The workspace database stored in this browser is damaged. If you have a Sojourner backup (a <code>.sojourner</code> file, or a <code>.jobranger</code> file saved
+        before the app was renamed), you can restore it here. Nothing changes until you confirm.
       </p>
       {!selection ? (
         <button ref={chooseButton} type="button" className="secondary-button" onClick={() => void choose()}>

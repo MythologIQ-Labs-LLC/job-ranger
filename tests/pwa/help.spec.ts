@@ -14,7 +14,7 @@ test("in-app Help works offline and links to real Career Ops routes", async ({ p
     }
   });
 
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(`${server.url}#/help`);
   await waitForRuntime(page);
 

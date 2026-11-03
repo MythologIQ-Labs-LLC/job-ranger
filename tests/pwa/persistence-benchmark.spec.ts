@@ -75,10 +75,10 @@ test("persistence cost by workspace size", async () => {
   for (const targetMiB of targets) {
     const profile = mkdtempSync(path.join(os.tmpdir(), `sojourner-bench-${targetMiB}-`));
     const context = await chromium.launchPersistentContext(profile, {
-      executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined,
+      executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined,
     });
     try {
-      await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+      await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
       const page = context.pages()[0] ?? (await context.newPage());
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));

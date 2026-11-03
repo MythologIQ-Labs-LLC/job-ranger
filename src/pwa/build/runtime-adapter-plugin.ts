@@ -69,7 +69,7 @@ export function selectRuntimeAdapterTarget(
 
 export function createRuntimeAdapterPlugin(target: RuntimeTarget, env: RuntimeAdapterEnvironment): Plugin {
   return {
-    name: `job-ranger-runtime-adapters:${target}`,
+    name: `sojourner-runtime-adapters:${target}`,
     enforce: "pre",
     async resolveId(source, importer) {
       const selection = selectRuntimeAdapterTarget(source, importer, target, env);

@@ -6,10 +6,12 @@
  * storage provably holds a demo workspace, so every demo workspace carries a
  * sentinel file written by the demo itself:
  *
- *   /job-ranger/.demo-workspace.json
+ *   /sojourner/.demo-workspace.json
  *   { schemaVersion, kind, buildFlavor: "demo", sessionId, createdAt, lastActiveAt, seeded }
  *
  * Startup rules (decideDemoStartup):
+ * - the legacy (pre-rename) root holds files but no valid legacy demo sentinel -> REFUSE
+ *   (the demo never migrates a workspace, and never runs on an origin that holds a real one);
  * - workspace directory missing or holding no files -> reset (nothing to erase);
  * - files present but no valid demo sentinel        -> REFUSE, never erase (it may be
  *   a real workspace: the demo deployed to a real origin, a service-worker update from
@@ -29,7 +31,9 @@ import { DEMO_IDLE_RESET_HOURS } from "../../demo/flavor.ts";
 
 export { DEMO_IDLE_RESET_HOURS };
 export const DEMO_SENTINEL_FILE = ".demo-workspace.json";
-export const DEMO_SENTINEL_KIND = "job-ranger-demo-workspace";
+export const DEMO_SENTINEL_KIND = "sojourner-demo-workspace";
+/** LEGACY: the sentinel kind written by demo builds released as "Job Ranger" (under the legacy root). */
+export const LEGACY_DEMO_SENTINEL_KIND = "job-ranger-demo-workspace";
 export const DEMO_IDLE_RESET_MS = DEMO_IDLE_RESET_HOURS * 60 * 60 * 1000;
 /** How often (at most) activity refreshes the sentinel's lastActiveAt. */
 export const DEMO_ACTIVITY_WRITE_INTERVAL_MS = 5 * 60 * 1000;
@@ -75,8 +79,8 @@ export function sentinelPath(userDataDirectory: string): string {
   return joinPath(userDataDirectory, DEMO_SENTINEL_FILE);
 }
 
-/** Parses a sentinel; anything that is not exactly a demo sentinel is null. */
-export function parseDemoSentinel(text: string): DemoWorkspaceSentinel | null {
+/** Parses a sentinel; anything that is not exactly a demo sentinel (of `kind`) is null. */
+export function parseDemoSentinel(text: string, kind: string = DEMO_SENTINEL_KIND): DemoWorkspaceSentinel | null {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -87,7 +91,7 @@ export function parseDemoSentinel(text: string): DemoWorkspaceSentinel | null {
   const candidate = value as Record<string, unknown>;
   if (
     candidate.schemaVersion !== 1 ||
-    candidate.kind !== DEMO_SENTINEL_KIND ||
+    candidate.kind !== kind ||
     candidate.buildFlavor !== "demo" ||
     !isValidDemoSessionId(candidate.sessionId) ||
     typeof candidate.createdAt !== "string" ||
@@ -122,7 +126,7 @@ export async function containsAnyFile(fs: DemoWorkspaceFs, directory: string): P
   return false;
 }
 
-async function readSentinel(fs: DemoWorkspaceFs, userDataDirectory: string): Promise<DemoWorkspaceSentinel | null> {
+async function readSentinel(fs: DemoWorkspaceFs, userDataDirectory: string, kind: string = DEMO_SENTINEL_KIND): Promise<DemoWorkspaceSentinel | null> {
   let raw: Uint8Array | string;
   try {
     raw = await fs.readFile(sentinelPath(userDataDirectory));
@@ -131,14 +135,19 @@ async function readSentinel(fs: DemoWorkspaceFs, userDataDirectory: string): Pro
     if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR") return null;
     throw error;
   }
-  return parseDemoSentinel(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
+  return parseDemoSentinel(typeof raw === "string" ? raw : new TextDecoder().decode(raw), kind);
 }
 
 export async function decideDemoStartup(
   fs: DemoWorkspaceFs,
-  options: { userDataDirectory: string; sessionId: string; now: number },
+  options: { userDataDirectory: string; sessionId: string; now: number; legacyUserDataDirectory?: string },
 ): Promise<DemoStartupDecision> {
   if (!isValidDemoSessionId(options.sessionId)) throw new Error("A demo session needs a valid session id");
+  const legacy = options.legacyUserDataDirectory;
+  if (legacy && !(await readSentinel(fs, legacy, LEGACY_DEMO_SENTINEL_KIND)) && (await containsAnyFile(fs, legacy))) {
+    // A legacy demo workspace is left alone (it is sample data); anything else may be real.
+    return { action: "refuse", reason: "not-a-demo-workspace" };
+  }
   const sentinel = await readSentinel(fs, options.userDataDirectory);
   if (!sentinel) {
     return (await containsAnyFile(fs, options.userDataDirectory))

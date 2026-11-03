@@ -10,7 +10,7 @@
  */
 export interface DriveBuildInput {
   flavor: string;
-  /** VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID */
+  /** VITE_SOJOURNER_GOOGLE_WEB_CLIENT_ID */
   clientId?: string;
   /** VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN */
   helperOrigin?: string;

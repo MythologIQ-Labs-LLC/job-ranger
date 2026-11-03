@@ -9,7 +9,7 @@ test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
 async function open(page: Page, route: string, width: number, height: number) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.setViewportSize({ width, height });
   await page.goto(`${server.url}#${route}`);
   await waitForRuntime(page);

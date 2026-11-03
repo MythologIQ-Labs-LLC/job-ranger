@@ -13,8 +13,8 @@
  */
 import { trustedScriptUrl } from "./security/trusted-types";
 
-export const UPDATE_READY_EVENT = "job-ranger:update-ready";
-export const UPDATE_FAILED_EVENT = "job-ranger:update-failed";
+export const UPDATE_READY_EVENT = "sojourner:update-ready";
+export const UPDATE_FAILED_EVENT = "sojourner:update-failed";
 
 let waitingWorker: ServiceWorker | null = null;
 
@@ -36,7 +36,7 @@ export function applyWaitingUpdate(): void {
   waitingWorker.postMessage({ type: "SKIP_WAITING" });
 }
 
-export async function registerJobRangerServiceWorker(): Promise<void> {
+export async function registerSojournerServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
   if (!window.isSecureContext) return;
   try {

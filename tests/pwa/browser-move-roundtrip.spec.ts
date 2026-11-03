@@ -7,7 +7,7 @@ import path from "node:path";
 import { startPwaServer, type PwaServer } from "./support/server";
 import { distPwa, healthcareProfile, healthcareResumeDocx, waitForRuntime } from "./support/fixtures";
 
-// #194 / #302: moving to another browser. A .jobranger backup made in one PWA workspace, through
+// #194 / #302: moving to another browser. A .sojourner backup made in one PWA workspace, through
 // Settings, restores through Settings into a different browser profile that already has its own
 // data, replacing it with exactly the backed-up career records and managed artifact bytes.
 
@@ -26,9 +26,9 @@ async function openProfile(): Promise<{ context: BrowserContext; page: Page }> {
   profiles.push(profile);
   const context = await chromium.launchPersistentContext(profile, {
     acceptDownloads: true,
-    executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined,
+    executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined,
   });
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   const page = context.pages()[0] ?? (await context.newPage());
   await page.goto(server.url);
   await waitForRuntime(page);
@@ -83,7 +83,7 @@ test("a backup from one browser restores into another browser's workspace with i
     const download = source.page.waitForEvent("download");
     await source.page.getByRole("button", { name: "Create backup" }).click();
     const saved = await download;
-    expect(saved.suggestedFilename()).toMatch(/\.jobranger$/);
+    expect(saved.suggestedFilename()).toMatch(/\.sojourner$/);
     const archivePath = path.join(os.tmpdir(), `move-${Date.now()}-${saved.suggestedFilename()}`);
     await saved.saveAs(archivePath);
     const archiveBytes = await readFile(archivePath);
