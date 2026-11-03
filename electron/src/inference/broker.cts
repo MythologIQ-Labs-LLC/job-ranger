@@ -1,4 +1,4 @@
-// InferenceBroker: registered tasks only, Job Ranger-assigned location policy,
+// InferenceBroker: registered tasks only, Sojourner-assigned location policy,
 // computed manifest, broker-enforced timeout and cancellation, no retry, no
 // fallback to another provider. It returns proposals; it never writes.
 

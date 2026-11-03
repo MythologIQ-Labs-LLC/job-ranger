@@ -4,7 +4,7 @@
 
   Checks: package identity and version, the exact (narrow) capability set,
   full-trust entry point, absence of startup/protocol/file-association
-  extensions, canonical Job Ranger tile assets (not electron-builder samples),
+  extensions, canonical Sojourner tile assets (not electron-builder samples),
   and the presence of the bundled sqlite3.exe and app.asar.
 #>
 param(
@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Job*windows-store*.appx" -File | Select-Object -First 1
+$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Sojourner-v*-windows-store*.appx" -File | Select-Object -First 1
 if (-not $appx) { throw "No Microsoft Store AppX package was found in $ReleaseDirectory." }
 if ([string]::IsNullOrWhiteSpace($ExpectedVersion)) {
   $ExpectedVersion = (node -p "require('./package.json').version").Trim()
@@ -56,9 +56,9 @@ try {
   if (-not ($identity.Publisher -like "CN=*")) { $failures += "Publisher is not a distinguished name" }
   if ((Compare-Object $capabilities $expectedCapabilities)) { $failures += "Capabilities must be exactly runFullTrust + internetClient, found: $($capabilities -join ', ')" }
   if ($application.EntryPoint -ne "Windows.FullTrustApplication") { $failures += "Unexpected entry point $($application.EntryPoint)" }
-  if ($application.Executable -ne "app\Job Ranger.exe") { $failures += "Unexpected executable $($application.Executable)" }
-  if ($application.Id -ne "JobRanger") { $failures += "Unexpected application id $($application.Id)" }
-  if ($extensions) { $failures += "Package declares extensions (startup task, protocol, or file association) that Job Ranger does not use" }
+  if ($application.Executable -ne "app\Sojourner.exe") { $failures += "Unexpected executable $($application.Executable)" }
+  if ($application.Id -ne "Sojourner") { $failures += "Unexpected application id $($application.Id)" }
+  if ($extensions) { $failures += "Package declares extensions (startup task, protocol, or file association) that Sojourner does not use" }
   if ($manifestText -match "electron-updater|squirrel") { $failures += "Package manifest references an app-managed updater" }
 
   $assetChecks = @{}
@@ -66,9 +66,9 @@ try {
     $expected = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path "build/appx" $asset)).Hash.ToLowerInvariant()
     $actual = Get-EntrySha256 $archive "assets/$asset"
     $assetChecks[$asset] = ($actual -eq $expected)
-    if ($actual -ne $expected) { $failures += "Tile asset $asset is not the canonical Job Ranger asset" }
+    if ($actual -ne $expected) { $failures += "Tile asset $asset is not the canonical Sojourner asset" }
   }
-  foreach ($required in @("app/Job Ranger.exe", "app/resources/app.asar", "app/resources/sqlite3.exe")) {
+  foreach ($required in @("app/Sojourner.exe", "app/resources/app.asar", "app/resources/sqlite3.exe")) {
     if ($names -notcontains $required) { $failures += "Package is missing $required" }
   }
 
@@ -81,7 +81,7 @@ try {
     publisher = $identity.Publisher
     version = $identity.Version
     architecture = $identity.ProcessorArchitecture
-    validationIdentity = ($identity.Publisher -eq "CN=Job Ranger Package Validation")
+    validationIdentity = ($identity.Publisher -eq "CN=Sojourner Package Validation")
     displayName = $manifest.Package.Properties.DisplayName
     publisherDisplayName = $manifest.Package.Properties.PublisherDisplayName
     minVersion = $manifest.Package.Dependencies.TargetDeviceFamily.MinVersion

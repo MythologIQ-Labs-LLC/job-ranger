@@ -6,13 +6,13 @@
 
 ## Purpose
 
-This document freezes the persistence and authority boundary required before Job Ranger begins resume import.
+This document freezes the persistence and authority boundary required before Sojourner begins resume import.
 
-Job Ranger must not create a second temporary career-data store for imported resumes. Career Profile preferences, Applications, future Career Evidence, source artifacts, resume projections, and exported artifacts all live behind the trusted desktop backend boundary.
+Sojourner must not create a second temporary career-data store for imported resumes. Career Profile preferences, Applications, future Career Evidence, source artifacts, resume projections, and exported artifacts all live behind the trusted desktop backend boundary.
 
 ## Authority model
 
-Job Ranger owns three related but distinct domains:
+Sojourner owns three related but distinct domains:
 
 - **Career Profile** owns user intent and preferences such as target roles, geography, compensation, commute, and work preferences.
 - **Career Evidence** owns factual career history and provenance.
@@ -36,7 +36,7 @@ CareerBackend
     ├── CareerRepository
     │       │
     │       ▼
-    │   jobscout.sqlite3
+    │   sojourner.sqlite3
     │
     └── managed artifact directory
             data/artifacts/
@@ -48,8 +48,8 @@ The renderer does not directly read or write SQLite or arbitrary files.
 
 v1.1.x stored Career Profile and Applications in renderer `localStorage` under:
 
-- `job-ranger.career-profile.v1`
-- `job-ranger.applications.v1`
+- `sojourner.career-profile.v1`
+- `sojourner.applications.v1`
 
 The R0 upgrade bridge follows this order:
 
@@ -77,7 +77,7 @@ The canonical managed directory is:
 
 Future artifact implementations must:
 
-- copy/import files into a Job Ranger-controlled location before interpretation;
+- copy/import files into a Sojourner-controlled location before interpretation;
 - use generated safe internal filenames rather than trusting user-provided paths;
 - retain the original display filename separately as metadata;
 - calculate a content hash before normalization;
@@ -127,7 +127,7 @@ This invariant remains blocking even when optional inference is introduced later
 
 ## Application snapshot rule
 
-When a user tracks a currently collected job, the backend derives the application snapshot from Job Ranger's own job/company records rather than accepting title/company/URL as renderer authority.
+When a user tracks a currently collected job, the backend derives the application snapshot from Sojourner's own job/company records rather than accepting title/company/URL as renderer authority.
 
 Applications preserve the snapshot fields needed to remain useful even if the source job is later deactivated or removed.
 
@@ -140,11 +140,11 @@ R0 does not implement an inference provider.
 Future remote inference must satisfy all of the following before personal career data leaves the machine:
 
 1. the user intentionally invokes or enables the capability;
-2. Job Ranger identifies the provider/data boundary;
+2. Sojourner identifies the provider/data boundary;
 3. the user is told what career data will be transmitted;
 4. the provider receives the minimum material required for the requested operation;
 5. returned factual claims remain proposals until evidence-linked and validated;
-6. deterministic Job Ranger functionality remains available when no provider is configured.
+6. deterministic Sojourner functionality remains available when no provider is configured.
 
 The same disclosure rule applies to future hosted OCR.
 

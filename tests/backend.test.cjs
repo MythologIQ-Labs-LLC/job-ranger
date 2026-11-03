@@ -4,7 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const { JobScoutBackend } = require("../electron/backend.cjs");
+const { SojournerBackend } = require("../electron/backend.cjs");
 
 function createMockFetch() {
   return async (url) => {
@@ -42,10 +42,10 @@ function createMockFetch() {
 }
 
 test("backend persists data, scrapes supported sources, and fails unsupported ones honestly", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "jobscout-backend-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-backend-"));
 
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: createMockFetch(),
       schedulerEnabled: false,
@@ -98,7 +98,7 @@ test("backend persists data, scrapes supported sources, and fails unsupported on
 
     await backend.dispose();
 
-    const reloaded = new JobScoutBackend({
+    const reloaded = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: createMockFetch(),
       schedulerEnabled: false,

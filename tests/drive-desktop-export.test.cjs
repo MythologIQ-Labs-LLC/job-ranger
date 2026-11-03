@@ -31,7 +31,7 @@ let sqliteBinaryPath;
 async function openJournal() {
   sqliteBinaryPath ??= await resolveSqliteBinary();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sojourner-drive-journal-"));
-  const databasePath = path.join(dir, "jobscout.sqlite3");
+  const databasePath = path.join(dir, "sojourner.sqlite3");
   const db = new SqliteClient(databasePath, sqliteBinaryPath);
   const journal = new SqliteDriveExportJournal(db);
   await journal.initialize();
@@ -73,7 +73,7 @@ test("migration 1010 creates the journal table once and is recorded in schema_mi
 test("a database that already recorded 1010 still gets the journal table", async () => {
   sqliteBinaryPath ??= await resolveSqliteBinary();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sojourner-drive-journal-"));
-  const db = new SqliteClient(path.join(dir, "jobscout.sqlite3"), sqliteBinaryPath);
+  const db = new SqliteClient(path.join(dir, "sojourner.sqlite3"), sqliteBinaryPath);
   await db.exec("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL);" +
     "INSERT INTO schema_migrations VALUES (1010, 'google_drive_export_journal', '2026-01-01T00:00:00.000Z');");
   const journal = new SqliteDriveExportJournal(db);

@@ -7,7 +7,7 @@ export function validateExternalUrl(rawUrl: string): string {
   }
 
   if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("Only http and https links can be opened outside Job Ranger.");
+    throw new Error("Only http and https links can be opened outside Sojourner.");
   }
 
   return parsed.toString();

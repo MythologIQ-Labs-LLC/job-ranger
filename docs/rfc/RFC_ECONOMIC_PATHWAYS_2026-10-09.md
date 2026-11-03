@@ -2,12 +2,12 @@
 
 **Status:** Stage A bounded implementation candidate; storage and evidence ingestion deferred  
 **Date:** 2026-10-09  
-**Owner:** Job Ranger / QOR  
-**Discovery:** [#217](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/217)
+**Owner:** Sojourner / QOR  
+**Discovery:** [#217](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/217)
 
 ## 1. Problem and limits of prediction
 
-A conventional career change means a different role or employer in an otherwise recognizable labor market. Structural economic transition may instead mean that the **business model supporting a role** becomes less viable, an entire supply chain changes, or an employer category contracts. Moving to another firm with the same business model might preserve a person's exposure rather than diversify it. Conversely, AI may augment jobs, reduce startup costs, enable smaller competitors or reinforce incumbents. Job Ranger cannot know which outcome will prevail.
+A conventional career change means a different role or employer in an otherwise recognizable labor market. Structural economic transition may instead mean that the **business model supporting a role** becomes less viable, an entire supply chain changes, or an employer category contracts. Moving to another firm with the same business model might preserve a person's exposure rather than diversify it. Conversely, AI may augment jobs, reduce startup costs, enable smaller competitors or reinforce incumbents. Sojourner cannot know which outcome will prevail.
 
 **Evidence context, not predictions:**
 

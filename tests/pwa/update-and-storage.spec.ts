@@ -30,7 +30,7 @@ async function makeVariant(target: string, buildId: string, corruptAsset: boolea
 }
 
 test.beforeAll(async () => {
-  const base = await mkdtemp(path.join(os.tmpdir(), "job-ranger-sw-"));
+  const base = await mkdtemp(path.join(os.tmpdir(), "sojourner-sw-"));
   currentBuild = JSON.parse(await readFile(path.join(distPwa, "build-info.json"), "utf8")).buildId;
   nextBuild = `${currentBuild}.next`;
   roots = { current: path.join(base, "current"), next: path.join(base, "next"), broken: path.join(base, "broken") };
@@ -47,7 +47,7 @@ test.afterAll(async () => {
 });
 
 const buildMeta = (page: import("@playwright/test").Page) =>
-  page.locator('meta[name="job-ranger-build"]').getAttribute("content");
+  page.locator('meta[name="sojourner-build"]').getAttribute("content");
 
 test("service worker updates are verified, user-confirmed, recoverable, and never touch career data", async ({ page }) => {
   server.setRoot(roots.current);
@@ -90,7 +90,7 @@ test("service worker updates are verified, user-confirmed, recoverable, and neve
   expect(await buildMeta(page)).toBe(nextBuild);
   expect((await page.evaluate(() => window.electronAPI.career.getProfile()))?.fullName).toBe("Morgan Rivera");
   const caches = await page.evaluate(() => window.caches.keys());
-  expect(caches).toEqual([`job-ranger-shell-${nextBuild}`]);
+  expect(caches).toEqual([`sojourner-shell-${nextBuild}`]);
 
   // 3. Shell repair clears only the shell and keeps career data.
   await page.goto(`${server.url}#/settings`);

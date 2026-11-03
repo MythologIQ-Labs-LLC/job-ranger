@@ -41,7 +41,7 @@ const plainEncryption = {
 async function openRecords(observe) {
   sqliteBinaryPath ??= await resolveSqliteBinary();
   const dir = tempDir("sojourner-storage-db-");
-  const databasePath = path.join(dir, "jobscout.sqlite3");
+  const databasePath = path.join(dir, "sojourner.sqlite3");
   const db = new SqliteClient(databasePath, sqliteBinaryPath);
   const records = new StorageRecords(db, observe);
   await records.initialize();
@@ -78,17 +78,17 @@ function microsoftAuth(onedrive, encryption = plainEncryption) {
 }
 
 test("Microsoft config: public client id from build config, test origin only when not packaged", () => {
-  assert.deepEqual(resolveMicrosoftClientConfig({ env: { JOB_RANGER_MICROSOFT_CLIENT_ID: CLIENT_ID.toUpperCase() }, isPackaged: false }),
+  assert.deepEqual(resolveMicrosoftClientConfig({ env: { SOJOURNER_MICROSOFT_CLIENT_ID: CLIENT_ID.toUpperCase() }, isPackaged: false }),
     { configured: true, clientId: CLIENT_ID });
-  assert.equal(resolveMicrosoftClientConfig({ env: { JOB_RANGER_MICROSOFT_CLIENT_ID: "nope" }, isPackaged: false }).reason, "invalid-client-config");
-  assert.equal(resolveMicrosoftClientConfig({ env: { JOB_RANGER_MICROSOFT_CLIENT_ID: CLIENT_ID }, isPackaged: true, resourcesPath: null }).configured, false,
+  assert.equal(resolveMicrosoftClientConfig({ env: { SOJOURNER_MICROSOFT_CLIENT_ID: "nope" }, isPackaged: false }).reason, "invalid-client-config");
+  assert.equal(resolveMicrosoftClientConfig({ env: { SOJOURNER_MICROSOFT_CLIENT_ID: CLIENT_ID }, isPackaged: true, resourcesPath: null }).configured, false,
     "a packaged build ignores the environment");
   assert.deepEqual(resolveMicrosoftClientConfig({ env: {}, isPackaged: true, resourcesPath: "R",
     readTextFile: () => JSON.stringify({ clientId: CLIENT_ID }) }), { configured: true, clientId: CLIENT_ID });
   assert.equal(resolveMicrosoftClientConfig({ env: {}, isPackaged: true, resourcesPath: "R", readTextFile: () => { throw new Error("missing"); } }).configured, false);
-  assert.equal(resolveMicrosoftTestOrigin({ env: { JOB_RANGER_MICROSOFT_TEST_BASE_URL: "http://127.0.0.1:9" }, isPackaged: true }), null);
-  assert.equal(resolveMicrosoftTestOrigin({ env: { JOB_RANGER_MICROSOFT_TEST_BASE_URL: "http://127.0.0.1:9" }, isPackaged: false }), "http://127.0.0.1:9");
-  assert.equal(resolveMicrosoftTestOrigin({ env: { JOB_RANGER_MICROSOFT_TEST_BASE_URL: "https://evil.example" }, isPackaged: false }), null);
+  assert.equal(resolveMicrosoftTestOrigin({ env: { SOJOURNER_MICROSOFT_TEST_BASE_URL: "http://127.0.0.1:9" }, isPackaged: true }), null);
+  assert.equal(resolveMicrosoftTestOrigin({ env: { SOJOURNER_MICROSOFT_TEST_BASE_URL: "http://127.0.0.1:9" }, isPackaged: false }), "http://127.0.0.1:9");
+  assert.equal(resolveMicrosoftTestOrigin({ env: { SOJOURNER_MICROSOFT_TEST_BASE_URL: "https://evil.example" }, isPackaged: false }), null);
   assert.equal(MICROSOFT_SCOPE_PARAMETER, "Files.ReadWrite.AppFolder offline_access");
 });
 
@@ -181,13 +181,13 @@ test("migration 1011 creates the records table once, without secrets, recorded i
 
 test("record states are crash safe: compare-and-swap transitions, never back to good from failed", async () => {
   const { records, db } = await openRecords();
-  const base = { provider: "local", locationKey: "C:\\S", locationLabel: "C:\\S", remotePath: "Backups/a.jobranger",
-    name: "a.jobranger", size: 10, sha256: "a".repeat(64), kind: "automatic" };
+  const base = { provider: "local", locationKey: "C:\\S", locationLabel: "C:\\S", remotePath: "Backups/a.sojourner",
+    name: "a.sojourner", size: 10, sha256: "a".repeat(64), kind: "automatic" };
   const id = randomUUID();
   await records.insertPending({ id, ...base });
   assert.equal((await records.unresolved()).length, 1, "a crash now leaves it pending, never verified");
   assert.equal(await records.transition(id, "uploaded", "verified"), false, "wrong expected state does nothing");
-  assert.equal(await records.transition(id, "pending", "uploaded", { remoteId: "a.jobranger" }), true);
+  assert.equal(await records.transition(id, "pending", "uploaded", { remoteId: "a.sojourner" }), true);
   assert.equal(await records.transition(id, "pending", "uploaded"), false, "a second writer loses the race");
   assert.equal(await records.transition(id, "uploaded", "verified"), true);
   assert.equal((await records.verifiedAutomatic("local", "C:\\S")).length, 1);
@@ -200,8 +200,8 @@ test("record states are crash safe: compare-and-swap transitions, never back to 
 test("restore carry-over copies the live records into a staged database (old backups included)", async () => {
   const live = await openRecords();
   await live.records.insertPending({ id: "live-record", provider: "onedrive", locationKey: "d", locationLabel: "OneDrive",
-    remotePath: "Backups/x.jobranger", name: "x.jobranger", size: 1, sha256: "b".repeat(64), kind: "automatic" });
-  const staged = new SqliteClient(path.join(tempDir("sojourner-staged-"), "jobscout.sqlite3"), sqliteBinaryPath);
+    remotePath: "Backups/x.sojourner", name: "x.sojourner", size: 1, sha256: "b".repeat(64), kind: "automatic" });
+  const staged = new SqliteClient(path.join(tempDir("sojourner-staged-"), "sojourner.sqlite3"), sqliteBinaryPath);
   await staged.exec("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL);");
   await staged.exec(carryOverStatements(live.databasePath));
   const rows = await staged.queryAll(`SELECT id FROM ${STORAGE_RECORDS_TABLE};`);
@@ -292,7 +292,7 @@ async function service(options = {}) {
 
 test("names are unique: timestamp plus a short content hash; document names are sanitized", () => {
   const at = new Date("2026-11-02T10:15:30.123Z");
-  assert.equal(backupName("automatic", at, "abcdef0123456789".padEnd(64, "0")), "Sojourner-backup-automatic-2026-11-02T10-15-30Z-abcdef01.jobranger");
+  assert.equal(backupName("automatic", at, "abcdef0123456789".padEnd(64, "0")), "Sojourner-backup-automatic-2026-11-02T10-15-30Z-abcdef01.sojourner");
   assert.equal(documentName("../Résumé final (2).pdf", at), "2026-11-02T10-15-30Z-R-sum-final-2-.pdf");
   assert.match(documentName("resume-v3.pdf", at), /^[A-Za-z0-9][A-Za-z0-9._-]+$/);
 });
@@ -360,7 +360,7 @@ test("retention keeps the newest N automatic backups and never touches manual ba
   await storage.setRetention(2);
   await storage.backUp("manual");
   fs.mkdirSync(path.join(location, "Documents"), { recursive: true });
-  fs.writeFileSync(path.join(location, "Backups", "my-own-file.jobranger"), "not Sojourner's");
+  fs.writeFileSync(path.join(location, "Backups", "my-own-file.sojourner"), "not Sojourner's");
   fs.writeFileSync(path.join(location, "Documents", "notes.txt"), "mine");
   const automatic = [];
   for (let index = 0; index < 4; index += 1) {
@@ -370,7 +370,7 @@ test("retention keeps the newest N automatic backups and never touches manual ba
     await wait(5);
   }
   const files = backupFiles();
-  assert.ok(files.includes("my-own-file.jobranger"), "a file Sojourner did not create is kept");
+  assert.ok(files.includes("my-own-file.sojourner"), "a file Sojourner did not create is kept");
   assert.equal(files.filter((name) => name.includes("-manual-")).length, 1, "manual backups are kept");
   assert.deepEqual(files.filter((name) => name.includes("-automatic-")).sort(), automatic.slice(-2).sort());
   assert.ok(fs.existsSync(path.join(location, "Documents", "notes.txt")));
@@ -405,17 +405,17 @@ test("startup recovery: a pending copy that finished becomes verified, one that 
   const [name] = backupFiles();
   const bytes = fs.readFileSync(path.join(location, "Backups", name));
   const finished = randomUUID();
-  fs.writeFileSync(path.join(location, "Backups", "Sojourner-backup-automatic-crash-1.jobranger"), bytes);
+  fs.writeFileSync(path.join(location, "Backups", "Sojourner-backup-automatic-crash-1.sojourner"), bytes);
   await records.insertPending({ id: finished, provider: "local", locationKey: location, locationLabel: location,
-    remotePath: "Backups/Sojourner-backup-automatic-crash-1.jobranger", name: "Sojourner-backup-automatic-crash-1.jobranger",
+    remotePath: "Backups/Sojourner-backup-automatic-crash-1.sojourner", name: "Sojourner-backup-automatic-crash-1.sojourner",
     size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), kind: "automatic" });
   const lost = randomUUID();
   await records.insertPending({ id: lost, provider: "local", locationKey: location, locationLabel: location,
-    remotePath: "Backups/Sojourner-backup-automatic-crash-2.jobranger", name: "Sojourner-backup-automatic-crash-2.jobranger",
+    remotePath: "Backups/Sojourner-backup-automatic-crash-2.sojourner", name: "Sojourner-backup-automatic-crash-2.sojourner",
     size: 5, sha256: "c".repeat(64), kind: "automatic" });
   fs.writeFileSync(path.join(location, "Backups", ".sojourner-partial-abc"), "partial");
   const listing = await storage.list();
-  assert.equal(listing.backups.find((item) => item.name.endsWith("crash-1.jobranger")).restorable, false,
+  assert.equal(listing.backups.find((item) => item.name.endsWith("crash-1.sojourner")).restorable, false,
     "an unverified copy is never offered for restore");
   await storage.backUp("manual");
   assert.equal((await records.get(finished)).status, "verified");
@@ -506,13 +506,13 @@ test("start removes temporary archives an interrupted run left in the user-data 
   const { storage, userData } = await service({
     debounceMs: 60_000,
     beforeStart: async (dir) => {
-      fs.mkdirSync(path.join(dir, ".job-ranger-storage-work-crashed", "nested"), { recursive: true });
-      fs.writeFileSync(path.join(dir, ".job-ranger-storage-work-crashed", "backup.jobranger"), randomBytes(4096));
-      fs.writeFileSync(path.join(dir, ".job-ranger-storage-work-abc.jobranger"), randomBytes(4096));
+      fs.mkdirSync(path.join(dir, ".sojourner-storage-work-crashed", "nested"), { recursive: true });
+      fs.writeFileSync(path.join(dir, ".sojourner-storage-work-crashed", "backup.sojourner"), randomBytes(4096));
+      fs.writeFileSync(path.join(dir, ".sojourner-storage-work-abc.sojourner"), randomBytes(4096));
       fs.writeFileSync(path.join(dir, "keep-me.txt"), "not Sojourner's work file");
     },
   });
-  assert.deepEqual(fs.readdirSync(userData).filter((name) => name.startsWith(".job-ranger-storage-work-")), []);
+  assert.deepEqual(fs.readdirSync(userData).filter((name) => name.startsWith(".sojourner-storage-work-")), []);
   assert.ok(fs.existsSync(path.join(userData, "keep-me.txt")));
   storage.stop();
 });
@@ -551,12 +551,12 @@ test("Open launches only Sojourner's own verified PDF or JSON copies, and only w
 test("restore carry-over empties archived records when this device never used storage locations", async () => {
   sqliteBinaryPath ??= await resolveSqliteBinary();
   const liveDir = tempDir("sojourner-live-");
-  const livePath = path.join(liveDir, "jobscout.sqlite3");
+  const livePath = path.join(liveDir, "sojourner.sqlite3");
   const live = new SqliteClient(livePath, sqliteBinaryPath);
   await live.exec("CREATE TABLE workspace (id INTEGER);");
   const staged = await openRecords();
   await staged.records.insertPending({ id: "foreign-record", provider: "local", locationKey: "D:\\Other", locationLabel: "D:\\Other",
-    remotePath: "Backups/x.jobranger", name: "x.jobranger", size: 1, sha256: "d".repeat(64), kind: "automatic" });
+    remotePath: "Backups/x.sojourner", name: "x.sojourner", size: 1, sha256: "d".repeat(64), kind: "automatic" });
   await carryOverStorageRecords({ liveDatabasePath: livePath, stagedDatabasePath: staged.databasePath, sqliteBinaryPath });
   assert.deepEqual(await staged.db.queryAll(`SELECT id FROM ${STORAGE_RECORDS_TABLE};`), []);
   assert.equal(await live.queryOne(`SELECT name FROM sqlite_master WHERE name = '${STORAGE_RECORDS_TABLE}';`), null,

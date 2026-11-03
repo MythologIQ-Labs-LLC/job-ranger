@@ -14,7 +14,7 @@ A **Storage location** section in Settings with exactly three choices:
 
 Two kinds of files go to the selected location:
 
-1. **Workspace backups.** A full `.jobranger` archive made by the existing streaming export (`BackupService.createArchive`, #344): automatic backups, and manual ones from **Back up now**.
+1. **Workspace backups.** A full `.sojourner` archive made by the existing streaming export (`BackupService.createArchive`, #344): automatic backups, and manual ones from **Back up now**.
 2. **Exported documents.** A verified resume PDF (`resume:export-pdf`) and a JSON Resume file (`json-resume:export`) are copied to `Documents/` when exported. Cover letters have no file export today (they are copied to the clipboard), so none are copied.
 
 **The working database always stays local.** The live SQLite database and managed files never move to, or are edited in, a location. This is backup and document copying, not live multi-PC editing. Another computer can restore a backup it finds at the same location, after the same validation as any backup.
@@ -26,7 +26,7 @@ workspace write ──> SQLite file change counter (header bytes 24-27, polled e
                       │ quiet 10 min after the last change, at most 60 min after the first, or on quit
                       v
 BackupService.createArchive (VACUUM INTO snapshot, streaming pack) -> private work file in the user-data root
-                      │ name = Sojourner-backup-<automatic|manual>-<UTC timestamp>-<sha256[0..8]>.jobranger
+                      │ name = Sojourner-backup-<automatic|manual>-<UTC timestamp>-<sha256[0..8]>.sojourner
                       v
 record pending (migration 1011) -> journal remote reference -> upload -> record uploaded
                       │ byte readback, SHA-256 and size equal
@@ -51,7 +51,7 @@ Restore: **Restore from this location** lists the files at the selected location
 
 - States: `pending -> uploaded -> verified`, `pending | uploaded -> failed`, `verified -> deleted` (retention only). Every update is a compare-and-swap on the expected status; `failed` never becomes `verified`.
 - The record is written `pending` before any byte is sent, and the remote reference (Google's reserved file id, or the path) is journaled before the request that can create a file.
-- Recovery before every operation at a location: a `pending` or `uploaded` record whose file verifies becomes `verified`; one that is provably absent, or present but not matching, becomes `failed`; an unknown answer leaves it for later. Leftover local `.sojourner-partial-*` files are removed, and at every start Sojourner deletes the temporary archives and downloads (`.job-ranger-storage-work-*` in the user-data root) an interrupted run, a crash or a quit-flush timeout left behind. A crash mid-upload therefore never shows a backup as good, and an unverified backup is never offered for restore.
+- Recovery before every operation at a location: a `pending` or `uploaded` record whose file verifies becomes `verified`; one that is provably absent, or present but not matching, becomes `failed`; an unknown answer leaves it for later. Leftover local `.sojourner-partial-*` files are removed, and at every start Sojourner deletes the temporary archives and downloads (`.sojourner-storage-work-*` in the user-data root) an interrupted run, a crash or a quit-flush timeout left behind. A crash mid-upload therefore never shows a backup as good, and an unverified backup is never offered for restore.
 - The records describe files at locations, not the workspace, so a restore carries the live records into the staged database before it is verified (`BackupService.addRestoreCarryOver`). When this device has no records table yet, the staged table is emptied instead: records that arrived inside an archive describe another device's copies and never drive retention or verification here.
 - A file at the location counts as Sojourner's copy only when it is the exact item recorded (Google and OneDrive item id, locally the path) with the recorded size. A file that now carries the name of one of Sojourner's copies but is a different item or size is listed as *replaced*, is never shown as verified, and is not offered for restore.
 - Device settings (selected provider, local folder, retention, cached Google folder ids, clean point, last success) are in `storage-location.json` in the user-data root, outside `data/`, so restoring another computer's backup never changes where this computer backs up.
@@ -87,8 +87,8 @@ No redirects are followed (Google's resumable `308 Resume Incomplete` is passed 
 
 ## Build configuration
 
-- Google: #369's `JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID` / `_SECRET`.
-- Microsoft: repository variable `JOB_RANGER_MICROSOFT_CLIENT_ID` (an application id; no secret) passed by `release-build.yml` to the Windows build; `scripts/write-microsoft-oauth-client.mjs` validates it and writes `build/microsoft-oauth/microsoft-client.json`, which `electron-builder.json` copies into resources. A packaged app reads only that file; a development run may use the environment variable.
+- Google: #369's `SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID` / `_SECRET`.
+- Microsoft: repository variable `SOJOURNER_MICROSOFT_CLIENT_ID` (an application id; no secret) passed by `release-build.yml` to the Windows build; `scripts/write-microsoft-oauth-client.mjs` validates it and writes `build/microsoft-oauth/microsoft-client.json`, which `electron-builder.json` copies into resources. A packaged app reads only that file; a development run may use the environment variable.
 - A provider without a configured client is shown disabled with the reason; no request is made to it. Packaged builds enable storage locations on Windows only; non-packaged runs (development, E2E) enable them on every platform.
 
 ## Failure states shown to the person

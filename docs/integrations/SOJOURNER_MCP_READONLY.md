@@ -1,8 +1,8 @@
 # Sojourner local read-only MCP prototype
 
-**Development-only status (2026-10-08).** This is an opt-in local [Model Context Protocol](https://modelcontextprotocol.io/) **stdio server**, not an installed ChatGPT plugin, a remote MCP endpoint, or a feature of the published v1.2.0 installer (released under the former name Job Ranger). Do **not** expose it through a public no-auth tunnel, browser endpoint, or unknown remote tool host. An independent **official, outbound-only Secure MCP Tunnel development pathway** is documented in [the owner-only trial guide](./JOB_RANGER_SECURE_TUNNEL.md); it has not been confirmed live in ChatGPT.
+**Development-only status (2026-10-08).** This is an opt-in local [Model Context Protocol](https://modelcontextprotocol.io/) **stdio server**, not an installed ChatGPT plugin, a remote MCP endpoint, or a feature of the published v1.2.0 installer (released under the former name Sojourner). Do **not** expose it through a public no-auth tunnel, browser endpoint, or unknown remote tool host. An independent **official, outbound-only Secure MCP Tunnel development pathway** is documented in [the owner-only trial guide](./SOJOURNER_SECURE_TUNNEL.md); it has not been confirmed live in ChatGPT.
 
-**Platform boundary: Windows desktop data only, not the PWA.** The server reads the local SQLite database (`jobscout.sqlite3`) that the Windows desktop (Electron) build of Sojourner writes. It is **not available for the Progressive Web App**: PWA and demo workspaces live in the browser's origin-private storage (OPFS), which this process cannot open, and nothing in the PWA starts or connects to it. Under [ARCH-002](../ARCHITECTURE_INDEX.md) the Electron build is an internal engineering harness rather than a supported end-user distribution, so this adapter stays a development prototype.
+**Platform boundary: Windows desktop data only, not the PWA.** The server reads the local SQLite database (`sojourner.sqlite3`) that the Windows desktop (Electron) build of Sojourner writes. It is **not available for the Progressive Web App**: PWA and demo workspaces live in the browser's origin-private storage (OPFS), which this process cannot open, and nothing in the PWA starts or connects to it. Under [ARCH-002](../ARCHITECTURE_INDEX.md) the Electron build is an internal engineering harness rather than a supported end-user distribution, so this adapter stays a development prototype.
 
 The baseline application works independently of this adapter and never needs a ChatGPT subscription or a model.
 
@@ -14,9 +14,9 @@ Every tool response includes a startup snapshot timestamp. No post performance i
 
 ## Prerequisites
 
-- Source checkout of the **current development branch** of Sojourner (repository `job-ranger`); published v1.2.0 does not contain this functionality.
+- Source checkout of the **current development branch** of Sojourner (repository `sojourner`); published v1.2.0 does not contain this functionality.
 - Node.js **22.12 or newer**, npm dependencies installed from the repository lockfile (`npm ci`), and a working `sqlite3` command (set `SQLITE3_PATH` if needed).
-- An existing **native** (Windows desktop) Sojourner data directory containing `jobscout.sqlite3` created by a normal desktop session. This prototype cannot access browser-origin OPFS/PWA data. It will not discover a path for you or launch Sojourner.
+- An existing **native** (Windows desktop) Sojourner data directory containing `sojourner.sqlite3` created by a normal desktop session. This prototype cannot access browser-origin OPFS/PWA data. It will not discover a path for you or launch Sojourner.
 - Explicit user consent to run a local MCP host and share selected data with a chosen local client. Local clients that themselves call online inference providers may send tool responses to those providers. Sojourner does not control their retention or privacy policies.
 - For a live native database, take a normal Sojourner backup first. The adapter opens the source using `sqlite3 -readonly` and creates a disposable, transaction-consistent local SQLite snapshot, including committed WAL content.
 
@@ -29,11 +29,11 @@ npm ci
 npm run desktop:compile
 ```
 
-Then provide the **absolute native data-directory path**. The example below is a placeholder: it must be replaced with a path that actually contains your `jobscout.sqlite3`.
+Then provide the **absolute native data-directory path**. The example below is a placeholder: it must be replaced with a path that actually contains your `sojourner.sqlite3`.
 
 ```sh
 node mcp/local-readonly-server.mjs \
-  --data-dir="/ABSOLUTE/PATH/TO/JOB-RANGER/data" \
+  --data-dir="/ABSOLUTE/PATH/TO/SOJOURNER/data" \
   --scopes="tracks:read,evidence:read,opportunities:read,posts:read,analytics:read"
 ```
 
@@ -90,4 +90,4 @@ ChatGPT Web generally requires a separately reachable **HTTPS MCP server** and a
 
 The official Secure MCP Tunnel now offers a narrowly controlled owner-only trial over the local stdio server; see the linked operator runbook. **End-to-end ChatGPT connectivity, OpenAI workspace authorization, credential provisioning and actual revocation are not yet verified.** Do not describe it as connected until the exact supported surface and end-to-end authorization have been tested.
 
-Governing record: [ADR-0002](../adr/0002-local-readonly-mcp-boundary.md), [issue #173](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/173).
+Governing record: [ADR-0002](../adr/0002-local-readonly-mcp-boundary.md), [issue #173](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/173).

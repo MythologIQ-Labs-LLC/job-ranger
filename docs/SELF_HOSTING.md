@@ -1,10 +1,10 @@
-# Self-host Job Ranger as a PWA
+# Self-host Sojourner as a PWA
 
-This is the shortest path to running the current Job Ranger web app on your own computer.
+This is the shortest path to running the current Sojourner web app on your own computer.
 
-The PWA is **local-first**. The application is served from your machine, and Job Ranger's Career Ops data is stored in the browser's local OPFS storage for the exact origin `http://localhost:4174`.
+The PWA is **local-first**. The application is served from your machine, and Sojourner's Career Ops data is stored in the browser's local OPFS storage for the exact origin `http://localhost:4174`.
 
-You do not need a hosted Job Ranger account, Docker, a separate database server, an AI subscription, or cloud storage.
+You do not need a hosted Sojourner account, Docker, a separate database server, an AI subscription, or cloud storage.
 
 ## What you need
 
@@ -33,14 +33,14 @@ When the server reports that it is ready, open:
 http://localhost:4174
 ```
 
-Keep that terminal window open while you use Job Ranger.
+Keep that terminal window open while you use Sojourner.
 
 ## Option B: no Git
 
-1. Open the [Job Ranger repository](https://github.com/MythologIQ-Labs-LLC/sojourner).
+1. Open the [Sojourner repository](https://github.com/MythologIQ-Labs-LLC/sojourner).
 2. Choose **Code → Download ZIP**.
 3. Extract the ZIP.
-4. Open a terminal or PowerShell window in the extracted `job-ranger` folder.
+4. Open a terminal or PowerShell window in the extracted `sojourner` folder.
 5. Run:
 
 ```bash
@@ -52,11 +52,11 @@ npm run selfhost:pwa
 
 ## Install it like an app
 
-Once Job Ranger is open in Chrome or Edge, use the browser's **Install app** control when available. The installed PWA opens in its own window while still using the same local Job Ranger origin and data.
+Once Sojourner is open in Chrome or Edge, use the browser's **Install app** control when available. The installed PWA opens in its own window while still using the same local Sojourner origin and data.
 
 Installing the PWA is optional. A normal browser tab works too.
 
-## Stop and restart Job Ranger
+## Stop and restart Sojourner
 
 To stop the local server, return to the terminal and press `Ctrl+C`.
 
@@ -71,7 +71,7 @@ Then return to `http://localhost:4174`.
 
 ## Update safely
 
-Before a meaningful update, export a `.jobranger` portable backup from Job Ranger.
+Before a meaningful update, export a `.sojourner` portable backup from Sojourner.
 
 If you cloned with Git:
 
@@ -83,17 +83,17 @@ npm run selfhost:pwa
 
 If you downloaded a ZIP, download and extract the newer source, run `npm ci`, and start it with `npm run selfhost:pwa`.
 
-Keep using the exact `http://localhost:4174` origin. Browser storage is origin-bound, so silently switching to a different port can make the existing profile appear missing. Job Ranger deliberately uses a strict port for this reason.
+Keep using the exact `http://localhost:4174` origin. Browser storage is origin-bound, so silently switching to a different port can make the existing profile appear missing. Sojourner deliberately uses a strict port for this reason.
 
 Application updates replace the application shell. They do not intentionally replace Career Ops data stored for the origin.
 
 ## Back up your data
 
-Use Job Ranger's portable `.jobranger` export before upgrades, experiments, or browser-profile changes.
+Use Sojourner's portable `.sojourner` export before upgrades, experiments, or browser-profile changes.
 
-Do not clear storage for `localhost:4174` unless you intend to remove that local Job Ranger profile.
+Do not clear storage for `localhost:4174` unless you intend to remove that local Sojourner profile.
 
-The portable archive is also the supported way to move data between the desktop application, a self-hosted PWA, and a future public Job Ranger origin.
+The portable archive is also the supported way to move data between the desktop application, a self-hosted PWA, and a future public Sojourner origin.
 
 ## What stays local
 

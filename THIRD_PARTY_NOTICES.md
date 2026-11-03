@@ -2,14 +2,14 @@
 
 ## career-ops lineage
 
-Job Ranger is an independent project. Some career-search workflow concepts in Job Ranger's career intelligence work were informed by the open-source **career-ops** project by Santiago Fernández de Valderrama.
+Sojourner is an independent project. Some career-search workflow concepts in Sojourner's career intelligence work were informed by the open-source **career-ops** project by Santiago Fernández de Valderrama.
 
 - Upstream project: `career-ops-hq/career-ops`
 - License: MIT
 - Relationship: independent project; no endorsement, sponsorship, certification, or official affiliation is implied.
-- Branding: Job Ranger does not use the career-ops name as a product name, logo, or "powered by" claim.
+- Branding: Sojourner does not use the career-ops name as a product name, logo, or "powered by" claim.
 
-Where Job Ranger incorporates or adapts code from career-ops, the following MIT notice applies to those portions:
+Where Sojourner incorporates or adapts code from career-ops, the following MIT notice applies to those portions:
 
 ```text
 MIT License
@@ -35,11 +35,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-Career-ops also publishes a separate trademark policy covering its project name and brand. Job Ranger's attribution above is descriptive lineage only and is intentionally written to avoid implying an official relationship.
+Career-ops also publishes a separate trademark policy covering its project name and brand. Sojourner's attribution above is descriptive lineage only and is intentionally written to avoid implying an official relationship.
 
 ## Anydoc
 
-Job Ranger uses **Anydoc** for local extraction of text-bearing DOCX and PDF resume documents. Job Ranger invokes the packaged parser directly and keeps hosted OCR disabled by default; imported content is preserved and proposed as reviewable career evidence rather than automatically becoming user-confirmed fact.
+Sojourner uses **Anydoc** for local extraction of text-bearing DOCX and PDF resume documents. Sojourner invokes the packaged parser directly and keeps hosted OCR disabled by default; imported content is preserved and proposed as reviewable career evidence rather than automatically becoming user-confirmed fact.
 
 - Project: `firecrawl/anydoc`
 - Version adopted: `0.2.4`
@@ -75,7 +75,7 @@ SOFTWARE.
 
 ## SQLite
 
-Job Ranger's packaged Windows release includes the official SQLite command-line shell so normal users do not need to install a separate SQLite executable.
+Sojourner's packaged Windows release includes the official SQLite command-line shell so normal users do not need to install a separate SQLite executable.
 
 - Project: SQLite
 - Distribution source: `sqlite.org`
@@ -83,7 +83,7 @@ Job Ranger's packaged Windows release includes the official SQLite command-line 
 - Status: SQLite's authors dedicate the SQLite deliverable code to the public domain; no SQLite license is required for redistribution of the bundled executable.
 - Release integrity: the Windows release workflow downloads the pinned official tools archive and verifies its published SHA3-256 digest before extracting `sqlite3.exe`.
 
-SQLite is a separate project. Its inclusion does not imply endorsement of Job Ranger by the SQLite authors or Hwaci.
+SQLite is a separate project. Its inclusion does not imply endorsement of Sojourner by the SQLite authors or Hwaci.
 
 ## Web/PWA runtime components
 

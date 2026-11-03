@@ -4,7 +4,7 @@ import { isIP } from "node:net";
 export class AcquisitionNetworkPolicyError extends Error {
   readonly code = "acquisition-network-policy";
 
-  constructor(message = "This source is not allowed by Job Ranger's acquisition network policy.") {
+  constructor(message = "This source is not allowed by Sojourner's acquisition network policy.") {
     super(message);
     this.name = "AcquisitionNetworkPolicyError";
   }
@@ -19,7 +19,7 @@ export interface ApprovedAcquisitionTarget {
 }
 
 const policyMessage =
-  "This source is not allowed by Job Ranger's acquisition network policy.";
+  "This source is not allowed by Sojourner's acquisition network policy.";
 
 function deny(): never {
   throw new AcquisitionNetworkPolicyError(policyMessage);

@@ -1,6 +1,6 @@
-# Contributing to Job Ranger
+# Contributing to Sojourner
 
-Thanks for helping improve Job Ranger. The project is intentionally consumer-facing: contributions should make the job-search experience more reliable, understandable, private, and usable by people who do not have software-development expertise.
+Thanks for helping improve Sojourner. The project is intentionally consumer-facing: contributions should make the job-search experience more reliable, understandable, private, and usable by people who do not have software-development expertise.
 
 Architecture decisions, supported distribution targets and explicit supersessions are governed by the [Canonical Architecture Index](./docs/ARCHITECTURE_INDEX.md). Electron and Store tests remain engineering validation, not obligations to ship a native application.
 
@@ -163,7 +163,7 @@ Current documentation authority is indexed in [docs/README.md](./docs/README.md)
 
 Outside contributions require agreement to the [Sojourner Contributor License Agreement](./CLA.md). It lets MythologIQ Labs, LLC distribute your contribution under the repository's GNU Affero General Public License v3.0 only (AGPL-3.0-only) and under commercial license terms, while you keep ownership. Agree by adding the statement from section 6 of the CLA to your pull request description. Pull requests without it will not be merged.
 
-Do not copy third-party code/assets into Job Ranger unless the exact license permits the intended use and attribution obligations are preserved. The repository license does not automatically replace or override the terms of bundled templates, fonts, models, datasets, dependencies, or hosted services.
+Do not copy third-party code/assets into Sojourner unless the exact license permits the intended use and attribution obligations are preserved. The repository license does not automatically replace or override the terms of bundled templates, fonts, models, datasets, dependencies, or hosted services.
 
 Substantial adopted/adapted work should be reflected in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) where required.
 

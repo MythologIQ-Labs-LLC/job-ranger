@@ -38,7 +38,7 @@ interface CareerBackendOptions {
 }
 
 const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
-const NATIVE_TEXT_PARSER_ID = "job-ranger/native-text";
+const NATIVE_TEXT_PARSER_ID = "sojourner/native-text";
 const NATIVE_TEXT_PARSER_VERSION = "1";
 
 function cleanList(values: string[]): string[] {

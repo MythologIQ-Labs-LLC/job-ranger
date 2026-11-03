@@ -13,7 +13,7 @@ export interface StoredMicrosoftCredential {
   savedAt: string;
 }
 
-/** In the user-data root, outside data/, so backups and .jobranger archives never include it. */
+/** In the user-data root, outside data/, so backups and .sojourner archives never include it. */
 export const MICROSOFT_CREDENTIAL_FILE = "microsoft-onedrive-credential.bin";
 export const ONEDRIVE_ACCOUNT_ID = /^[A-Za-z0-9!_.-]{1,200}$/;
 

@@ -93,9 +93,9 @@ function createTray(): void {
   const icon = nativeImage.createFromPath(path.join(moduleDirectory, "../ICON.png"));
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
 
-  tray.setToolTip("Job Ranger");
+  tray.setToolTip("Sojourner");
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: "Open Job Ranger", click: () => mainWindow?.show() },
+    { label: "Open Sojourner", click: () => mainWindow?.show() },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]));
@@ -145,7 +145,7 @@ app.on("before-quit", () => {
       <h2 className="text-2xl font-semibold">Notifications</h2>
     </div>
     <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-      Control when Job Ranger alerts you about new opportunities.
+      Control when Sojourner alerts you about new opportunities.
     </p>
   </div>
   <div className="panel panel-strong p-6 space-y-4">

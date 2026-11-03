@@ -281,11 +281,11 @@ test("egress refuses before any network call, never follows redirects and caps r
 });
 
 test("the fake-Google origin override is honoured only by non-packaged builds and loopback http", () => {
-  const env = { JOB_RANGER_GOOGLE_TEST_BASE_URL: "http://127.0.0.1:4567" };
+  const env = { SOJOURNER_GOOGLE_TEST_BASE_URL: "http://127.0.0.1:4567" };
   assert.equal(resolveGoogleTestOrigin({ env, isPackaged: false }), "http://127.0.0.1:4567");
   assert.equal(resolveGoogleTestOrigin({ env, isPackaged: true }), null);
-  assert.equal(resolveGoogleTestOrigin({ env: { JOB_RANGER_GOOGLE_TEST_BASE_URL: "https://127.0.0.1:4567" }, isPackaged: false }), null);
-  assert.equal(resolveGoogleTestOrigin({ env: { JOB_RANGER_GOOGLE_TEST_BASE_URL: "http://example.com:80" }, isPackaged: false }), null);
+  assert.equal(resolveGoogleTestOrigin({ env: { SOJOURNER_GOOGLE_TEST_BASE_URL: "https://127.0.0.1:4567" }, isPackaged: false }), null);
+  assert.equal(resolveGoogleTestOrigin({ env: { SOJOURNER_GOOGLE_TEST_BASE_URL: "http://example.com:80" }, isPackaged: false }), null);
   assert.equal(browserAuthorizationUrl("https://accounts.google.com/o/oauth2/v2/auth?a=1", "http://127.0.0.1:4567"),
     "http://127.0.0.1:4567/o/oauth2/v2/auth?a=1");
   assert.equal(browserAuthorizationUrl("https://accounts.google.com/o/oauth2/v2/auth?a=1", null),
@@ -297,7 +297,7 @@ test("Drive stays off without a valid Desktop client; packaged builds read only 
     { configured: false, reason: "missing-client-config" });
   assert.equal(validateClientConfig("not-a-client", "GOCSPX-abcdefgh").configured, false);
   const packaged = resolveGoogleClientConfig({
-    env: { JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: "ignored-in-packaged-builds" }, isPackaged: true, resourcesPath: "C:/res",
+    env: { SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: "ignored-in-packaged-builds" }, isPackaged: true, resourcesPath: "C:/res",
     readTextFile: (target) => {
       assert.match(target.replace(/\\/g, "/"), /C:\/res\/google-oauth\/google-desktop-client\.json$/);
       return JSON.stringify(CLIENT);
@@ -307,7 +307,7 @@ test("Drive stays off without a valid Desktop client; packaged builds read only 
   assert.equal(resolveGoogleClientConfig({ env: {}, isPackaged: true, resourcesPath: "C:/res",
     readTextFile: () => { throw new Error("ENOENT"); } }).configured, false);
   assert.deepEqual(resolveGoogleClientConfig({ env: {
-    JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: CLIENT.clientId, JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: CLIENT.clientSecret,
+    SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: CLIENT.clientId, SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: CLIENT.clientSecret,
   }, isPackaged: false }), { configured: true, client: CLIENT });
 });
 

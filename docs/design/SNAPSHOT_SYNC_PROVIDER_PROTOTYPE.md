@@ -4,7 +4,7 @@
 
 **Status:** deferred (see `GOVERNANCE.md` status language). It records design limits for [#257](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/257). No Sojourner code implements, invokes or ships it, and merging this document authorizes no implementation.  
 **Owner decision (2026-11-02):** the agent-first Drive/sync family is rescoped to **explicit, user-initiated actions only**: *share snapshot* and *review-before-import*. Both are **off by default**. There is **no automatic, background or scheduled sync** and **no app-side pruning, retention or deletion** of remote files. PR #262 merges as this document only.  
-**Architecture authority:** [`docs/ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md). Google Drive export is also bound by ARCH-004 and ARCH-005. User-facing copy says "Sojourner"; internal `job-ranger` identifiers (package names, the `.jobranger` archive suffix, storage namespaces) are unchanged.
+**Architecture authority:** [`docs/ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md). Google Drive export is also bound by ARCH-004 and ARCH-005. User-facing copy says "Sojourner"; internal `sojourner` identifiers (package names, the `.sojourner` archive suffix, storage namespaces) are unchanged.
 
 ## Runtime priority
 
@@ -59,7 +59,7 @@ Sojourner's `drive.file` grant belongs to **Sojourner's** OAuth app. It does not
 
 - [#256](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/256) (trigger and UI): **decided**, user-initiated only and off by default. The exact UI and disclosure copy remain open.
 - [#251](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/251) (retention and deletion): **decided**, no app-side pruning or retention.
-- [#255](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/255) (snapshot format): open. The choice is between the existing `.jobranger` archive and a minimized snapshot. The provider treats the bytes as opaque either way.
+- [#255](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/255) (snapshot format): open. The choice is between the existing `.sojourner` archive and a minimized snapshot. The provider treats the bytes as opaque either way.
 - [#254](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/254) (user-facing privacy and help text): open, and required before anything ships.
 
 ## Withdrawn prototype

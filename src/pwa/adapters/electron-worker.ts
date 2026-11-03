@@ -15,7 +15,7 @@
  */
 import { basename, join } from "./node-path";
 import { promises as fs } from "./node-fs";
-import { IO_DIRECTORY, mediaTypeForFileName, type DownloadPayload } from "../runtime/protocol";
+import { IO_DIRECTORY, USER_DATA_DIRECTORY, mediaTypeForFileName, type DownloadPayload } from "../runtime/protocol";
 import { fileBytesForTransfer } from "../runtime/transfer-file-bytes";
 
 type Handler = (event: { sender: null }, ...args: unknown[]) => unknown;
@@ -93,7 +93,7 @@ export const dialog = {
   },
   async showSaveDialog(options?: { defaultPath?: string }): Promise<{ canceled: boolean; filePath?: string }> {
     const invocation = requireInvocation("A save location");
-    const fileName = basename(options?.defaultPath || "job-ranger-export");
+    const fileName = basename(options?.defaultPath || "sojourner-export");
     const filePath = join(IO_DIRECTORY, "outbox", crypto.randomUUID(), fileName);
     invocation.saveTargets.push(filePath);
     return { canceled: false, filePath };
@@ -104,14 +104,20 @@ export const dialog = {
 };
 
 let appVersion = "0.0.0";
+/** The workspace root in use (the legacy root only while a failed migration is retried). */
+let userDataPath = USER_DATA_DIRECTORY;
 
 export function setAppVersion(version: string): void {
   appVersion = version;
 }
 
+export function setUserDataPath(directory: string): void {
+  userDataPath = directory;
+}
+
 export const app = {
   getVersion: () => appVersion,
-  getPath: (_name: string) => "/job-ranger",
+  getPath: (_name: string) => userDataPath,
   isPackaged: true,
   relaunch: () => hostEventSink({ event: "relaunch" }),
   exit: (_code?: number) => undefined,

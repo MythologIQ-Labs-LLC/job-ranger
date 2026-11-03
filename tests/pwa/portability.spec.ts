@@ -11,7 +11,7 @@ import { distPwa, healthcareProfile, projectRoot, waitForRuntime } from "./suppo
 // the native sqlite3 CLI engine — i.e. exactly what the desktop app runs.
 const require = createRequire(import.meta.url);
 const electronCore = (name: string) => require(path.join(projectRoot, "electron-runtime", "electron", "src", name));
-const { JobScoutBackend } = electronCore("backend.cjs");
+const { SojournerBackend } = electronCore("backend.cjs");
 const { CareerBackend } = electronCore("career-backend.cjs");
 const { PersonalBrandBackend } = electronCore("personal-brand-backend.cjs");
 const { BackupService, applyPendingRestore } = electronCore("backup-service.cjs");
@@ -23,7 +23,7 @@ let workRoot: string;
 
 test.beforeAll(async () => {
   server = await startPwaServer(distPwa);
-  workRoot = await mkdtemp(path.join(os.tmpdir(), "job-ranger-portability-"));
+  workRoot = await mkdtemp(path.join(os.tmpdir(), "sojourner-portability-"));
 });
 
 test.afterAll(async () => {
@@ -33,7 +33,7 @@ test.afterAll(async () => {
 
 async function openElectronInstall(userDataDirectory: string) {
   const dataDirectory = path.join(userDataDirectory, "data");
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -61,7 +61,7 @@ async function chooseRestoreFile(page: Page, file: { name: string; buffer: Buffe
   await (await chooser).setFiles({ name: file.name, mimeType: "application/octet-stream", buffer: file.buffer });
 }
 
-test("Electron → PWA: a desktop .jobranger archive restores into the web runtime with provenance intact", async ({ page }) => {
+test("Electron → PWA: a desktop .sojourner archive restores into the web runtime with provenance intact", async ({ page }) => {
   const desktopUserData = path.join(workRoot, "desktop");
   const desktop = await openElectronInstall(desktopUserData);
   await desktop.career.saveProfile({ ...healthcareProfile, fullName: "Desktop Morgan" });
@@ -97,7 +97,7 @@ test("Electron → PWA: a desktop .jobranger archive restores into the web runti
     sourceLabel: "Personal journal", note: "Independent recruiter conversation.",
     relatedPostId: null, association: "none", userConfirmed: true,
   });
-  const archivePath = path.join(workRoot, "desktop-export.jobranger");
+  const archivePath = path.join(workRoot, "desktop-export.sojourner");
   await desktop.backups.createArchive(archivePath, {
     runtime: "electron",
     channel: "direct-download",
@@ -110,8 +110,8 @@ test("Electron → PWA: a desktop .jobranger archive restores into the web runti
   await waitForRuntime(page);
   await page.evaluate((profile) => window.electronAPI.career.saveProfile(profile), { ...healthcareProfile, fullName: "Replace Me" });
 
-  await chooseRestoreFile(page, { name: "desktop-export.jobranger", buffer: await readFile(archivePath) });
-  await expect(page.getByTestId("restore-producer")).toContainText("Job Ranger desktop app");
+  await chooseRestoreFile(page, { name: "desktop-export.sojourner", buffer: await readFile(archivePath) });
+  await expect(page.getByTestId("restore-producer")).toContainText("Sojourner desktop app");
   await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Restore and restart" }).click()]);
   await waitForRuntime(page);
 
@@ -126,7 +126,7 @@ test("Electron → PWA: a desktop .jobranger archive restores into the web runti
   const artifacts = await page.evaluate(() => window.electronAPI.career.listSourceArtifacts());
   const restored = artifacts.find((item) => item.id === imported.artifact.id);
   expect(restored?.contentHash).toBe(imported.artifact.contentHash);
-  expect(restored?.managedPath.startsWith("/job-ranger/data/artifacts/")).toBe(true);
+  expect(restored?.managedPath.startsWith("/sojourner/data/artifacts/")).toBe(true);
   // The proposals extracted on the desktop keep their lineage to the same source artifact.
   const lineage = evidence.filter((item) => JSON.stringify(item.sources).includes(imported.artifact.id));
   expect(lineage.length).toBeGreaterThan(0);
@@ -158,7 +158,7 @@ test("PWA → Electron: a web archive validates and restores in the desktop runt
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Create backup" }).click();
   const saved = await download;
-  expect(saved.suggestedFilename()).toMatch(/^job-ranger-backup-.*\.jobranger$/);
+  expect(saved.suggestedFilename()).toMatch(/^sojourner-backup-.*\.sojourner$/);
   const archivePath = path.join(workRoot, saved.suggestedFilename());
   await saved.saveAs(archivePath);
   const sha = (await page.getByTestId("backup-created-sha256").textContent())?.replace("SHA-256 ", "").trim();
@@ -255,13 +255,13 @@ test("corrupted, foreign, newer, and unknown-schema backups are rejected without
 
   const errorBox = page.locator(".border-red-300");
 
-  await chooseRestoreFile(page, { name: "notes.jobranger", buffer: Buffer.from("not a backup at all") });
-  await expect(errorBox).toContainText("not a Job Ranger archive");
+  await chooseRestoreFile(page, { name: "notes.sojourner", buffer: Buffer.from("not a backup at all") });
+  await expect(errorBox).toContainText("not a Sojourner archive");
 
   // Valid container, newer archive format.
   const desktop = await openElectronInstall(path.join(workRoot, "fixtures-source"));
   await desktop.career.saveProfile({ ...healthcareProfile, fullName: "Fixture" });
-  const goodPath = path.join(workRoot, "good.jobranger");
+  const goodPath = path.join(workRoot, "good.sojourner");
   await desktop.backups.createArchive(goodPath, { runtime: "electron", channel: "development", appVersion: "1.2.0", buildId: "t" });
   const entries = archive.decodeStoreZip(await readFile(goodPath)).map((entry: { name: string; bytes: Uint8Array }) => ({
     name: entry.name,
@@ -269,26 +269,26 @@ test("corrupted, foreign, newer, and unknown-schema backups are rejected without
   }));
   const newer = archive.encodeStoreZip(
     entries.map((entry: { name: string; bytes: Uint8Array }) => {
-      if (entry.name !== "job-ranger-archive.json") return entry;
+      if (entry.name !== "sojourner-archive.json") return entry;
       const manifest = JSON.parse(Buffer.from(entry.bytes).toString("utf8"));
       manifest.archiveVersion = 2;
       return { name: entry.name, bytes: Buffer.from(JSON.stringify(manifest)) };
     }),
   );
-  await chooseRestoreFile(page, { name: "newer.jobranger", buffer: Buffer.from(newer) });
-  await expect(errorBox).toContainText("newer Job Ranger");
+  await chooseRestoreFile(page, { name: "newer.sojourner", buffer: Buffer.from(newer) });
+  await expect(errorBox).toContainText("newer Sojourner");
 
   // Bit-rot inside the database entry.
   const corrupted = Buffer.from(await readFile(goodPath));
   corrupted[Math.floor(corrupted.length / 2)] ^= 0xff;
-  await chooseRestoreFile(page, { name: "corrupted.jobranger", buffer: corrupted });
+  await chooseRestoreFile(page, { name: "corrupted.sojourner", buffer: corrupted });
   await expect(errorBox).toContainText(/CRC-32|integrity|corrupt/);
 
-  // A database written by a future Job Ranger schema.
+  // A database written by a future Sojourner schema.
   const sqlite = new SqliteClient(desktop.status.databasePath, desktop.status.sqliteBinaryPath);
   await sqlite.exec("INSERT INTO schema_migrations (version, name, applied_at) VALUES (999, 'future_feature', '2027-01-01T00:00:00.000Z');");
-  const futurePath = path.join(workRoot, "future.jobranger");
-  // Simulates an archive produced by a newer Job Ranger (this build would
+  const futurePath = path.join(workRoot, "future.sojourner");
+  // Simulates an archive produced by a newer Sojourner (this build would
   // refuse to export it, so pack the raw bundle directly).
   const bundleParent = path.join(workRoot, "future-bundle");
   await (await import("node:fs/promises")).mkdir(bundleParent, { recursive: true });
@@ -299,7 +299,7 @@ test("corrupted, foreign, newer, and unknown-schema backups are rejected without
     producer: { runtime: "electron", channel: "development", appVersion: "9.9.9", buildId: "future" },
   });
   await desktop.backend.dispose();
-  await chooseRestoreFile(page, { name: "future.jobranger", buffer: await readFile(futurePath) });
+  await chooseRestoreFile(page, { name: "future.sojourner", buffer: await readFile(futurePath) });
   await expect(errorBox).toContainText("does not recognize");
 
   await expect(page.getByRole("button", { name: "Restore and restart" })).toHaveCount(0);

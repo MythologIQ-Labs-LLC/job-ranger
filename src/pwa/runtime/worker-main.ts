@@ -8,7 +8,7 @@
  * whole lifetime, so two tabs can never write the same local database.
  */
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
-import { JobScoutBackend } from "../../../electron/src/backend.cjs";
+import { SojournerBackend, resolveWorkspaceDatabasePath } from "../../../electron/src/backend.cjs";
 import { CareerBackend } from "../../../electron/src/career-backend.cjs";
 import { RequirementBackend } from "../../../electron/src/requirement-backend.cjs";
 import { registerCoreIpcHandlers } from "../../../electron/src/core-ipc.cjs";
@@ -26,13 +26,18 @@ import {
   ipcMain,
   setAppVersion,
   setHostEventSink,
+  setUserDataPath,
   type InvocationContext,
 } from "../adapters/electron-worker";
-import { JobRangerStorageError, onStorageFailure, promises as fs } from "../adapters/node-fs";
+import { SojournerStorageError, onStorageFailure, promises as fs } from "../adapters/node-fs";
 import { basename, dirname, join } from "../adapters/node-path";
 import {
   DATA_DIRECTORY,
+  DATABASE_FILE_NAME,
   IO_DIRECTORY,
+  LEGACY_DATABASE_FILE_NAME,
+  LEGACY_RUNTIME_LOCK_NAME,
+  LEGACY_USER_DATA_DIRECTORY,
   mediaTypeForFileName,
   RUNTIME_LOCK_NAME,
   USER_DATA_DIRECTORY,
@@ -40,8 +45,9 @@ import {
   type DownloadPayload,
   type PageToWorkerMessage,
   type WorkerToPageMessage,
+  type WorkspaceStartup,
 } from "./protocol";
-import { setActiveWasmSqliteEngine, WasmSqliteEngine } from "./wasm-sqlite-engine";
+import { setActiveWasmSqliteEngine, WasmSqliteEngine, type EngineFs } from "./wasm-sqlite-engine";
 import {
   DEMO_REFUSAL_MESSAGE,
   createDemoSentinel,
@@ -54,9 +60,10 @@ import {
 } from "./demo-workspace";
 import { fileBytesForTransfer } from "./transfer-file-bytes";
 import { canOfferRestoreFromBackup, RECOVERY_CHANNELS } from "./workspace-recovery";
+import { migrateLegacyWorkspace, rebaseManagedPaths, type MigrationFs } from "./workspace-migration";
 
-declare const __JOB_RANGER_VERSION__: string;
-declare const __JOB_RANGER_BUILD_ID__: string;
+declare const __SOJOURNER_VERSION__: string;
+declare const __SOJOURNER_BUILD_ID__: string;
 
 interface WorkerScope {
   postMessage(message: WorkerToPageMessage, transfer?: Transferable[]): void;
@@ -65,13 +72,13 @@ interface WorkerScope {
 }
 
 const scope = self as unknown as WorkerScope;
-const appVersion = __JOB_RANGER_VERSION__;
-const buildId = __JOB_RANGER_BUILD_ID__;
+const appVersion = __SOJOURNER_VERSION__;
+const buildId = __SOJOURNER_BUILD_ID__;
 const pending: Extract<PageToWorkerMessage, { type: "invoke" }>[] = [];
 let ready = false;
 /**
  * When the workspace database is damaged, only RECOVERY_CHANNELS are served, so a user can restore
- * a .jobranger backup. Restore never reads or writes the damaged database: it validates the backup,
+ * a Sojourner backup. Restore never reads or writes the damaged database: it validates the backup,
  * stages it beside the workspace, and the next start swaps it in through applyPendingRestore before
  * anything opens the database. See workspace-recovery.ts for when it is offered.
  */
@@ -81,6 +88,14 @@ let pendingRestoreSettled = false;
 let backupIpcRegistered = false;
 /** Validating a backup needs the SQLite engine; recovery is offered only once it is running. */
 let engineReady = false;
+/**
+ * The workspace in use. Always USER_DATA_DIRECTORY, except for a session in which copying a legacy
+ * (pre-rename) workspace there failed: that session runs from the untouched legacy root instead.
+ */
+let userDataDirectory = USER_DATA_DIRECTORY;
+let dataDirectory = DATA_DIRECTORY;
+/** The legacy root keeps its database under the legacy file name (the shared core opens either name). */
+let databaseFileName = DATABASE_FILE_NAME;
 
 function post(message: WorkerToPageMessage, transfer: Transferable[] = []): void {
   scope.postMessage(message, transfer);
@@ -258,15 +273,23 @@ scope.addEventListener("message", (event) => {
 async function acquireExclusiveLock(): Promise<void> {
   const locks = (scope.navigator as Navigator & { locks?: LockManager }).locks;
   if (!locks) {
-    throw new JobRangerStorageError(
+    throw new SojournerStorageError(
       "This browser cannot guarantee that only one Sojourner tab writes your data (Web Locks are unavailable).",
       "EUNSUPPORTED",
     );
   }
+  // Both locks, always in this order, for the worker's whole lifetime: the current one keeps
+  // Sojourner tabs single-writer; the legacy one keeps out a tab still running a build released
+  // as Job Ranger, which would otherwise write the legacy workspace while it is being copied.
+  await acquireLock(locks, RUNTIME_LOCK_NAME);
+  await acquireLock(locks, LEGACY_RUNTIME_LOCK_NAME);
+}
+
+async function acquireLock(locks: LockManager, name: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     let granted = false;
     void locks
-      .request(RUNTIME_LOCK_NAME, { mode: "exclusive", ifAvailable: true }, async (lock) => {
+      .request(name, { mode: "exclusive", ifAvailable: true }, async (lock) => {
         if (!lock) return;
         granted = true;
         resolve();
@@ -276,7 +299,7 @@ async function acquireExclusiveLock(): Promise<void> {
         if (granted) return;
         post({ type: "waiting-for-lock" });
         void locks
-          .request(RUNTIME_LOCK_NAME, { mode: "exclusive" }, async () => {
+          .request(name, { mode: "exclusive" }, async () => {
             resolve();
             await new Promise(() => undefined);
           })
@@ -292,8 +315,62 @@ async function verifyStorage(): Promise<void> {
   const probe = join(probeDirectory, `probe-${crypto.randomUUID()}.bin`);
   await fs.writeFile(probe, new Uint8Array([1, 2, 3]));
   const back = (await fs.readFile(probe)) as Uint8Array;
-  if (back.length !== 3 || back[2] !== 3) throw new JobRangerStorageError("Browser storage returned different bytes than were written.", "EIO");
+  if (back.length !== 3 || back[2] !== 3) throw new SojournerStorageError("Browser storage returned different bytes than were written.", "EIO");
   await fs.rm(IO_DIRECTORY, { recursive: true, force: true });
+}
+
+/** A separate engine for the migrated copy, so it is never cached for the workspace itself. */
+async function withCopyEngine(sqlite3: unknown, engineFs: EngineFs, action: (engine: WasmSqliteEngine) => Promise<void>): Promise<void> {
+  const engine = new WasmSqliteEngine({ sqlite3, fs: engineFs, dirname });
+  try {
+    await action(engine);
+  } finally {
+    engine.closeAll();
+  }
+}
+
+/**
+ * A restore staged by a pre-rename build (its stage folder is copied with the legacy workspace)
+ * swaps in a database whose managed-artifact paths still point into the legacy data directory,
+ * and every later backup would refuse them. After applyPendingRestore, the workspace in use is
+ * rebased the same way the migrated copy was; with nothing left to rebase this changes nothing.
+ */
+async function rebaseRestoredManagedPaths(engine: WasmSqliteEngine): Promise<void> {
+  const databasePath = await resolveWorkspaceDatabasePath(dataDirectory);
+  if (!(await fs.stat(databasePath).then(() => true, () => false))) return;
+  await rebaseManagedPaths(engine, databasePath, join(LEGACY_USER_DATA_DIRECTORY, basename(DATA_DIRECTORY)), dataDirectory);
+}
+
+/**
+ * Standard flavor, under both Web Locks and before the engine opens anything: copy a legacy
+ * (pre-rename) workspace to the Sojourner root when that root has none (workspace-migration.ts).
+ * If the copy fails it is removed again and this session runs from the untouched legacy root,
+ * whose database file keeps its legacy name; the next start retries the copy.
+ */
+async function openWorkspaceRoot(sqlite3: unknown, engineFs: EngineFs): Promise<WorkspaceStartup> {
+  const outcome = await migrateLegacyWorkspace(fs as unknown as MigrationFs, {
+    userDataDirectory: USER_DATA_DIRECTORY,
+    legacyUserDataDirectory: LEGACY_USER_DATA_DIRECTORY,
+    dataDirectoryName: basename(DATA_DIRECTORY),
+    databaseFileName: DATABASE_FILE_NAME,
+    legacyDatabaseFileName: LEGACY_DATABASE_FILE_NAME,
+    rebaseDatabase: (path, from, to) => withCopyEngine(sqlite3, engineFs, async (engine) => { await rebaseManagedPaths(engine, path, from, to); }),
+    verifyDatabase: (path) =>
+      withCopyEngine(sqlite3, engineFs, async (engine) => {
+        const rows = await engine.queryAll<{ integrity_check: string }>(path, "PRAGMA integrity_check;");
+        if (rows.length !== 1 || rows[0].integrity_check !== "ok") {
+          throw new Error(`The copied workspace database failed its integrity check: ${rows.map((row) => row.integrity_check).join("; ")}`);
+        }
+      }),
+    now: () => Date.now(),
+  });
+  if (outcome.action !== "failed") return { root: "current", migrated: outcome.action === "migrated" };
+  console.warn("Sojourner kept using this browser's earlier workspace; copying it to the new location is retried next start.", outcome.error);
+  userDataDirectory = LEGACY_USER_DATA_DIRECTORY;
+  dataDirectory = join(LEGACY_USER_DATA_DIRECTORY, basename(DATA_DIRECTORY));
+  databaseFileName = LEGACY_DATABASE_FILE_NAME;
+  setUserDataPath(userDataDirectory);
+  return { root: "legacy-fallback", migrated: false };
 }
 
 async function boot(): Promise<void> {
@@ -312,6 +389,7 @@ async function boot(): Promise<void> {
 
   let demo: DemoWorkspaceStartup | undefined;
   let demoClaim: DemoWorkspaceSentinel | null = null;
+  let workspace: WorkspaceStartup | undefined;
   try {
     if (IS_DEMO_FLAVOR) {
       // Demo flavor, under the exclusive lock and BEFORE anything opens the workspace:
@@ -319,7 +397,12 @@ async function boot(): Promise<void> {
       // carries no demo sentinel (it may be someone's real workspace).
       const sessionId = await demoSessionRequest;
       const now = Date.now();
-      const decision = await decideDemoStartup(demoFs, { userDataDirectory: USER_DATA_DIRECTORY, sessionId, now });
+      const decision = await decideDemoStartup(demoFs, {
+        userDataDirectory: USER_DATA_DIRECTORY,
+        legacyUserDataDirectory: LEGACY_USER_DATA_DIRECTORY,
+        sessionId,
+        now,
+      });
       if (decision.action === "refuse") {
         post({ type: "fatal", code: "demo-workspace-refused", message: DEMO_REFUSAL_MESSAGE });
         return;
@@ -343,33 +426,31 @@ async function boot(): Promise<void> {
       print: () => undefined,
       printErr: () => undefined,
     });
-    setActiveWasmSqliteEngine(
-      new WasmSqliteEngine({
-        sqlite3,
-        fs: {
-          readFile: async (target) => (await fs.readFile(target)) as Uint8Array,
-          writeFile: (target, data) => fs.writeFile(target, data),
-          mkdir: (target, options) => fs.mkdir(target, options),
-          stat: (target) => fs.stat(target),
-        },
-        dirname,
-      }),
-    );
+    const engineFs: EngineFs = {
+      readFile: async (target) => (await fs.readFile(target)) as Uint8Array,
+      writeFile: (target, data) => fs.writeFile(target, data),
+      mkdir: (target, options) => fs.mkdir(target, options),
+      stat: (target) => fs.stat(target),
+    };
+    if (!IS_DEMO_FLAVOR) workspace = await openWorkspaceRoot(sqlite3, engineFs);
+    const engine = new WasmSqliteEngine({ sqlite3, fs: engineFs, dirname });
+    setActiveWasmSqliteEngine(engine);
     engineReady = true;
 
-    await fs.mkdir(USER_DATA_DIRECTORY, { recursive: true });
-    await applyPendingRestore({ userDataDirectory: USER_DATA_DIRECTORY, dataDirectory: DATA_DIRECTORY });
+    await fs.mkdir(userDataDirectory, { recursive: true });
+    await applyPendingRestore({ userDataDirectory, dataDirectory });
     pendingRestoreSettled = true;
+    if (workspace?.root === "current") await rebaseRestoredManagedPaths(engine);
 
-    const backend = new JobScoutBackend({
-      dataDirectory: DATA_DIRECTORY,
+    const backend = new SojournerBackend({
+      dataDirectory,
       runtimeLabel: "web-worker",
       runnableSourceTypes: WEB_RUNNABLE_SOURCE_TYPES,
     });
     await backend.initialize();
     const systemStatus = await backend.getSystemStatus("web");
     const careerBackend = new CareerBackend({
-      dataDirectory: DATA_DIRECTORY,
+      dataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
@@ -383,13 +464,13 @@ async function boot(): Promise<void> {
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
     await initializeResumeIpc({
-      dataDirectory: DATA_DIRECTORY,
+      dataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
     });
     initializeBackupIpc({
-      dataDirectory: DATA_DIRECTORY,
-      userDataDirectory: USER_DATA_DIRECTORY,
+      dataDirectory,
+      userDataDirectory,
       databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
       appVersion,
@@ -414,7 +495,7 @@ async function boot(): Promise<void> {
       lastModified: null,
     }));
     ipcMain.handle("legacy-install:stage-import", () => {
-      throw new Error("The web app cannot import a desktop installation directly. Export a .jobranger backup from your desktop installation and restore it here instead.");
+      throw new Error("The web app cannot import a desktop installation directly. Export a backup from your desktop installation and restore it here instead.");
     });
 
     if (demo && demoClaim) {
@@ -440,19 +521,20 @@ async function boot(): Promise<void> {
     }
 
     ready = true;
-    post(demo ? { type: "ready", info: await runtimeInfo(), demo } : { type: "ready", info: await runtimeInfo() });
+    const info = await runtimeInfo();
+    post(demo ? { type: "ready", info, demo } : workspace ? { type: "ready", info, workspace } : { type: "ready", info });
     for (const message of pending.splice(0)) void handleInvoke(message);
   } catch (error) {
-    const storageUnavailable = error instanceof JobRangerStorageError;
+    const storageUnavailable = error instanceof SojournerStorageError;
     // Only a positively identified damaged database is answered with "Restore from a backup":
     // a newer-version workspace, a storage error or a failed pending restore may hold healthy data.
     if (!storageUnavailable && canOfferRestoreFromBackup({ error, demo: IS_DEMO_FLAVOR, engineReady, pendingRestoreSettled })) {
       try {
         if (!backupIpcRegistered) {
           initializeBackupIpc({
-            dataDirectory: DATA_DIRECTORY,
-            userDataDirectory: USER_DATA_DIRECTORY,
-            databasePath: join(DATA_DIRECTORY, "jobscout.sqlite3"),
+            dataDirectory,
+            userDataDirectory,
+            databasePath: join(dataDirectory, databaseFileName),
             sqliteBinaryPath: "",
             appVersion,
             producer: { runtime: "web", channel: "web", appVersion, buildId },

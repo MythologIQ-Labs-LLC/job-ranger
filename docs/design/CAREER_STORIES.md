@@ -29,7 +29,7 @@ A story may contain:
 - reflection;
 - explicit links to Career Evidence.
 
-The narrative fields may be incomplete. Job Ranger should not require every user to remember experience in a perfect STAR template before the story is useful.
+The narrative fields may be incomplete. Sojourner should not require every user to remember experience in a perfect STAR template before the story is useful.
 
 A story must link to at least one current `user-confirmed` or `user-authored` Career Evidence item when it is created or updated.
 
@@ -39,13 +39,13 @@ Career Evidence remains the only factual career authority.
 
 Story prose is user-authored narrative framing. Future consumers may use a story to understand which facts belong together, which themes matter, or how the user prefers to explain an experience. They may not treat story prose as proof of a factual claim.
 
-Any future resume, cover-letter, application-answer, or generated material using a Career Story must re-ground factual claims to the linked current Career Evidence and pass the same truth boundary used elsewhere in Job Ranger.
+Any future resume, cover-letter, application-answer, or generated material using a Career Story must re-ground factual claims to the linked current Career Evidence and pass the same truth boundary used elsewhere in Sojourner.
 
 ## Evidence changes
 
 Career Evidence may be corrected, rejected, merged, or superseded after a Career Story is created.
 
-Job Ranger does not silently rewrite story evidence links.
+Sojourner does not silently rewrite story evidence links.
 
 If a linked evidence record is no longer current:
 

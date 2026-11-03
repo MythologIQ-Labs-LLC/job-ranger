@@ -6,17 +6,17 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-queue-idle-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-queue-idle-"));
   const unhandled = [];
   const onUnhandled = (error) => unhandled.push(error);
   process.on("unhandledRejection", onUnhandled);
   try {
     const fetchImpl = async () =>
       new Response(JSON.stringify({ jobs: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
-    const backend = new JobScoutBackend({ dataDirectory: tempDir, fetchImpl, schedulerEnabled: false });
+    const backend = new SojournerBackend({ dataDirectory: tempDir, fetchImpl, schedulerEnabled: false });
     await backend.initialize();
     const company = await backend.createCompany({
       name: "Empty board",

@@ -33,7 +33,7 @@ const DEMO_ONLY = [
   "About this demo",
   "Morgan Rivera",
   "Demo seed: the fictional employer must not be a monitorable job source",
-  "job-ranger.demo.session.v1",
+  "sojourner.demo.session.v1",
   // Fixture data (electron/src/demo-seed.cts) and the workspace-ownership guard.
   "Harbor Health",
   "Practice Operations Coordinator",
@@ -41,7 +41,7 @@ const DEMO_ONLY = [
   "Clinic Operations Coordinator",
   "Referral backlog cleanup",
   "demo-listing.invalid/harbor-health",
-  "job-ranger-demo-workspace",
+  "sojourner-demo-workspace",
   ".demo-workspace.json",
   "This site holds a Sojourner workspace that is not a demo",
   "The Sojourner demo is open in another tab or window",

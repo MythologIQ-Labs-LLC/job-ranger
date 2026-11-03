@@ -9,7 +9,7 @@
 
 ## Summary
 
-The web/PWA runtime is a first-class Job Ranger runtime. It runs the **same shared application core** as the Electron runtime: repositories, SQL migrations, domain services, the IPC channel table, and boundary validators. It also renders the **same React application**. Only runtime infrastructure differs, and it is supplied by explicit adapters.
+The web/PWA runtime is a first-class Sojourner runtime. It runs the **same shared application core** as the Electron runtime: repositories, SQL migrations, domain services, the IPC channel table, and boundary validators. It also renders the **same React application**. Only runtime infrastructure differs, and it is supplied by explicit adapters.
 
 ```text
                React app (src/)  ──  shared preload bridge (electron/src/preload.cts)
@@ -36,7 +36,7 @@ The authoritative list is `src/pwa/adapter-map.ts`. It is applied at build time 
 | --- | --- | --- |
 | `sqlite.cts` (`SqliteClient`) | bundled `sqlite3` CLI | `WasmSqliteEngine`: `@sqlite.org/sqlite-wasm` 3.53.4, persisted to OPFS |
 | `node:fs` | Node fs | OPFS adapter (`createWritable`, atomic commit on close) |
-| `node:path` | Node path | POSIX path (`/job-ranger/...` virtual namespace) |
+| `node:path` | Node path | POSIX path (`/sojourner/...` virtual namespace) |
 | `node:crypto` | Node crypto | Synchronous FIPS 180-4 SHA-256 plus `crypto.randomUUID` |
 | `resume-parser.cts` | Anydoc 0.2.4 (native) | Bounded DOCX unzip (fflate) + WordprocessingML; pdf.js text layer |
 | `resume-renderer.cts` | Hidden, JavaScript-disabled Chromium `printToPDF` | Deterministic pdf-lib ATS writer |
@@ -56,9 +56,9 @@ The build fails on any unadapted `node:*` import. Electron imports are confined 
 - If persisting fails (quota exhausted, storage locked or evicted), the connection is reloaded from the last durable image and the caller receives the error. Memory never claims state that is not on disk. The UI shows a storage-failure banner.
 - `VACUUM INTO` (backups) writes a serialized snapshot to the requested path.
 
-**Single writer.** The runtime worker holds an exclusive Web Lock (`job-ranger-web-runtime-v1`) for its lifetime. A second tab shows "Job Ranger is open in another tab or window" and continues automatically once the first tab closes.
+**Single writer.** The runtime worker holds an exclusive Web Lock (`sojourner-web-runtime-v1`) for its lifetime. A second tab shows "Sojourner is open in another tab or window" and continues automatically once the first tab closes.
 
-**Managed artifacts.** Source documents, resume PDFs, and backups live in OPFS under `/job-ranger/data/artifacts/…`. Paths are relative to the data root, and backups/archives rebase them on restore.
+**Managed artifacts.** Source documents, resume PDFs, and backups live in OPFS under `/sojourner/data/artifacts/…`. Paths are relative to the data root, and backups/archives rebase them on restore.
 
 **Migrations and downgrade safety.** New migrations apply on startup exactly as in Electron. Data last opened by a *newer* schema is refused with an explanation rather than opened by older code. The guard is shared (`backend.cts`, plus the feature-migration registry `feature-migrations.cts`), so it protects both runtimes and also covers service-worker rollbacks.
 
@@ -66,14 +66,14 @@ The build fails on any unadapted `node:*` import. Electron imports are confined 
 - At startup the runtime verifies OPFS round-trip writes.
 - If OPFS, `createWritable`, or Web Locks are missing (for example in some private-browsing modes), the app refuses to start and explains why. It never silently falls back to temporary storage.
 - Settings → *This installation* shows persistent-storage status, usage, and quota. The user can request persistent storage there. Warnings appear when persistence is not granted or usage passes 80% of quota.
-- Guidance: install the app (installed PWAs are more likely to be granted persistence) and export `.jobranger` backups regularly.
+- Guidance: install the app (installed PWAs are more likely to be granted persistence) and export `.sojourner` backups regularly.
 
-## Portable data (`.jobranger`)
+## Portable data (`.sojourner`)
 
 The portable archive (`electron/src/portable-archive.cts`) is a single-file container wrapping the existing versioned backup bundle:
 
 - The container is ZIP with STORE entries only: no compression, encryption, ZIP64, or symlinks. Every path must be a safe relative path, and every entry is CRC-32 verified.
-- `job-ranger-archive.json` records the archive format version, the producing runtime/channel/version/build, the content format/version, and the SHA-256 of the inner backup manifest.
+- `sojourner-archive.json` records the archive format version, the producing runtime/channel/version/build, the content format/version, and the SHA-256 of the inner backup manifest.
 - The inner `manifest.json` (backup format v1) pins the SHA-256 of the SQLite snapshot and every managed artifact. It also lists migrations and managed-path records.
 - On restore, the shared `BackupService` re-verifies everything, checks every migration against the migrations *this build knows*, runs `PRAGMA integrity_check`, rebases managed paths, and stages the restore. The previous data is kept as the rollback candidate until the swap completes.
 - A newer archive format, a newer backup format, or unknown migrations are rejected with an explicit message.
@@ -119,9 +119,9 @@ The PWA never reads the Electron SQLite database directly. It only accepts valid
 - **Host redirects.** The shell document is fetched at its directory URL (`/`), never `/index.html`, because pretty-URL hosts such as Cloudflare Pages redirect `/index.html`. Any redirected response is re-wrapped before caching, since browsers refuse a redirected response for a navigation. The browser suite's test server redirects `/index.html` the same way.
 - **Version pinning.** The page, runtime worker, and WASM are served from the same versioned cache, so a page never talks to a runtime from another build.
 - **User-confirmed activation.** A new version installs in the background, then waits until the user chooses "Reload to update". The first install activates immediately.
-- **Recovery.** Settings → *Repair app shell*, also shown on the startup-failure screen, unregisters the service worker and deletes only the `job-ranger-shell-*` and `job-ranger-on-demand-*` caches. Career data is untouched.
+- **Recovery.** Settings → *Repair app shell*, also shown on the startup-failure screen, unregisters the service worker and deletes only the `sojourner-shell-*` and `sojourner-on-demand-*` caches. Career data is untouched.
 - **Offline.** After the first visit, the full app (including SQLite WASM, the parser, and the PDF writer) works offline. Only job-source refreshes need the network.
-- **Build identity.** Every build carries `version+commit` (`<meta name="job-ranger-build">`, `build-info.json`, Settings → This installation).
+- **Build identity.** Every build carries `version+commit` (`<meta name="sojourner-build">`, `build-info.json`, Settings → This installation).
 
 ## Capability parity
 
@@ -141,7 +141,7 @@ The PWA never reads the Electron SQLite database directly. It only accepts valid
 | Career Stories, interview prep, application materials, Search Insights | ✅ Full | Shared core |
 | Resume generation, Truth Gate, PDF export, Parseability Gate | ✅ Full, with a bounded difference | See "Resume / PDF path" below |
 | Reveal file in folder | ↔ Download instead | Labelled "Download file" in the web app |
-| Backup/restore | ✅ Full | `.jobranger` archives in both directions |
+| Backup/restore | ✅ Full | `.sojourner` archives in both directions |
 
 ### Resume / PDF path
 
@@ -157,7 +157,7 @@ The PWA never reads the Electron SQLite database directly. It only accepts valid
 - **Font delivery.**
   - `scripts/pdf-fonts.mjs` turns the pinned `@fontsource` Noto slices into content-addressed TrueType files under `fonts/`, plus a manifest with each file's SHA-256 and code-point ranges. pdf-lib cannot subset WOFF/WOFF2 input, which is why the slices are converted.
   - The fonts are about 20 MB in total but are **not** part of the precached shell. The runtime downloads only the slices a resume needs (typically 4–30 files, tens of kilobytes each) and verifies each one against the manifest before use.
-  - The service worker caches verified fonts in `job-ranger-on-demand-v1`, so a resume that rendered once renders again offline.
+  - The service worker caches verified fonts in `sojourner-on-demand-v1`, so a resume that rendered once renders again offline.
   - A resume in a new script needs one online export first; offline, export fails with an explanation.
 - **Parseability Gate.** The shared gate re-parses the exact produced bytes and enforces the same contact, statement-coverage, reading-order, and page-count rules. The parser differs: Electron uses Anydoc, the web runtime uses pdf.js. The gate records the parser ID and version in every artifact.
 - **Bounded limitation.** Right-to-left scripts (Arabic, Hebrew, …) and Indic scripts (Devanagari, Tamil, …) need bidirectional layout and complex shaping. pdf-lib does not perform these, and in testing the extracted text came back reordered or garbled. The web writer therefore fails export for these scripts with an explicit message asking the person to remove or transliterate that text (the web app has no renderer that lays these scripts out yet). Characters no bundled font covers (for example Armenian or Georgian) fail the same way, naming the characters, instead of being dropped.
@@ -190,13 +190,13 @@ The localhost origin is part of the storage identity. Hostname and port therefor
 
 Do not treat an ordinary private-LAN HTTP address as equivalent to localhost. Loopback receives secure-context treatment suitable for development, while a remote tester should normally run their own local instance unless trusted HTTPS is deliberately configured.
 
-Moving from localhost to a later public origin is a cross-origin migration. Existing testers move their data through the versioned `.jobranger` archive rather than assuming OPFS / browser state can move automatically.
+Moving from localhost to a later public origin is a cross-origin migration. Existing testers move their data through the versioned `.sojourner` archive rather than assuming OPFS / browser state can move automatically.
 
 This stage intentionally requires no Cloudflare, Netlify, hosted database, user account service, or cloud-authoritative storage.
 
 ## Public deployment (not yet performed)
 
-`.github/workflows/pwa.yml` builds and tests the web app on every pull request. Each release produces `job-ranger-web-v<version>.zip` with:
+`.github/workflows/pwa.yml` builds and tests the web app on every pull request. Each release produces `sojourner-web-v<version>.zip` with:
 - `web-build-info.json`: build identity, CSP, and per-asset SHA-256;
 - the browser-suite report;
 - checksums and a release manifest;
@@ -206,7 +206,7 @@ This stage intentionally requires no Cloudflare, Netlify, hosted database, user 
 
 Required owner configuration **only when public deployment is intentionally activated**:
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets;
-- `JOB_RANGER_PWA_PAGES_PROJECT` and `JOB_RANGER_PWA_ORIGIN` variables;
+- `SOJOURNER_PWA_PAGES_PROJECT` and `SOJOURNER_PWA_ORIGIN` variables;
 - reviewers on the `production-web` environment.
 
 Cloudflare Pages remains the currently implemented public-host target, but public hosting is not a development or dogfood prerequisite. The build stays host-neutral apart from requiring the production host to honor the shipped security headers.

@@ -33,7 +33,7 @@ childProcess.execFile[promisify.custom] = (binary, args, ...rest) => {
 const { SqliteClient, resolveSqliteBinary, sql } = require('../electron-runtime/electron/src/sqlite.cjs');
 
 async function run() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-stdin-sql-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-stdin-sql-'));
   try {
     const binary = await resolveSqliteBinary();
     launches.length = 0;

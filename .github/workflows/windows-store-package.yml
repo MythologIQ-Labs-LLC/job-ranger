@@ -65,11 +65,11 @@ jobs:
     outputs:
       artifact-name: ${{ steps.names.outputs.artifact }}
     env:
-      JOB_RANGER_STORE_IDENTITY_NAME: ${{ vars.JOB_RANGER_STORE_IDENTITY_NAME }}
-      JOB_RANGER_STORE_PUBLISHER: ${{ vars.JOB_RANGER_STORE_PUBLISHER }}
-      JOB_RANGER_STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.JOB_RANGER_STORE_PUBLISHER_DISPLAY_NAME }}
-      JOB_RANGER_STORE_DISPLAY_NAME: ${{ vars.JOB_RANGER_STORE_DISPLAY_NAME }}
-      JOB_RANGER_REQUIRE_STORE_IDENTITY: ${{ inputs.submission && '1' || '0' }}
+      SOJOURNER_STORE_IDENTITY_NAME: ${{ vars.SOJOURNER_STORE_IDENTITY_NAME }}
+      SOJOURNER_STORE_PUBLISHER: ${{ vars.SOJOURNER_STORE_PUBLISHER }}
+      SOJOURNER_STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.SOJOURNER_STORE_PUBLISHER_DISPLAY_NAME }}
+      SOJOURNER_STORE_DISPLAY_NAME: ${{ vars.SOJOURNER_STORE_DISPLAY_NAME }}
+      SOJOURNER_REQUIRE_STORE_IDENTITY: ${{ inputs.submission && '1' || '0' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -132,7 +132,7 @@ jobs:
         with:
           name: ${{ steps.names.outputs.artifact }}
           path: |
-            release/Job*windows-store*.appx
+            release/Sojourner-v*-windows-store*.appx
             build/trust/windows-store-*
           if-no-files-found: error
           retention-days: 30

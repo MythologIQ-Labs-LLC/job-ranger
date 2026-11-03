@@ -226,7 +226,7 @@ export async function loadPageHtmlWithOptions(
   options: BrowserLoadOptions & { userAgent: string },
 ): Promise<string> {
   const url = await assertPublicAcquisitionUrl(options.url);
-  const partition = `jobscout-scraper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const partition = `sojourner-scraper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   return new Promise<string>((resolve, reject) => {
     const session = createBrowserSession(partition, options, reject);

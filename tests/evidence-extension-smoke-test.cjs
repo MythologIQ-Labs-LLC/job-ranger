@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { EvidenceExtensionBackend } = require('../electron-runtime/electron/src/evidence-extension-backend.cjs');
 const {
@@ -12,7 +12,7 @@ const {
 } = require('../electron-runtime/electron/src/requirement-mapper.cjs');
 
 async function open(tempDir) {
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory: tempDir,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -35,7 +35,7 @@ async function open(tempDir) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-evidence-extension-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-evidence-extension-'));
   try {
     let runtime = await open(tempDir);
     const original = await runtime.career.createUserEvidence({

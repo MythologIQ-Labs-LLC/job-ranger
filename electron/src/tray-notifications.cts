@@ -26,10 +26,10 @@ export function createTray(
   }
 
   tray = new Tray(icon);
-  tray.setToolTip("Job Ranger");
+  tray.setToolTip("Sojourner");
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Open Job Ranger", click: () => mainWindow?.show() },
+      { label: "Open Sojourner", click: () => mainWindow?.show() },
       { type: "separator" },
       { label: "Quit", click: onQuit },
     ]),

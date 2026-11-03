@@ -118,7 +118,7 @@ jobs:
         with:
           name: ${{ steps.names.outputs.artifact }}
           path: |
-            release/job-ranger-web-*.zip
+            release/sojourner-web-*.zip
             build/trust/web-*
           if-no-files-found: error
           retention-days: 30

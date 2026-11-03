@@ -23,7 +23,7 @@
 
 Amended after the plan audit VETO recorded at META_LEDGER Entry #75. Iteration 2 adds the missing Draft 0.2 rules: semantic-support evidence checks, location classification with fail-closed consent, a network-denial conformance check, a lane split for the SQLite test, adjudication-time staleness, and caller cancellation. Every non-blocking observation is also folded in.
 
-Implements Slice A of `docs/design/INFERENCE_CONTRACT.md` Draft 0.2, as defined in its "Slice A" section and in the #164 acceptance criteria. The slice proves that Job Ranger can host optional inference behind a bounded, testable seam without a provider, while the deterministic product stays untouched.
+Implements Slice A of `docs/design/INFERENCE_CONTRACT.md` Draft 0.2, as defined in its "Slice A" section and in the #164 acceptance criteria. The slice proves that Sojourner can host optional inference behind a bounded, testable seam without a provider, while the deterministic product stays untouched.
 
 ## Open Questions
 
@@ -36,7 +36,7 @@ None.
 - Canonical re-reads and the existing write path also exist:
   - `ResumeService.getProjectionDetail(id)` (`resume-service.cts:274-289`) returns the canonical statements, the selected evidence, and a Truth Gate report;
   - `ResumeService.updateStatement(id, { text })` (`resume-service.cts:291-299`) is the existing write.
-- `tests/resume-lifecycle-smoke-test.cjs:11-130` shows how to build a real SQLite-backed `JobScoutBackend`, `CareerEvidenceRepository` and `ResumeService` with network fetch forbidden, and how to create a confirmed-evidence projection.
+- `tests/resume-lifecycle-smoke-test.cjs:11-130` shows how to build a real SQLite-backed `SojournerBackend`, `CareerEvidenceRepository` and `ResumeService` with network fetch forbidden, and how to create a confirmed-evidence projection.
 - `buildJobEvidenceCoverage(jobId, requirements, evidence, now)` (`electron/src/requirement-mapper.cts:344-352`) and `buildOpportunityAssessment(job, track, coverage, now)` (`src/shared/opportunity-assessment.ts:252-256`) are pure deterministic functions.
 - `tsconfig.electron.json` compiles `electron/src/**/*.cts` into `electron-runtime/`. Tests `require` the compiled `.cjs` (for example `tests/resume-truth-gate-multilingual.test.cjs:5`). No production entry point will import the new modules, so the PWA bundle is unaffected. `electron-builder.json:12` packages `electron-runtime/**/*`, so the compiled `inference/*.cjs` files ship inert in desktop builds: no entry point loads them, and the production registry is empty.
 - `npm test` and `npm run test:unit` are explicit `&&` chains in `package.json:21-22`. `test:unit` is SQLite-free by construction: it omits every SQLite smoke test. The release lane (`.github/workflows/ci.yml:37-39`) runs it without SQLite provisioning. Pure tests therefore go in both chains, and the SQLite smoke test goes in `npm test` only, like the existing smoke tests.
@@ -91,7 +91,7 @@ None.
   4. writes only through the injected `updateStatement(id, { text })`.
   Any mismatch is `validation-failed` (phase `acceptance`) with no write. It requires an explicit `userApproved: true` argument.
 - LD8: Broker (`broker.cts`).
-  - Location classification: each registry entry carries a Job Ranger-assigned `location`, set at registration and separate from the descriptor's `declaredLocation`, which the broker never reads for policy. The manifest's `location` is that classification.
+  - Location classification: each registry entry carries a Sojourner-assigned `location`, set at registration and separate from the descriptor's `declaredLocation`, which the broker never reads for policy. The manifest's `location` is that classification.
   - Slice A has no consent mechanism, so the broker refuses any provider classified `loopback` or `remote` with `consent-required` (phase `pre-transmission`) before calling it. A conformance case registers the fake as `remote` and asserts this, with the adapter call counter at 0.
   - Callers may pass their own `AbortSignal`. Caller cancellation gives `{ code: "cancelled", phase: "provider" }`, the adapter sees `signal.aborted === true`, and the adapter call counter stays at 1.
   - `createInferenceBroker({ registry, adjudicator, hmac, clock, timeoutMs })` accepts only registered tasks (`unsupported-task`) and only registry providers that advertise the task and the contract version (`not-configured` otherwise).
@@ -202,7 +202,7 @@ None user-touchable. No route, IPC command, UI event or service is exposed. `FEA
 
 ### Deliverable: Provider-free inference seam
 
-- **D1**: Job Ranger hosts optional inference behind a broker and adjudicator that wrap, without modifying, the deterministic gates. The seam is proven by a synthetic provider and a conformance suite, and the product is unchanged with inference absent.
+- **D1**: Sojourner hosts optional inference behind a broker and adjudicator that wrap, without modifying, the deterministic gates. The seam is proven by a synthetic provider and a conformance suite, and the product is unchanged with inference absent.
 - **D2**: The listed modules and tests exist within the Razor limits; no deterministic file is modified; no dependency is added.
 - **D3**: Ledger plan, audit, implement and seal entries; governance index row; contract implementation status; PLAN, ARCHITECTURE_PLAN and CHANGELOG updated; #164 acceptance criteria ticked.
 - **D4**: `node tests/inference-conformance.test.cjs`, `node tests/inference-adversarial.test.cjs`, `node tests/inference-baseline.test.cjs` and `node tests/inference-baseline-sqlite-smoke-test.cjs` pass. `npm test` and `npm run typecheck` pass. `git diff --stat main` shows no deterministic module changed.

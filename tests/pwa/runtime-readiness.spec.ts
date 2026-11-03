@@ -26,7 +26,7 @@ async function holdAppChunk(page: Page): Promise<() => number> {
 }
 
 async function open(page: Page, route: string) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${server.url}#${route}`);
   await waitForRuntime(page);

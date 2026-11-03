@@ -2,8 +2,8 @@
 
 **Status:** Contract-first implementation, no ingestion, display, scoring or persistence authorized  
 **Date:** 2026-10-09  
-**Issue:** [#219](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/219)  
-**Parent:** [#217](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/217) and [Economic Pathways RFC](./RFC_ECONOMIC_PATHWAYS_2026-10-09.md)  
+**Issue:** [#219](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/219)  
+**Parent:** [#217](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/217) and [Economic Pathways RFC](./RFC_ECONOMIC_PATHWAYS_2026-10-09.md)  
 **Implemented contract:** `src/shared/structural-signals.ts`  
 **Adversarial test:** `tests/structural-signals.test.mjs`
 

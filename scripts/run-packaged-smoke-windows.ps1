@@ -5,10 +5,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$smokeRoot = Join-Path $env:RUNNER_TEMP "job-ranger-package-smoke-windows"
+$smokeRoot = Join-Path $env:RUNNER_TEMP "sojourner-package-smoke-windows"
 $trustRoot = Join-Path (Get-Location) "build\trust"
 $reportPath = Join-Path $trustRoot "windows-package-smoke.json"
-$exePath = (Resolve-Path "release\win-unpacked\Job Ranger.exe").Path
+$exePath = (Resolve-Path "release\win-unpacked\Sojourner.exe").Path
 $resourcesPath = (Resolve-Path "release\win-unpacked\resources").Path
 $scriptPath = Join-Path $resourcesPath "app.asar\electron-runtime\electron\src\package-smoke-cli.cjs"
 
@@ -18,20 +18,20 @@ New-Item -ItemType Directory -Path $trustRoot -Force | Out-Null
 Remove-Item -LiteralPath $reportPath -Force -ErrorAction SilentlyContinue
 
 $env:ELECTRON_RUN_AS_NODE = "1"
-$env:JOB_RANGER_PACKAGE_SMOKE_USER_DATA = $smokeRoot
-$env:JOB_RANGER_PACKAGE_SMOKE_REPORT = $reportPath
-$env:JOB_RANGER_PACKAGE_SMOKE_VERSION = $AppVersion
+$env:SOJOURNER_PACKAGE_SMOKE_USER_DATA = $smokeRoot
+$env:SOJOURNER_PACKAGE_SMOKE_REPORT = $reportPath
+$env:SOJOURNER_PACKAGE_SMOKE_VERSION = $AppVersion
 
 try {
   $process = Start-Process -FilePath $exePath -ArgumentList @($scriptPath) -Wait -PassThru -NoNewWindow
   if ($process.ExitCode -ne 0) {
-    throw "Packaged Job Ranger smoke process exited with code $($process.ExitCode)."
+    throw "Packaged Sojourner smoke process exited with code $($process.ExitCode)."
   }
 } finally {
   Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-  Remove-Item Env:JOB_RANGER_PACKAGE_SMOKE_USER_DATA -ErrorAction SilentlyContinue
-  Remove-Item Env:JOB_RANGER_PACKAGE_SMOKE_REPORT -ErrorAction SilentlyContinue
-  Remove-Item Env:JOB_RANGER_PACKAGE_SMOKE_VERSION -ErrorAction SilentlyContinue
+  Remove-Item Env:SOJOURNER_PACKAGE_SMOKE_USER_DATA -ErrorAction SilentlyContinue
+  Remove-Item Env:SOJOURNER_PACKAGE_SMOKE_REPORT -ErrorAction SilentlyContinue
+  Remove-Item Env:SOJOURNER_PACKAGE_SMOKE_VERSION -ErrorAction SilentlyContinue
 }
 
 if (-not (Test-Path -LiteralPath $reportPath)) {

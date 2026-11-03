@@ -4,7 +4,7 @@
 
 Implemented in successive bounded slices; this document records both delivered capabilities and proposed follow-ons for ADR-0001.
 
-This design gives Job Ranger a concrete starting point for personal-brand publishing, post composition guidance, analytics, and career-outcome learning without requiring model inference.
+This design gives Sojourner a concrete starting point for personal-brand publishing, post composition guidance, analytics, and career-outcome learning without requiring model inference.
 
 The capability is a **Career Ops** surface. It is not a general social scheduler and it is not a product-marketing subsystem.
 
@@ -18,9 +18,9 @@ The capability is a **Career Ops** surface. It is not a general social scheduler
 
 ## Executable manual workflow (2026-10-08, second implementation slice)
 
-**Current code:** `src/pages/PersonalBrand.tsx` is reachable from **Personal Brand** in the Job Ranger navigation, on the same application shell as the rest of Career Ops. `src/shared/personal-brand-api.ts` defines the runtime-neutral application contract. `electron/src/personal-brand-ipc.cts` and `electron/src/personal-brand-backend.cts` implement that contract once; the Electron preload and PWA worker route the same IPC channels to it. No separate in-browser `localStorage` authority exists.
+**Current code:** `src/pages/PersonalBrand.tsx` is reachable from **Personal Brand** in the Sojourner navigation, on the same application shell as the rest of Career Ops. `src/shared/personal-brand-api.ts` defines the runtime-neutral application contract. `electron/src/personal-brand-ipc.cts` and `electron/src/personal-brand-backend.cts` implement that contract once; the Electron preload and PWA worker route the same IPC channels to it. No separate in-browser `localStorage` authority exists.
 
-**Local persistence:** feature migration **1005** (`personal_brand_manual_publishing`) adds four SQLite tables: drafts, prepared immutable copy packages, user-confirmed publication receipts, and append-only analytics snapshots. Draft updates are revision-guarded and previous approved versions are kept. Receipt rows are unique by post and provider URL, and snapshots reference an existing recorded publication. These tables live in the ordinary Job Ranger database and thus follow its existing `.jobranger` backup/restore portability and downgrade protection. New provider credentials and external network traffic are not involved.
+**Local persistence:** feature migration **1005** (`personal_brand_manual_publishing`) adds four SQLite tables: drafts, prepared immutable copy packages, user-confirmed publication receipts, and append-only analytics snapshots. Draft updates are revision-guarded and previous approved versions are kept. Receipt rows are unique by post and provider URL, and snapshots reference an existing recorded publication. These tables live in the ordinary Sojourner database and thus follow its existing `.sojourner` backup/restore portability and downgrade protection. New provider credentials and external network traffic are not involved.
 
 **Complete first-use path:** navigate to **Personal Brand**; create a LinkedIn text draft, select objective/audience/hook type and hypothesis; inspect deterministic readiness findings; personally review the actual claims and privacy; save and prepare an exact text version for copying; publish manually on LinkedIn; return to record the permalink, actual time, and explicit user confirmation; then enter the available LinkedIn metrics. Blank fields remain `unavailable` rather than becoming zero. Snapshots preserve actual capture/reporting windows and manual provenance and derive rates using available denominators. Existing snapshots survive reload, app restarts, and backup. Comparisons across same-age cohorts currently exist in the pure service contract; UI cohort comparison and advisory next-experiment views remain pending.
 
@@ -58,7 +58,7 @@ The capability is a **Career Ops** surface. It is not a general social scheduler
 
 ## User-confirmed career outcome journal (fifth implementation slice, 2026-10-08)
 
-**Implemented:** Career outcomes are now explicitly **user-attested records**, stored alongside Personal Brand drafts and snapshots in canonical local SQLite. Migration **1006** adds `personal_brand_career_outcomes` with a unique record ID, actual event time, user-provided provenance label, optional privacy-limited note, optional existing published-post reference, and recorded-at time. The same data follows existing `.jobranger` backup/restore and downgrade protection. `src/shared/personal-brand-outcomes.ts` provides the deterministic input validator and strictly observational summary. The existing Electron IPC and PWA worker share the same backend and typed API. No inference, hosted data, or new social permissions.
+**Implemented:** Career outcomes are now explicitly **user-attested records**, stored alongside Personal Brand drafts and snapshots in canonical local SQLite. Migration **1006** adds `personal_brand_career_outcomes` with a unique record ID, actual event time, user-provided provenance label, optional privacy-limited note, optional existing published-post reference, and recorded-at time. The same data follows existing `.sojourner` backup/restore and downgrade protection. `src/shared/personal-brand-outcomes.ts` provides the deterministic input validator and strictly observational summary. The existing Electron IPC and PWA worker share the same backend and typed API. No inference, hosted data, or new social permissions.
 
 **Workflow:** The Personal Brand page now includes **5. Record real career outcomes**. Users can log recruiter outreach, meaningful professional conversations, referrals, interview invitations/completions, offers, or other events. An actual date/time, source label, and explicit user confirmation are mandatory. The user may leave an event unlinked to any post. If the user associates it with a published post, they must explicitly identify whether the other party mentioned the post or reported discovering them through it. The backend rejects nonexistent posts, impossible event chronology (before the referenced publication), missing confirmation, fabricated relationship enumerations, bad timestamps and oversized notes. Revisions are not silently inferred; an explicit two-step **Remove outcome → Confirm removal** operation deletes a mistaken or private record from the canonical local database.
 
@@ -68,11 +68,11 @@ The capability is a **Career Ops** surface. It is not a general social scheduler
 
 **Tests:** `tests/personal-brand-outcomes.test.mjs` covers deliberate user confirmation, valid/invalid associations, unsupported kinds, chronology, future timestamps, privacy bounds, provenance and summaries without fabricated conversions. `tests/personal-brand-persistence.test.cjs` covers migration 1006, SQLite persistence, duplication of data into a backup copy and explicit deletion; `tests/pwa/personal-brand.spec.ts` covers the actual form, post relation, persistence across reload, guard rejection and two-step deletion. The PWA/Electron archive portability regression also checks outcomes in both directions, and the release-upgrade checker verifies the new version and outcome counts.
 
-**Remaining:** richer, user-verified career-outcome history and external proof attachments, scoped relationship to tracked Job Ranger applications, outcome corrections/retention guidance, and analytics that can compare observation windows without mistaking coincidence for cause. The ChatGPT plugin remains a separately governed capability and is not added here.
+**Remaining:** richer, user-verified career-outcome history and external proof attachments, scoped relationship to tracked Sojourner applications, outcome corrections/retention guidance, and analytics that can compare observation windows without mistaking coincidence for cause. The ChatGPT plugin remains a separately governed capability and is not added here.
 
 ## Core principle
 
-> **Job Ranger helps the user decide what professional story to tell, verify that it is grounded in their real evidence, publish exactly what they approved, and learn whether that communication improves professional discovery and career outcomes.**
+> **Sojourner helps the user decide what professional story to tell, verify that it is grounded in their real evidence, publish exactly what they approved, and learn whether that communication improves professional discovery and career outcomes.**
 
 The baseline system does not write posts for the user.
 
@@ -80,7 +80,7 @@ It structures the decision, checks the draft, preserves provenance, publishes ex
 
 ## Product boundary
 
-Job Ranger owns the professional presence of a person.
+Sojourner owns the professional presence of a person.
 
 It may use:
 
@@ -101,7 +101,7 @@ It does not own:
 - product-market conversion;
 - customer acquisition campaigns.
 
-A user's project can appear as professional evidence. That does not turn Job Ranger into the marketing system for that project.
+A user's project can appear as professional evidence. That does not turn Sojourner into the marketing system for that project.
 
 ## High-level architecture
 
@@ -228,7 +228,7 @@ interface PresenceBrief {
 
 ### 3.1 Guided questions
 
-Job Ranger can help the user compose a post without generating prose.
+Sojourner can help the user compose a post without generating prose.
 
 The composer should ask structured questions based on the objective.
 
@@ -257,12 +257,12 @@ Examples:
 **Project visibility**
 
 - Is the project being shown as evidence of your work or being marketed as a product?
-- If the primary objective is users, leads, customers, or product validation, the workflow belongs in Viable rather than Job Ranger.
+- If the primary objective is users, leads, customers, or product validation, the workflow belongs in Viable rather than Sojourner.
 - If the primary objective is demonstrating what you can build or how you think, it belongs here.
 
 ### 3.2 Hook archetypes
 
-Job Ranger may present structures, not generated lines.
+Sojourner may present structures, not generated lines.
 
 | Archetype | User guidance |
 | --- | --- |
@@ -435,7 +435,7 @@ Provider adapters do not decide what is good career content.
 
 ## 8. Runtime capability model
 
-Job Ranger is multi-runtime. Connected social capability must remain honest.
+Sojourner is multi-runtime. Connected social capability must remain honest.
 
 **PWA baseline**
 
@@ -498,7 +498,7 @@ Suggested observation checkpoints:
 - 48 hours;
 - 7 days.
 
-These are reminders/checkpoint targets, not a requirement that Job Ranger invent data when the app was not running.
+These are reminders/checkpoint targets, not a requirement that Sojourner invent data when the app was not running.
 
 ## 10. Metric families
 
@@ -561,7 +561,7 @@ Unavailable denominators yield unavailable results.
 
 ## 12. Objective-aware interpretation
 
-Job Ranger should not interpret every post against one universal engagement target.
+Sojourner should not interpret every post against one universal engagement target.
 
 Suggested facet priority by objective:
 
@@ -610,7 +610,7 @@ Allowed:
 
 Allowed:
 
-> There are only two Thursday-afternoon posts in this cohort. Job Ranger does not yet have enough evidence to recommend Thursday afternoon over Tuesday morning.
+> There are only two Thursday-afternoon posts in this cohort. Sojourner does not yet have enough evidence to recommend Thursday afternoon over Tuesday morning.
 
 Allowed:
 
@@ -628,7 +628,7 @@ unless the user's own comparable evidence meets the documented recommendation th
 
 ## 15. Manual analytics workflow
 
-Until connected analytics exists, Job Ranger should still support the full learning model.
+Until connected analytics exists, Sojourner should still support the full learning model.
 
 A manual snapshot can record:
 
@@ -684,9 +684,9 @@ Rules:
 - local-first storage remains authoritative;
 - social credentials are runtime capability state, not portable career data;
 - portable backups must not contain provider tokens;
-- publication content and analytics may be included in user-controlled backup when explicitly part of Job Ranger workspace data;
+- publication content and analytics may be included in user-controlled backup when explicitly part of Sojourner workspace data;
 - imported screenshots/evidence remain local unless the user explicitly exports them;
-- Job Ranger must not silently upload Career Evidence to a social provider;
+- Sojourner must not silently upload Career Evidence to a social provider;
 - only the exact approved public content and required media leave the device during publication.
 
 ## 18. Implementation slices
@@ -802,7 +802,7 @@ The architecture intentionally mirrors Viable's publication-experiment and analy
 
 The semantics are not shared:
 
-- Job Ranger asks whether professional communication advances a person's career.
+- Sojourner asks whether professional communication advances a person's career.
 - Viable asks whether market communication advances a product.
 
 A future common protocol library may remove duplicated HTTP/schema mechanics. It must not become a shared domain or data authority.
@@ -819,7 +819,7 @@ A future common protocol library may remove duplicated HTTP/schema mechanics. It
 
 ## Native LinkedIn XLSX analytics and reconciliation (2026-10-10)
 
-**Delivered foundations:** PR #224 embeds LinkedIn-only instructions plus the official LinkedIn help link in Personal Brand. PR #225 supplies a strictly bounded client-local XLSX decoder and six-sheet preview. PR #227 adds versioned feature migration 1007, manual confirmation before save, normalized immutable SQLite import records, content digest-based idempotence, an import ledger and explicitly confirmed deletion. Import records participate in the existing Job Ranger backup and downgrade safeguards. The original XLSX bytes are never stored or sent to LinkedIn; users should retain their original exports.
+**Delivered foundations:** PR #224 embeds LinkedIn-only instructions plus the official LinkedIn help link in Personal Brand. PR #225 supplies a strictly bounded client-local XLSX decoder and six-sheet preview. PR #227 adds versioned feature migration 1007, manual confirmation before save, normalized immutable SQLite import records, content digest-based idempotence, an import ledger and explicitly confirmed deletion. Import records participate in the existing Sojourner backup and downgrade safeguards. The original XLSX bytes are never stored or sent to LinkedIn; users should retain their original exports.
 
 **Reconciliation scope (this PR):** `src/shared/linkedin-reconciliation.ts` projects saved import snapshots without mutating canonical records. Overlapping exports are aligned to calendar date, and *identical* metric values across exports count once. When two exports disagree for the same calendar date and metric, that metric becomes `conflict` with null display value and retained source IDs; later import time is **not** treated as a truth authority. No values are silently overwritten. An empty or absent observation remains missing, not zero. Complete-period totals are withheld for that metric when any day is missing or disputed. No extrapolation is performed. Users can inspect the latest 14 calendar days, gaps, conflicts and reasons directly on the Personal Brand page.
 
@@ -840,17 +840,17 @@ To disclose a draft's **original approved copy**, the record must also have prec
 
 The user interface names this material *approved copy*, not verified live LinkedIn text. The export contains no comments, actual text, or proof of career outcomes. Source-ranked metrics are kept separate from manual per-post snapshots and age-normalized comparisons; aggregate daily metrics are not assigned to a ranked post. Source-provenance warnings remain visible. This is a read projection only: no new schema, API permissions, persistence, external requests, automatic posting, or modification of the Truth Gate.
 
-The follow-on work in #236 remains open for individually reviewed historical post text not already captured by Job Ranger, optional privacy-governed comments, and richer observational dashboards. None may be inferred or synthesized from the native Excel export.
+The follow-on work in #236 remains open for individually reviewed historical post text not already captured by Sojourner, optional privacy-governed comments, and richer observational dashboards. None may be inferred or synthesized from the native Excel export.
 
 
 ## Historical LinkedIn post archive (2026-10-10 candidate)
 
-This is a distinct, user-attested record type for LinkedIn posts published *before* Job Ranger's prepublication review workflow. It must never be represented as a verified LinkedIn source, a reviewed publishing package, a career-outcome event, or authenticated comment material.
+This is a distinct, user-attested record type for LinkedIn posts published *before* Sojourner's prepublication review workflow. It must never be represented as a verified LinkedIn source, a reviewed publishing package, a career-outcome event, or authenticated comment material.
 
 - The user manually supplies the **permalink**, original **publication calendar day** (not an invented timestamp or time zone), the **post text**, and whether it was **copied from their own published post** or **reconstructed from memory**. Both modes require explicit affirmative attestation. Reconstructed text is explicitly not an exact copy.
-- The back end normalizes only supported HTTPS LinkedIn post URLs, rejects unknown fields, impossible dates, excessive/control-character text, duplicates by canonical URL and collisions with Job Ranger's already confirmed publishing receipts. Adding a future approved publishing receipt for a currently archived historical URL is also blocked until the archive entry is deliberately removed.
+- The back end normalizes only supported HTTPS LinkedIn post URLs, rejects unknown fields, impossible dates, excessive/control-character text, duplicates by canonical URL and collisions with Sojourner's already confirmed publishing receipts. Adding a future approved publishing receipt for a currently archived historical URL is also blocked until the archive entry is deliberately removed.
 - The user-attested content is independently stored in versioned SQLite migration **1008**, with a SHA-256 of the exact body, creation time, source method and separate `user_attested_historical` authority label. This digest detects exact byte changes; it does **not** cryptographically prove LinkedIn publication, authorship or source authenticity.
-- The user can inspect and explicitly delete records. There is no hidden background scrape, bulk harvest, OAuth, browser automation, social comment ingestion, automatic text rewrite, inferred source rating, or change to Career Evidence/Truth Gate. Raw post text remains within the Job Ranger local database and existing backup/restore boundary; users should consider local backup privacy and delete copied material they do not wish to retain.
+- The user can inspect and explicitly delete records. There is no hidden background scrape, bulk harvest, OAuth, browser automation, social comment ingestion, automatic text rewrite, inferred source rating, or change to Career Evidence/Truth Gate. Raw post text remains within the Sojourner local database and existing backup/restore boundary; users should consider local backup privacy and delete copied material they do not wish to retain.
 - The read-only join uses a **single latest saved XLSX** top-post sample. It matches by canonical URL and the publication day, refuses conflicting/ambiguous dates and leaves missing metrics unknown. Ranked observations are not a complete post population, do not represent uniform post-age windows, and cannot establish causal effectiveness. User-attested historical text is never silently upgraded into the `copy-verified` status reserved for earlier, prepublication-approved packages.
 - The isolated archive is LinkedIn-only. Optional manually reviewed comments, user-controlled qualitative labels, revision/supersession history, fuller dashboards and age-normalized comparisons remain governed follow-ons in issue #236.
 

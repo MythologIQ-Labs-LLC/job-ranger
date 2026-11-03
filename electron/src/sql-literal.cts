@@ -52,7 +52,7 @@ export function sql(queryParts: TemplateStringsArray, ...values: unknown[]): str
 }
 
 /**
- * The persistence port every Job Ranger repository depends on. Electron
+ * The persistence port every Sojourner repository depends on. Electron
  * implements it with the bundled sqlite3 CLI; the browser runtime implements
  * it with SQLite WASM persisted to the origin-private file system. Both
  * engines execute the same migrations and the same repository SQL.

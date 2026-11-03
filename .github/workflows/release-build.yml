@@ -16,7 +16,7 @@ on:
         default: false
         type: boolean
       platform:
-        description: "Which release assets to build (macOS native builds are historical/manual only)"
+        description: "Which release assets to build (macOS native builds are historical/manual only; the Microsoft Store package builds only when windows-store is chosen, never with all or a tag push)"
         required: true
         default: windows
         type: choice
@@ -83,10 +83,10 @@ jobs:
           # Every published Windows installer is signed; a build-only candidate never is.
           if [[ "$PUBLISH_RELEASE" == "true" ]]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_WINDOWS_SIGNING=1" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_WINDOWS_SIGNING=1" >> "$GITHUB_ENV"
           else
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_WINDOWS_SIGNING=0" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_WINDOWS_SIGNING=0" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Node.js
@@ -121,7 +121,7 @@ jobs:
           if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
             throw "The signing client is not Microsoft-signed: $($sig.Status) $($sig.SignerCertificate.Subject)"
           }
-          "JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR=$dir" >> $env:GITHUB_ENV
+          "SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR=$dir" >> $env:GITHUB_ENV
 
       - name: Provision pinned SQLite CLI
         uses: ./.github/actions/provision-windows-sqlite
@@ -138,11 +138,11 @@ jobs:
           # Google Drive export (#314): an installed app's Desktop OAuth client id and
           # secret are distributed application configuration, not confidential values.
           # Repository variables; when unset the build ships with Drive export disabled.
-          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID }}
-          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET }}
+          SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID }}
+          SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET }}
           # OneDrive storage location (#249): the Microsoft public client's application id
           # (no secret exists). Repository variable; when unset OneDrive shows as not set up.
-          JOB_RANGER_MICROSOFT_CLIENT_ID: ${{ vars.JOB_RANGER_MICROSOFT_CLIENT_ID }}
+          SOJOURNER_MICROSOFT_CLIENT_ID: ${{ vars.SOJOURNER_MICROSOFT_CLIENT_ID }}
 
       - name: Verify packaged SQLite runtime
         shell: pwsh
@@ -188,7 +188,7 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: release/Job*windows*.exe
+          subject-path: release/Sojourner*windows*.exe
 
       - name: Ensure GitHub release exists
         if: env.PUBLISH_RELEASE == 'true'
@@ -202,10 +202,11 @@ jobs:
             exit 0
           fi
 
-          if [[ "$tag" == *-rc.* || "$tag" == *-beta* ]]; then
-            create_args=(--title "Job Ranger $tag" --generate-notes --prerelease)
+          # Alpha, beta and release-candidate tags (v1.0.0-alpha.1) are GitHub pre-releases.
+          if [[ "$tag" == *-alpha* || "$tag" == *-beta* || "$tag" == *-rc.* ]]; then
+            create_args=(--title "Sojourner $tag" --generate-notes --prerelease)
           else
-            create_args=(--title "Job Ranger $tag" --generate-notes)
+            create_args=(--title "Sojourner $tag" --generate-notes)
           fi
 
           if ! gh release create "$tag" "${create_args[@]}"; then
@@ -219,9 +220,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.release_tag.outputs.tag }}" \
-            release/Job*windows*.exe \
-            release/Job*windows*.exe.blockmap \
-            release/latest.yml \
+            release/Sojourner*windows*.exe \
+            release/Sojourner*windows*.exe.blockmap \
             build/trust/windows-signing.json \
             build/trust/windows-package-smoke.json \
             build/trust/windows-SHA256SUMS.txt \
@@ -232,12 +232,12 @@ jobs:
         if: env.PUBLISH_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: job-ranger-windows-build-only-${{ github.run_id }}
+          name: sojourner-windows-build-only-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: error
           path: |
-            release/Job*windows*.exe
-            release/Job*windows*.exe.blockmap
+            release/Sojourner*windows*.exe
+            release/Sojourner*windows*.exe.blockmap
             build/trust/windows-signing.json
             build/trust/windows-package-smoke.json
             build/trust/windows-SHA256SUMS.txt
@@ -269,10 +269,10 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && "$PUBLISH_RELEASE" == "true" ]]; then
             echo "public=true" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_NOTARIZATION=1" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_NOTARIZATION=1" >> "$GITHUB_ENV"
           else
             echo "public=false" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_NOTARIZATION=0" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_NOTARIZATION=0" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Node.js
@@ -370,10 +370,11 @@ jobs:
             exit 0
           fi
 
-          if [[ "$tag" == *-rc.* || "$tag" == *-beta* ]]; then
-            create_args=(--title "Job Ranger $tag" --generate-notes --prerelease)
+          # Alpha, beta and release-candidate tags (v1.0.0-alpha.1) are GitHub pre-releases.
+          if [[ "$tag" == *-alpha* || "$tag" == *-beta* || "$tag" == *-rc.* ]]; then
+            create_args=(--title "Sojourner $tag" --generate-notes --prerelease)
           else
-            create_args=(--title "Job Ranger $tag" --generate-notes)
+            create_args=(--title "Sojourner $tag" --generate-notes)
           fi
 
           if ! gh release create "$tag" "${create_args[@]}"; then
@@ -387,8 +388,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.release_tag.outputs.tag }}" \
-            release/Job*macos*.dmg \
-            release/Job*macos*.zip \
+            release/Sojourner*macos*.dmg \
+            release/Sojourner*macos*.zip \
             build/trust/macos-signing.txt \
             build/trust/macos-package-smoke.json \
             build/trust/macos-SHA256SUMS.txt \
@@ -399,27 +400,29 @@ jobs:
         if: env.PUBLISH_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: job-ranger-macos-build-only-${{ github.run_id }}
+          name: sojourner-macos-build-only-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: error
           path: |
-            release/Job*macos*.dmg
-            release/Job*macos*.zip
+            release/Sojourner*macos*.dmg
+            release/Sojourner*macos*.zip
             build/trust/macos-signing.txt
             build/trust/macos-package-smoke.json
             build/trust/macos-SHA256SUMS.txt
             build/trust/macos-release-manifest.json
 
+  # The Microsoft Store package is not a shipping channel (ARCH-001): a pushed v* tag never
+  # builds or publishes it. It runs only on a manual dispatch with platform windows-store.
   store-package:
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows-store'
+    if: github.event_name == 'workflow_dispatch' && inputs.platform == 'windows-store'
     uses: ./.github/workflows/windows-store-package.yml
     with:
       ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-      submission: ${{ vars.JOB_RANGER_STORE_IDENTITY_NAME != '' }}
+      submission: ${{ vars.SOJOURNER_STORE_IDENTITY_NAME != '' }}
 
   publish-store-package:
     needs: store-package
-    if: github.event_name == 'push' || inputs.publish
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -435,7 +438,7 @@ jobs:
       - name: Attest build provenance (Store package)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: store/release/Job*windows-store*.appx
+          subject-path: store/release/Sojourner-v*-windows-store*.appx
 
       - name: Upload Store package candidate and evidence
         shell: bash
@@ -446,8 +449,8 @@ jobs:
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Job Ranger $tag" --generate-notes --prerelease
-          gh release upload "$tag" store/release/Job*windows-store*.appx store/build/trust/windows-store-* --clobber
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
+          gh release upload "$tag" store/release/Sojourner-v*-windows-store*.appx store/build/trust/windows-store-* --clobber
 
   web:
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'web'
@@ -473,7 +476,7 @@ jobs:
       - name: Attest build provenance (web build)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: web/release/job-ranger-web-v*.zip
+          subject-path: web/release/sojourner-web-v*.zip
 
       - name: Upload web build and evidence
         shell: bash
@@ -484,5 +487,5 @@ jobs:
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Job Ranger $tag" --generate-notes --prerelease
-          gh release upload "$tag" web/release/job-ranger-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
+          gh release upload "$tag" web/release/sojourner-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber

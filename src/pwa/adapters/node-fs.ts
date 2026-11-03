@@ -8,7 +8,7 @@
  * leaves a half-written managed artifact or SQLite snapshot in place.
  *
  * Storage failures are never swallowed: quota exhaustion and unavailable
- * storage surface as `JobRangerStorageError` with a user-actionable message,
+ * storage surface as `SojournerStorageError` with a user-actionable message,
  * and are reported to the runtime's storage-health listener.
  */
 import { basename, dirname, join, resolve } from "./node-path";
@@ -19,17 +19,17 @@ type DirectoryHandle = FileSystemDirectoryHandle & {
   entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
 };
 
-export class JobRangerStorageError extends Error {
+export class SojournerStorageError extends Error {
   readonly code: string;
-  constructor(message: string, code = "EJOBRANGERSTORAGE", options?: { cause?: unknown }) {
+  constructor(message: string, code = "ESOJOURNERSTORAGE", options?: { cause?: unknown }) {
     super(message);
-    this.name = "JobRangerStorageError";
+    this.name = "SojournerStorageError";
     this.code = code;
     if (options?.cause !== undefined) (this as { cause?: unknown }).cause = options.cause;
   }
 }
 
-type StorageListener = (error: JobRangerStorageError) => void;
+type StorageListener = (error: SojournerStorageError) => void;
 const storageListeners = new Set<StorageListener>();
 
 export function onStorageFailure(listener: StorageListener): () => void {
@@ -44,12 +44,12 @@ function fsError(code: string, message: string): Error & { code: string } {
 function wrapStorageError(error: unknown, action: string): never {
   if (error && typeof error === "object" && "code" in error && typeof (error as { code: unknown }).code === "string") {
     const code = (error as { code: string }).code;
-    if (code.startsWith("E") && code !== "EJOBRANGERSTORAGE") throw error;
+    if (code.startsWith("E") && code !== "ESOJOURNERSTORAGE") throw error;
   }
   const name = error instanceof DOMException ? error.name : error instanceof Error ? error.name : "";
-  let wrapped: JobRangerStorageError;
+  let wrapped: SojournerStorageError;
   if (name === "QuotaExceededError") {
-    wrapped = new JobRangerStorageError(
+    wrapped = new SojournerStorageError(
       `Browser storage is full, so Sojourner could not ${action}. Your previous saved data is unchanged. Export a backup, free browser storage for this site, then retry.`,
       "EQUOTA",
       { cause: error },
@@ -59,15 +59,15 @@ function wrapStorageError(error: unknown, action: string): never {
   } else if (name === "TypeMismatchError") {
     throw fsError("ENOTDIR", action);
   } else if (name === "NoModificationAllowedError" || name === "InvalidStateError") {
-    wrapped = new JobRangerStorageError(
+    wrapped = new SojournerStorageError(
       `Browser storage is locked or unavailable, so Sojourner could not ${action}. Close other Sojourner tabs and reload.`,
       "ELOCKED",
       { cause: error },
     );
-  } else if (error instanceof JobRangerStorageError) {
+  } else if (error instanceof SojournerStorageError) {
     wrapped = error;
   } else {
-    wrapped = new JobRangerStorageError(
+    wrapped = new SojournerStorageError(
       `Browser storage failed while Sojourner tried to ${action}: ${error instanceof Error ? error.message : String(error)}`,
       "EIO",
       { cause: error },
@@ -82,7 +82,7 @@ let rootPromise: Promise<DirectoryHandle> | null = null;
 async function storageRoot(): Promise<DirectoryHandle> {
   if (!rootPromise) {
     if (typeof navigator === "undefined" || !navigator.storage?.getDirectory) {
-      throw new JobRangerStorageError(
+      throw new SojournerStorageError(
         "This browser does not provide the Origin Private File System that Sojourner needs for durable local storage.",
         "EUNSUPPORTED",
       );

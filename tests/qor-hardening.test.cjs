@@ -18,7 +18,7 @@ const {
 
 function validSettings(overrides = {}) {
   return {
-    userAgent: "Job Ranger Test",
+    userAgent: "Sojourner Test",
     maxConcurrentScrapes: 2,
     scrapeTimeoutMs: 20_000,
     retryCount: 1,

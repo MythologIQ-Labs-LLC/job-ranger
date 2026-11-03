@@ -38,7 +38,7 @@ function request(file, overrides = {}) {
   return {
     journal,
     value: {
-      folder: "Backups", name: `Sojourner-backup-automatic-test-${randomUUID().slice(0, 8)}.jobranger`,
+      folder: "Backups", name: `Sojourner-backup-automatic-test-${randomUUID().slice(0, 8)}.sojourner`,
       filePath: file.filePath, size: file.size, sha256: file.sha256, kind: "automatic", recordId: randomUUID(),
       beforeSend: async (ref) => { journal.push(ref); },
       ...overrides,
@@ -62,9 +62,9 @@ test("the storage egress allows only Google storage calls, the Microsoft token e
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups", "GET"],
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups:/children?$top=200", "GET"],
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Documents/a.pdf", "GET"],
-    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.jobranger", "DELETE"],
-    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.jobranger:/content", "PUT"],
-    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.jobranger:/createUploadSession", "POST"],
+    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.sojourner", "DELETE"],
+    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.sojourner:/content", "PUT"],
+    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.sojourner:/createUploadSession", "POST"],
   ];
   for (const [url, method] of allowed) assert.equal(allowedStorageRequest(new URL(url), method), true, `${method} ${url}`);
   const refused = [
@@ -80,7 +80,7 @@ test("the storage egress allows only Google storage calls, the Microsoft token e
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Other/a.txt", "GET"],
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/../x:/content", "PUT"],
     ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a%2F..%2Fb:/content", "PUT"],
-    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.jobranger", "PATCH"],
+    ["https://graph.microsoft.com/v1.0/me/drive/special/approot:/Backups/a.sojourner", "PATCH"],
     ["https://graph.microsoft.com/beta/me/drive/special/approot", "GET"],
     ["http://graph.microsoft.com/v1.0/me/drive/special/approot", "GET"],
     ["https://user:pw@graph.microsoft.com/v1.0/me/drive/special/approot", "GET"],
@@ -188,8 +188,8 @@ test("This computer copies through a temporary file, verifies by hash and never 
   assert.equal(listed.entries.length, 1);
   assert.equal(listed.entries[0].size, file.size);
   const resolved = await provider.resolve("Backups", upload.value.name);
-  assert.equal(await provider.resolve("Backups", "../escape.jobranger"), null);
-  const target = path.join(tempDir("sojourner-download-"), "copy.jobranger");
+  assert.equal(await provider.resolve("Backups", "../escape.sojourner"), null);
+  const target = path.join(tempDir("sojourner-download-"), "copy.sojourner");
   assert.deepEqual(await provider.download(resolved, target, 10_000_000), { size: file.size, sha256: file.sha256 });
 
   fs.writeFileSync(path.join(folder, "Backups", `${PARTIAL_PREFIX}leftover`), "partial");
@@ -273,7 +273,7 @@ test("Google Drive uploads large files through a resumable session (308 Resume I
   assert.equal(google.state.storage.counts.chunks, 2);
   assert.deepEqual(google.state.files.get(ref.remoteId).bytes, file.bytes);
   assert.equal(await provider.verify(ref, file), true);
-  const target = path.join(tempDir("sojourner-download-"), "restore.jobranger");
+  const target = path.join(tempDir("sojourner-download-"), "restore.sojourner");
   const entry = await provider.resolve("Backups", ref.remoteId);
   assert.deepEqual(await provider.download(entry, target, 100 * 1024 * 1024), { size: file.size, sha256: file.sha256 });
 });
@@ -362,7 +362,7 @@ test("OneDrive uses an upload session for large files, retries a failed chunk an
   const uploads = onedrive.state.requests.filter((item) => item.path.startsWith("/up/"));
   assert.ok(uploads.every((item) => !item.authorization));
   assert.equal(await provider.verify(ref, file), true);
-  const target = path.join(tempDir("sojourner-download-"), "restore.jobranger");
+  const target = path.join(tempDir("sojourner-download-"), "restore.sojourner");
   const entry = await provider.resolve("Backups", path.basename(ref.remotePath));
   assert.deepEqual(await provider.download(entry, target, 100 * 1024 * 1024), { size: file.size, sha256: file.sha256 });
 });
@@ -420,12 +420,12 @@ test("the OneDrive listing follows app-folder pages and returns the newest backu
   const { provider } = oneDriveProvider(onedrive);
   await provider.ensureFolders();
   for (let index = 0; index < 450; index += 1) {
-    onedrive.put("Backups", `Sojourner-backup-automatic-${String(index).padStart(4, "0")}.jobranger`, Buffer.from(String(index)));
+    onedrive.put("Backups", `Sojourner-backup-automatic-${String(index).padStart(4, "0")}.sojourner`, Buffer.from(String(index)));
   }
   const listed = await provider.list("Backups");
   assert.equal(listed.entries.length, 450);
   assert.equal(listed.truncated, false);
-  assert.equal(listed.entries[0].name, "Sojourner-backup-automatic-0449.jobranger", "newest first");
+  assert.equal(listed.entries[0].name, "Sojourner-backup-automatic-0449.sojourner", "newest first");
   onedrive.state.faults.foreignNextLink = true;
   const foreign = await provider.list("Backups");
   assert.equal(foreign.entries.length, 200, "a next page outside the app folder is not followed");

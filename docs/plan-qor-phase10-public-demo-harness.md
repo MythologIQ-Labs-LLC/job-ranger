@@ -85,7 +85,7 @@ None.
     - `demo:frames`: `node scripts/demo/frames.mjs build/demo/video.webm build/demo/frames 1`.
     - `test:demo`: `node tests/demo-frames.test.mjs`.
   - `test` and `test:unit` are unchanged, so CI and release lanes do not need a browser.
-  - The demo config honours `JOB_RANGER_PW_CHROMIUM` the same way `playwright.pwa.config.ts:6` does.
+  - The demo config honours `SOJOURNER_PW_CHROMIUM` the same way `playwright.pwa.config.ts:6` does.
 - LD9: `scripts/demo/*.ts`, like `tests/**/*.spec.ts`, sits outside `tsconfig.json`'s `include` and is transpiled by Playwright at run time. `npm run typecheck` is not claimed to cover it.
 - LD10: BACKLOG records the tokenizer's trailing-punctuation scoring artifact as G11, a product defect left for a separate fix.
 
@@ -109,7 +109,7 @@ None.
 
 ### Affected Files
 
-- `scripts/demo/playwright.demo.config.ts` (new) - Chromium, `testDir` `scripts/demo`, `testMatch` `story.spec.ts`, one worker, 300 s timeout, `JOB_RANGER_PW_CHROMIUM` override.
+- `scripts/demo/playwright.demo.config.ts` (new) - Chromium, `testDir` `scripts/demo`, `testMatch` `story.spec.ts`, one worker, 300 s timeout, `SOJOURNER_PW_CHROMIUM` override.
 - `scripts/demo/fixture.ts` (new) - fixture data and `seedDemo(page)`.
 - `scripts/demo/ready.ts` (new) - `waitForDemoReady`, `waitForLayoutStable`, `scrollToElement`, `caption`, `installTitleCard`, `removeTitleCard`, `installCursor`, `glideClick`.
 - `scripts/demo/story.spec.ts` (new) - seeding context, recorded story context, assertions, screenshots, `video.saveAs`, frame review, `demo-report.json`.

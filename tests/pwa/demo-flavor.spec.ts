@@ -14,7 +14,7 @@ const PRIMARY = "Practice Operations Coordinator";
 const HOURLY = "Patient Access Representative";
 const TRACKED = "Clinic Operations Coordinator";
 const DEMO_BADGE = "Demo listing — fictional, not a real opening";
-const SESSION_KEY = "job-ranger.demo.session.v1";
+const SESSION_KEY = "sojourner.demo.session.v1";
 
 function readBuildInfo(dist: string): { buildId: string; flavor?: string } | null {
   try {
@@ -229,7 +229,7 @@ test("a session keeps its data across reloads; a new tab starts from a fresh see
     await openDemo(sessionA);
     const marker = `Session A entry ${Date.now()}`;
     await addEvidence(sessionA, marker);
-    await sessionA.evaluate(() => localStorage.setItem("job-ranger.visitor-preference", "session-a"));
+    await sessionA.evaluate(() => localStorage.setItem("sojourner.visitor-preference", "session-a"));
 
     await sessionA.reload();
     await waitForRuntime(sessionA);
@@ -238,7 +238,7 @@ test("a session keeps its data across reloads; a new tab starts from a fresh see
     expect(reloaded.evidence).toContain(marker);
     expect(reloaded).toMatchObject(SEEDED);
     expect(reloaded.evidence).toHaveLength(5);
-    expect(await sessionA.evaluate(() => localStorage.getItem("job-ranger.visitor-preference"))).toBe("session-a");
+    expect(await sessionA.evaluate(() => localStorage.getItem("sojourner.visitor-preference"))).toBe("session-a");
     await sessionA.goto(demoServer.url + "#/career-evidence/new");
     await expect(sessionA.getByText(marker).first()).toBeVisible();
 
@@ -250,8 +250,8 @@ test("a session keeps its data across reloads; a new tab starts from a fresh see
     expect(fresh).toMatchObject(SEEDED);
     expect(fresh.evidence).not.toContain(marker);
     expect(fresh.evidence).toHaveLength(4);
-    expect(await sessionB.evaluate(() => localStorage.getItem("job-ranger.visitor-preference"))).toBeNull();
-    expect(await sessionB.evaluate(() => localStorage.getItem("job-ranger.onboarding.dismissed.v1"))).toBe("true");
+    expect(await sessionB.evaluate(() => localStorage.getItem("sojourner.visitor-preference"))).toBeNull();
+    expect(await sessionB.evaluate(() => localStorage.getItem("sojourner.onboarding.dismissed.v1"))).toBe("true");
   } finally {
     await context.close();
   }
@@ -342,7 +342,7 @@ test("the demo refuses to erase a non-demo workspace on its origin, which stays 
       for (const key of await caches.keys()) await caches.delete(key);
     });
   try {
-    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
     const real = await context.newPage();
     await real.goto(shared.url);
     await waitForRuntime(real);
@@ -430,7 +430,7 @@ test("the demo banner and pages fit a 375px phone without horizontal overflow", 
 test("the standard build has no demo banner, seeds nothing and never resets between sessions", async ({ browser }) => {
   const context = await browser.newContext();
   try {
-    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
     const first = await context.newPage();
     await first.goto(standardServer.url);
     await waitForRuntime(first);

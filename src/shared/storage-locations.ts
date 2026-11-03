@@ -1,7 +1,7 @@
 /**
  * Windows (Electron) storage location IPC contract (#249, #314; owner decision 2026-11-02).
  *
- * The Windows app copies automatic and manual workspace backups (full `.jobranger`
+ * The Windows app copies automatic and manual workspace backups (full `.sojourner`
  * archives) and exported documents to ONE chosen location: a folder on this computer,
  * the person's Google Drive ("Sojourner" folder, scope drive.file) or their OneDrive
  * (the app folder, scope Files.ReadWrite.AppFolder). The working SQLite database always

@@ -21,7 +21,7 @@ export const MICROSOFT_CLIENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}
 
 /**
  * Generated at package time by scripts/write-microsoft-oauth-client.mjs from the
- * JOB_RANGER_MICROSOFT_CLIENT_ID repository variable (release-build.yml) and copied into
+ * SOJOURNER_MICROSOFT_CLIENT_ID repository variable (release-build.yml) and copied into
  * resources by electron-builder.json.
  */
 export const PACKAGED_MICROSOFT_CONFIG_RELATIVE_PATH = path.join("microsoft-oauth", "microsoft-client.json");
@@ -51,8 +51,8 @@ export function validateMicrosoftClientId(value: unknown): MicrosoftClientConfig
  * the choice; it never throws.
  */
 export function resolveMicrosoftClientConfig(runtime: MicrosoftRuntimeEnvironment): MicrosoftClientConfigResult {
-  if (!runtime.isPackaged && runtime.env.JOB_RANGER_MICROSOFT_CLIENT_ID !== undefined) {
-    return validateMicrosoftClientId(runtime.env.JOB_RANGER_MICROSOFT_CLIENT_ID);
+  if (!runtime.isPackaged && runtime.env.SOJOURNER_MICROSOFT_CLIENT_ID !== undefined) {
+    return validateMicrosoftClientId(runtime.env.SOJOURNER_MICROSOFT_CLIENT_ID);
   }
   if (!runtime.resourcesPath) return { configured: false, reason: "missing-client-config" };
   const read = runtime.readTextFile ?? ((target: string) => readFileSync(target, "utf8"));
@@ -87,7 +87,7 @@ function loopbackOrigin(raw: string | undefined): string | null {
  * a non-packaged build (Electron E2E). A packaged build ignores the variable.
  */
 export function resolveMicrosoftTestOrigin(runtime: Pick<MicrosoftRuntimeEnvironment, "env" | "isPackaged">): string | null {
-  return runtime.isPackaged ? null : loopbackOrigin(runtime.env.JOB_RANGER_MICROSOFT_TEST_BASE_URL);
+  return runtime.isPackaged ? null : loopbackOrigin(runtime.env.SOJOURNER_MICROSOFT_TEST_BASE_URL);
 }
 
 function testNumber(runtime: Pick<MicrosoftRuntimeEnvironment, "env" | "isPackaged">, name: string,
@@ -102,9 +102,9 @@ export function resolveStorageTestTimings(runtime: Pick<MicrosoftRuntimeEnvironm
   debounceMs: number | null; retryBaseMs: number | null; pollMs: number | null; timeoutMs: number | null;
 } {
   return {
-    debounceMs: testNumber(runtime, "JOB_RANGER_STORAGE_TEST_DEBOUNCE_MS", 50, 3_600_000),
-    retryBaseMs: testNumber(runtime, "JOB_RANGER_STORAGE_TEST_RETRY_MS", 50, 3_600_000),
-    pollMs: testNumber(runtime, "JOB_RANGER_STORAGE_TEST_POLL_MS", 50, 60_000),
-    timeoutMs: testNumber(runtime, "JOB_RANGER_STORAGE_TEST_TIMEOUT_MS", 100, 600_000),
+    debounceMs: testNumber(runtime, "SOJOURNER_STORAGE_TEST_DEBOUNCE_MS", 50, 3_600_000),
+    retryBaseMs: testNumber(runtime, "SOJOURNER_STORAGE_TEST_RETRY_MS", 50, 3_600_000),
+    pollMs: testNumber(runtime, "SOJOURNER_STORAGE_TEST_POLL_MS", 50, 60_000),
+    timeoutMs: testNumber(runtime, "SOJOURNER_STORAGE_TEST_TIMEOUT_MS", 100, 600_000),
   };
 }

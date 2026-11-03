@@ -149,7 +149,7 @@ test("a deep-linked nested destination is scrolled into the short-screen sidebar
 test("the mobile menu button is a comfortable touch target", async ({ page, context }) => {
   // Measure a settled page: Home swaps its loading shell for onboarding, which remounts
   // the layout and can leave boundingBox() reading a detached button (null box).
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 700 });
     await page.goto(`${server.url}#/applications`);

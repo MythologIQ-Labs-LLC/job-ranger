@@ -7,7 +7,7 @@ test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
 async function open(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url + "#/jobs");
   await waitForRuntime(page);
 }
@@ -39,7 +39,7 @@ test("tracked Application controls reflow without horizontal clipping at 320px",
     headers: { "Access-Control-Allow-Origin": "*" },
     body: JSON.stringify(greenhouseFixture),
   }));
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto(server.url);
   await waitForRuntime(page);
@@ -76,7 +76,7 @@ test("rendered status badges meet small-text contrast in every theme", async ({ 
     headers: { "Access-Control-Allow-Origin": "*" },
     body: JSON.stringify(greenhouseFixture),
   }));
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url);
   await waitForRuntime(page);
   await page.evaluate(async () => {

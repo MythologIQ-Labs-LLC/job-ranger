@@ -9,6 +9,8 @@ import {
   DEMO_IDLE_RESET_MS,
   DEMO_REFUSAL_MESSAGE,
   DEMO_SENTINEL_FILE,
+  DEMO_SENTINEL_KIND,
+  LEGACY_DEMO_SENTINEL_KIND,
   containsAnyFile,
   createDemoSentinel,
   decideDemoStartup,
@@ -18,9 +20,12 @@ import {
   shouldRecordDemoActivity,
   writeDemoSentinel,
 } from "../src/pwa/runtime/demo-workspace.ts";
+import { LEGACY_DATABASE_FILE_NAME, LEGACY_USER_DATA_DIRECTORY } from "../src/pwa/runtime/protocol.ts";
 
-const USER = "/job-ranger";
-const IO = "/job-ranger-io";
+const USER = "/sojourner";
+const IO = "/sojourner-io";
+// The root of pre-rename builds, which the demo must never run over.
+const LEGACY_USER = LEGACY_USER_DATA_DIRECTORY;
 const SESSION_A = "11111111-1111-4111-8111-111111111111";
 const SESSION_B = "22222222-2222-4222-8222-222222222222";
 const T0 = Date.parse("2026-10-16T09:00:00.000Z");
@@ -73,7 +78,7 @@ assert.equal(DEMO_SENTINEL_FILE, ".demo-workspace.json");
 assert.equal(DEMO_REFUSAL_MESSAGE, "This site holds a Sojourner workspace that is not a demo; the demo will not erase it.");
 assert.ok(isValidDemoSessionId(SESSION_A));
 assert.ok(!isValidDemoSessionId("short"));
-assert.ok(!isValidDemoSessionId("../../job-ranger/escape-attempt"));
+assert.ok(!isValidDemoSessionId("../../sojourner/escape-attempt"));
 
 // --- nothing to erase: missing or empty workspace -> reset
 assert.deepEqual(await decide(memoryFs()), { action: "reset", reason: "empty" });
@@ -87,10 +92,10 @@ assert.deepEqual(await decide(memoryFs()), { action: "reset", reason: "empty" })
 
 // --- B1: any files without a valid demo sentinel -> REFUSE, never erase
 for (const [label, files] of [
-  ["a real standard workspace", { [`${USER}/data/jobscout.sqlite3`]: "SQLite format 3", [`${USER}/data/artifacts/sources/a/source.txt`]: "resume" }],
+  ["a real standard workspace", { [`${USER}/data/sojourner.sqlite3`]: "SQLite format 3", [`${USER}/data/artifacts/sources/a/source.txt`]: "resume" }],
   ["a staged restore", { [`${USER}/pending-restore/manifest.json`]: "{}" }],
-  ["an unparsable sentinel", { [`${USER}/${DEMO_SENTINEL_FILE}`]: "not json", [`${USER}/data/jobscout.sqlite3`]: "db" }],
-  ["a sentinel for another flavor", { [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText({ buildFlavor: "standard" }), [`${USER}/data/jobscout.sqlite3`]: "db" }],
+  ["an unparsable sentinel", { [`${USER}/${DEMO_SENTINEL_FILE}`]: "not json", [`${USER}/data/sojourner.sqlite3`]: "db" }],
+  ["a sentinel for another flavor", { [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText({ buildFlavor: "standard" }), [`${USER}/data/sojourner.sqlite3`]: "db" }],
   ["a sentinel of another kind", { [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText({ kind: "something-else" }) }],
   ["a sentinel with a bad session id", { [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText({ sessionId: "x" }) }],
 ]) {
@@ -107,7 +112,7 @@ for (const [label, files] of [
 
 // --- valid demo sentinel
 const demoWorkspace = (overrides) =>
-  memoryFs({ [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText(overrides), [`${USER}/data/jobscout.sqlite3`]: "demo db" });
+  memoryFs({ [`${USER}/${DEMO_SENTINEL_FILE}`]: sentinelText(overrides), [`${USER}/data/sojourner.sqlite3`]: "demo db" });
 const kept = await decide(demoWorkspace());
 assert.equal(kept.action, "keep", "same session, recently active: keep (reload)");
 assert.equal(kept.sentinel.sessionId, SESSION_A);
@@ -132,7 +137,7 @@ assert.deepEqual(await decide(demoWorkspace({ seeded: false })), { action: "rese
   const stored = parseDemoSentinel(new TextDecoder().decode(fs.store.get(`${USER}/${DEMO_SENTINEL_FILE}`)));
   assert.deepEqual(stored, claim);
   // An interrupted seed is recognised as the demo's own next time, never as a real workspace.
-  fs.store.set(`${USER}/data/jobscout.sqlite3`, new Uint8Array([1, 2]));
+  fs.store.set(`${USER}/data/sojourner.sqlite3`, new Uint8Array([1, 2]));
   assert.deepEqual(await decide(fs, SESSION_B, T0 + 3 * HOUR), { action: "reset", reason: "incomplete-seed" });
   // After a completed seed the owning session keeps it.
   await writeDemoSentinel(fs, USER, createDemoSentinel({ sessionId: SESSION_B, now: T0 + 3 * HOUR, seeded: true, createdAt: claim.createdAt }));
@@ -144,7 +149,7 @@ assert.deepEqual(await decide(demoWorkspace({ seeded: false })), { action: "rese
 // never removed, so whatever survives is still recognised as the demo's own and reset next time.
 for (let failAt = 1; failAt <= 2; failAt += 1) {
   const fs = demoWorkspace();
-  fs.store.set(`${USER}/data/jobscout.sqlite3`, new Uint8Array([1]));
+  fs.store.set(`${USER}/data/sojourner.sqlite3`, new Uint8Array([1]));
   fs.store.set(`${USER}/data/artifacts/resume.pdf`, new Uint8Array([2]));
   fs.store.set(`${IO}/inbox/x/file.pdf`, new Uint8Array([3]));
   const rm = fs.rm.bind(fs);
@@ -171,6 +176,40 @@ assert.ok(DEMO_ACTIVITY_WRITE_INTERVAL_MS <= DEMO_IDLE_RESET_MS / 10);
   const active = { ...createDemoSentinel({ sessionId: SESSION_A, now: T0 + 7 * HOUR, seeded: true }), createdAt: new Date(T0).toISOString() };
   await writeDemoSentinel(fs, USER, active);
   assert.equal((await decide(fs, SESSION_A, T0 + 14 * HOUR)).action, "keep");
+}
+
+// --- the legacy (pre-rename) root: a demo never migrates, and never runs where a real legacy
+// workspace lives; a legacy DEMO workspace is sample data and is simply left alone.
+{
+  assert.equal(DEMO_SENTINEL_KIND, "sojourner-demo-workspace");
+  const decideWithLegacy = (fs, sessionId = SESSION_A, now = T0 + HOUR) =>
+    decideDemoStartup(fs, { userDataDirectory: USER, legacyUserDataDirectory: LEGACY_USER, sessionId, now });
+  const legacySentinel = (overrides = {}) => sentinelText({ kind: LEGACY_DEMO_SENTINEL_KIND, ...overrides });
+  for (const [label, files] of [
+    ["a real legacy workspace", { [`${LEGACY_USER}/data/${LEGACY_DATABASE_FILE_NAME}`]: "SQLite format 3" }],
+    ["a legacy staged restore", { [`${LEGACY_USER}/pending-restore/manifest.json`]: "{}" }],
+    ["a legacy root whose sentinel is the new kind", { [`${LEGACY_USER}/${DEMO_SENTINEL_FILE}`]: sentinelText(), [`${LEGACY_USER}/data/${LEGACY_DATABASE_FILE_NAME}`]: "db" }],
+    ["a legacy sentinel for another flavor", { [`${LEGACY_USER}/${DEMO_SENTINEL_FILE}`]: legacySentinel({ buildFlavor: "standard" }) }],
+  ]) {
+    const fs = memoryFs(files);
+    const before = new Map(fs.store);
+    assert.deepEqual(await decideWithLegacy(fs), { action: "refuse", reason: "not-a-demo-workspace" }, label);
+    assert.deepEqual(fs.store, before, `${label}: nothing was touched`);
+  }
+  // A legacy demo workspace (legacy sentinel) or an empty legacy root does not block the demo.
+  const legacyDemo = memoryFs({ [`${LEGACY_USER}/${DEMO_SENTINEL_FILE}`]: legacySentinel(), [`${LEGACY_USER}/data/${LEGACY_DATABASE_FILE_NAME}`]: "demo db" });
+  const legacyBefore = new Map(legacyDemo.store);
+  assert.deepEqual(await decideWithLegacy(legacyDemo), { action: "reset", reason: "empty" });
+  const claim = await resetDemoWorkspace(legacyDemo, { userDataDirectory: USER, ioDirectory: IO, sessionId: SESSION_A, now: T0 }, await decideWithLegacy(legacyDemo));
+  assert.equal(claim.kind, DEMO_SENTINEL_KIND);
+  for (const [name, bytes] of legacyBefore) assert.deepEqual(legacyDemo.store.get(name), bytes, `the legacy demo tree is left alone: ${name}`);
+  const emptyLegacy = memoryFs();
+  emptyLegacy.directories.add(LEGACY_USER);
+  assert.deepEqual(await decideWithLegacy(emptyLegacy), { action: "reset", reason: "empty" });
+  // The new root keeps its own rules: a legacy demo sentinel there is not a Sojourner demo sentinel.
+  assert.deepEqual(await decideWithLegacy(memoryFs({ [`${USER}/${DEMO_SENTINEL_FILE}`]: legacySentinel() })), { action: "refuse", reason: "not-a-demo-workspace" });
+  assert.equal(parseDemoSentinel(legacySentinel()), null);
+  assert.equal(parseDemoSentinel(legacySentinel(), LEGACY_DEMO_SENTINEL_KIND)?.kind, LEGACY_DEMO_SENTINEL_KIND);
 }
 
 console.log("pwa demo workspace ownership tests passed");

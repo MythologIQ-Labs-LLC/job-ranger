@@ -23,16 +23,16 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --app)
-      explicit_apps+=("${2:?--app requires a Job Ranger.app path}")
+      explicit_apps+=("${2:?--app requires a Sojourner.app path}")
       shift 2
       ;;
     --help|-h)
       cat <<'USAGE'
 Usage:
   bash scripts/verify-macos-distribution.sh [0|1]
-  bash scripts/verify-macos-distribution.sh --require-trust --app "/Applications/Job Ranger.app" --report ./macos-clean-machine.txt
+  bash scripts/verify-macos-distribution.sh --require-trust --app "/Applications/Sojourner.app" --report ./macos-clean-machine.txt
 
-Without --app, the script searches release/**/Job Ranger.app for CI/package verification.
+Without --app, the script searches release/**/Sojourner.app for CI/package verification.
 USAGE
       exit 0
       ;;
@@ -64,7 +64,7 @@ apps=()
 if [[ ${#explicit_apps[@]} -gt 0 ]]; then
   for app in "${explicit_apps[@]}"; do
     if [[ ! -d "$app" ]]; then
-      echo "Requested Job Ranger.app does not exist: $app" | tee -a "$report_path" >&2
+      echo "Requested Sojourner.app does not exist: $app" | tee -a "$report_path" >&2
       exit 1
     fi
     apps+=("$app")
@@ -72,18 +72,18 @@ if [[ ${#explicit_apps[@]} -gt 0 ]]; then
 else
   while IFS= read -r -d '' app; do
     apps+=("$app")
-  done < <(find release -maxdepth 3 -type d -name 'Job Ranger.app' -print0 2>/dev/null)
+  done < <(find release -maxdepth 3 -type d -name 'Sojourner.app' -print0 2>/dev/null)
 fi
 
 if [[ ${#apps[@]} -eq 0 ]]; then
-  echo "No packaged Job Ranger.app bundles were found." | tee -a "$report_path"
+  echo "No packaged Sojourner.app bundles were found." | tee -a "$report_path"
   exit 1
 fi
 
 failures=0
 for app in "${apps[@]}"; do
   echo "APP: $app" | tee -a "$report_path"
-  executable="$app/Contents/MacOS/Job Ranger"
+  executable="$app/Contents/MacOS/Sojourner"
   if [[ -f "$executable" ]]; then
     echo "executableArchitecture: $(file "$executable")" | tee -a "$report_path"
   fi

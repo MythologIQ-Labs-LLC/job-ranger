@@ -1,6 +1,6 @@
 // #302: packBackupBundle streams the archive to disk instead of holding every bundle file plus a
 // full archive copy in memory. These checks pin the bytes to the in-memory encoder (so existing
-// .jobranger readers are unaffected), bound the read and write sizes, and require a failed or
+// .sojourner readers are unaffected), bound the read and write sizes, and require a failed or
 // inconsistent pack to leave nothing behind.
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
@@ -43,11 +43,11 @@ async function makeBundle(files) {
     artifactFiles: artifacts.map(record),
   }, null, 2)}\n`);
   await fs.writeFile(path.join(bundle, 'manifest.json'), manifest);
-  return { root, bundle, manifest, archivePath: path.join(root, 'out', 'backup.jobranger') };
+  return { root, bundle, manifest, archivePath: path.join(root, 'out', 'backup.sojourner') };
 }
 
 const sampleFiles = () => ({
-  'database/job-ranger.sqlite': filler(3 * MiB + 17, 1),
+  'database/sojourner.sqlite': filler(3 * MiB + 17, 1),
   'artifacts/resumes/morgan-rivera.pdf': filler(5 * MiB + 3, 2),
   'artifacts/evidence/empty.txt': Buffer.alloc(0),
   'artifacts/evidence/notes – ünïcode.txt': Buffer.from('Scheduling notes\n'),
@@ -144,13 +144,13 @@ test('truncated or corrupted streamed archives are rejected before anything is e
   try {
     await archive.packBackupBundle({ bundleDirectory: bundle, archivePath, producer, createdAt });
     const bytes = await fs.readFile(archivePath);
-    const truncated = path.join(root, 'truncated.jobranger');
+    const truncated = path.join(root, 'truncated.sojourner');
     await fs.writeFile(truncated, bytes.subarray(0, bytes.length - 1000));
     await assert.rejects(archive.extractArchiveToBundle(truncated, path.join(root, 'x1')), archive.PortableArchiveError);
     assert.equal(await exists(path.join(root, 'x1')), false);
     const flipped = Buffer.from(bytes);
     flipped[Math.floor(bytes.length / 2)] ^= 0xff;
-    const corrupt = path.join(root, 'corrupt.jobranger');
+    const corrupt = path.join(root, 'corrupt.sojourner');
     await fs.writeFile(corrupt, flipped);
     await assert.rejects(archive.extractArchiveToBundle(corrupt, path.join(root, 'x2')), /CRC-32/);
     assert.equal(await exists(path.join(root, 'x2')), false);
@@ -222,7 +222,7 @@ test('an oversized bundle is refused from file sizes before any file is read', a
   });
   const restoreStat = patch(nodeFs.promises, 'lstat', (original) => async (target, ...rest) => {
     const stat = await original(target, ...rest);
-    if (path.basename(String(target)) !== 'job-ranger.sqlite') return stat;
+    if (path.basename(String(target)) !== 'sojourner.sqlite') return stat;
     return Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: archive.MAX_ARCHIVE_BYTES });
   });
   try {
@@ -242,7 +242,7 @@ test('an oversized bundle is refused from file sizes before any file is read', a
 test('unsafe or repeated paths in the backup manifest are refused before writing', async () => {
   for (const [label, artifactPath, message] of [
     ['traversal', '../outside.txt', /unsafe path/],
-    ['repeat', 'DATABASE/job-ranger.sqlite', /repeats/],
+    ['repeat', 'DATABASE/sojourner.sqlite', /repeats/],
   ]) {
     const { root, bundle, archivePath } = await makeBundle(sampleFiles());
     try {

@@ -5,15 +5,15 @@
 
 ## Purpose
 
-Job Ranger should work across materially different career paths without requiring the product to know what a “normal” career looks like.
+Sojourner should work across materially different career paths without requiring the product to know what a “normal” career looks like.
 
-The product contract is expressed through **user stories**. Career archetypes and synthetic personas are validation fixtures only. They exist to expose hidden assumptions, not to define separate versions of Job Ranger.
+The product contract is expressed through **user stories**. Career archetypes and synthetic personas are validation fixtures only. They exist to expose hidden assumptions, not to define separate versions of Sojourner.
 
 The original implementation issues (#82 through #88) are now historical ownership/provenance. Future changes to these stories should be tracked through new issues rather than reopening completed tranche issues merely to reuse their numbers.
 
 ## North-star user story
 
-> **US-0:** As a job seeker, I want Job Ranger to adapt to the way my career works without requiring me to understand how Job Ranger works.
+> **US-0:** As a job seeker, I want Sojourner to adapt to the way my career works without requiring me to understand how Sojourner works.
 
 ## Governing rules
 
@@ -35,19 +35,19 @@ The original implementation issues (#82 through #88) are now historical ownershi
 
 #### US-1 — Resume-first onboarding
 
-As a job seeker with an existing resume, I want to import it so Job Ranger can build an initial evidence set without making me retype my career history.
+As a job seeker with an existing resume, I want to import it so Sojourner can build an initial evidence set without making me retype my career history.
 
 Implementation provenance: #82 plus the Career Evidence import architecture from #59.
 
 #### US-2 — No-resume onboarding
 
-As a job seeker without a resume, I want to describe my background incrementally so I can use Job Ranger without first creating a traditional resume.
+As a job seeker without a resume, I want to describe my background incrementally so I can use Sojourner without first creating a traditional resume.
 
 Implementation provenance: #82/#84.
 
 #### US-3 — Goal-first onboarding
 
-As a user who knows what I want but has not entered my history yet, I want to start with target work and constraints so Job Ranger can begin helping immediately.
+As a user who knows what I want but has not entered my history yet, I want to start with target work and constraints so Sojourner can begin helping immediately.
 
 Implementation provenance: #82/#83.
 
@@ -55,19 +55,19 @@ Implementation provenance: #82/#83.
 
 #### US-4 — Multiple career targets
 
-As a job seeker pursuing more than one career direction, I want separate target tracks so Job Ranger does not mix incompatible goals.
+As a job seeker pursuing more than one career direction, I want separate target tracks so Sojourner does not mix incompatible goals.
 
 Implementation provenance: #83.
 
 #### US-5 — Hard constraints vs preferences
 
-As a job seeker, I want to distinguish requirements from preferences so Job Ranger does not reject a good opportunity because of something I merely prefer.
+As a job seeker, I want to distinguish requirements from preferences so Sojourner does not reject a good opportunity because of something I merely prefer.
 
 Implementation provenance: #83.
 
 #### US-6 — Employment arrangements
 
-As a user, I want to specify acceptable work arrangements without Job Ranger assuming permanent salaried full-time employment.
+As a user, I want to specify acceptable work arrangements without Sojourner assuming permanent salaried full-time employment.
 
 Implementation provenance: #83.
 
@@ -101,19 +101,19 @@ Implementation provenance: #84 and Career Evidence review/lineage behavior.
 
 #### US-11 — Find employers and sources for me
 
-As a user who knows the kind of work I want but not which companies hire for it, I want Job Ranger to discover likely employers and opportunity sources.
+As a user who knows the kind of work I want but not which companies hire for it, I want Sojourner to discover likely employers and opportunity sources.
 
 Implementation provenance: #85.
 
 #### US-12 — Search beyond employer career pages
 
-As a user, I want Job Ranger to discover opportunities from relevant source classes without requiring me to understand ATS vendors or career-page URLs.
+As a user, I want Sojourner to discover opportunities from relevant source classes without requiring me to understand ATS vendors or career-page URLs.
 
 Implementation provenance: #85.
 
 #### US-13 — Trust discovered sources
 
-As a user, I want to review and approve discovered sources before Job Ranger begins monitoring them.
+As a user, I want to review and approve discovered sources before Sojourner begins monitoring them.
 
 Implementation provenance: #85.
 
@@ -145,7 +145,7 @@ Implementation provenance: #83/#86.
 
 #### US-18 — Show uncertainty
 
-As a user, I want Job Ranger to distinguish known match, known mismatch, missing information, and uncertain interpretation.
+As a user, I want Sojourner to distinguish known match, known mismatch, missing information, and uncertain interpretation.
 
 Implementation provenance: #86.
 
@@ -153,7 +153,7 @@ Implementation provenance: #86.
 
 #### US-19 — Tailor my resume
 
-As a user, I want Job Ranger to emphasize relevant verified experience for a specific opportunity without introducing unsupported claims.
+As a user, I want Sojourner to emphasize relevant verified experience for a specific opportunity without introducing unsupported claims.
 
 Implementation provenance: #64/#88.
 
@@ -165,7 +165,7 @@ Implementation provenance: #64/#88.
 
 #### US-21 — Create application materials
 
-As a user, I want Job Ranger to help create application materials from confirmed Career Evidence.
+As a user, I want Sojourner to help create application materials from confirmed Career Evidence.
 
 Implementation provenance: #65/#88.
 
@@ -217,19 +217,19 @@ Implementation provenance: #65/#88.
 
 #### US-29 — Help me reconsider strategy
 
-As a user whose search is not producing downstream progress, I want Job Ranger to surface evidence-based strategy signals without inventing causal certainty or reducing the search to activity quotas.
+As a user whose search is not producing downstream progress, I want Sojourner to surface evidence-based strategy signals without inventing causal certainty or reducing the search to activity quotas.
 
 Implementation provenance: #65/#88.
 
 #### US-30 — Preserve my career history over time
 
-As a user, I want Job Ranger to maintain an increasingly complete Career Evidence record rather than reconstructing my history from each new resume.
+As a user, I want Sojourner to maintain an increasingly complete Career Evidence record rather than reconstructing my history from each new resume.
 
 Implementation provenance: Career Evidence architecture, portability, and #88 reconciliation.
 
 ## Universal opportunity assessment
 
-Job Ranger does not reduce every opportunity to one opaque universal percentage.
+Sojourner does not reduce every opportunity to one opaque universal percentage.
 
 The user-facing assessment separates at least:
 
@@ -249,7 +249,7 @@ First-run setup supports three valid entry paths:
 2. **evidence-first/manual** — enter relevant background incrementally without a resume;
 3. **goal-first** — define target work and initial constraints, then add evidence later.
 
-Partial profiles are valid product states. Job Ranger becomes more useful as information is added rather than refusing to work until a large form is complete.
+Partial profiles are valid product states. Sojourner becomes more useful as information is added rather than refusing to work until a large form is complete.
 
 ## Target tracks and constraint semantics
 

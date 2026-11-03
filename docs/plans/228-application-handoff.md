@@ -5,7 +5,7 @@
 **Change class:** material (application-materials workflow); no new external action authority.  
 **Owner:** Sojourner maintainer; scoped by [#228](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/228).  
 **Baseline:** `main` at `9dad91ab6a2f3a78433c274e4fa75390aff9ac08` (2026-11-02).  
-**Architecture authority:** [`docs/ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md). User-facing copy says "Sojourner"; internal `job-ranger` identifiers are unchanged.
+**Architecture authority:** [`docs/ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md). User-facing copy says "Sojourner"; internal `sojourner` identifiers are unchanged.
 
 ## Delivered baseline (#270, already on main)
 

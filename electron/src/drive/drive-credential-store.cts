@@ -19,7 +19,7 @@ export interface StoredDriveCredential {
   savedAt: string;
 }
 
-/** In the user-data root, outside data/, so backups and .jobranger archives never include it. */
+/** In the user-data root, outside data/, so backups and .sojourner archives never include it. */
 export const DRIVE_CREDENTIAL_FILE = "google-drive-credential.bin";
 
 function parseCredential(text: string): StoredDriveCredential | null {

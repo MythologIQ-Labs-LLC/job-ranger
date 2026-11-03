@@ -4,12 +4,12 @@ const { resolveSigning } = require("./scripts/windows-sign.cjs");
 
 // Azure Artifact Signing through SignTool and the Azure CLI sign-in (GitHub OIDC in the
 // `release` environment, or the owner's `az login` locally). No client secret.
-const requireSigning = process.env.JOB_RANGER_REQUIRE_WINDOWS_SIGNING === "1";
+const requireSigning = process.env.SOJOURNER_REQUIRE_WINDOWS_SIGNING === "1";
 const signing = resolveSigning(process.env);
 
 if (requireSigning && !signing) {
   throw new Error(
-    "Windows code signing is required for this public release, but the Artifact Signing client is not configured (JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR).",
+    "Windows code signing is required for this public release, but the Artifact Signing client is not configured (SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR).",
   );
 }
 

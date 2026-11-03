@@ -32,7 +32,7 @@ test("first run boots the local-first runtime with production security and insta
 
   const buildInfo = JSON.parse(await readFile(path.join(distPwa, "build-info.json"), "utf8"));
   expect(info.buildId).toBe(buildInfo.buildId);
-  await expect(page.locator('meta[name="job-ranger-build"]')).toHaveAttribute("content", buildInfo.buildId);
+  await expect(page.locator('meta[name="sojourner-build"]')).toHaveAttribute("content", buildInfo.buildId);
 
   const manifest = await page.evaluate(async () => {
     const href = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!.href;
@@ -83,7 +83,7 @@ test("service worker serves the verified shell offline without touching career d
   await waitForRuntime(page);
   expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   const cacheNames = await page.evaluate(() => caches.keys());
-  expect(cacheNames.every((name) => name.startsWith("job-ranger-shell-"))).toBe(true);
+  expect(cacheNames.every((name) => name.startsWith("sojourner-shell-"))).toBe(true);
 
   await context.setOffline(true);
   await page.reload();
@@ -95,10 +95,10 @@ test("service worker serves the verified shell offline without touching career d
 });
 
 test("career data persists across reloads and full browser restarts", async () => {
-  const profileDirectory = await mkdtemp(path.join(os.tmpdir(), "job-ranger-pwa-profile-"));
+  const profileDirectory = await mkdtemp(path.join(os.tmpdir(), "sojourner-pwa-profile-"));
   const launch = () =>
     chromium.launchPersistentContext(profileDirectory, {
-      executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined,
+      executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined,
     });
   try {
     let context = await launch();
@@ -155,11 +155,11 @@ test("only one tab can write the local workspace at a time", async ({ context })
 
   const second = await context.newPage();
   await second.goto(server.url);
-  await expect(second.getByText("Sojourner is open in another tab or window")).toBeVisible();
+  await expect(second.getByText("Sojourner (or an earlier Job Ranger tab) is open in another tab or window")).toBeVisible();
 
   await first.close();
   await waitForRuntime(second);
-  await expect(second.getByText("Sojourner is open in another tab or window")).toHaveCount(0);
+  await expect(second.getByText("Sojourner (or an earlier Job Ranger tab) is open in another tab or window")).toHaveCount(0);
   const info = await second.evaluate(() => window.electronAPI.getRuntimeInfo());
   expect(info.kind).toBe("web");
 });

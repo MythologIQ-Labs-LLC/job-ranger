@@ -8,7 +8,7 @@ test.afterAll(async () => { await server.close(); });
 
 async function openHome(page: Page) {
   await page.context().addInitScript(() => {
-    localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true");
+    localStorage.setItem("sojourner.onboarding.dismissed.v1", "true");
   });
   await page.goto(server.url);
   await waitForRuntime(page);

@@ -13,7 +13,7 @@
  * - from the command line, `node scripts/windows-sign.cjs <file>...`, for binaries
  *   electron-builder does not sign itself (the bundled sqlite3.exe).
  *
- * Signing is enabled by JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR, the folder holding
+ * Signing is enabled by SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR, the folder holding
  * bin/x64/Azure.CodeSigning.Dlib.dll from the Microsoft.ArtifactSigning.Client package.
  */
 
@@ -41,7 +41,7 @@ const ARTIFACT_SIGNING = Object.freeze({
 const TIMESTAMP_URL = "http://timestamp.acs.microsoft.com";
 
 function findSignTool(env) {
-  if (env.JOB_RANGER_SIGNTOOL_PATH) return env.JOB_RANGER_SIGNTOOL_PATH;
+  if (env.SOJOURNER_SIGNTOOL_PATH) return env.SOJOURNER_SIGNTOOL_PATH;
   const kits = path.join(env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Windows Kits", "10", "bin");
   const candidates = fs.existsSync(kits)
     ? fs.readdirSync(kits)
@@ -51,13 +51,13 @@ function findSignTool(env) {
         .map((name) => path.join(kits, name, "x64", "signtool.exe"))
         .filter((candidate) => fs.existsSync(candidate))
     : [];
-  if (candidates.length === 0) throw new Error("signtool.exe was not found. Install the Windows SDK or set JOB_RANGER_SIGNTOOL_PATH.");
+  if (candidates.length === 0) throw new Error("signtool.exe was not found. Install the Windows SDK or set SOJOURNER_SIGNTOOL_PATH.");
   return candidates[0];
 }
 
 /** null when signing is not configured; throws when it is configured but unusable. */
 function resolveSigning(env = process.env) {
-  const clientDir = env.JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR;
+  const clientDir = env.SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR;
   if (!clientDir) return null;
   const dlib = path.join(clientDir, "bin", "x64", "Azure.CodeSigning.Dlib.dll");
   if (!fs.existsSync(dlib)) throw new Error(`Artifact Signing client not found at ${dlib}.`);
@@ -80,7 +80,7 @@ function signToolArgs(file, dlib, metadata) {
 
 function signFile(file, env = process.env) {
   const signing = resolveSigning(env);
-  if (!signing) throw new Error("Windows signing is not configured: set JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR.");
+  if (!signing) throw new Error("Windows signing is not configured: set SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR.");
   execFileSync(signing.signTool, signToolArgs(file, signing.dlib, signingMetadata()), { stdio: "inherit" });
 }
 

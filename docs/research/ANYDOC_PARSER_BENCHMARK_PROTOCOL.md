@@ -6,17 +6,17 @@
 
 ## Purpose
 
-This benchmark decides whether Job Ranger should adopt `@firecrawl/anydoc` as its default local document parser for the first Resume Import slice.
+This benchmark decides whether Sojourner should adopt `@firecrawl/anydoc` as its default local document parser for the first Resume Import slice.
 
 A parser converts documents. It does not establish career truth. Passing this benchmark does not permit extracted claims to become confirmed Candidate Evidence without user authority.
 
 ## Candidate boundary
 
-The candidate is executed from a pinned package version through `npx` for benchmark purposes. It is intentionally not added to Job Ranger runtime dependencies until the adoption gate is satisfied.
+The candidate is executed from a pinned package version through `npx` for benchmark purposes. It is intentionally not added to Sojourner runtime dependencies until the adoption gate is satisfied.
 
-Plain text and pasted text use Job Ranger's native text path and are not counted as evidence that the parser adds value.
+Plain text and pasted text use Sojourner's native text path and are not counted as evidence that the parser adds value.
 
-Hosted OCR is disabled. Image-only PDFs must produce an explicit local failure that Job Ranger can normalize to `ocr-required`; the benchmark must not silently send a personal document to a hosted service.
+Hosted OCR is disabled. Image-only PDFs must produce an explicit local failure that Sojourner can normalize to `ocr-required`; the benchmark must not silently send a personal document to a hosted service.
 
 ## Synthetic corpus
 

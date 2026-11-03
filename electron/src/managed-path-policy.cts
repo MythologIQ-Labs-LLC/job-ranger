@@ -13,7 +13,7 @@ export function assertManagedArtifactPath(
   const relative = path.relative(root, target);
 
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new Error("Only Job Ranger managed artifacts can be revealed.");
+    throw new Error("Only Sojourner managed artifacts can be revealed.");
   }
 
   return target;

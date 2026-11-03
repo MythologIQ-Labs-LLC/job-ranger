@@ -2,11 +2,11 @@
 
 **Status:** Accepted for implementation in development; not a released or verified ChatGPT Web connector  
 **Date:** 2026-10-08  
-**Related:** [ChatGPT integration issue #173](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/173), [Personal Brand ADR-0001](./0001-personal-brand-publishing-and-analytics.md)
+**Related:** [ChatGPT integration issue #173](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/173), [Personal Brand ADR-0001](./0001-personal-brand-publishing-and-analytics.md)
 
 ## Context
 
-Job Ranger is a standalone, local-first Career Ops application. Career Evidence,
+Sojourner is a standalone, local-first Career Ops application. Career Evidence,
 Target Tracks, job opportunities, application records and Personal Brand posts are
 owned by its deterministic application services and user-controlled database.
 Connecting inference must not create a second workspace, require accounts, or
@@ -20,7 +20,7 @@ access are separate capabilities. Implementing a read-only MCP transport
 ## Decision
 
 Build a **local, opt-in stdio MCP 2025-06-18 prototype**, using the same
-compiled Job Ranger Career, JobScout, and Personal Brand backend service
+compiled Sojourner Career, Sojourner, and Personal Brand backend service
 methods already used by the application's human workflows. Keep it isolated
 from both Electron user interface privileges and browser OPFS storage.
 
@@ -42,7 +42,7 @@ from both Electron user interface privileges and browser OPFS storage.
   statement, or post body are treated as instructions.
 * For draft readiness and age-based Personal Brand comparisons, invoke the
   same deterministic `assessPersonalBrandDraft` and
-  `buildPersonalBrandLearningReport` modules used by Job Ranger.
+  `buildPersonalBrandLearningReport` modules used by Sojourner.
   Human editorial approval, exact-content publication, provider access,
   career writes, and analytics imports remain inaccessible to this adapter.
 * A snapshot deliberately becomes stale after startup; the user restarts
@@ -102,4 +102,4 @@ HTTP port; uploading the full workspace to a hosted replica by default;
 creating a model-owned knowledge store; claiming this prototype is a ChatGPT
 plugin installed or working on ChatGPT Web.
 
-See [Local MCP usage and status](../integrations/JOB_RANGER_MCP_READONLY.md).
+See [Local MCP usage and status](../integrations/SOJOURNER_MCP_READONLY.md).

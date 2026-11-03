@@ -8,13 +8,13 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { BackupService, applyPendingRestore } = require('../electron-runtime/electron/src/backup-service.cjs');
 const { SqliteClient } = require('../electron-runtime/electron/src/sqlite.cjs');
 const { replaceNul, findNulText, repairStoredNulTextOnce } = require('../electron-runtime/electron/src/nul-text.cjs');
 
-const engine = globalThis.__JOB_RANGER_SQL_ENGINE__ ?? 'sqlite3-cli';
+const engine = globalThis.__SOJOURNER_SQL_ENGINE__ ?? 'sqlite3-cli';
 const R = '\uFFFD';
 
 function greenhouseWithNul() {
@@ -47,7 +47,7 @@ function greenhouseWithNul() {
 
 async function installation(userDataDirectory, fetchImpl) {
   const dataDirectory = path.join(userDataDirectory, 'data');
-  const backend = new JobScoutBackend({ dataDirectory, schedulerEnabled: false, fetchImpl });
+  const backend = new SojournerBackend({ dataDirectory, schedulerEnabled: false, fetchImpl });
   await backend.initialize();
   const status = await backend.getSystemStatus(process.platform);
   const career = new CareerBackend({ dataDirectory, databasePath: status.databasePath, sqliteBinaryPath: status.sqliteBinaryPath });
@@ -59,7 +59,7 @@ async function run() {
   assert.deepEqual(replaceNul('a\u0000b\u0000'), { text: `a${R}b${R}`, replaced: 2 });
   assert.deepEqual(replaceNul('clean'), { text: 'clean', replaced: 0 });
 
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-nul-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-nul-'));
   try {
     // A listing carrying NUL keeps all of its text, shows U+FFFD, and the run succeeds.
     const scraping = await installation(path.join(root, 'scrape'), greenhouseWithNul());

@@ -1,6 +1,6 @@
 # Clean-Machine Trust Validation
 
-This runbook records the external evidence required before Job Ranger promotes a stable public Windows/macOS release.
+This runbook records the external evidence required before Sojourner promotes a stable public Windows/macOS release.
 
 It complements hosted package validation. It does **not** replace the release pipeline's package-smoke, checksum, or signing checks.
 
@@ -38,7 +38,7 @@ From a checkout of the exact release tag or a trusted copy of the verification s
 ```powershell
 ./scripts/verify-windows-distribution.ps1 `
   -RequireSigned `
-  -ArtifactPath "C:\Users\<you>\Downloads\Job.Ranger-v1.2.0-windows-x64.exe" `
+  -ArtifactPath "C:\Users\<you>\Downloads\Sojourner-v1.0.0-alpha.1-windows-x64.exe" `
   -ReportPath ".\windows-clean-machine-signing.json"
 ```
 
@@ -69,7 +69,7 @@ A silent `/S` install may be useful as a separate automation check, but it is **
 
 ### 5. First launch
 
-Launch Job Ranger from the installed application shortcut/start-menu entry.
+Launch Sojourner from the installed application shortcut/start-menu entry.
 
 Record:
 
@@ -99,14 +99,14 @@ Download the architecture-appropriate DMG from the stable GitHub Release.
 Verify its SHA-256 against the published checksum file:
 
 ```bash
-shasum -a 256 ~/Downloads/Job.Ranger-v1.2.0-macos-arm64.dmg
+shasum -a 256 ~/Downloads/Sojourner-v<version>-macos-arm64.dmg
 ```
 
 (or the x64 filename on an Intel Mac).
 
 ### 3. Mount/install normally
 
-Open the DMG and copy Job Ranger to `/Applications` using the normal user flow.
+Open the DMG and copy Sojourner to `/Applications` using the normal user flow.
 
 Do not use `xattr -dr com.apple.quarantine` or globally disable Gatekeeper.
 
@@ -117,7 +117,7 @@ From a checkout of the exact release tag or a trusted copy of the verification s
 ```bash
 bash scripts/verify-macos-distribution.sh \
   --require-trust \
-  --app "/Applications/Job Ranger.app" \
+  --app "/Applications/Sojourner.app" \
   --report ./macos-clean-machine-signing.txt
 ```
 
@@ -132,13 +132,13 @@ The command records and enforces:
 
 ### 5. First launch
 
-Launch `/Applications/Job Ranger.app` normally through Finder/Launchpad.
+Launch `/Applications/Sojourner.app` normally through Finder/Launchpad.
 
 Record:
 
 - whether Gatekeeper accepts the app without an unsigned-app override;
 - any warning/prompt shown;
-- whether Job Ranger reaches its normal first-run UI;
+- whether Sojourner reaches its normal first-run UI;
 - any startup error.
 
 A stable Developer ID-signed/notarized build should not depend on the tester-only **Open Anyway** path documented for unsigned prereleases.

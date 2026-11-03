@@ -11,12 +11,12 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const work = mkdtempSync(path.join(os.tmpdir(), "job-ranger-demo-frames-"));
+const work = mkdtempSync(path.join(os.tmpdir(), "sojourner-demo-frames-"));
 const video = path.join(work, "sample.webm");
 const frames = path.join(work, "frames");
 
 try {
-  const browser = await chromium.launch({ executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined });
+  const browser = await chromium.launch({ executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined });
   const page = await browser.newPage();
   await page.setContent("<canvas id='c' width='320' height='180'></canvas>");
   const base64 = await page.evaluate(async () => {

@@ -1,9 +1,9 @@
 # Release Readiness Contract
 
-> **CURRENT ARCHITECTURE OVERRIDE (2026-10-16):** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) governs product distribution. **Only the PWA/web product is a future public release target.** Native NSIS/Store/macOS checklists below remain historical or engineering-test procedures, never release blockers. This document is being reconciled; no native signing, Store listing, notarization or installer checks may be demanded for PWA publication.
+> **CURRENT ARCHITECTURE (2026-11-02):** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) governs product distribution. **ARCH-001: the signed Windows installer is the primary deliverable, and the PWA continues as the cross-environment channel.** Windows releases follow [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1) and section 7; PWA releases follow [Current PWA release acceptance](#current-pwa-release-acceptance-pwa-publication-only). Microsoft Store and native macOS checklists remain historical or engineering-test procedures, never release blockers, and no Windows signing or installer check may be demanded for a PWA-only publication.
 
 
-This document defines the minimum evidence required before Job Ranger publishes a new user-installable release.
+This document defines the minimum evidence required before Sojourner (historically Job Ranger) publishes a new user-installable release.
 
 A merged `main` branch is **not** a release. A passing unit test is **not** a release. Electron Builder being configured for a platform is **not** a release. A release exists only when an immutable version/tag has been validated and published with the artifacts users are actually expected to run.
 
@@ -14,17 +14,49 @@ A merged `main` branch is **not** a release. A passing unit test is **not** a re
 - **`main`**: authority for current merged development, which may be ahead of the published product.
 - **Documentation on `main`**: must describe both boundaries honestly.
 
-The current published stable release is **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`, promoted byte-for-byte from rc.5). It is immutable historical release truth.
+**No Sojourner release is published yet.** The first is `v1.0.0-alpha.1` (a GitHub pre-release). The last published Job Ranger release was **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`, promoted byte-for-byte from rc.5). On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits (`job-ranger-v1.2.0`); Sojourner is a separate product line whose tags are `v*`.
 
-Historical native-release assumptions below have been superseded by [ARCH-001–003](./ARCHITECTURE_INDEX.md). For PWA releases, qualify actual HTTPS origin, browser workflows, data isolation, persistence, build identity, CSP/headers, and service-worker safety. Historic channels were:
+Channels under [ARCH-001–003](./ARCHITECTURE_INDEX.md):
 
-- **Current supported target:** web/PWA only. Microsoft Store native is historical testing infrastructure, **not** a forward channel.
-- **Advanced/test artifacts:** the direct-download NSIS installer, unless it is independently signed. Azure Artifact Signing is optional and never blocks a release.
-- **Not part of the forward architecture:** native macOS and Linux packages.
+- **Primary:** the signed Windows NSIS installer `Sojourner-v<version>-windows-x64.exe`. Every published Windows installer is Authenticode-signed by `MythologIQ Labs, LLC`.
+- **Continuing:** the web/PWA. For PWA releases, qualify the actual HTTPS origin, browser workflows, data isolation, persistence, build identity, CSP/headers, and service-worker safety.
+- **Not shipping channels:** the Microsoft Store package (manual engineering builds only) and native macOS and Linux packages.
 
-## Current PWA release acceptance (authoritative; effective 2026-10-16)
+## Current Windows release acceptance (v1.0.0-alpha.1)
 
-This section replaces native distribution acceptance for **all future product releases**. It is governed by [ARCH-001–006](./ARCHITECTURE_INDEX.md). The native installation, signing, Store and notarization procedures further below are preserved **only for historical verification and internal engineering tests**. They MUST NOT be required for release of the PWA or Studio demo.
+The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies section 7 to this release. Record the evidence in the release's validation record (see [Evidence record](#evidence-record)).
+
+### Candidate identification
+- [ ] `package.json` and the top-level `package-lock.json` entries are `1.0.0-alpha.1`; the tag is `v1.0.0-alpha.1` on the reviewed `main` commit, and that commit is recorded.
+- [ ] `electron-builder.json` uses `appId` `com.mythologiq.sojourner`, `nsis.deleteAppDataOnUninstall: false` and `nsis.include` `build/installer.nsh` (removes a legacy Job Ranger install, appId `com.jobranger.app`, keeping its data; `tests/nsis-legacy-uninstall.test.cjs`), names the product `Sojourner`, and carries `Copyright © 2026 MythologIQ Labs, LLC`.
+- [ ] The CHANGELOG `1.0.0-alpha.1` section describes only what is on the tagged commit (Windows Drive export #369 and storage locations #370 are on `main` since 2026-11-02).
+- [ ] Local gates pass on the tagged commit: `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run test:pwa:e2e`, `npm run test:release-upgrade` (baseline `job-ranger-v1.2.0`).
+
+### Build, package and smoke (section 7)
+- [ ] The tag push runs `release-build.yml`; the owner approves the `release` environment. No Microsoft Store job runs on the tag push.
+- [ ] The installer is `release/Sojourner-v1.0.0-alpha.1-windows-x64.exe`, and the unpacked app is `release/win-unpacked/Sojourner.exe` with `resources/sqlite3.exe`.
+- [ ] Packaged SQLite resolution selects the bundled `sqlite3.exe` with `SQLITE3_PATH` removed.
+- [ ] `scripts/run-packaged-smoke-windows.ps1` passes: `windows-package-smoke.json` reports `passed` for the healthcare scenario with app version `1.0.0-alpha.1`.
+
+### Signing verification (ARCH-006)
+- [ ] `scripts/verify-windows-distribution.ps1 -RequireSigned` passes for `Sojourner.exe`, `resources/elevate.exe`, `resources/sqlite3.exe` and the installer: every one passes `signtool verify /pa`, has a `Valid` Authenticode status, signer subject `CN="MythologIQ Labs, LLC"`, and a timestamp.
+- [ ] `windows-signing.json` (with `requireSigned: true`), `windows-SHA256SUMS.txt` and `windows-release-manifest.json` (`publicRelease: true`) are attached, and `gh attestation verify Sojourner-v1.0.0-alpha.1-windows-x64.exe --repo MythologIQ-Labs-LLC/sojourner` passes.
+- [ ] The installer is only called "signed" in release notes or docs after the above evidence exists.
+
+### Upgrade from Job Ranger v1.2.0 data
+- [ ] Automated: `npm run test:release-upgrade` passes from `job-ranger-v1.2.0` (every baseline data folder is migrated by the start-up migration into a `Sojourner` folder with all records and the legacy folder unchanged, then opens, migrations apply, backups restore). `tests/legacy-migration.test.cjs` covers every migration branch, including fallback to the legacy folder.
+- [ ] On a Windows machine with Job Ranger v1.2.0 installed and real-looking data in `%APPDATA%\job-ranger`: create a `.jobranger` backup, run the Sojourner installer, and confirm the installer removed Job Ranger (one entry, "Sojourner", in Installed apps; no "Job Ranger" shortcuts or executable remain).
+- [ ] First launch of Sojourner shows the existing Career Profile, Career Evidence, Target Tracks, applications and resumes; Settings → This installation reports the data location `%APPDATA%\Sojourner`; `%APPDATA%\job-ranger` is unchanged and holds `MIGRATED-TO-SOJOURNER.txt`.
+- [ ] Uninstalling Sojourner leaves `%APPDATA%\Sojourner` in place; reinstalling opens the same data.
+- [ ] A clean-machine install (no Sojourner) launches normally, and SmartScreen / Smart App Control behavior is recorded (section 10).
+
+### Publication (section 11)
+- [ ] The GitHub Release is titled "Sojourner v1.0.0-alpha.1" and is marked **pre-release** (the workflow does this for `-alpha`, `-beta` and `-rc.` tags).
+- [ ] README "Get Sojourner" and `docs/SYSTEM_STATE.md` say the release exists only after the assets are uploaded and verified.
+
+## Current PWA release acceptance (PWA publication only)
+
+This section governs publication of the **web app (PWA)** and the Studio-linked demo; it was first adopted on 2026-10-16 and its scope was narrowed on 2026-11-02 when [ARCH-001](./ARCHITECTURE_INDEX.md) made the signed Windows installer the primary release. It does **not** replace or relax the Windows release gates: a Windows release must pass [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1) and section 7, including signing verification. In the other direction, Windows installer, signing, Store and notarization checks MUST NOT be required for a PWA-only or Studio demo publication.
 
 ### PWA candidate identification
 - [ ] State exactly whether the candidate is a **bounded Studio-linked demonstration**, a fuller PWA public release, or an internal staging preview; distinguish deliberately excluded capabilities in public copy and UI.
@@ -53,9 +85,11 @@ This section replaces native distribution acceptance for **all future product re
 
 **Do not treat an Electron installer build, Store package test, native trust verifier, or historical GitHub Release as evidence that any of the preceding PWA acceptance gates passed.**
 
-## Historical native release verification (not a PWA release gate)
+## Historical native release verification and detailed release checklists
 
-## Release-blocking checklist (historical native artifact checklist)
+The numbered checklist below predates the 2026-11-02 decision. **Section 7 (Windows NSIS) is the current Windows release gate**, applied through [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1); sections 7a (Microsoft Store) and 8 (macOS) are historical or engineering-test procedures and are never release blockers; none of it is a PWA publication gate.
+
+## Release-blocking checklist
 
 ### 1. Scope and version
 
@@ -137,7 +171,7 @@ For documentation-only remediation, code tests may reuse fresh evidence from the
 - [ ] Historical plans are unmistakably historical from the documentation index.
 - [ ] Screens/workspace names in HELP match current navigation.
 
-### 7. Windows direct-download (NSIS) package validation — advanced/test channel
+### 7. Windows direct-download (NSIS) package validation — primary channel (ARCH-001)
 
 - [ ] Build from the immutable release tag on the supported Windows builder.
 - [ ] NSIS x64 installer is produced with the expected versioned filename.
@@ -145,12 +179,12 @@ For documentation-only remediation, code tests may reuse fresh evidence from the
 - [ ] Packaged `resources/sqlite3.exe` exists and executes.
 - [ ] With `SQLITE3_PATH` removed, runtime resolution selects the packaged SQLite binary.
 - [ ] Generated `electron-runtime` entry point exists in the packaged application.
-- [ ] The packaged `Job Ranger.exe` executes the headless package-smoke harness from its own `app.asar` using an isolated data root.
+- [ ] The packaged `Sojourner.exe` (Job Ranger releases: `Job Ranger.exe`) executes the headless package-smoke harness from its own `app.asar` using an isolated data root.
 - [ ] `windows-package-smoke.json` reports `passed` for the required non-software scenario and is included in release evidence.
 - [ ] The Windows trust verifier executes successfully in the native release runner.
 - [ ] Installer launch/upgrade is exercised on a clean supported Windows system before stable publication.
-- [ ] Existing user data survives installer upgrade.
-- [ ] If (and only if) the direct installer is promoted as an ordinary-user channel, it carries valid Authenticode signatures and observed SmartScreen / Smart App Control behavior is recorded on a clean supported machine. Otherwise its release manifest marks it `testerOnly` and release notes label it an advanced/test artifact.
+- [ ] Existing user data survives installer upgrade, including an upgrade from Job Ranger v1.2.0 (legacy data folder `%APPDATA%\job-ranger`, migrated to `%APPDATA%\Sojourner` by `electron/src/legacy-migration.cts`).
+- [ ] Every published installer carries valid, timestamped Authenticode signatures by `MythologIQ Labs, LLC` (`verify-windows-distribution.ps1 -RequireSigned`), and observed SmartScreen / Smart App Control behavior is recorded on a clean supported machine. Only build-only candidates are unsigned; their release manifest marks them `testerOnly`.
 - [ ] A GitHub artifact attestation exists for the installer.
 
 ### 7a. Microsoft Store package validation (supported Windows channel)
@@ -161,7 +195,7 @@ Design and procedure: [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT
   - `windows-store-package.json`: identity, version, capabilities exactly `runFullTrust` + `internetClient`, no extensions, canonical assets, bundled `sqlite3.exe`;
   - `windows-store-package-smoke.json`: in-package healthcare Career Ops smoke, `windowsStore: true`, isolated data root, native DOCX resume import, Chromium PDF and native parseability, archive round trip;
   - `windows-store-install.json`: data in package storage, no leak into `%APPDATA%`, historical NSIS data unchanged, uninstall behavior.
-- [ ] Partner Center identity variables are configured and the submission package was built with `JOB_RANGER_REQUIRE_STORE_IDENTITY=1`.
+- [ ] Partner Center identity variables are configured and the submission package was built with `SOJOURNER_REQUIRE_STORE_IDENTITY=1`.
 - [ ] The `.appx`, its checksums, `windows-store-release-manifest.json`, and its artifact attestation are attached to the release.
 - [ ] Partner Center certification passed (record the submission ID).
 - [ ] A clean supported Windows 11 install from the Store listing, first launch, an upgrade from an earlier Store version, and backup/restore are recorded.
@@ -172,7 +206,7 @@ Design and procedure: [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT
 Design and procedure: [`design/PWA_RUNTIME.md`](./design/PWA_RUNTIME.md).
 
 - [ ] The `pwa` workflow passed for the release commit: production build, web-parser benchmark, and the browser suite (Career Ops end to end, Electron↔PWA portability, rejected backups, offline shell, verified/rejected updates, quota failure, tab lock).
-- [ ] `job-ranger-web-v<version>.zip`, `web-build-info.json` (build ID, commit, CSP, asset hashes), the browser-suite report, checksums, the release manifest, and the artifact attestation are attached to the release.
+- [ ] `sojourner-web-v<version>.zip`, `web-build-info.json` (build ID, commit, CSP, asset hashes), the browser-suite report, checksums, the release manifest, and the artifact attestation are attached to the release.
 - [ ] Deployment uses `deploy-pwa.yml` from the attested archive (no rebuild), behind the protected `production-web` environment, to an HTTPS origin that serves the shipped `_headers`.
 - [ ] The post-deploy check confirms the live build ID and security headers.
 - [ ] The browser/platform matrix is recorded from real validation: Chromium-based browsers on Windows, macOS, and Linux; Firefox; Safari, including install/standalone behavior where supported.
@@ -283,12 +317,16 @@ Each release should record:
 - known limitations or waived checks and rationale;
 - links to retained validation evidence.
 
-## Current v1.2.0 release-readiness status
+## Current v1.0.0-alpha.1 release-readiness status
 
-**Published:** `v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` on 2026-10-05.
+**Prepared, not tagged.** `package.json` is `1.0.0-alpha.1`. The gate is [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1). No `v*` tag exists yet.
 
-The release is non-prerelease and GitHub's current latest release. Its Windows/macOS assets are byte-identical to the validated rc.5 packages and include packaged smoke, trust-state, checksum, and release-manifest evidence. v1.2.0 was published under an explicit owner-approved unsigned/unnotarized exception. Forward distribution moved to the Microsoft Store (#125) and the web/PWA runtime (#130). Any change ships as a new release; v1.2.0 is never mutated.
+## Job Ranger v1.2.0 release-readiness status (historical)
 
-## Current v1.3.0 release-readiness status
+**Published:** `v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` on 2026-10-05. Its GitHub Release was removed on 2026-11-02 and the tag renamed `job-ranger-v1.2.0`.
 
-**Candidate preparation.** v1.3.0 is the selected next version (`package.json`). No `v1.3.0-rc.N` tag exists yet. The scope, the pre-tag validation, the automated upgrade evidence from v1.2.0, and the remaining gates are recorded in [`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md).
+The release was non-prerelease and GitHub's latest release until then. Its Windows/macOS assets are byte-identical to the validated rc.5 packages and include packaged smoke, trust-state, checksum, and release-manifest evidence. v1.2.0 was published under an explicit owner-approved unsigned/unnotarized exception. Forward distribution moved to the Microsoft Store (#125) and the web/PWA runtime (#130). Any change ships as a new release; v1.2.0 is never mutated.
+
+## Job Ranger v1.3.0 release-readiness status (superseded)
+
+**Never tagged.** The v1.3.0 Job Ranger candidate was superseded by Sojourner `1.0.0-alpha.1`, which ships its content. The scope, the pre-tag validation, the automated upgrade evidence from v1.2.0, and the remaining gates are recorded in [`validation/RELEASE_CANDIDATE_V1.3.0.md`](./validation/RELEASE_CANDIDATE_V1.3.0.md).

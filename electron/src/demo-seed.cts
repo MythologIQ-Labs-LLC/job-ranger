@@ -15,10 +15,10 @@
 import type { CareerProfile, CareerTargetTrackInput, Job, TrackedApplication } from "../../src/shared/contracts.js";
 import type { UserAuthoredEvidenceInput } from "../../src/shared/evidence-authoring.js";
 import { DEMO_LISTING_ORIGIN, demoListingUrl, isDemoListing } from "../../src/shared/demo-listing.js";
-import type { JobScoutBackend } from "./backend.cjs";
+import type { SojournerBackend } from "./backend.cjs";
 import type { CareerBackend } from "./career-backend.cjs";
 import type { RequirementBackend } from "./requirement-backend.cjs";
-import { JobScoutRepository } from "./repository.cjs";
+import { SojournerRepository } from "./repository.cjs";
 import { parseSalary, toSnippet, toSourceText } from "./scrapers.cjs";
 import { SqliteClient } from "./sqlite.cjs";
 import { validateCompanyDraft } from "./validators.cjs";
@@ -35,7 +35,7 @@ export const DEMO_EMPLOYER_NAME = "Harbor Health";
 // every fixture string because nothing here runs unless the demo flavor seeds.
 export const DEMO_EMPLOYER_URL = "https://demo-listing.invalid/harbor-health";
 export const DEMO_TARGET_TRACK_NAME = "Practice operations";
-export const DEMO_EXTRACTION_VERSION = "job-ranger-demo-fixture-v1";
+export const DEMO_EXTRACTION_VERSION = "sojourner-demo-fixture-v1";
 
 export function demoProfile(): CareerProfile {
   return {
@@ -233,7 +233,7 @@ export const DEMO_APPLICATION_NOTES =
   "Fictional demo application: submitted through the employer's careers page and waiting to hear back. Sample data only.";
 
 export interface DemoSeedOptions {
-  backend: JobScoutBackend;
+  backend: SojournerBackend;
   careerBackend: CareerBackend;
   requirementBackend: RequirementBackend;
   databasePath: string;
@@ -274,7 +274,7 @@ async function seedDirection(careerBackend: CareerBackend): Promise<string> {
 }
 
 async function seedListings(options: DemoSeedOptions, companyId: string): Promise<Job[]> {
-  const repository = new JobScoutRepository(new SqliteClient(options.databasePath, options.sqliteBinaryPath));
+  const repository = new SojournerRepository(new SqliteClient(options.databasePath, options.sqliteBinaryPath));
   const now = options.now ?? new Date();
   const capturedAt = now.getTime();
   const jobs: Job[] = [];

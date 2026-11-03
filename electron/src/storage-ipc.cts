@@ -1,6 +1,6 @@
 import path from "node:path";
 import { app, dialog, ipcMain, safeStorage, shell } from "electron";
-import type { JobRangerArchiveProducer } from "../../src/shared/backup.js";
+import type { SojournerArchiveProducer } from "../../src/shared/backup.js";
 import type { StorageResult } from "../../src/shared/storage-locations.js";
 import type { BackupService } from "./backup-service.cjs";
 import type { DriveIpcHandles } from "./drive-ipc.cjs";
@@ -78,7 +78,7 @@ export function safeStorageEncryption(): CredentialEncryption {
 
 /** %USERPROFILE%\Documents\Sojourner; a non-packaged E2E run may point it at a temporary folder. */
 function defaultLocalFolder(runtime: { env: Record<string, string | undefined>; isPackaged: boolean }): string {
-  const override = runtime.env.JOB_RANGER_STORAGE_TEST_DEFAULT_FOLDER;
+  const override = runtime.env.SOJOURNER_STORAGE_TEST_DEFAULT_FOLDER;
   if (!runtime.isPackaged && override && path.isAbsolute(override)) return override;
   return path.join(app.getPath("documents"), "Sojourner");
 }
@@ -96,7 +96,7 @@ export async function initializeStorageIpc(options: {
   databasePath: string;
   sqliteBinaryPath: string;
   backupService: BackupService;
-  producer: JobRangerArchiveProducer;
+  producer: SojournerArchiveProducer;
   /** #369's Google sign-in; null when Drive export could not start (Google is then unavailable). */
   drive: DriveIpcHandles | null;
 }): Promise<StorageService> {

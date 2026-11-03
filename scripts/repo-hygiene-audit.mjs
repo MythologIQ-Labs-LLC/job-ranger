@@ -71,7 +71,7 @@ function main() {
   const r = auditRepository(state, { staleDays: days });
   if (args.includes("--json")) return void process.stdout.write(JSON.stringify(r, null, 2) + "\n");
   process.stdout.write([
-    "Job Ranger repository hygiene (read-only)",
+    "Sojourner repository hygiene (read-only)",
     "Open: " + r.counts.issues + " issues, " + r.counts.prs + " PRs (" + r.counts.drafts + " drafts)",
     "Active feature PRs (explicit labels): " + r.counts.activePrs + " / " + r.activeLimit,
     "Issues missing status/area/owner: " + r.issuesMissingTriage.length,

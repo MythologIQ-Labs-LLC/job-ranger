@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Job Ranger welcomes constructive participation from people with different backgrounds, skill levels, and professional experiences.
+Sojourner welcomes constructive participation from people with different backgrounds, skill levels, and professional experiences.
 
 ## Expected Behavior
 
@@ -15,7 +15,7 @@ Participants should:
 
 ## Project-Specific Standard
 
-Job Ranger is explicitly intended to become usable by ordinary job seekers, including people who are not developers. Dismissing accessibility, clarity, or nontechnical users as unimportant is inconsistent with the project's product direction.
+Sojourner is explicitly intended to become usable by ordinary job seekers, including people who are not developers. Dismissing accessibility, clarity, or nontechnical users as unimportant is inconsistent with the project's product direction.
 
 ## Enforcement
 
@@ -25,4 +25,4 @@ Serious conduct concerns should be raised privately with the maintainer when pos
 
 ## Scope
 
-This code applies to project spaces controlled by Job Ranger, including issues, pull requests, reviews, discussions, and other project communication channels.
+This code applies to project spaces controlled by Sojourner, including issues, pull requests, reviews, discussions, and other project communication channels.

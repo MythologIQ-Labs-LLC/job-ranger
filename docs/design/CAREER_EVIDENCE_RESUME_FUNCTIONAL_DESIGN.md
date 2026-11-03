@@ -1,12 +1,12 @@
 # Functional Design: Career Evidence and Resume Intelligence
 
-**Status:** Accepted implementation architecture for the next Job Ranger product program  
+**Status:** Accepted implementation architecture for the next Sojourner product program  
 **Date:** 2026-09-24  
 **Scope:** Candidate evidence, resume import, tailoring, review, rendering, and application linkage.
 
 ## 1. Product decision
 
-Job Ranger will not implement a document-first "resume builder" as the architectural center of this phase.
+Sojourner will not implement a document-first "resume builder" as the architectural center of this phase.
 
 The product will implement a **Career Evidence domain**. Resumes are versioned projections of that evidence for a particular purpose and opportunity.
 
@@ -30,14 +30,14 @@ Application
 
 This architecture is occupation-agnostic, inference-optional, and independent of any one parser, template language, LLM, or external career tool.
 
-The product-wide Technical Capability Catalog reconciliation in `../research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md` is controlling context for external-tool selection. Job Ranger keeps a native vertical core and adopts external capabilities only at narrow replaceable seams.
+The product-wide Technical Capability Catalog reconciliation in `../research/SOJOURNER_CAPABILITY_CATALOG_RECONCILIATION.md` is controlling context for external-tool selection. Sojourner keeps a native vertical core and adopts external capabilities only at narrow replaceable seams.
 
 ## 2. Functional goals
 
 A user should be able to:
 
 1. import an existing resume without losing the original;
-2. review what Job Ranger believes the resume says;
+2. review what Sojourner believes the resume says;
 3. correct ambiguous or wrong interpretations;
 4. accumulate verified career evidence over time;
 5. create a resume from verified evidence even when no AI provider is configured;
@@ -65,7 +65,7 @@ Reasons:
 - explicit `NeedsOcr`, `Encrypted`, `Malformed`, and resource-limit failure classes;
 - no model or cloud service required for ordinary imports.
 
-### Selected as native Job Ranger behavior
+### Selected as native Sojourner behavior
 
 - candidate evidence model;
 - source provenance and verification state;
@@ -81,7 +81,7 @@ Career-Ops informs several of these mechanisms, but no Career-Ops runtime will b
 
 ### Selected rendering strategy for the first release
 
-Use **Job Ranger's existing Electron/Chromium runtime** to render ATS-safe HTML/CSS into PDF through a hidden isolated rendering window and Electron PDF printing.
+Use **Sojourner's existing Electron/Chromium runtime** to render ATS-safe HTML/CSS into PDF through a hidden isolated rendering window and Electron PDF printing.
 
 Reasons:
 
@@ -132,7 +132,7 @@ In practical terms:
 
 - `anydoc` should handle import and, if its benchmark permits, generated-PDF verification;
 - Electron/Chromium should handle initial PDF rendering;
-- Job Ranger should own evidence/mapping/artifact state;
+- Sojourner should own evidence/mapping/artifact state;
 - Career-Ops, Tailit, and EasyPeasyCV remain mechanism donors rather than embedded products;
 - OCR, DOCX output, richer parser fallback, and external research remain separately justified later capabilities.
 
@@ -168,7 +168,7 @@ Rules:
 - use a content hash for duplicate detection and provenance;
 - do not rewrite the original source in place.
 
-Large original files should remain managed files in Job Ranger's data directory. SQLite stores metadata and relationships rather than becoming an accidental blob warehouse.
+Large original files should remain managed files in Sojourner's data directory. SQLite stores metadata and relationships rather than becoming an accidental blob warehouse.
 
 ### 4.2 ExtractionSnapshot
 
@@ -235,7 +235,7 @@ The source locator may be a page number, extracted block index, paragraph/bullet
 
 ### 4.5 JobRequirement
 
-Normalized requirement extracted from a Job Ranger job record.
+Normalized requirement extracted from a Sojourner job record.
 
 ```text
 JobRequirement
@@ -470,7 +470,7 @@ The user must always be able to edit profile preferences directly.
 
 ## 9. Resume creation without inference
 
-Job Ranger must be able to produce a useful resume with no configured AI provider.
+Sojourner must be able to produce a useful resume with no configured AI provider.
 
 Deterministic creation should support:
 
@@ -646,11 +646,11 @@ Use a dedicated hidden `BrowserWindow` with:
 - no remote resources;
 - locally packaged fonts/assets only.
 
-Render a structured resume projection into Job Ranger-owned HTML/CSS and export with Electron PDF printing.
+Render a structured resume projection into Sojourner-owned HTML/CSS and export with Electron PDF printing.
 
 ### 13.2 Template system
 
-Templates are lightweight Job Ranger-owned adapters:
+Templates are lightweight Sojourner-owned adapters:
 
 ```text
 ResumeProjection
@@ -676,7 +676,7 @@ Do not ship dozens of templates simply because another project has dozens of tem
 
 Every imported third-party template requires individual license review. A host project's MIT license does not relicense bundled third-party templates/fonts.
 
-Prefer Job Ranger-owned templates for the initial release.
+Prefer Sojourner-owned templates for the initial release.
 
 ## 14. JSON Resume interoperability
 
@@ -687,7 +687,7 @@ It should be implemented later as:
 - import adapter;
 - export adapter.
 
-It is **not** the canonical Job Ranger data model because it does not provide the provenance/verification relationships required by Career Evidence.
+It is **not** the canonical Sojourner data model because it does not provide the provenance/verification relationships required by Career Evidence.
 
 ## 15. Security model
 
@@ -810,7 +810,7 @@ Evaluate against:
 - memory footprint;
 - Windows/macOS Electron packaging;
 - transitive license clarity;
-- ability to re-parse Job Ranger-generated PDFs.
+- ability to re-parse Sojourner-generated PDFs.
 
 Only introduce a second parser if there is a demonstrated gap important enough to justify the maintenance burden.
 
@@ -845,7 +845,7 @@ Only introduce a second parser if there is a demonstrated gap important enough t
 ### R3 — deterministic resume creation
 
 - ResumeProjection + ResumeStatement;
-- Job Ranger-owned ATS-safe templates;
+- Sojourner-owned ATS-safe templates;
 - Chromium PDF renderer;
 - Truth Gate;
 - PDF re-parse/Parseability Gate;
@@ -870,7 +870,7 @@ Only introduce a second parser if there is a demonstrated gap important enough t
 
 ## 20. Definition of done for the first resume milestone
 
-The milestone is not complete merely because Job Ranger can generate a PDF.
+The milestone is not complete merely because Sojourner can generate a PDF.
 
 It is complete when a nontechnical user can:
 

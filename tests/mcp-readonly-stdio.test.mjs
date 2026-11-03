@@ -12,13 +12,13 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const load = (file) => require(path.join(root, "electron-runtime", "electron", "src", file));
-const { JobScoutBackend } = load("backend.cjs");
+const { SojournerBackend } = load("backend.cjs");
 const { CareerBackend } = load("career-backend.cjs");
 const { PersonalBrandBackend } = load("personal-brand-backend.cjs");
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "jr-mcp-smoke-"));
 const dir = path.join(tmp, "canonical");
 await fs.mkdir(dir, { recursive: true });
-const backend = new JobScoutBackend({ dataDirectory: dir, schedulerEnabled: false,
+const backend = new SojournerBackend({ dataDirectory: dir, schedulerEnabled: false,
   fetchImpl: async () => { throw new Error("Network forbidden during test."); } });
 
 function protocolClient(args) {
@@ -92,7 +92,7 @@ try {
   const init = await cli.call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: {
     name: "test-client", version: "1.0.0",
   } });
-  assert.equal(init.result.serverInfo.name, "job-ranger-local-readonly");
+  assert.equal(init.result.serverInfo.name, "sojourner-local-readonly");
   const toolList = await cli.call("tools/list");
   const toolNames = toolList.result.tools.map((tool) => tool.name);
   assert(toolNames.includes("get_confirmed_career_evidence"));

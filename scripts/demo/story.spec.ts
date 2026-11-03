@@ -13,9 +13,9 @@ import { DEMO_EMPLOYER, DEMO_JOB_TITLE, TARGET_TRACK, prepareDemoContext, seedDe
 import { caption, freezeFrame, glideClick, glideTo, installCursor, installTitleCard, releaseFrame, removeTitleCard, scrollToElement, scrollToTop, waitForDemoReady, waitForLayoutStable, type DemoReadyExpectations } from "./ready";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = process.env.JOB_RANGER_DEMO_OUT ?? path.resolve(here, "..", "..", "build", "demo");
+const out = process.env.SOJOURNER_DEMO_OUT ?? path.resolve(here, "..", "..", "build", "demo");
 const shots = path.join(out, "screenshots");
-const executablePath = process.env.JOB_RANGER_PW_CHROMIUM || undefined;
+const executablePath = process.env.SOJOURNER_PW_CHROMIUM || undefined;
 const VIEWPORT = { width: 1600, height: 900 };
 const FIND_JOBS = "Spend your time on the jobs that look worth it.";
 
@@ -239,7 +239,7 @@ test("sojourner public demo", async () => {
   rmSync(out, { recursive: true, force: true });
   mkdirSync(shots, { recursive: true });
   const server = await startPwaServer(distPwa);
-  const profile = mkdtempSync(path.join(os.tmpdir(), "job-ranger-demo-"));
+  const profile = mkdtempSync(path.join(os.tmpdir(), "sojourner-demo-"));
   const problems: string[] = [];
   const beats: Record<string, number> = {};
   try {

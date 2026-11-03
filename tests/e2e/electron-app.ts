@@ -4,12 +4,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { ONBOARDING_DISMISSED_KEY } from "../../src/demo/session";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "../..");
 const require = createRequire(import.meta.url);
-const onboardingDismissedKey = "job-ranger.onboarding.dismissed.v1";
+// The renderer owns this storage key; importing it keeps the test on whatever name it uses.
+const onboardingDismissedKey = ONBOARDING_DISMISSED_KEY;
 
 export interface ElectronAppFixture {
   electronApp: ElectronApplication;
@@ -41,7 +43,7 @@ interface LaunchElectronAppOptions {
 export async function launchElectronApp(
   options: LaunchElectronAppOptions = {},
 ): Promise<ElectronAppFixture> {
-  const tempDataDir = options.userDataDir ?? await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-e2e-"));
+  const tempDataDir = options.userDataDir ?? await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-e2e-"));
   const electronExe = require("electron") as unknown as string;
 
   console.log("Launching Electron app root:", projectRoot);
@@ -93,7 +95,7 @@ export async function navigateTo(page: Page, route: string): Promise<void> {
   const link = sidebar.locator(`a[href="#${route}"]`);
   // Grouped navigation (#271): open the collapsed group that contains the link, as a person would.
   if (!(await link.isVisible())) {
-    const panelId = await link.evaluate((element) => element.closest("[id^='job-ranger-nav-group-']")?.id ?? null);
+    const panelId = await link.evaluate((element) => element.closest("[id^='sojourner-nav-group-']")?.id ?? null);
     if (panelId) await sidebar.locator(`button[aria-controls="${panelId}"]`).click();
   }
   await link.click();

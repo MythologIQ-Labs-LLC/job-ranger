@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { EvidenceExtensionBackend } = require('../electron-runtime/electron/src/evidence-extension-backend.cjs');
 const { ApplicationMaterialsBackend } = require('../electron-runtime/electron/src/application-materials-backend.cjs');
@@ -13,9 +13,9 @@ const now = '2026-10-03T03:20:00.000Z';
 const applicationId = 'application-materials-smoke';
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-materials-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-materials-'));
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => { throw new Error('application material smoke test must not use the network'); },

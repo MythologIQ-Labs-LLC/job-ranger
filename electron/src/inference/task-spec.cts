@@ -49,7 +49,7 @@ export interface TaskCheckDeps {
   truthGate: TruthGate;
 }
 
-/** A task check returns null on success or a Job Ranger-authored reason. */
+/** A task check returns null on success or a Sojourner-authored reason. */
 export type TaskCheckResult = { code: "policy-violation" | "validation-failed"; message: string } | null;
 
 export interface TaskSpec<TInput, TProposal> {

@@ -3,7 +3,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron/backend.cjs");
+const { SojournerBackend } = require("../electron/backend.cjs");
 
 async function waitFor(condition, timeoutMs = 1000) {
   const startedAt = Date.now();
@@ -87,11 +87,11 @@ function createMockFetch() {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "jobscout-backend-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-backend-"));
   const mockFetch = createMockFetch();
 
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: mockFetch.fetch,
       schedulerEnabled: false,
@@ -144,7 +144,7 @@ async function run() {
 
     await backend.dispose();
 
-    const reloaded = new JobScoutBackend({
+    const reloaded = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: mockFetch.fetch,
       schedulerEnabled: false,

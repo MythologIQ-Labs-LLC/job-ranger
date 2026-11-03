@@ -229,14 +229,14 @@ function strategySignals(
   groups: OutcomeGroup[],
 ): StrategySignal[] {
   const signals: StrategySignal[] = [];
-  const caveat = "This is an observation from your saved Job Ranger history, not proof of causation or a hiring-market benchmark.";
+  const caveat = "This is an observation from your saved Sojourner history, not proof of causation or a hiring-market benchmark.";
 
   if (totals.tracked < 3) {
     signals.push({
       id: "insufficient-history",
       kind: "insufficient-data",
       sampleSize: totals.tracked,
-      observation: `Job Ranger has only ${totals.tracked} tracked application${totals.tracked === 1 ? "" : "s"}, so outcome patterns would be fragile.`,
+      observation: `Sojourner has only ${totals.tracked} tracked application${totals.tracked === 1 ? "" : "s"}, so outcome patterns would be fragile.`,
       recommendation: null,
       caveat,
     });
@@ -270,7 +270,7 @@ function strategySignals(
       kind: "recurring-gap",
       sampleSize: recurring.applicationCount,
       observation: `“${recurring.label}” appears unsupported or ambiguous across ${recurring.applicationCount} tracked applications.`,
-      recommendation: "Decide whether this is a capability you want to build, evidence you already have but have not recorded, or a signal to narrow the opportunities you pursue. Job Ranger will not change your Career Evidence or target tracks automatically.",
+      recommendation: "Decide whether this is a capability you want to build, evidence you already have but have not recorded, or a signal to narrow the opportunities you pursue. Sojourner will not change your Career Evidence or target tracks automatically.",
       caveat,
     });
   }
@@ -298,7 +298,7 @@ function strategySignals(
       id: "no-strong-pattern",
       kind: "insufficient-data",
       sampleSize: totals.tracked,
-      observation: "Your saved history does not yet contain a strong enough deterministic pattern for Job Ranger to surface a strategy recommendation.",
+      observation: "Your saved history does not yet contain a strong enough deterministic pattern for Sojourner to surface a strategy recommendation.",
       recommendation: null,
       caveat,
     });

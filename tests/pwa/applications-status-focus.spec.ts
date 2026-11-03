@@ -7,7 +7,7 @@ test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
 async function seedThree(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.route("https://boards-api.greenhouse.io/**", route => route.fulfill({
     status: 200,
     contentType: "application/json",

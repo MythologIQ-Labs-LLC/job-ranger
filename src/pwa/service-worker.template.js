@@ -13,13 +13,16 @@
  *   manifest, and kept in a content-addressed cache so they work offline
  *   afterwards. Unverified bytes are never cached or served from the cache.
  */
-const BUILD_ID = "__JOB_RANGER_BUILD_ID__";
-const ASSETS = __JOB_RANGER_PRECACHE__;
-const CACHE_PREFIX = "job-ranger-shell-";
+const BUILD_ID = "__SOJOURNER_BUILD_ID__";
+const ASSETS = __SOJOURNER_PRECACHE__;
+const CACHE_PREFIX = "sojourner-shell-";
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_ID}`;
-const ON_DEMAND = __JOB_RANGER_ON_DEMAND__;
+const ON_DEMAND = __SOJOURNER_ON_DEMAND__;
 // Content-addressed file names, so this cache survives app updates.
-const ON_DEMAND_CACHE = "job-ranger-on-demand-v1";
+const ON_DEMAND_CACHE = "sojourner-on-demand-v1";
+// LEGACY: cache names of builds released as Job Ranger. They hold only reproducible shell
+// assets (never career data), so the first activation of a renamed build deletes them.
+const LEGACY_CACHE_PREFIXES = ["job-ranger-shell-", "job-ranger-on-demand-"];
 const ON_DEMAND_BY_URL = new Map(
   ON_DEMAND.map((asset) => [new URL(asset.path, self.registration.scope).toString(), asset.sha256]),
 );
@@ -92,7 +95,11 @@ self.addEventListener("activate", (event) => {
       const names = await caches.keys();
       await Promise.all(
         names
-          .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+          .filter(
+            (name) =>
+              (name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME) ||
+              LEGACY_CACHE_PREFIXES.some((prefix) => name.startsWith(prefix)),
+          )
           .map((name) => caches.delete(name)),
       );
       if (await caches.has(ON_DEMAND_CACHE)) {

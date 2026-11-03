@@ -70,7 +70,7 @@ export function BackupRestorePanel() {
           <h2 className="text-2xl font-semibold">Backup and restore</h2>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          Create a portable <code>.jobranger</code> backup of Sojourner career data and managed artifacts. The same file restores into Sojourner, including installations previously branded Job Ranger, which is how you move data, for example from an earlier desktop installation into the web app. Restores are validated before the current data is replaced and require a restart (the web app reloads).
+          Create a portable <code>.sojourner</code> backup of Sojourner career data and managed artifacts. The same file restores into Sojourner on any device, and older <code>.jobranger</code> backups (from Sojourner before its rename, or from Job Ranger) still restore, which is how you move data, for example from an earlier desktop installation into the web app. Restores are validated before the current data is replaced and require a restart (the web app reloads).
         </p>
       </div>
 
@@ -125,7 +125,7 @@ export function BackupRestorePanel() {
                 <div>
                   <dt className="font-medium text-[var(--color-text-primary)]">Exported from</dt>
                   <dd data-testid="restore-producer">
-                    {selection.archive.producer.runtime === "web" ? "Sojourner web app" : "Legacy Job Ranger desktop app"} · build {selection.archive.producer.buildId}
+                    {selection.archive.producer.runtime === "web" ? "Sojourner web app" : "Sojourner desktop app"} · build {selection.archive.producer.buildId}
                   </dd>
                 </div>
               )}

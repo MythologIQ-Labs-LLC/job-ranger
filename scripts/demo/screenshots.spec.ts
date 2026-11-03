@@ -13,8 +13,8 @@ import { DEMO_EMPLOYER, DEMO_JOB_TITLE, TARGET_TRACK, prepareDemoContext, seedDe
 import { scrollToElement, scrollToTop, waitForDemoReady, waitForLayoutStable } from "./ready";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = process.env.JOB_RANGER_DEMO_OUT ?? path.resolve(here, "..", "..", "build", "demo", "curated");
-const executablePath = process.env.JOB_RANGER_PW_CHROMIUM || undefined;
+const out = process.env.SOJOURNER_DEMO_OUT ?? path.resolve(here, "..", "..", "build", "demo", "curated");
+const executablePath = process.env.SOJOURNER_PW_CHROMIUM || undefined;
 const VIEWPORT = { width: 1600, height: 900 };
 const FIND_JOBS = "Spend your time on the jobs that look worth it.";
 
@@ -108,7 +108,7 @@ test("curated README and website screenshots", async () => {
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   const server = await startPwaServer(distPwa);
-  const profile = mkdtempSync(path.join(os.tmpdir(), "job-ranger-shots-"));
+  const profile = mkdtempSync(path.join(os.tmpdir(), "sojourner-shots-"));
   const problems: string[] = [];
   const context = await chromium.launchPersistentContext(profile, { viewport: VIEWPORT, executablePath });
   try {

@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { EvidenceExtensionBackend } = require('../electron-runtime/electron/src/evidence-extension-backend.cjs');
 const { InterviewPrepBackend } = require('../electron-runtime/electron/src/interview-prep-backend.cjs');
@@ -14,9 +14,9 @@ const jobId = '7101';
 const applicationId = 'application-interview-prep';
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-interview-prep-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-interview-prep-'));
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => { throw new Error('interview prep smoke test must not use the network'); },

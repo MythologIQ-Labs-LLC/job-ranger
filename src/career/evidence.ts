@@ -14,7 +14,7 @@ import type {
 } from "../shared/evidence-extensions";
 import { getDesktopApi } from "../services/api";
 
-const evidenceEvent = "job-ranger:career-evidence-changed";
+const evidenceEvent = "sojourner:career-evidence-changed";
 
 export function useCareerEvidence() {
   const [artifacts, setArtifacts] = useState<SourceArtifact[]>([]);

@@ -63,9 +63,9 @@ async function editDatabase(page: Page, file: string, mode: "garbage" | "truncat
 for (const mode of ["garbage", "truncate"] as const) {
   test(`a damaged database (${mode}) is refused at startup and left exactly as found`, async () => {
     const profile = mkdtempSync(path.join(os.tmpdir(), "sj-durability-"));
-    const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined });
+    const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined });
     try {
-      await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+      await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
       const page = context.pages()[0] ?? (await context.newPage());
       await page.goto(server.url); await waitForRuntime(page);
       await page.evaluate((p) => window.electronAPI.career.saveProfile(p as never), { ...healthcareProfile, fullName: "Durability User" });
@@ -87,9 +87,9 @@ for (const mode of ["garbage", "truncate"] as const) {
 
 test("reload during large writes never leaves a damaged or partial workspace", async () => {
   const profile = mkdtempSync(path.join(os.tmpdir(), "sj-durability-"));
-  const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.JOB_RANGER_PW_CHROMIUM || undefined });
+  const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.SOJOURNER_PW_CHROMIUM || undefined });
   try {
-    await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+    await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
     const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(server.url); await waitForRuntime(page);
     await page.evaluate((p) => window.electronAPI.career.saveProfile(p as never), { ...healthcareProfile, fullName: "Name 0" });

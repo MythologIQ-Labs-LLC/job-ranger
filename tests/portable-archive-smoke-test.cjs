@@ -1,4 +1,4 @@
-// Portable `.jobranger` archive + Store legacy-install import smoke test.
+// Portable `.sojourner` archive + Store legacy-install import smoke test.
 // Runs on the Electron sqlite3 CLI engine (npm test) and on the web runtime's
 // SQLite WASM engine (tests/run-wasm-engine-parity.mjs).
 const assert = require('node:assert/strict');
@@ -7,7 +7,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { BackupService, applyPendingRestore } = require('../electron-runtime/electron/src/backup-service.cjs');
 const archive = require('../electron-runtime/electron/src/portable-archive.cjs');
@@ -18,7 +18,7 @@ const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function openInstallation(userDataDirectory) {
   const dataDirectory = path.join(userDataDirectory, 'data');
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => { throw new Error('archive smoke test must not use the network'); },
@@ -91,7 +91,7 @@ function rewriteEntries(bytes, mutate) {
 }
 
 async function run() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-archive-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-archive-'));
   try {
     // --- Archive round trip (Electron → web semantics, any runtime pair) ---
     const sourceUserData = path.join(root, 'source');
@@ -99,7 +99,7 @@ async function run() {
     const imported = await seed(source, 'Archive Person');
     const artifactHash = imported.artifact.contentHash;
 
-    const archivePath = path.join(root, 'exports', 'career.jobranger');
+    const archivePath = path.join(root, 'exports', 'career.sojourner');
     const created = await source.backups.createArchive(archivePath, {
       runtime: 'web',
       channel: 'web',
@@ -110,14 +110,14 @@ async function run() {
     assert.equal(created.archive.sha256, sha256(archiveBytes));
     assert.equal(created.archive.bytes, archiveBytes.length);
     assert.equal(created.summary.artifactFileCount, 1);
-    const leftovers = (await fs.readdir(sourceUserData)).filter((name) => name.startsWith('.job-ranger-archive-work-'));
+    const leftovers = (await fs.readdir(sourceUserData)).filter((name) => name.startsWith('.sojourner-archive-work-'));
     assert.deepEqual(leftovers, [], 'archive work directories are removed');
     await source.backend.dispose();
 
     const entries = archive.decodeStoreZip(archiveBytes);
-    assert.equal(entries[0].name, 'job-ranger-archive.json');
+    assert.equal(entries[0].name, 'sojourner-archive.json');
     assert.ok(entries.some((entry) => entry.name === 'manifest.json'));
-    assert.ok(entries.some((entry) => entry.name === 'jobscout.sqlite3'));
+    assert.ok(entries.some((entry) => entry.name === 'sojourner.sqlite3'));
 
     // Deterministic container: identical content yields identical bytes.
     const again = archive.encodeStoreZip(entries.map((entry) => ({ name: entry.name, bytes: entry.bytes })));
@@ -157,6 +157,50 @@ async function run() {
     assert.equal(directorySelection.archive, undefined);
     assert.equal(directorySelection.summary.artifactFileCount, 1);
 
+    // --- LEGACY .jobranger archives (Job Ranger, and Sojourner before the rename) still restore ---
+    assert.equal(archive.isArchiveFileName('backup.sojourner'), true);
+    assert.equal(archive.isArchiveFileName('BACKUP.JOBRANGER'), true);
+    assert.equal(archive.isArchiveFileName('backup.zip'), false);
+    let legacyBackupManifestBytes = null;
+    const legacyEntries = (items) => {
+      const out = items.map((entry) => {
+        if (entry.name === 'manifest.json') {
+          const manifest = JSON.parse(Buffer.from(entry.bytes).toString('utf8'));
+          assert.equal(manifest.format, 'sojourner-backup');
+          manifest.format = 'job-ranger-backup';
+          manifest.database.path = 'jobscout.sqlite3';
+          legacyBackupManifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+          return { name: 'manifest.json', bytes: legacyBackupManifestBytes };
+        }
+        if (entry.name === 'sojourner.sqlite3') return { name: 'jobscout.sqlite3', bytes: entry.bytes };
+        return entry;
+      });
+      return out.map((entry) => {
+        if (entry.name !== 'sojourner-archive.json') return entry;
+        const manifest = JSON.parse(Buffer.from(entry.bytes).toString('utf8'));
+        assert.equal(manifest.format, 'sojourner-portable-archive');
+        manifest.format = 'job-ranger-portable-archive';
+        manifest.content.format = 'job-ranger-backup';
+        manifest.backupManifest.sha256 = sha256(legacyBackupManifestBytes);
+        manifest.backupManifest.bytes = legacyBackupManifestBytes.length;
+        return { name: 'job-ranger-archive.json', bytes: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`) };
+      });
+    };
+    const legacyArchivePath = path.join(root, 'exports', 'older.jobranger');
+    await fs.writeFile(legacyArchivePath, rewriteEntries(archiveBytes, legacyEntries));
+    const legacyTargetUserData = path.join(root, 'legacy-target');
+    const legacyTarget = await openInstallation(legacyTargetUserData);
+    const legacySelection = await legacyTarget.backups.validateRestoreSource(legacyArchivePath);
+    assert.equal(legacySelection.archive.format, 'sojourner-portable-archive', 'legacy archive manifests are normalized');
+    assert.equal(legacySelection.manifest.database.path, 'jobscout.sqlite3');
+    await legacyTarget.backups.stageRestore(legacySelection.bundlePath);
+    await legacyTarget.backend.dispose();
+    assert.equal(await applyPendingRestore({ userDataDirectory: legacyTargetUserData, dataDirectory: legacyTarget.dataDirectory }), true);
+    const legacyRestored = await openInstallation(legacyTargetUserData);
+    assert.equal((await legacyRestored.career.getProfile()).fullName, 'Archive Person');
+    assert.equal(path.basename(legacyRestored.status.databasePath), 'sojourner.sqlite3', 'a restored legacy backup opens under the current name');
+    await legacyRestored.backend.dispose();
+
     // --- Hostile / corrupted / unsupported archives fail closed ---
     const writeVariant = async (name, bytes) => {
       const variantPath = path.join(root, 'variants', name);
@@ -165,17 +209,17 @@ async function run() {
       return variantPath;
     };
     const flipped = Buffer.from(archiveBytes);
-    const databaseEntry = entries.find((entry) => entry.name === 'jobscout.sqlite3');
+    const databaseEntry = entries.find((entry) => entry.name === 'sojourner.sqlite3');
     const databaseOffset = archiveBytes.indexOf(Buffer.from(databaseEntry.bytes.subarray(0, 64)));
     flipped[databaseOffset + 200] ^= 0xff;
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('crc.jobranger', flipped)),
+      async () => restored.backups.validateRestoreSource(await writeVariant('crc.sojourner', flipped)),
       /CRC-32/,
       'bit flip',
     );
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('not-zip.jobranger', Buffer.from('hello'))),
-      /not a Job Ranger archive/,
+      async () => restored.backups.validateRestoreSource(await writeVariant('not-zip.sojourner', Buffer.from('hello'))),
+      /not a Sojourner archive/,
       'not an archive',
     );
     assert.throws(
@@ -204,21 +248,21 @@ async function run() {
       Buffer.from('../../../x.txt').copy(traversal, index);
     }
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('traversal.jobranger', traversal)),
+      async () => restored.backups.validateRestoreSource(await writeVariant('traversal.sojourner', traversal)),
       /unsafe path/,
       'path traversal',
     );
     const newer = rewriteEntries(archiveBytes, (items) =>
       items.map((entry) => {
-        if (entry.name !== 'job-ranger-archive.json') return entry;
+        if (entry.name !== 'sojourner-archive.json') return entry;
         const manifest = JSON.parse(Buffer.from(entry.bytes).toString('utf8'));
         manifest.archiveVersion = 99;
         return { name: entry.name, bytes: Buffer.from(JSON.stringify(manifest)) };
       }),
     );
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('newer.jobranger', newer)),
-      /newer Job Ranger/,
+      async () => restored.backups.validateRestoreSource(await writeVariant('newer.sojourner', newer)),
+      /newer Sojourner/,
       'newer archive',
     );
     const tamperedManifest = rewriteEntries(archiveBytes, (items) =>
@@ -230,20 +274,20 @@ async function run() {
       }),
     );
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('manifest.jobranger', tamperedManifest)),
+      async () => restored.backups.validateRestoreSource(await writeVariant('manifest.sojourner', tamperedManifest)),
       /integrity/,
       'tampered backup manifest',
     );
     const tamperedDatabase = rewriteEntries(archiveBytes, (items) =>
       items.map((entry) => {
-        if (entry.name !== 'jobscout.sqlite3') return entry;
+        if (entry.name !== 'sojourner.sqlite3') return entry;
         const bytes = new Uint8Array(entry.bytes);
         bytes[bytes.length - 1] ^= 0x01;
         return { name: entry.name, bytes };
       }),
     );
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('database.jobranger', tamperedDatabase)),
+      async () => restored.backups.validateRestoreSource(await writeVariant('database.sojourner', tamperedDatabase)),
       /integrity verification/,
       'tampered database with valid CRC',
     );
@@ -252,11 +296,11 @@ async function run() {
     const centralOffset = recompressed.indexOf(centralSignature);
     recompressed.writeUInt16LE(8, centralOffset + 10);
     await expectRejects(
-      async () => restored.backups.validateRestoreSource(await writeVariant('deflate.jobranger', recompressed)),
+      async () => restored.backups.validateRestoreSource(await writeVariant('deflate.sojourner', recompressed)),
       /re-compressed/,
       'compressed entry',
     );
-    const workLeftovers = (await fs.readdir(targetUserData)).filter((name) => name.startsWith('.job-ranger-archive-work-'));
+    const workLeftovers = (await fs.readdir(targetUserData)).filter((name) => name.startsWith('.sojourner-archive-work-'));
     assert.deepEqual(workLeftovers, [], 'failed archive validations leave no extracted data behind');
     await restored.backend.dispose();
 
@@ -268,16 +312,20 @@ async function run() {
     const legacyInstall = await openInstallation(legacyUserData);
     await seed(legacyInstall, 'Legacy Desktop Person');
     await legacyInstall.backend.dispose();
+    // The LEGACY folder (%APPDATA%\job-ranger) holds the database under its LEGACY name.
     const legacyDatabase = path.join(legacyUserData, 'data', 'jobscout.sqlite3');
+    await fs.rename(path.join(legacyUserData, 'data', 'sojourner.sqlite3'), legacyDatabase);
     const legacyHashBefore = sha256(await fs.readFile(legacyDatabase));
 
     const store = await openInstallation(storeUserData);
     await store.backend.dispose();
+    assert.equal(path.basename(store.status.databasePath), 'sojourner.sqlite3');
     const options = {
       channel: 'microsoft-store',
       appDataDirectory: appData,
       userDataDirectory: storeUserData,
       dataDirectory: store.dataDirectory,
+      databasePath: store.status.databasePath,
       sqliteBinaryPath: store.status.sqliteBinaryPath,
       appVersion: 'test-2',
     };
@@ -298,12 +346,28 @@ async function run() {
     await migratedStore.backend.dispose();
     assert.equal(sha256(await fs.readFile(legacyDatabase)), legacyHashBefore, 'legacy data is never modified');
 
+    // A migrated direct-download folder (%APPDATA%\Sojourner) is preferred over the legacy one.
+    const directUserData = distribution.resolveDirectUserDataDirectory(appData);
+    const directInstall = await openInstallation(directUserData);
+    await seed(directInstall, 'Current Desktop Person');
+    await directInstall.backend.dispose();
+    const preferred = await legacy.detectLegacyInstall(options);
+    assert.equal(preferred.dataDirectory, path.join(directUserData, 'data'));
+    await legacy.stageLegacyImport(options);
+    assert.equal(
+      await applyPendingRestore({ userDataDirectory: storeUserData, dataDirectory: store.dataDirectory }),
+      true,
+    );
+    const currentStore = await openInstallation(storeUserData);
+    assert.equal((await currentStore.career.getProfile()).fullName, 'Current Desktop Person');
+    await currentStore.backend.dispose();
+
     assert.equal(
       distribution.detectDistributionChannel({ windowsStore: true, isPackaged: true, env: {} }),
       'microsoft-store',
     );
     assert.equal(
-      distribution.detectDistributionChannel({ windowsStore: undefined, isPackaged: true, env: { JOB_RANGER_DISTRIBUTION_CHANNEL_OVERRIDE: 'microsoft-store' } }),
+      distribution.detectDistributionChannel({ windowsStore: undefined, isPackaged: true, env: { SOJOURNER_DISTRIBUTION_CHANNEL_OVERRIDE: 'microsoft-store' } }),
       'direct-download',
       'packaged direct builds cannot be relabeled as Store builds',
     );

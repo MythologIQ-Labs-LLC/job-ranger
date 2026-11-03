@@ -12,8 +12,8 @@ name: Deploy web app (PWA)
 #
 # Required configuration (not present until the owner sets it up):
 #   secrets.CLOUDFLARE_API_TOKEN, secrets.CLOUDFLARE_ACCOUNT_ID
-#   vars.JOB_RANGER_PWA_PAGES_PROJECT  (Cloudflare Pages project name)
-#   vars.JOB_RANGER_PWA_ORIGIN         (e.g. https://app.example.org)
+#   vars.SOJOURNER_PWA_PAGES_PROJECT  (Cloudflare Pages project name)
+#   vars.SOJOURNER_PWA_ORIGIN         (e.g. https://app.example.org)
 #
 # Rollback: re-run with an earlier release tag. The service worker treats it
 # as a new version (user-confirmed reload) and the runtime refuses to open
@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           mkdir -p artifact site
           gh release download "$RELEASE_TAG" --repo "${{ github.repository }}" \
-            --pattern "job-ranger-web-v*.zip" --pattern "web-SHA256SUMS.txt" \
+            --pattern "sojourner-web-v*.zip" --pattern "web-SHA256SUMS.txt" \
             --pattern "web-release-manifest.json" --pattern "web-build-info.json" --dir artifact
 
       - name: Verify checksum and build provenance
@@ -66,12 +66,12 @@ jobs:
           set -euo pipefail
           cd artifact
           sha256sum --check web-SHA256SUMS.txt
-          gh attestation verify job-ranger-web-v*.zip --repo "${{ github.repository }}"
+          gh attestation verify sojourner-web-v*.zip --repo "${{ github.repository }}"
 
       - name: Unpack and check deployable shell
         run: |
           set -euo pipefail
-          unzip -q artifact/job-ranger-web-v*.zip -d site
+          unzip -q artifact/sojourner-web-v*.zip -d site
           for required in index.html sw.js _headers manifest.webmanifest build-info.json studio-handoff.json; do
             test -s "site/$required"
           done
@@ -90,17 +90,17 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
-          test -n "${{ vars.JOB_RANGER_PWA_PAGES_PROJECT }}" || { echo "JOB_RANGER_PWA_PAGES_PROJECT is not configured"; exit 1; }
+          test -n "${{ vars.SOJOURNER_PWA_PAGES_PROJECT }}" || { echo "SOJOURNER_PWA_PAGES_PROJECT is not configured"; exit 1; }
           commit=$(node -p "require('./site/build-info.json').commit")
           npx --yes wrangler@4 pages deploy site \
-            --project-name "${{ vars.JOB_RANGER_PWA_PAGES_PROJECT }}" \
+            --project-name "${{ vars.SOJOURNER_PWA_PAGES_PROJECT }}" \
             --branch main --commit-hash "$commit" --commit-dirty=false
 
       - name: Verify the live origin serves this build with its security headers
         run: |
           set -euo pipefail
-          origin="${{ vars.JOB_RANGER_PWA_ORIGIN }}"
-          test -n "$origin" || { echo "JOB_RANGER_PWA_ORIGIN is not configured"; exit 1; }
+          origin="${{ vars.SOJOURNER_PWA_ORIGIN }}"
+          test -n "$origin" || { echo "SOJOURNER_PWA_ORIGIN is not configured"; exit 1; }
           case "$origin" in https://*) ;; *) echo "Production origin must be HTTPS"; exit 1;; esac
           expected=$(node -p "require('./site/build-info.json').buildId")
           for attempt in 1 2 3 4 5 6; do

@@ -4,7 +4,7 @@ This note records the release-blocking Windows packaging validation completed on
 
 ## Why this validation exists
 
-The first v1.1.0 Windows release build failed before packaging because the desktop backend expected `sqlite3.exe` to exist on the host. That exposed a product defect: a normal Windows user should not need to install SQLite separately after installing Job Ranger.
+The first v1.1.0 Windows release build failed before packaging because the desktop backend expected `sqlite3.exe` to exist on the host. That exposed a product defect: a normal Windows user should not need to install SQLite separately after installing Sojourner.
 
 ## Corrected boundary
 

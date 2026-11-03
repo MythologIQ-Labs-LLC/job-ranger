@@ -15,7 +15,7 @@ import type { LegacyInstallDesktopApi } from "../shared/legacy-install";
 import type { GoogleDriveDesktopApi } from "../shared/google-drive-desktop";
 import type { StorageLocationsDesktopApi } from "../shared/storage-locations";
 
-export type JobRangerDesktopApi = DesktopApi &
+export type SojournerDesktopApi = DesktopApi &
   ResumeDesktopApi &
   EvidenceExtensionDesktopApi &
   SourceDiscoveryDesktopApi &
@@ -43,7 +43,7 @@ export function hasDesktopApi(): boolean {
   return typeof window !== "undefined" && typeof window.electronAPI !== "undefined";
 }
 
-export function getDesktopApi(): JobRangerDesktopApi {
+export function getDesktopApi(): SojournerDesktopApi {
   if (!hasDesktopApi()) {
     throw new DesktopApiError(
       "Sojourner requires the Electron desktop shell. Use `npm run electron:dev` for local development.",

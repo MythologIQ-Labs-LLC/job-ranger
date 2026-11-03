@@ -1,4 +1,4 @@
-# Job Ranger Roadmap
+# Sojourner Roadmap
 
 > **ARCHITECTURE SUPERSESSION (2026-10-16):** [Canonical Architecture Index](../ARCHITECTURE_INDEX.md) is authoritative. This roadmap is a dated 2026-10-10 snapshot; its Store-native mainstream, signing/installer and localhost-only rollout plans are **superseded**. Current delivery is PWA-only, including the bounded Studio-linked web demo. Electron remains a test harness. Historical checklists below do not create release obligations.
 
@@ -9,7 +9,7 @@ This is the active roadmap. Historical phase/remediation plans remain implementa
 
 ## North Star
 
-Job Ranger should help a job seeker:
+Sojourner should help a job seeker:
 
 1. find useful opportunities;
 2. understand which deserve attention;
@@ -22,7 +22,7 @@ Core functionality must remain useful without remote inference.
 
 The universal product contract remains:
 
-> **US-0:** As a job seeker, I want Job Ranger to adapt to the way my career works without requiring me to understand how Job Ranger works.
+> **US-0:** As a job seeker, I want Sojourner to adapt to the way my career works without requiring me to understand how Sojourner works.
 
 See [`../design/UNIVERSAL_USER_STORIES.md`](../design/UNIVERSAL_USER_STORIES.md).
 
@@ -34,7 +34,7 @@ Stable **v1.2.0** was published on 2026-10-05 from commit:
 
 The release was promoted byte-for-byte from validated `v1.2.0-rc.5` artifacts. Its Windows/macOS packages are intentionally unsigned/unnotarized under the documented owner-approved exception and remain immutable historical release artifacts.
 
-Post-v1.2 work no longer assumes that Job Ranger must purchase/maintain both Windows public-trust signing and Apple Developer credentials. The accepted forward distribution architecture is:
+Post-v1.2 work no longer assumes that Sojourner must purchase/maintain both Windows public-trust signing and Apple Developer credentials. The accepted forward distribution architecture is:
 
 - **cross-platform mainstream:** local-first PWA/web runtime;
 - **Windows-native mainstream:** Microsoft Store packaged Electron application;
@@ -102,7 +102,7 @@ The unsigned/unnotarized v1.2.0 exception does not define the future distributio
 - [x] resume import/export, Chromium PDF + Parseability Gate, archive backup/restore, and external-navigation validation inside the package context;
 - [x] Store servicing owns updates (no app-managed updater; enforced by test);
 - [x] coexistence with historical NSIS installs: isolated data root, explicit read-only import, uninstall behavior recorded;
-- [ ] reserve the app in Partner Center and set `JOB_RANGER_STORE_*` repository variables (external);
+- [ ] reserve the app in Partner Center and set `SOJOURNER_STORE_*` repository variables (external);
 - [ ] build the submission package from a release tag and pass Store certification (external);
 - [ ] validate clean Windows 11 install, first launch, and Store upgrade from the Store listing (external);
 - [ ] make Microsoft Store the recommended Windows-native installation path (after the listing is live).
@@ -115,7 +115,7 @@ Azure Artifact Signing is opt-in only and does not block this work.
 
 - [x] inventory of Electron-only and Node-only assumptions; shared-core versus runtime-adapter boundary (`src/pwa/adapter-map.ts`, contract test);
 - [x] browser persistence: SQLite WASM + OPFS atomic snapshots, Web Lock single writer; proven by running 18 shared-core suites on the WASM engine;
-- [x] domain identity, provenance, lineage, migrations, downgrade guard, and backup semantics preserved; `.jobranger` archive for Electron ↔ PWA;
+- [x] domain identity, provenance, lineage, migrations, downgrade guard, and backup semantics preserved; `.sojourner` archive for Electron ↔ PWA;
 - [x] resume/Career Evidence import (DOCX/PDF/TXT; 9/9 on the shared parser benchmark) and deterministic PDF output through the shared Truth and Parseability Gates;
 - [x] end-to-end local-first Career Ops workflow in the browser (healthcare scenario);
 - [x] SHA-256-verified service-worker shell, user-confirmed updates, repair/recovery;
@@ -181,7 +181,7 @@ Current application-scoped contacts may prove sufficient. Promote broader networ
 
 ### Calendar mirroring
 
-Job Ranger remains authoritative. A future calendar adapter may mirror selected interviews/deadlines/follow-ups but must not silently mutate lifecycle history.
+Sojourner remains authoritative. A future calendar adapter may mirror selected interviews/deadlines/follow-ups but must not silently mutate lifecycle history.
 
 ### Mock interview practice
 
@@ -227,7 +227,7 @@ Outstanding or separately qualified:
 - [ ] prove cross-runtime user journeys and representative UX acceptance at the exact implementation head before release admission;
 - [ ] ensure the v1.3.0 release boundary explicitly admits or defers each new Personal Brand slice; work on `main` is not automatically packaged/released.
 
-Job Ranger supports a person's professional presence, not a generic marketing platform, and does not borrow Viable's product-marketing responsibilities.
+Sojourner supports a person's professional presence, not a generic marketing platform, and does not borrow Viable's product-marketing responsibilities.
 
 ### Economic transition pathways / #217 and #221
 
@@ -235,7 +235,7 @@ Job Ranger supports a person's professional presence, not a generic marketing pl
 
 ### Read-only local MCP prototype / #173 and #181
 
-**Status: optional development adapter on `main`, not a shipped ChatGPT plugin.** The local stdio service and documented Secure MCP Tunnel trial remain read-only, permission-limited and human-authorized. A documented tunnel pathway does not establish a verified live ChatGPT connection; issue #181 remains open for that integration gate. See [local MCP prototype](../integrations/JOB_RANGER_MCP_READONLY.md).
+**Status: optional development adapter on `main`, not a shipped ChatGPT plugin.** The local stdio service and documented Secure MCP Tunnel trial remain read-only, permission-limited and human-authorized. A documented tunnel pathway does not establish a verified live ChatGPT connection; issue #181 remains open for that integration gate. See [local MCP prototype](../integrations/SOJOURNER_MCP_READONLY.md).
 
 ## Deferred
 
@@ -254,7 +254,7 @@ Do not schedule these without new evidence:
 
 ## Explicitly rejected under current distribution architecture
 
-- SignPath as a Job Ranger signing/distribution dependency.
+- SignPath as a Sojourner signing/distribution dependency.
 
 Changing this disposition requires a new explicit architecture decision.
 

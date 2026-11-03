@@ -34,7 +34,7 @@ async function measure(page: Page, route: string) {
 }
 
 test.beforeEach(async ({ context }) => {
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
 });
 
 test("regular desktop keeps the full page introduction", async ({ page }) => {

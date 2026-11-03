@@ -3,7 +3,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 const { RequirementBackend } = require("../electron-runtime/electron/src/requirement-backend.cjs");
 const { SqliteClient } = require("../electron-runtime/electron/src/sqlite.cjs");
 
@@ -18,7 +18,7 @@ async function clearScrapeGuard(sqlite, companyId) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-source-trust-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-source-trust-"));
   let greenhouseContent = `<p>${"Coordinate vendor schedules, customer requests, inventory records, service calendars, dispatch notes, purchase orders, supplier escalations, site access, shift handoffs, maintenance windows, and customer communications. ".repeat(2)}</p><p>Must maintain OSHA 30 certification and support weekend rotations.</p>`;
 
   const fetchImpl = async (url) => {
@@ -36,7 +36,7 @@ async function run() {
   };
 
   try {
-    const backend = new JobScoutBackend({ dataDirectory: tempDir, fetchImpl, schedulerEnabled: false });
+    const backend = new SojournerBackend({ dataDirectory: tempDir, fetchImpl, schedulerEnabled: false });
     await backend.initialize();
 
     const company = await backend.createCompany({ name: "Acme", url: "https://boards.greenhouse.io/acme", frequencyMinutes: 1440, isActive: true });

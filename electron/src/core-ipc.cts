@@ -1,6 +1,6 @@
 import { dialog, ipcMain, shell } from "electron";
 import type { RuntimeInfo } from "../../src/shared/runtime.js";
-import type { JobScoutBackend } from "./backend.cjs";
+import type { SojournerBackend } from "./backend.cjs";
 import type { CareerBackend } from "./career-backend.cjs";
 import type { RequirementBackend } from "./requirement-backend.cjs";
 import { publicJobFeedDiscoveryProvider } from "./source-discovery-provider.cjs";
@@ -28,7 +28,7 @@ import {
 import { validateCareerTargetTrackInput } from "./target-track-validator.cjs";
 
 export interface CoreIpcOptions {
-  backend: JobScoutBackend;
+  backend: SojournerBackend;
   careerBackend: CareerBackend;
   requirementBackend: RequirementBackend;
   appVersion: string;
@@ -40,7 +40,7 @@ export interface CoreIpcOptions {
 }
 
 /**
- * The core Job Ranger IPC contract: channel names, boundary validation, and
+ * The core Sojourner IPC contract: channel names, boundary validation, and
  * dispatch into the shared application services. Electron registers it on the
  * real `ipcMain`; the browser runtime registers the identical table inside its
  * dedicated worker through the runtime's `electron` adapter.

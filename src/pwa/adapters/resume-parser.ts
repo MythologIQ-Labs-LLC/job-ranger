@@ -20,12 +20,12 @@ import {
   type DocumentFailureCode,
 } from "../runtime/document-text";
 
-// pdf.js runs in-thread inside the Job Ranger runtime worker (already off the
+// pdf.js runs in-thread inside the Sojourner runtime worker (already off the
 // UI thread): exposing its message handler makes pdf.js skip creating a
 // nested worker, which keeps the CSP/Trusted Types surface minimal.
 (globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
-export const RESUME_PARSER_ID = "job-ranger-web-document-parser";
+export const RESUME_PARSER_ID = "sojourner-web-document-parser";
 export const RESUME_PARSER_VERSION = `1.0.0+pdfjs-${pdfjs.version}`;
 
 export type ResumeParserFailureCode = DocumentFailureCode;

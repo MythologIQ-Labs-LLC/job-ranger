@@ -27,8 +27,8 @@ None.
 
 ## Locked Decisions
 
-- LD1: Take 11 is committed unchanged as `docs/assets/demo/job-ranger-demo.webm`. It is copied byte for byte, and the committed file's SHA-256 must equal the Evidence hash. It is not re-recorded or re-encoded, because the frame-by-frame review applies only to that exact file.
-- LD2: The README "See it in action" section links to it with a relative link, `./docs/assets/demo/job-ranger-demo.webm`. The link text gives the length (85 seconds) and says the walkthrough uses the same fictional data. The section's closing sentence still gives `npm run demo:record` for recording locally. It makes no hosted-demo claim.
+- LD1: Take 11 is committed unchanged as `docs/assets/demo/historical/legacy-walkthrough.webm`. It is copied byte for byte, and the committed file's SHA-256 must equal the Evidence hash. It is not re-recorded or re-encoded, because the frame-by-frame review applies only to that exact file.
+- LD2: The README "See it in action" section links to it with a relative link, `./docs/assets/demo/historical/legacy-walkthrough.webm`. The link text gives the length (85 seconds) and says the walkthrough uses the same fictional data. The section's closing sentence still gives `npm run demo:record` for recording locally. It makes no hosted-demo claim.
 - LD3: This supersedes Phase 10 LD7's "No media are committed" for this one accepted take. `build/demo/` stays ignored, and new recordings are still not committed automatically. A refreshed video is committed only by a later deliberate change.
 - LD4: The CHANGELOG Unreleased entry for the README section records that the walkthrough video is now committed.
 
@@ -37,13 +37,13 @@ None.
 ### Unit Tests
 
 - No code changes. Acceptance is checked directly:
-  - `sha256sum docs/assets/demo/job-ranger-demo.webm` equals the Evidence hash;
+  - `sha256sum docs/assets/demo/historical/legacy-walkthrough.webm` equals the Evidence hash;
   - the README link target resolves to that file;
-  - Playwright Chromium loads the committed file and reports a 1600x900 frame size and a duration between 60 and 90 s, using the measurement `scripts/demo/frames.mjs` uses: `node scripts/demo/frames.mjs docs/assets/demo/job-ranger-demo.webm <tmp> 10`, read from `frames.json`.
+  - Playwright Chromium loads the committed file and reports a 1600x900 frame size and a duration between 60 and 90 s, using the measurement `scripts/demo/frames.mjs` uses: `node scripts/demo/frames.mjs docs/assets/demo/historical/legacy-walkthrough.webm <tmp> 10`, read from `frames.json`.
 
 ### Affected Files
 
-- `docs/assets/demo/job-ranger-demo.webm` (new)
+- `docs/assets/demo/historical/legacy-walkthrough.webm` (new)
 - `README.md` - link in "See it in action"
 - `CHANGELOG.md` - Unreleased entry wording
 - `docs/GOVERNANCE_INDEX.md` - Phase 12 plan row
@@ -63,5 +63,5 @@ None.
 
 ## CI Commands
 
-- `node scripts/demo/frames.mjs docs/assets/demo/job-ranger-demo.webm <tmp> 10` - committed file decodes at 1600x900 with a duration of 60-90 s.
+- `node scripts/demo/frames.mjs docs/assets/demo/historical/legacy-walkthrough.webm <tmp> 10` - committed file decodes at 1600x900 with a duration of 60-90 s.
 - `npm test` - unit suite, unchanged.

@@ -4,7 +4,7 @@
 
 This audit evaluates a bounded set of job-source candidates surfaced by the October 2026 remote-job-source review. It does **not** convert a website list into an integration backlog.
 
-Job Ranger's accepted discovery contract remains unchanged:
+Sojourner's accepted discovery contract remains unchanged:
 
 - quality over quantity;
 - discovery provider, employer, opportunity, and monitorable employer source remain distinct concepts;
@@ -22,9 +22,9 @@ Each candidate is evaluated on:
 1. **Coverage value** — does it add meaningfully different career/employer coverage?
 2. **Machine-readable access** — documented JSON/API/RSS is preferred over browser scraping.
 3. **Consumer setup burden** — no-auth or low-friction access is preferred.
-4. **Terms / attribution clarity** — can Job Ranger comply without guesswork?
+4. **Terms / attribution clarity** — can Sojourner comply without guesswork?
 5. **Maintenance risk** — documented public interfaces are preferred over DOM-dependent extraction.
-6. **Fit with Job Ranger** — can the provider cleanly sit behind `SourceDiscoveryProvider` without weakening existing trust boundaries?
+6. **Fit with Sojourner** — can the provider cleanly sit behind `SourceDiscoveryProvider` without weakening existing trust boundaries?
 
 Scores are directional prioritization aids, not product truth.
 
@@ -54,7 +54,7 @@ Important constraints:
 - API responses are rate limited;
 - data refreshes on a documented cadence;
 - attribution/link-back is required;
-- Himalayas explicitly prohibits republishing its jobs to certain third-party job sites, so Job Ranger must remain a user-facing discovery client rather than a redistribution service.
+- Himalayas explicitly prohibits republishing its jobs to certain third-party job sites, so Sojourner must remain a user-facing discovery client rather than a redistribution service.
 
 Sources:
 
@@ -72,7 +72,7 @@ Source:
 
 - https://weworkremotely.com/remote-job-rss-feed
 
-**Assessment:** strong immediate candidate. Category feeds may allow Job Ranger to reduce irrelevant volume before local Target Track matching.
+**Assessment:** strong immediate candidate. Category feeds may allow Sojourner to reduce irrelevant volume before local Target Track matching.
 
 ### ReliefWeb
 
@@ -167,7 +167,7 @@ These two provide the clearest technical path to broader remote discovery withou
 
 ### Tranche B — high-value niche providers
 
-3. **ReliefWeb**, after Job Ranger obtains/records an approved product `appname` and verifies attribution/IP handling.
+3. **ReliefWeb**, after Sojourner obtains/records an approved product `appname` and verifies attribution/IP handling.
 4. **Idealist**, after production API-key approval and credential-storage/governance review.
 5. **HigherEdJobs**, only after first-party endpoint and terms verification.
 

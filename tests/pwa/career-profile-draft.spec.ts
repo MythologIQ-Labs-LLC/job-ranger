@@ -9,10 +9,10 @@ let server: PwaServer;
 test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
-const profileChanged = "job-ranger:career-profile-changed";
+const profileChanged = "sojourner:career-profile-changed";
 
 async function openProfile(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(`${server.url}#/career-profile`);
   await waitForRuntime(page);
   const payBasis = page.getByRole("combobox", { name: "Pay basis", exact: true });

@@ -115,7 +115,7 @@ function createMemoryReader(world) {
 
 /** The existing deterministic Truth Gate, unchanged; evaluateTruth needs no SQLite. */
 function createTruthGate() {
-  const unused = path.join(os.tmpdir(), "job-ranger-inference-gate-unused");
+  const unused = path.join(os.tmpdir(), "sojourner-inference-gate-unused");
   const service = new ResumeService({
     dataDirectory: unused,
     databasePath: path.join(unused, "unused.sqlite"),

@@ -1,6 +1,7 @@
 /**
  * Explicit, user-initiated import of data from a historical direct-download
- * (NSIS) legacy Job Ranger installation into a Microsoft Store installation.
+ * (NSIS) installation of Sojourner (or of Job Ranger, its former name) into a
+ * Microsoft Store installation.
  *
  * The legacy data directory is only read. Nothing is moved or deleted, so the
  * historical installation keeps working and the import can be repeated or

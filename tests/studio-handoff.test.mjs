@@ -8,7 +8,7 @@ import { run as runVerifierCli } from "../scripts/verify-studio-handoff.mjs";
 
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 const buildId = "1.3.0+123456789abc";
-const index = '<meta name="job-ranger-build" content="' + buildId + '">';
+const index = '<meta name="sojourner-build" content="' + buildId + '">';
 const sw = "const BUILD_ID = " + JSON.stringify(buildId) + ";";
 const appChunk = "/* representative immutable JS asset */ const APP_READY = true;";
 const policy = "default-src 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'";
@@ -20,7 +20,7 @@ const headersFile = "/*\n" +
   "  Cross-Origin-Resource-Policy: same-origin\n";
 const info = {
   schemaVersion: 1,
-  product: "job-ranger-web",
+  product: "sojourner-web",
   version: "1.3.0",
   contentSecurityPolicy: policy,
   buildId,
@@ -196,7 +196,7 @@ try {
   await assert.rejects(inspectLiveStudioPwa("https://jobs.example.org", buildId, pinnedDigest, "standard", tamperedWorkerSameId), /live service-worker checksum mismatch/);
 
   // A complete demo-flavor build verifies as demo, and only as demo.
-  const demoIndex = '<meta name="job-ranger-build" content="' + demoBuildId + '">';
+  const demoIndex = '<meta name="sojourner-build" content="' + demoBuildId + '">';
   const demoSw = "const BUILD_ID = " + JSON.stringify(demoBuildId) + ";";
   const demoBuildInfo = {
     ...demoInfo,

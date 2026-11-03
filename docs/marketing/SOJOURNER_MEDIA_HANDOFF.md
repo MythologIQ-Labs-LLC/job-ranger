@@ -11,7 +11,7 @@ On 2026-11-02 the owner approved using these files publicly in the repository RE
 - Product: **Sojourner: Employment Toolkit**. Since 2026-11-02 the primary deliverable is a signed Windows application, and the browser PWA continues ([`../ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md) ARCH-001). These captures show the PWA, which uses the same interface as the Windows app.
 - Primary story: a local-first job-search companion for career direction, evidence-backed opportunity assessment, truthful resumes and deliberate application tracking.
 - First-party capture scripts: `scripts/demo/story.spec.ts`, `scripts/demo/screenshots.spec.ts`, `scripts/demo/fixture.ts`, `scripts/demo/ready.ts`.
-- Commands: `npm run demo:record`; `npm run demo:screenshots`. Both build the PWA and use `scripts/demo/playwright.demo.config.ts`; honor `JOB_RANGER_PW_CHROMIUM` when a compatible supplemental browser is required.
+- Commands: `npm run demo:record`; `npm run demo:screenshots`. Both build the PWA and use `scripts/demo/playwright.demo.config.ts`; honor `SOJOURNER_PW_CHROMIUM` when a compatible supplemental browser is required.
 - Output: `build/demo/video.webm`, `build/demo/screenshots/`, `build/demo/curated/`, `build/demo/demo-report.json`, `build/demo/frames/`. Check actual output before signoff.
 - Video script targets 1600×900, Canopy theme, 60–90 seconds, fictional fixture, source assertions, a single story and a frame review. Screenshot script targets 1600×900 with no caption/cursor overlays.
 - Do not portray a recorded `application status = applied` change as a real job application submission. Do not claim live remote job feeds, automated application submission, Google Drive OAuth/export, background monitoring, or hiring outcomes from the demo fixture.
@@ -100,7 +100,7 @@ Still open and independent of media quality:
 
 ## Script execution and review checklist
 
-1. Pin the exact Sojourner source SHA and validate demo fixture stability. Do not quietly reuse a historic Job Ranger build or represent PR #315 unmerged features as shipping.
+1. Pin the exact Sojourner source SHA and validate demo fixture stability. Do not quietly reuse a historic Sojourner build or represent PR #315 unmerged features as shipping.
 2. Build the production PWA and isolated demo flavor; run existing handoff checks and the relevant demo tests. Use fictional data only; no personal contacts, Google credentials or Drive uploads.
 3. Run both existing Playwright capture commands on the **same pinned candidate**. If a selector fails, correct only the demonstrated demo/test defect; do not invent UI or weaken assertions.
 4. Review every shot at native resolution: actual Sojourner branding, legible data, modal drawer geometry, theme consistency, no clipping at 1600×900 and mobile width 390, keyboard focus, reduced motion and console errors.

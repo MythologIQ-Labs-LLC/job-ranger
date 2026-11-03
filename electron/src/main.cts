@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
-import { JobScoutBackend } from "./backend.cjs";
+import { SojournerBackend } from "./backend.cjs";
 import { CareerBackend } from "./career-backend.cjs";
 import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
@@ -9,7 +9,8 @@ import { initializeBackupIpc } from "./backup-ipc.cjs";
 import { initializeDriveIpc, registerUnavailableDriveIpc, type DriveIpcHandles } from "./drive-ipc.cjs";
 import { initializeStorageIpc } from "./storage-ipc.cjs";
 import type { StorageService } from "./storage/storage-service.cjs";
-import { applyPendingRestore } from "./backup-service.cjs";
+import { applyPendingRestore, rebaseRestoredManagedPaths } from "./backup-service.cjs";
+import { SqliteClient } from "./sqlite.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
 import { loadPageHtmlInHiddenWindow } from "./browser-loader.cjs";
@@ -19,10 +20,12 @@ import {
   detectDistributionChannel,
   electronRuntimeInfo,
   packageFamilyNameFromExecPath,
-  resolveStoreUserDataDirectory,
+  resolvePinnedUserDataDirectory,
   storeHostPath,
 } from "./distribution.cjs";
 import { initializeLegacyInstallIpc } from "./legacy-install-ipc.cjs";
+import { migrateLegacyUserData } from "./legacy-migration.cjs";
+import { resolveSqliteBinarySync, sqliteIntegrityCheck, sqliteManagedPathRebase } from "./sqlite-sync.cjs";
 import { parsePackageSmokeArgument, runStorePackageSmoke } from "./store-package-smoke.cjs";
 
 const distributionChannel = detectDistributionChannel({
@@ -31,14 +34,36 @@ const distributionChannel = detectDistributionChannel({
   env: process.env,
 });
 
-// Store (AppX) builds isolate their data root from historical direct-download
-// installations so the two never share a live database. An explicit
-// --user-data-dir (used by automated tests) always wins.
-if (
-  distributionChannel === "microsoft-store" &&
-  !app.commandLine.hasSwitch("user-data-dir")
-) {
-  app.setPath("userData", resolveStoreUserDataDirectory(app.getPath("appData")));
+// Pin the data root before anything reads userData or opens the database: packaged
+// direct-download builds use %APPDATA%\Sojourner and Store (AppX) builds their isolated
+// "Sojourner Store" folder. Data written before the rename (%APPDATA%\job-ranger,
+// "Job Ranger Store") is copied there and verified first (legacy-migration.cts); if
+// that fails, this run uses the untouched legacy folder. Development runs and an
+// explicit --user-data-dir keep Electron's default.
+const pinnedUserData = resolvePinnedUserDataDirectory({
+  channel: distributionChannel,
+  appDataDirectory: app.getPath("appData"),
+  hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
+});
+if (pinnedUserData) {
+  const sqliteBinary = resolveSqliteBinarySync();
+  const userDataMigration = migrateLegacyUserData({
+    target: pinnedUserData.target,
+    legacy: pinnedUserData.legacy,
+    verifyDatabase: sqliteIntegrityCheck(sqliteBinary),
+    rebaseManagedPaths: sqliteManagedPathRebase(sqliteBinary),
+    log: (message) => console.log(`[data folder] ${message}`),
+  });
+  if (userDataMigration.kind === "busy") {
+    // Never open either folder while another start may still be moving the data.
+    dialog.showErrorBox(
+      "Sojourner is still starting",
+      "Another Sojourner window is still moving your data to its new folder. Wait for it to open, then try again.",
+    );
+    app.exit(1);
+  } else {
+    app.setPath("userData", userDataMigration.userDataDirectory);
+  }
 }
 
 /** Path the OS file manager sees for a path inside Sojourner's data root. */
@@ -59,10 +84,25 @@ const pinnedDiscoveryFetch = createPinnedFetch();
 
 let mainWindow: BrowserWindow | null = null;
 let helpWindow: BrowserWindow | null = null;
-let backend: JobScoutBackend | null = null;
+let backend: SojournerBackend | null = null;
 let careerBackend: CareerBackend | null = null;
 let requirementBackend: RequirementBackend | null = null;
 let isQuitting = false;
+
+// One running app per data folder: a second launch focuses the existing window instead of
+// opening the same database twice. Automated runs pass their own --user-data-dir, so
+// parallel test instances each hold their own lock; the packaged smoke run is exempt.
+const hasInstanceLock = packageSmokeReport !== null || app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.exit(0);
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
 let storageService: StorageService | null = null;
 let quitFlushDone = false;
 
@@ -267,6 +307,7 @@ async function runPackageSmokeAndExit(reportPath: string): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  if (!hasInstanceLock) return;
   if (packageSmokeReport) {
     await runPackageSmokeAndExit(packageSmokeReport);
     return;
@@ -274,15 +315,29 @@ app.whenReady().then(async () => {
   try {
     const userDataDirectory = app.getPath("userData");
     const dataDirectory = path.join(userDataDirectory, "data");
-    await applyPendingRestore({ userDataDirectory, dataDirectory });
+    const restoreApplied = await applyPendingRestore({ userDataDirectory, dataDirectory });
 
-    backend = new JobScoutBackend({
+    backend = new SojournerBackend({
       dataDirectory,
       browserPageLoader: loadPageHtmlInHiddenWindow,
     });
     await backend.initialize();
 
     const systemStatus = await backend.getSystemStatus(process.platform);
+    if (restoreApplied) {
+      // A restore staged in another data folder (such as the legacy %APPDATA%\job-ranger,
+      // before the start-up migration) keeps that folder's artifact paths.
+      // Best effort: a failure is logged and never stops Sojourner from opening.
+      try {
+        const rebased = await rebaseRestoredManagedPaths(
+          new SqliteClient(systemStatus.databasePath, systemStatus.sqliteBinaryPath),
+          dataDirectory,
+        );
+        if (rebased > 0) console.log(`[restore] Pointed ${rebased} restored artifact paths at ${dataDirectory}.`);
+      } catch (error) {
+        console.error("Restored artifact paths could not be updated:", error instanceof Error ? error.message : error);
+      }
+    }
     careerBackend = new CareerBackend({
       dataDirectory,
       databasePath: systemStatus.databasePath,
@@ -320,7 +375,7 @@ app.whenReady().then(async () => {
       runtime: "electron" as const,
       channel: distributionChannel,
       appVersion: app.getVersion(),
-      buildId: process.env.JOB_RANGER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
+      buildId: process.env.SOJOURNER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
     };
     const backupService = initializeBackupIpc({
       dataDirectory,
@@ -361,7 +416,7 @@ app.whenReady().then(async () => {
           platform: process.platform,
           userDataDirectory,
           sqliteBinaryPath: systemStatus.sqliteBinaryPath,
-          buildId: process.env.JOB_RANGER_BUILD_ID,
+          buildId: process.env.SOJOURNER_BUILD_ID,
         }),
     });
     initializeLegacyInstallIpc({
@@ -369,6 +424,7 @@ app.whenReady().then(async () => {
       appDataDirectory: app.getPath("appData"),
       userDataDirectory,
       dataDirectory,
+      databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
       appVersion: app.getVersion(),
     });

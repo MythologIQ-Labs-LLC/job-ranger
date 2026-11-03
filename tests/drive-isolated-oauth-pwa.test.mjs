@@ -23,7 +23,7 @@ test("isolated PWA mode does not load Google's script into the career workspace"
   assert.ok(!directives["connect-src"].includes("oauth2.googleapis.com"));
   assert.ok(!directives["connect-src"].includes("accounts.google.com"));
   assert.equal(directives["child-src"], "child-src 'self'");
-  assert.equal(directives["trusted-types"], "trusted-types job-ranger-script-url");
+  assert.equal(directives["trusted-types"], "trusted-types sojourner-script-url");
   assert.equal(buildSecurityHeaders({
     googleOAuthEnabled: true, isolatedGoogleOAuthOrigin: helper,
   })["Cross-Origin-Opener-Policy"], "same-origin-allow-popups");

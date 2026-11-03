@@ -6,15 +6,15 @@
  * app name is reserved; supply it through environment variables (repository
  * variables in CI):
  *
- *   JOB_RANGER_STORE_IDENTITY_NAME           Package/Identity/Name
- *   JOB_RANGER_STORE_PUBLISHER               Package/Identity/Publisher (CN=...)
- *   JOB_RANGER_STORE_PUBLISHER_DISPLAY_NAME  Package/Properties/PublisherDisplayName
- *   JOB_RANGER_STORE_DISPLAY_NAME            Reserved app name (optional; defaults to "Job Ranger")
+ *   SOJOURNER_STORE_IDENTITY_NAME           Package/Identity/Name
+ *   SOJOURNER_STORE_PUBLISHER               Package/Identity/Publisher (CN=...)
+ *   SOJOURNER_STORE_PUBLISHER_DISPLAY_NAME  Package/Properties/PublisherDisplayName
+ *   SOJOURNER_STORE_DISPLAY_NAME            Reserved app name (optional; defaults to "Sojourner")
  *
  * Without them the build produces a clearly labelled *validation* package
  * (placeholder identity) that is only for packaged-runtime testing and can
  * never be mistaken for a Store submission. Set
- * JOB_RANGER_REQUIRE_STORE_IDENTITY=1 to fail closed when producing a
+ * SOJOURNER_REQUIRE_STORE_IDENTITY=1 to fail closed when producing a
  * submission package.
  *
  * The Store signs certified packages, so no code-signing certificate (and no
@@ -35,6 +35,12 @@ baseWin.extraResources = (baseWin.extraResources ?? []).filter((entry) => entry.
 
 module.exports = {
   ...base,
+  // The Store package is named Sojourner like the direct-download installer (executable
+  // `app\Sojourner.exe`, artifact `Sojourner-v<version>-windows-store*.appx`, data root
+  // STORE_USER_DATA_FOLDER "Sojourner Store", migrated at first start from the LEGACY
+  // "Job Ranger Store"). The Store is not a shipping channel (ARCH-001); a Partner Center
+  // submission still needs its reserved identity through the variables above.
+  productName: "Sojourner",
   win: {
     ...baseWin,
     target: [{ target: "appx", arch: ["x64"] }],
@@ -45,7 +51,7 @@ module.exports = {
     publisher: identity.publisher,
     publisherDisplayName: identity.publisherDisplayName,
     displayName: identity.displayName,
-    applicationId: "JobRanger",
+    applicationId: "Sojourner",
     backgroundColor: "#fdf9f6",
     showNameOnTiles: false,
     languages: ["en-US"],

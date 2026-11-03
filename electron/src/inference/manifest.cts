@@ -1,6 +1,6 @@
 // Transmission manifest computed from everything the broker transmits
 // (payload and context). An uncovered leaf is a policy violation before any
-// provider call, so the manifest cannot understate what leaves Job Ranger.
+// provider call, so the manifest cannot understate what leaves Sojourner.
 
 import type {
   InferenceDataClass,

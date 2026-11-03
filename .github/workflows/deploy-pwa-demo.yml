@@ -15,10 +15,10 @@ name: Deploy web demo (PWA demo flavor)
 # Owner setup (none of it exists until the owner configures it):
 #   Repository variables (must be repository-level: the guard compares them,
 #   and a job in demo-web cannot see another environment's variables):
-#     vars.JOB_RANGER_DEMO_PAGES_PROJECT  Cloudflare Pages project used for the demo only
-#     vars.JOB_RANGER_DEMO_ORIGIN         e.g. https://demo.example.org (HTTPS, demo only)
-#     vars.JOB_RANGER_PWA_PAGES_PROJECT   the real web app's Pages project
-#     vars.JOB_RANGER_PWA_ORIGIN          the real web app's origin
+#     vars.SOJOURNER_DEMO_PAGES_PROJECT  Cloudflare Pages project used for the demo only
+#     vars.SOJOURNER_DEMO_ORIGIN         e.g. https://demo.example.org (HTTPS, demo only)
+#     vars.SOJOURNER_PWA_PAGES_PROJECT   the real web app's Pages project
+#     vars.SOJOURNER_PWA_ORIGIN          the real web app's origin
 #   Environment `demo-web` (create it before the first run, otherwise GitHub
 #   creates it unprotected): required reviewers, deployment branch policy
 #   limited to `main`, and these environment secrets (preferably a token that
@@ -103,11 +103,11 @@ jobs:
       - name: Keep the verified demo archive for attestation and deployment
         uses: actions/upload-artifact@v4
         with:
-          name: job-ranger-web-demo-${{ github.run_id }}
+          name: sojourner-web-demo-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: error
           path: |
-            release/job-ranger-web-demo-v*.zip
+            release/sojourner-web-demo-v*.zip
             build/trust/web-demo-build-info.json
 
   # Signing runs apart from npm ci and the browser tests, so no dependency install script can
@@ -123,13 +123,13 @@ jobs:
       - name: Download the verified demo archive
         uses: actions/download-artifact@v4
         with:
-          name: job-ranger-web-demo-${{ github.run_id }}
+          name: sojourner-web-demo-${{ github.run_id }}
           path: artifact
 
       - name: Attest build provenance (demo archive)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: artifact/release/job-ranger-web-demo-v*.zip
+          subject-path: artifact/release/sojourner-web-demo-v*.zip
 
   deploy:
     needs: [build, attest]
@@ -141,10 +141,10 @@ jobs:
     steps:
       - name: Refuse a project or origin shared with the real web app
         env:
-          DEMO_PROJECT: ${{ vars.JOB_RANGER_DEMO_PAGES_PROJECT }}
-          DEMO_ORIGIN: ${{ vars.JOB_RANGER_DEMO_ORIGIN }}
-          APP_PROJECT: ${{ vars.JOB_RANGER_PWA_PAGES_PROJECT }}
-          APP_ORIGIN: ${{ vars.JOB_RANGER_PWA_ORIGIN }}
+          DEMO_PROJECT: ${{ vars.SOJOURNER_DEMO_PAGES_PROJECT }}
+          DEMO_ORIGIN: ${{ vars.SOJOURNER_DEMO_ORIGIN }}
+          APP_PROJECT: ${{ vars.SOJOURNER_PWA_PAGES_PROJECT }}
+          APP_ORIGIN: ${{ vars.SOJOURNER_PWA_ORIGIN }}
         run: |
           set -euo pipefail
           [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "Run this workflow from main (got $GITHUB_REF)"; exit 1; }
@@ -161,8 +161,8 @@ jobs:
             if (url.protocol !== "https:") fail(`${label} must be HTTPS: ${value}`);
             return url.origin.toLowerCase();
           };
-          const demoOrigin = originOf(process.env.DEMO_ORIGIN, "JOB_RANGER_DEMO_ORIGIN");
-          const appOrigin = originOf(process.env.APP_ORIGIN, "JOB_RANGER_PWA_ORIGIN");
+          const demoOrigin = originOf(process.env.DEMO_ORIGIN, "SOJOURNER_DEMO_ORIGIN");
+          const appOrigin = originOf(process.env.APP_ORIGIN, "SOJOURNER_PWA_ORIGIN");
           if (demoOrigin === appOrigin) fail(`The demo origin must not be the real web app's origin (${appOrigin})`);
           const project = (value) => value.trim().toLowerCase();
           if (project(process.env.DEMO_PROJECT) === project(process.env.APP_PROJECT)) fail("The demo Pages project must not be the real web app's project");
@@ -182,7 +182,7 @@ jobs:
       - name: Download the verified demo archive
         uses: actions/download-artifact@v4
         with:
-          name: job-ranger-web-demo-${{ github.run_id }}
+          name: sojourner-web-demo-${{ github.run_id }}
           path: artifact
 
       - name: Verify provenance and unpack
@@ -192,11 +192,11 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          gh attestation verify artifact/release/job-ranger-web-demo-v*.zip \
+          gh attestation verify artifact/release/sojourner-web-demo-v*.zip \
             --repo "${{ github.repository }}" \
             --signer-workflow "${{ github.repository }}/.github/workflows/deploy-pwa-demo.yml"
           mkdir site
-          unzip -q artifact/release/job-ranger-web-demo-v*.zip -d site
+          unzip -q artifact/release/sojourner-web-demo-v*.zip -d site
           for required in index.html sw.js _headers manifest.webmanifest build-info.json studio-handoff.json; do
             test -s "site/$required"
           done
@@ -207,7 +207,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DEMO_PROJECT: ${{ vars.JOB_RANGER_DEMO_PAGES_PROJECT }}
+          DEMO_PROJECT: ${{ vars.SOJOURNER_DEMO_PAGES_PROJECT }}
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
@@ -218,7 +218,7 @@ jobs:
 
       - name: Verify the live demo origin serves this exact build
         env:
-          DEMO_ORIGIN: ${{ vars.JOB_RANGER_DEMO_ORIGIN }}
+          DEMO_ORIGIN: ${{ vars.SOJOURNER_DEMO_ORIGIN }}
           EXPECTED: ${{ needs.build.outputs.build-id }}
         run: |
           set -euo pipefail

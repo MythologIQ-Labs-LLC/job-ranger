@@ -1,6 +1,7 @@
 // Deterministic fictional demo fixture. Morgan Rivera and Harbor Health are
 // fictional; no real person's career data is used.
 import type { BrowserContext, Page } from "@playwright/test";
+import { ONBOARDING_DISMISSED_KEY } from "../../src/demo/session";
 
 export const DEMO_JOB_TITLE = "Practice Operations Coordinator";
 export const DEMO_EMPLOYER = "Harbor Health";
@@ -187,8 +188,8 @@ export async function prepareDemoContext(context: BrowserContext): Promise<void>
   await context.route("https://boards-api.greenhouse.io/**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(greenhouseListing) }),
   );
-  await context.addInitScript(() => {
+  await context.addInitScript((onboardingDismissedKey) => {
     localStorage.setItem("theme", "canopy");
-    localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true");
-  });
+    localStorage.setItem(onboardingDismissedKey, "true");
+  }, ONBOARDING_DISMISSED_KEY);
 }

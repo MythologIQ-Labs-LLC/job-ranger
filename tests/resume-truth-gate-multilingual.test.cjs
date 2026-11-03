@@ -9,7 +9,7 @@ const {
 } = require("../electron-runtime/electron/src/truth-gate-tokens.cjs");
 
 // evaluateTruth is pure; the service never touches SQLite here.
-const tempDir = path.join(os.tmpdir(), "job-ranger-truth-gate-unused");
+const tempDir = path.join(os.tmpdir(), "sojourner-truth-gate-unused");
 const service = new ResumeService({
   dataDirectory: tempDir,
   databasePath: path.join(tempDir, "unused.sqlite"),

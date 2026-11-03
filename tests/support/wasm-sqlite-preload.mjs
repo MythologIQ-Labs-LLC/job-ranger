@@ -1,6 +1,6 @@
 // Engine-parity harness: swaps the Electron sqlite3-CLI adapter for the web
 // runtime's SQLite WASM engine *before* any shared-core module is loaded, so
-// unchanged Job Ranger repositories, migrations, and domain services run on
+// unchanged Sojourner repositories, migrations, and domain services run on
 // the exact engine the PWA uses.
 //
 // Usage: node --experimental-strip-types --import ./tests/support/wasm-sqlite-preload.mjs <test file>
@@ -27,7 +27,7 @@ setActiveWasmSqliteEngine(engine);
 const sqliteModule = require("../../electron-runtime/electron/src/sqlite.cjs");
 sqliteModule.SqliteClient = WasmSqliteClient;
 sqliteModule.resolveSqliteBinary = async () => `sqlite-wasm:${engine.version}`;
-globalThis.__JOB_RANGER_SQL_ENGINE__ = `sqlite-wasm:${engine.version}`;
+globalThis.__SOJOURNER_SQL_ENGINE__ = `sqlite-wasm:${engine.version}`;
 
 process.on("exit", (code) => {
   if (code === 0 && engine.operationCount === 0) {

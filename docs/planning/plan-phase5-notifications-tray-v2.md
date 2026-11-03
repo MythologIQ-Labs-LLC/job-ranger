@@ -10,7 +10,7 @@ This plan addresses all 4 violations from VETO Entry #24:
 
 1. **Notification grouping**: Single notification per company scrape displaying "N new jobs at [Company]". This avoids notification spam while providing actionable information.
 
-2. **Tray badge**: No badge. Tooltip shows "Job Ranger" only. Badge requires platform-specific handling (macOS dock, Windows overlay) and adds complexity disproportionate to value.
+2. **Tray badge**: No badge. Tooltip shows "Sojourner" only. Badge requires platform-specific handling (macOS dock, Windows overlay) and adds complexity disproportionate to value.
 
 ---
 
@@ -126,9 +126,9 @@ export function createTray(moduleDirectory: string, mainWindow: BrowserWindow | 
   const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
 
   tray = new Tray(icon);
-  tray.setToolTip("Job Ranger");
+  tray.setToolTip("Sojourner");
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: "Open Job Ranger", click: () => mainWindow?.show() },
+    { label: "Open Sojourner", click: () => mainWindow?.show() },
     { type: "separator" },
     { label: "Quit", click: onQuit },
   ]));
@@ -188,7 +188,7 @@ export interface Settings {
 
 ```typescript
 const defaultSettings: Settings = {
-  userAgent: "Job Ranger Desktop/1.0",
+  userAgent: "Sojourner Desktop/1.0",
   maxConcurrentScrapes: 2,
   scrapeTimeoutMs: 20000,
   retryCount: 1,
@@ -284,7 +284,7 @@ import { Bell, Database, Save, Settings2, SwatchBook } from "lucide-react";
 
 ```typescript
 const fallbackSettings: RuntimeSettings = {
-  userAgent: "Job Ranger Desktop/1.0",
+  userAgent: "Sojourner Desktop/1.0",
   maxConcurrentScrapes: 2,
   scrapeTimeoutMs: 20000,
   retryCount: 1,
@@ -305,7 +305,7 @@ const fallbackSettings: RuntimeSettings = {
       <h2 className="text-2xl font-semibold">Notifications</h2>
     </div>
     <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-      Control when Job Ranger alerts you about new opportunities.
+      Control when Sojourner alerts you about new opportunities.
     </p>
   </div>
   <div className="panel panel-strong p-6 space-y-4">

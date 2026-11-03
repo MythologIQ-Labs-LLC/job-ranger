@@ -10,14 +10,14 @@
 
 ## Decision
 
-Job Ranger will use a dual-channel distribution architecture:
+Sojourner will use a dual-channel distribution architecture:
 
 1. **Cross-platform primary runtime:** an installable local-first web application / Progressive Web App (PWA). Before demonstrated external demand, the default delivery model is self-hosted on the user's own localhost rather than a public cloud origin.
 2. **Windows native mainstream:** a Microsoft Store package produced from the existing Electron application, initially using the established electron-builder v26 `appx` target unless implementation evidence justifies a different Store package target.
 
 PWA-first does **not** mean cloud-hosted-first. A public HTTPS origin is a distribution milestone for ordinary external users, not a prerequisite for development, dogfooding, trusted testing, or product-demand validation.
 
-The PWA is not a reduced or promotional edition. It is intended to become a first-class Job Ranger runtime with functional parity wherever browser capabilities can safely provide the required behavior.
+The PWA is not a reduced or promotional edition. It is intended to become a first-class Sojourner runtime with functional parity wherever browser capabilities can safely provide the required behavior.
 
 The Windows Store application remains a first-class native runtime where native capabilities materially improve the product.
 
@@ -29,19 +29,19 @@ The architecture is implemented on the post-v1.2.0 development line (merged via 
 | --- | --- | --- |
 | Shared core and runtime adapters | Implemented | Shared modules run unchanged in both runtimes. `src/pwa/adapter-map.ts` is enforced by `tests/runtime-adapter-contract.test.mjs`. 18 shared-core suites pass on the SQLite WASM engine |
 | Web/PWA runtime | Implemented, **not deployed** | Design and parity matrix: [`PWA_RUNTIME.md`](./PWA_RUNTIME.md). The browser suite runs in CI (`pwa.yml`). A production deployment needs a header-capable HTTPS origin (`deploy-pwa.yml`). Firefox, Safari, and real-device install validation are pending |
-| Portable data boundary | Implemented | `.jobranger` archive. Electron→PWA, PWA→Electron, and corruption/version rejection are tested in the browser suite |
+| Portable data boundary | Implemented | `.sojourner` archive. Electron→PWA, PWA→Electron, and corruption/version rejection are tested in the browser suite |
 | Microsoft Store package | Implemented; package validation in CI; **certification pending** | Design: [`MICROSOFT_STORE_PACKAGING.md`](./MICROSOFT_STORE_PACKAGING.md). `windows-store-package.yml` builds, verifies, installs, and smoke-tests inside the package context. Partner Center identity, submission, and certification remain external |
 | Store/NSIS coexistence | Implemented | Isolated Store data root; explicit read-only import of historical NSIS data; uninstall behavior recorded by CI |
-| Provenance | Implemented | SHA-256 files, release manifests (`windows`, `windows-store`, `web`), and GitHub artifact attestations. Azure Artifact Signing is opt-in only (`vars.JOB_RANGER_REQUIRE_WINDOWS_SIGNING`) |
+| Provenance | Implemented | SHA-256 files, release manifests (`windows`, `windows-store`, `web`), and GitHub artifact attestations. Azure Artifact Signing is opt-in only (`vars.SOJOURNER_REQUIRE_WINDOWS_SIGNING`) |
 | Native macOS / Linux | Not part of the target architecture | macOS release job runs only on manual dispatch, for historical/advanced use |
 
 ## Why this decision exists
 
-Public code-signing certificates are useful for publisher identity and native OS trust, but they are not the only defensible software-distribution trust model and must not become a mandatory economic or operational dependency for Job Ranger.
+Public code-signing certificates are useful for publisher identity and native OS trust, but they are not the only defensible software-distribution trust model and must not become a mandatory economic or operational dependency for Sojourner.
 
 The accepted model separates:
 
-- **distribution trust**: how an ordinary user obtains and installs Job Ranger safely;
+- **distribution trust**: how an ordinary user obtains and installs Sojourner safely;
 - **artifact provenance**: how a build can be traced to source and release automation;
 - **runtime security**: what authority the application receives after installation;
 - **product architecture**: which capabilities genuinely require a privileged native runtime.
@@ -63,18 +63,18 @@ Target environments include modern supported browsers on:
 
 The PWA should be installable where the browser/OS supports installation or standalone web-app behavior. Ordinary browser use remains valid where installation is unavailable.
 
-The PWA must preserve Job Ranger's local-first principle. Web delivery does **not** imply that Career Evidence, applications, resumes, or other personal career data become server-authoritative.
+The PWA must preserve Sojourner's local-first principle. Web delivery does **not** imply that Career Evidence, applications, resumes, or other personal career data become server-authoritative.
 
 ### Pre-demand localhost distribution
 
-Until there is evidence that public distribution is warranted, Job Ranger may be built and served entirely on the user's own machine.
+Until there is evidence that public distribution is warranted, Sojourner may be built and served entirely on the user's own machine.
 
 - `localhost` / loopback is the preferred dogfood and trusted-tester origin.
 - Each tester runs their own local instance; one developer machine is not treated as a shared LAN production host.
 - The project must use a stable canonical localhost origin for persisted test profiles. Because browser storage is origin-bound, the local server must not silently change hostnames or ports when its configured port is occupied.
 - A busy configured port should fail with a clear recovery message rather than quietly selecting a different port and making existing local data appear missing.
 - Ordinary interaction, domain logic, SQLite-WASM/OPFS persistence, IndexedDB state, service-worker behavior, and offline use remain local. The static server only serves the application shell and updates.
-- Moving later from localhost to a public HTTPS origin is an origin migration. Users migrate through the versioned `.jobranger` portable backup/import contract rather than by assuming browser storage transfers between origins.
+- Moving later from localhost to a public HTTPS origin is an origin migration. Users migrate through the versioned `.sojourner` portable backup/import contract rather than by assuming browser storage transfers between origins.
 
 This local self-hosted stage is deliberately cheap. Public hosting is earned by external demand, not required to discover whether that demand exists.
 
@@ -85,9 +85,9 @@ The Microsoft Store is the primary supported native Windows distribution channel
 The Store path should:
 
 - package the existing Electron application for Store certification;
-- use the Store's package signing/certification trust path rather than requiring Job Ranger to own a separate public code-signing certificate for the Store-delivered package;
+- use the Store's package signing/certification trust path rather than requiring Sojourner to own a separate public code-signing certificate for the Store-delivered package;
 - use Store-managed installation/update behavior;
-- preserve Job Ranger's current Electron security boundaries;
+- preserve Sojourner's current Electron security boundaries;
 - validate packaged SQLite, local data paths, backup/restore, document import/export, source acquisition, and upgrade behavior under packaged-app constraints.
 
 The initial implementation should prefer the already-established electron-builder v26 `appx` target evaluated in #133 rather than changing packaging infrastructure merely for naming consistency. A later MSIX migration is allowed only when the toolchain is mature enough and the change earns its migration/testing cost.
@@ -100,7 +100,7 @@ The accepted evolution is toward a shared domain/application core consumed by mu
 
 ```text
                          ┌─────────────────────────────┐
-                         │   Job Ranger domain/core    │
+                         │   Sojourner domain/core    │
                          │                             │
                          │ Career Evidence             │
                          │ Target Tracks               │
@@ -151,7 +151,7 @@ A native-only capability must be identified as such because of a concrete platfo
 
 The product contract is shared across runtimes.
 
-The PWA should provide the same meaningful Career Ops workflows wherever technically reasonable. It must not become a permanently diminished "Job Ranger Lite" edition.
+The PWA should provide the same meaningful Career Ops workflows wherever technically reasonable. It must not become a permanently diminished "Sojourner Lite" edition.
 
 Acceptable differences are environment capabilities, for example:
 
@@ -238,7 +238,7 @@ A native Linux package requires future evidence that its user value justifies th
 
 ### SignPath
 
-SignPath is not part of the Job Ranger distribution strategy.
+SignPath is not part of the Sojourner distribution strategy.
 
 It must not be introduced as a substitute signing dependency unless a future explicit architecture decision reverses this disposition.
 
@@ -309,6 +309,6 @@ This distribution decision does not change the core product governance:
 
 ## Supersession
 
-This decision supersedes the previous forward assumption that Job Ranger must complete both Azure Artifact Signing for normal Windows distribution and Apple Developer ID/notarization for normal macOS distribution.
+This decision supersedes the previous forward assumption that Sojourner must complete both Azure Artifact Signing for normal Windows distribution and Apple Developer ID/notarization for normal macOS distribution.
 
 Historical implementation and release evidence for those paths remains valid historical evidence and should not be deleted merely because the product direction changed.

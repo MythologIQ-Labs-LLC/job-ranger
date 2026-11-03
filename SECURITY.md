@@ -2,11 +2,11 @@
 
 ## Supported scope
 
-Job Ranger is a local-first personal career application. It runs as a desktop (Electron) app and, on the post-v1.2 development line, as a local-first web/PWA app built on the same shared core.
+Sojourner is a local-first personal career application. It runs as a desktop (Electron) app and, on the post-v1.2 development line, as a local-first web/PWA app built on the same shared core.
 
 The latest stable published release is **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`). It is a desktop release. The web/PWA runtime and the Microsoft Store package exist on `main` but are not yet published channels. See [`docs/RELEASE_READINESS.md`](./docs/RELEASE_READINESS.md) for the shipped and unreleased boundary.
 
-Job Ranger should not be represented as a hardened enterprise endpoint, centrally managed security product, or sandbox for arbitrary web content.
+Sojourner should not be represented as a hardened enterprise endpoint, centrally managed security product, or sandbox for arbitrary web content.
 
 ## Security model
 
@@ -51,11 +51,11 @@ Structured state is stored locally behind the Electron/SQLite boundary, includin
 - Career Stories;
 - application materials and related local state.
 
-Managed source/resume artifacts live under Job Ranger's local data/artifact directory.
+Managed source/resume artifacts live under Sojourner's local data/artifact directory.
 
 Backup/restore is local and versioned. Cloud sync of the live workspace is not part of the product: the working database never leaves the local data directory.
 
-**Storage location (Windows app, optional, #249).** The person may choose one location for copies of full `.jobranger` workspace backups (automatic after changes and on quit, or **Back up now**) and of exported documents (resume PDFs, JSON Resume files): a local folder, their own Google Drive (scope `drive.file`, a `Sojourner` folder, the same Desktop sign-in and custody as Drive export below) or their own OneDrive (Microsoft identity platform public client, tenant `common`, system browser with PKCE S256 and a single-use state on a `http://localhost` loopback, scopes `Files.ReadWrite.AppFolder` and `offline_access` only, Graph app folder only, no client secret). Refresh tokens are stored only encrypted with Windows `safeStorage` (session-only when unavailable) outside the data directory; access tokens stay in main-process memory; nothing token-related is logged, written to SQLite, put in URLs, backups or archives, or sent to the renderer. Main-process egress for storage (`electron/src/storage/storage-egress.cts`) allows only the Drive v3 file and upload paths, `login.microsoftonline.com/common/oauth2/v2.0/token`, Graph paths under `/v1.0/me/drive/special/approot`, and upload-session or download URLs that Graph itself returned on Microsoft content domains (never with a token); no redirects, timeouts and capped responses. Every copy is verified by readback SHA-256 and recorded (migration 1011) as pending, uploaded, verified or failed; retention deletes only older verified automatic backups Sojourner recorded at that location. Restores from a location go through the existing archive validation and staged restart. Microsoft offers public clients no revocation endpoint: disconnecting deletes the stored sign-in and tells the person where to remove the app's access. No telemetry; nothing else leaves the device. [Contract and threat model](./docs/design/STORAGE_LOCATIONS.md). Not live-provider qualified yet.
+**Storage location (Windows app, optional, #249).** The person may choose one location for copies of full `.sojourner` workspace backups (automatic after changes and on quit, or **Back up now**) and of exported documents (resume PDFs, JSON Resume files): a local folder, their own Google Drive (scope `drive.file`, a `Sojourner` folder, the same Desktop sign-in and custody as Drive export below) or their own OneDrive (Microsoft identity platform public client, tenant `common`, system browser with PKCE S256 and a single-use state on a `http://localhost` loopback, scopes `Files.ReadWrite.AppFolder` and `offline_access` only, Graph app folder only, no client secret). Refresh tokens are stored only encrypted with Windows `safeStorage` (session-only when unavailable) outside the data directory; access tokens stay in main-process memory; nothing token-related is logged, written to SQLite, put in URLs, backups or archives, or sent to the renderer. Main-process egress for storage (`electron/src/storage/storage-egress.cts`) allows only the Drive v3 file and upload paths, `login.microsoftonline.com/common/oauth2/v2.0/token`, Graph paths under `/v1.0/me/drive/special/approot`, and upload-session or download URLs that Graph itself returned on Microsoft content domains (never with a token); no redirects, timeouts and capped responses. Every copy is verified by readback SHA-256 and recorded (migration 1011) as pending, uploaded, verified or failed; retention deletes only older verified automatic backups Sojourner recorded at that location. Restores from a location go through the existing archive validation and staged restart. Microsoft offers public clients no revocation endpoint: disconnecting deletes the stored sign-in and tells the person where to remove the app's access. No telemetry; nothing else leaves the device. [Contract and threat model](./docs/design/STORAGE_LOCATIONS.md). Not live-provider qualified yet.
 
 **Google Drive export (optional, off by default, #314).** The only data flow to a third party is a user-approved upload of one verified resume PDF to the user's own Google Drive, with scope `drive.file` only and an approval of exactly that file on every export ([ARCH-005](./docs/ARCHITECTURE_INDEX.md), [contract](./docs/design/GOOGLE_DRIVE_ARTIFACT_EXPORT_CONTRACT.md)). There is no automatic sync of resume exports (the optional storage location above copies backups and exported documents automatically) and no Sojourner server in the path. In the **Windows app** it exists only in a build configured with a Google Desktop OAuth client: sign-in uses the system browser with PKCE (S256) and a single-use state on a `127.0.0.1` loopback redirect; the access token stays in main-process memory; the refresh token is stored only encrypted with Windows `safeStorage` (session-only when encryption is unavailable), outside the data directory, so it is never in SQLite, logs, URLs, backups, archives or the renderer; main-process egress is limited to `oauth2.googleapis.com` (token, revoke) and the `www.googleapis.com` Drive v3 API and upload paths, with no redirects and capped responses; disconnecting deletes the stored sign-in and revokes it at Google (best effort). The Desktop client secret ships in every installed copy and is treated as public configuration, not a security control. In the **PWA**, authorization happens only on the separately hosted OAuth helper origin and the access token stays in page memory ([isolation design](./docs/security/SOJOURNER_DRIVE_OAUTH_ISOLATION.md)). Neither runtime is live-provider qualified yet.
 
@@ -75,7 +75,7 @@ Current controls include:
 - explicit encrypted/malformed/unsupported/parser-failure states;
 - explicit OCR-required state for image-only/scanned documents.
 
-Job Ranger does not silently upload resumes to hosted OCR or inference services.
+Sojourner does not silently upload resumes to hosted OCR or inference services.
 
 ## Acquisition network policy
 
@@ -112,7 +112,7 @@ Future changes must preserve connection-level pinning. Do not replace this bound
 
 User-directed external links are validated separately from automated acquisition.
 
-The fact that a URL is acceptable for `shell.openExternal` does not imply that Job Ranger should automatically retrieve it through privileged acquisition code.
+The fact that a URL is acceptable for `shell.openExternal` does not imply that Sojourner should automatically retrieve it through privileged acquisition code.
 
 ## Resume rendering security
 
@@ -179,9 +179,9 @@ Prerelease tags are signed like any published Windows release. Unsigned Windows 
 
 The release pipeline emits SHA-256 checksums and machine-readable release manifests from the exact packaged files uploaded to GitHub Releases.
 
-Windows Smart App Control can make unsigned software non-runnable without a supported per-app exception. Job Ranger does not instruct users to disable Smart App Control, SmartScreen, or Defender.
+Windows Smart App Control can make unsigned software non-runnable without a supported per-app exception. Sojourner does not instruct users to disable Smart App Control, SmartScreen, or Defender.
 
-macOS testers may use Apple's bounded Privacy & Security → Open Anyway flow when the operating system offers it after the artifact has been independently verified. Job Ranger does not recommend disabling Gatekeeper globally or recursively stripping quarantine metadata.
+macOS testers may use Apple's bounded Privacy & Security → Open Anyway flow when the operating system offers it after the artifact has been independently verified. Sojourner does not recommend disabling Gatekeeper globally or recursively stripping quarantine metadata.
 
 See [`docs/TESTER_INSTALLATION.md`](./docs/TESTER_INSTALLATION.md).
 

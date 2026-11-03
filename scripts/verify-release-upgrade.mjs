@@ -2,12 +2,17 @@
 // Verifies that the current build safely opens data written by a previously
 // published release (RELEASE_READINESS §3, "Data and migration safety").
 //
-//   npm run test:release-upgrade -- [--baseline v1.2.0] [--work <dir>] [--keep]
+//   npm run test:release-upgrade -- [--baseline job-ranger-v1.2.0] [--work <dir>] [--keep]
 //                                   [--reuse-node-modules]
 //
-// 1. Checks the baseline release tag (default: the newest stable vX.Y.Z tag)
-//    out into a temporary git worktree, installs its dependencies, and
-//    compiles its desktop runtime.
+// 1. Checks the baseline release tag out into a temporary git worktree,
+//    installs its dependencies, and compiles its desktop runtime. The default
+//    baseline is the newest stable Sojourner tag (vX.Y.Z). Until Sojourner has
+//    one, it is the newest stable Job Ranger tag (job-ranger-vX.Y.Z, i.e.
+//    job-ranger-v1.2.0): the Job Ranger releases were archived under that
+//    prefix and their data is what a Sojourner install upgrades in place.
+//    Pre-release tags (v1.0.0-alpha.1, job-ranger-v1.2.0-rc.5) are never the
+//    default. --baseline <tag> overrides the choice.
 // 2. Runs the baseline's own package smoke and feature smoke tests to write
 //    real baseline data directories (scripts/upgrade-check/generate-baseline-data.cjs).
 // 3. Opens every directory with the current build and checks that no baseline
@@ -25,6 +30,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync }
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { selectDefaultBaseline } from "./upgrade-check/baseline-tag.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -39,7 +45,9 @@ function run(command, commandArgs, options = {}) {
     cwd: root,
     stdio: options.capture ? ["ignore", "pipe", "inherit"] : "inherit",
     encoding: "utf8",
-    shell: process.platform === "win32",
+    // Only npm needs a shell on Windows (npm.cmd). Running node or git through
+    // a shell breaks when process.execPath contains spaces (C:\Program Files\nodejs).
+    shell: process.platform === "win32" && command === "npm",
     ...options,
   });
   if (result.status !== 0) {
@@ -48,23 +56,19 @@ function run(command, commandArgs, options = {}) {
   return result.stdout ?? "";
 }
 
-function newestStableTag() {
-  const tags = run("git", ["tag", "--list", "v*"], { capture: true })
-    .split("\n")
-    .map((tag) => tag.trim())
-    .filter((tag) => /^v\d+\.\d+\.\d+$/.test(tag));
-  if (tags.length === 0) {
-    throw new Error("No stable vX.Y.Z tag found. Fetch tags (actions/checkout with fetch-depth: 0) or pass --baseline.");
+function defaultBaseline() {
+  const tags = run("git", ["tag", "--list", "v*", "job-ranger-v*"], { capture: true }).split(/\r?\n/);
+  const baseline = selectDefaultBaseline(tags);
+  if (!baseline) {
+    throw new Error(
+      "No stable vX.Y.Z or job-ranger-vX.Y.Z tag found. Fetch tags (actions/checkout with fetch-depth: 0) or pass --baseline.",
+    );
   }
-  const parts = (tag) => tag.slice(1).split(".").map(Number);
-  return tags.sort((a, b) => {
-    const [x, y] = [parts(a), parts(b)];
-    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
-  }).at(-1);
+  return baseline;
 }
 
-const baseline = option("--baseline") ?? newestStableTag();
-const work = path.resolve(option("--work") ?? mkdtempSync(path.join(os.tmpdir(), "job-ranger-release-upgrade-")));
+const baseline = option("--baseline") ?? defaultBaseline();
+const work = path.resolve(option("--work") ?? mkdtempSync(path.join(os.tmpdir(), "sojourner-release-upgrade-")));
 const baselineRoot = path.join(work, "baseline");
 const dataRoot = path.join(work, "data");
 const keep = flag("--keep");

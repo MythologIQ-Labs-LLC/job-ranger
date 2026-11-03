@@ -52,21 +52,21 @@ assert.throws(() => webCreateHash("md5"), /only supports sha256/);
 
 // --- POSIX path semantics used by managed-artifact and backup code ---
 const pathCases = [
-  ["join", ["/job-ranger/data", "artifacts", "sources", "a1", "source.pdf"]],
+  ["join", ["/sojourner/data", "artifacts", "sources", "a1", "source.pdf"]],
   ["join", ["/a/b", "../c", "./d"]],
   ["join", ["a", "", "b/"]],
-  ["dirname", ["/job-ranger/data/jobscout.sqlite3"]],
-  ["dirname", ["/job-ranger"]],
+  ["dirname", ["/sojourner/data/sojourner.sqlite3"]],
+  ["dirname", ["/sojourner"]],
   ["dirname", ["relative"]],
   ["basename", ["/x/y/source.docx"]],
   ["basename", ["/x/y/source.docx", ".docx"]],
   ["extname", ["/x/y/source.tar.gz"]],
   ["extname", ["/x/.hidden"]],
-  ["resolve", ["/job-ranger/data", "artifacts/x"]],
+  ["resolve", ["/sojourner/data", "artifacts/x"]],
   ["resolve", ["/a", "/b", "c/../d"]],
-  ["relative", ["/job-ranger/data", "/job-ranger/data/artifacts/sources/x"]],
-  ["relative", ["/job-ranger/data", "/job-ranger/other"]],
-  ["relative", ["/job-ranger/data", "/job-ranger/data"]],
+  ["relative", ["/sojourner/data", "/sojourner/data/artifacts/sources/x"]],
+  ["relative", ["/sojourner/data", "/sojourner/other"]],
+  ["relative", ["/sojourner/data", "/sojourner/data"]],
   ["isAbsolute", ["/abs"]],
   ["isAbsolute", ["rel/x"]],
   ["normalize", ["/a//b/./c/.."]],
@@ -89,7 +89,7 @@ assert.doesNotMatch(csp, /'unsafe-inline'|'unsafe-eval'|\*/, "CSP forbids inline
 assert.match(csp, /default-src 'none'/);
 assert.match(csp, /frame-ancestors 'none'/);
 assert.match(csp, /require-trusted-types-for 'script'/);
-assert.match(csp, /trusted-types job-ranger-script-url/);
+assert.match(csp, /trusted-types sojourner-script-url/);
 const connect = csp.split("; ").find((directive) => directive.startsWith("connect-src"));
 assert.deepEqual(connect.split(" ").slice(1), ["'self'", ...ACQUISITION_ORIGINS]);
 for (const origin of ACQUISITION_ORIGINS) assert.match(origin, /^https:\/\/[a-z0-9.-]+$/);

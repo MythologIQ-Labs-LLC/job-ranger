@@ -1,6 +1,6 @@
-# Job Ranger grouped sidebar navigation (#271)
+# Sojourner grouped sidebar navigation (#271)
 
-**Status:** candidate on `ux/271-grouped-sidebar-navigation`, based on `main` at `296cac2f55cacc95a564c4c18dbd35033af2a9a2`. It merges [PR #186](https://github.com/MythologIQ-Labs-LLC/job-ranger/pull/186) (offline Help, [#185](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/185)), so **#186 must merge first**. **Not merged or released.** Parent visual refinement issue: [#248](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/248).
+**Status:** candidate on `ux/271-grouped-sidebar-navigation`, based on `main` at `296cac2f55cacc95a564c4c18dbd35033af2a9a2`. It merges [PR #186](https://github.com/MythologIQ-Labs-LLC/sojourner/pull/186) (offline Help, [#185](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/185)), so **#186 must merge first**. **Not merged or released.** Parent visual refinement issue: [#248](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/248).
 
 ## First-party evidence and problem
 
@@ -28,7 +28,7 @@ Measured on `main` (`296cac2`) in the running web app across 3 themes × 4 viewp
 - **Group buttons:** groups are native buttons with `aria-expanded`, `aria-controls`, a chevron and visible focus rings. Only actual destination links receive `aria-current="page"`.
 - **Utility area:** the footer is a compact utility navigation landmark containing Settings and Help.
 - **Mobile:** the existing menu button is kept, now at least 44×44 px. The expanded menu shows the primary, grouped and utility navigation, and choosing a destination closes it.
-- **Identity:** the existing themes and Job Ranger identity are kept. Nothing is profiled, inferred, persisted or permanently hidden.
+- **Identity:** the existing themes and Sojourner identity are kept. Nothing is profiled, inferred, persisted or permanently hidden.
 
 ## Test and demo impact
 
