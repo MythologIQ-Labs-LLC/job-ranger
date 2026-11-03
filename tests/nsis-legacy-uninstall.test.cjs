@@ -43,6 +43,15 @@ assert.ok(customInstall, "customInstall is defined");
 const hkcu = customInstall.indexOf('sojournerRemoveLegacyInstall HKCU "/currentuser"');
 const hklm = customInstall.indexOf('sojournerRemoveLegacyInstall HKLM "/allusers"');
 assert.ok(hkcu >= 0 && hklm > hkcu, "HKCU is checked, then HKLM");
+// An all-users (HKLM) legacy install is only removed by an elevated installer; otherwise
+// the person is told to remove it, instead of a surprise UAC prompt or a silent failure.
+assert.match(
+  customInstall,
+  /\$\{If\} \$\{UAC_IsAdmin\}\s+!insertmacro sojournerRemoveLegacyInstall HKLM "\/allusers"\s+\$\{Else\}[\s\S]*?DetailPrint "An all-users Job Ranger installation is still present\. Remove it from Settings > Apps > Installed apps/,
+);
+for (let n = 0; n <= 9; n += 1) {
+  assert.ok(customInstall.includes(`Push $R${n}`) && customInstall.includes(`Pop $R${n}`), `$R${n} is preserved`);
+}
 // electron-builder inserts customInstall at the end of the install section, after the files.
 const installSection = fs.readFileSync(require.resolve("app-builder-lib/templates/nsis/installSection.nsh"), "utf8");
 assert.ok(
@@ -62,19 +71,34 @@ const flags = remove.match(/StrCpy \$R5 "([^"]*)"/)?.[1] ?? "";
 for (const flag of ["/S", "${SCOPE_FLAG}", "--updated"]) {
   assert.ok(flags.split(/\s+/).includes(flag), `the legacy uninstaller gets ${flag}`);
 }
-assert.match(remove, /\$\{If\} \$R1 == "\$\{SHORTCUT_NAME\}"\s+StrCpy \$R5 "\$R5 --keep-shortcuts"/, "shortcuts sharing Sojourner's name are kept");
-assert.match(
-  remove,
-  /\$\{If\} \$R4 == \$INSTDIR[\s\S]*?DeleteRegKey \$\{ROOT_KEY\} "\$\{SOJOURNER_LEGACY_UNINSTALL_KEY\}"[\s\S]*?\$\{ElseIf\}/,
-  "a legacy install in this folder only loses its registration",
+assert.match(remove, /\$\{If\} \$R7 == "\$\{SHORTCUT_NAME\}"\s+StrCpy \$R5 "\$R5 --keep-shortcuts"/, "shortcuts sharing Sojourner's name are kept");
+assert.match(remove, /DetailPrint "If Job Ranger is still open, it is closed first\."/, "closing a running Job Ranger is announced");
+// Same folder: compared as normalised full paths; only the legacy app's own leftovers go.
+assert.match(remove, /GetFullPathName \$R8 "\$R4"\s+GetFullPathName \$R9 "\$INSTDIR"\s+\$\{If\} \$R8 == \$R9/);
+const sameFolder = remove.slice(remove.indexOf("${If} $R8 == $R9"), remove.indexOf("${ElseIf} ${FileExists}"));
+const compact = sameFolder.replace(/\s+/g, " ");
+assert.ok(
+  compact.includes('${If} $R5 != "$INSTDIR\\${APP_EXECUTABLE_FILENAME}" ${AndIf} ${FileExists} "$R5" Delete "$R5"'),
+  "the legacy executable is deleted, never Sojourner's",
 );
+assert.ok(
+  compact.includes('${If} $R2 != "$INSTDIR\\${UNINSTALL_FILENAME}" ${AndIf} ${FileExists} "$R2" Delete "$R2"'),
+  "the legacy uninstaller is deleted, never Sojourner's",
+);
+assert.ok(
+  compact.includes('${AndIf} $R7 != "${SHORTCUT_NAME}" Delete "$DESKTOP\\$R7.lnk" Delete "$SMPROGRAMS\\$R7.lnk"'),
+  "differently named legacy shortcuts are deleted",
+);
+assert.match(sameFolder, /DeleteRegKey \$\{ROOT_KEY\} "\$\{SOJOURNER_LEGACY_UNINSTALL_KEY\}"\s+DeleteRegKey \$\{ROOT_KEY\} "\$\{SOJOURNER_LEGACY_INSTALL_KEY\}"/);
+assert.doesNotMatch(sameFolder, /ExecWait/, "the legacy uninstaller never runs against Sojourner's own folder");
 assert.match(script, /!define SOJOURNER_LEGACY_UNINSTALL_ATTEMPTS 5/);
 assert.match(
   remove,
   /\$\{Do\}[\s\S]*ExecWait[\s\S]*\$\{If\} \$R3 >= \$\{SOJOURNER_LEGACY_UNINSTALL_ATTEMPTS\}[\s\S]*Sleep 1000[\s\S]*\$\{Loop\}/,
   "the legacy uninstaller is retried",
 );
-assert.doesNotMatch(script, /--delete-app-data|RMDir|Delete\s+"\$APPDATA/i, "the include never deletes app data");
+assert.doesNotMatch(script, /--delete-app-data|RMDir \/r|\$APPDATA|\$LOCALAPPDATA/i, "the include never deletes app data");
+assert.ok([...script.matchAll(/RMDir "([^"]*)"/g)].every((match) => match[1] === "$SMPROGRAMS\\$R1"), "only the legacy Start-menu folder is removed, and only if empty");
 assert.doesNotMatch(remove, /Abort|Quit/, "a failed removal never blocks the install");
 
 console.log("NSIS legacy-uninstall config tests passed");

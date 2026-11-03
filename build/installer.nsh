@@ -10,15 +10,19 @@
 ; customInstall runs at the end of the install section, after the user chose to install
 ; and Sojourner's files, shortcuts and uninstall entry are in place; cancelling the wizard
 ; or a failed install therefore never removes the legacy app. It looks the legacy install
-; up under HKCU, then HKLM, and runs its uninstaller silently with `--updated` (the
-; electron-builder flag that keeps app data; deleteAppDataOnUninstall stays false) and
-; `_?=<install dir>` so ExecWait really waits, retrying like electron-builder's
-; uninstallOldVersion. User data is never deleted: the data folder is copied to
-; %APPDATA%\Sojourner at first start (electron/src/legacy-migration.cts).
+; up under HKCU and, only when this installer runs elevated, HKLM (an all-users install
+; cannot be removed from a per-user, unelevated installer without a surprise UAC prompt;
+; the person is told to remove it from Installed apps instead). It runs the legacy
+; uninstaller silently with `--updated` (the electron-builder flag that keeps app data;
+; deleteAppDataOnUninstall stays false) and `_?=<install dir>` so ExecWait really waits,
+; retrying like electron-builder's uninstallOldVersion. The legacy uninstaller closes a
+; running Job Ranger first; the install log says so. User data is never deleted: the data
+; folder is copied to %APPDATA%\Sojourner at first start (electron/src/legacy-migration.cts).
 ;
 ; A legacy install in the same folder as this one (a pre-rename Sojourner build) already
-; had its files replaced by this install, so only its registration is removed. A legacy
-; install whose shortcuts have this install's name keeps them (--keep-shortcuts).
+; had its files replaced by this install: its registration, its own executable and
+; uninstaller and its differently named shortcuts are removed, nothing of this install.
+; A legacy install whose shortcuts have this install's name keeps them (--keep-shortcuts).
 
 !include LogicLib.nsh
 
@@ -57,17 +61,48 @@
     ${If} $R4 == ""
       ${StdUtils.GetParentPath} $R4 "$R2"
     ${EndIf}
+    ReadRegStr $R7 ${ROOT_KEY} "${SOJOURNER_LEGACY_INSTALL_KEY}" "ShortcutName"
 
-    ${If} $R4 == $INSTDIR
-      ; Same folder: this install already replaced the legacy files; drop the legacy entry.
-      DetailPrint "Removing the earlier registration of $R4."
+    ; Compare normalised full paths (NSIS string comparison ignores case).
+    GetFullPathName $R8 "$R4"
+    GetFullPathName $R9 "$INSTDIR"
+    ${If} $R8 == $R9
+      ; Same folder: this install already replaced the legacy files. Remove what is only
+      ; the legacy app's: its registration, executable, uninstaller and shortcuts.
+      DetailPrint "Removing the earlier installation's leftovers from $R4."
+      ReadRegStr $R5 ${ROOT_KEY} "${SOJOURNER_LEGACY_UNINSTALL_KEY}" "DisplayIcon"
+      ${If} $R5 != ""
+        ; DisplayIcon is "<exe>,0" or "<exe>".
+        StrCpy $R1 $R5 2 -2
+        ${If} $R1 == ",0"
+          StrCpy $R5 $R5 -2
+        ${EndIf}
+        ${If} $R5 != "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
+        ${AndIf} ${FileExists} "$R5"
+          Delete "$R5"
+        ${EndIf}
+      ${EndIf}
+      ${If} $R2 != "$INSTDIR\${UNINSTALL_FILENAME}"
+      ${AndIf} ${FileExists} "$R2"
+        Delete "$R2"
+      ${EndIf}
+      ${If} $R7 != ""
+      ${AndIf} $R7 != "${SHORTCUT_NAME}"
+        Delete "$DESKTOP\$R7.lnk"
+        Delete "$SMPROGRAMS\$R7.lnk"
+        ReadRegStr $R1 ${ROOT_KEY} "${SOJOURNER_LEGACY_INSTALL_KEY}" "MenuDirectory"
+        ${If} $R1 != ""
+          Delete "$SMPROGRAMS\$R1\$R7.lnk"
+          RMDir "$SMPROGRAMS\$R1"
+        ${EndIf}
+      ${EndIf}
       DeleteRegKey ${ROOT_KEY} "${SOJOURNER_LEGACY_UNINSTALL_KEY}"
       DeleteRegKey ${ROOT_KEY} "${SOJOURNER_LEGACY_INSTALL_KEY}"
     ${ElseIf} ${FileExists} "$R2"
       DetailPrint "Removing the earlier Job Ranger installation in $R4 (your data is kept)."
+      DetailPrint "If Job Ranger is still open, it is closed first."
       StrCpy $R5 "/S /KEEP_APP_DATA ${SCOPE_FLAG} --updated"
-      ReadRegStr $R1 ${ROOT_KEY} "${SOJOURNER_LEGACY_INSTALL_KEY}" "ShortcutName"
-      ${If} $R1 == "${SHORTCUT_NAME}"
+      ${If} $R7 == "${SHORTCUT_NAME}"
         StrCpy $R5 "$R5 --keep-shortcuts"
       ${EndIf}
       InitPluginsDir
@@ -89,7 +124,7 @@
         ${EndIf}
         ${If} $R3 >= ${SOJOURNER_LEGACY_UNINSTALL_ATTEMPTS}
           ; Never fail the install: the earlier app stays listed and can be removed by hand.
-          DetailPrint "The earlier Job Ranger installation could not be removed automatically (exit $R6)."
+          DetailPrint "The earlier Job Ranger installation could not be removed automatically (exit $R6). Remove it from Settings > Apps > Installed apps; your data is kept."
           ${ExitDo}
         ${EndIf}
         ; The legacy app may still be closing; electron-builder waits and retries the same way.
@@ -107,8 +142,21 @@
   Push $R4
   Push $R5
   Push $R6
+  Push $R7
+  Push $R8
+  Push $R9
   !insertmacro sojournerRemoveLegacyInstall HKCU "/currentuser"
-  !insertmacro sojournerRemoveLegacyInstall HKLM "/allusers"
+  ${If} ${UAC_IsAdmin}
+    !insertmacro sojournerRemoveLegacyInstall HKLM "/allusers"
+  ${Else}
+    ReadRegStr $R0 HKLM "${SOJOURNER_LEGACY_UNINSTALL_KEY}" "UninstallString"
+    ${If} $R0 != ""
+      DetailPrint "An all-users Job Ranger installation is still present. Remove it from Settings > Apps > Installed apps (administrator rights needed); your data is kept."
+    ${EndIf}
+  ${EndIf}
+  Pop $R9
+  Pop $R8
+  Pop $R7
   Pop $R6
   Pop $R5
   Pop $R4
