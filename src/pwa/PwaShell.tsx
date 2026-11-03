@@ -133,10 +133,10 @@ export function PwaBootGate({ state, children }: { state: RuntimeBootState; chil
   }
   if (state.status === "waiting-for-lock") {
     return (
-      <BootScreen title="Sojourner is open in another tab or window">
+      <BootScreen title="Sojourner (or an earlier Job Ranger tab) is open in another tab or window">
         <p className="text-sm leading-6">
-          To protect your data, only one Sojourner tab can use this browser's local workspace at a time. Close the other
-          Sojourner tab or window; this tab will continue automatically.
+          To protect your data, only one tab can use this browser's local workspace at a time, including a tab still
+          running the app from before it was renamed Sojourner. Close the other tab or window; this tab will continue automatically.
         </p>
       </BootScreen>
     );

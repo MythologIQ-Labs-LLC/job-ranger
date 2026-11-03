@@ -37,7 +37,7 @@ assert.match(read("src/pwa/runtime/client.ts"), /STORAGE_FAILURE_EVENT = "sojour
 assert.match(read("src/pwa/runtime/client.ts"), /BOOT_STATE_EVENT = "sojourner:boot-state"/);
 assert.match(read("src/pwa/runtime/protocol.ts"), /RUNTIME_LOCK_NAME = "sojourner-web-runtime-v1"/);
 assert.match(read("src/pwa/runtime/protocol.ts"), /LEGACY_RUNTIME_LOCK_NAME = "job-ranger-web-runtime-v1"/);
-assert.match(read("src/pwa/PwaShell.tsx"), /Sojourner is open in another tab or window/);
+assert.match(read("src/pwa/PwaShell.tsx"), /Sojourner \(or an earlier Job Ranger tab\) is open in another tab or window/);
 assert.match(packaging, /sojourner-web-v\$\{version\}\.zip/);
 assert.match(read("src/demo/session.ts"), /sojourner\.\*/);
 assert.match(read("src/demo/session.ts"), /LEGACY_STORAGE_KEY_PREFIX/);

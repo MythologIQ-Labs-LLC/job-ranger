@@ -8,7 +8,7 @@
  * whole lifetime, so two tabs can never write the same local database.
  */
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
-import { SojournerBackend } from "../../../electron/src/backend.cjs";
+import { SojournerBackend, resolveWorkspaceDatabasePath } from "../../../electron/src/backend.cjs";
 import { CareerBackend } from "../../../electron/src/career-backend.cjs";
 import { RequirementBackend } from "../../../electron/src/requirement-backend.cjs";
 import { registerCoreIpcHandlers } from "../../../electron/src/core-ipc.cjs";
@@ -60,7 +60,7 @@ import {
 } from "./demo-workspace";
 import { fileBytesForTransfer } from "./transfer-file-bytes";
 import { canOfferRestoreFromBackup, RECOVERY_CHANNELS } from "./workspace-recovery";
-import { migrateLegacyWorkspace, type MigrationFs } from "./workspace-migration";
+import { migrateLegacyWorkspace, rebaseManagedPaths, type MigrationFs } from "./workspace-migration";
 
 declare const __SOJOURNER_VERSION__: string;
 declare const __SOJOURNER_BUILD_ID__: string;
@@ -329,29 +329,16 @@ async function withCopyEngine(sqlite3: unknown, engineFs: EngineFs, action: (eng
   }
 }
 
-const sqlText = (value: string) => `'${value.replace(/'/g, "''")}'`;
-
 /**
- * Managed artifacts are recorded with absolute paths. In the migrated copy they are moved from the
- * legacy data directory to the new one in one transaction, exactly as a backup restore rebases them.
+ * A restore staged by a pre-rename build (its stage folder is copied with the legacy workspace)
+ * swaps in a database whose managed-artifact paths still point into the legacy data directory,
+ * and every later backup would refuse them. After applyPendingRestore, the workspace in use is
+ * rebased the same way the migrated copy was; with nothing left to rebase this changes nothing.
  */
-async function rebaseManagedPaths(engine: WasmSqliteEngine, path: string, from: string, to: string): Promise<void> {
-  const fromPrefix = `${from.replace(/\/+$/, "")}/`;
-  const toPrefix = `${to.replace(/\/+$/, "")}/`;
-  const underFrom = `substr(managed_path, 1, ${fromPrefix.length}) = ${sqlText(fromPrefix)}`;
-  const tables = await engine.queryAll<{ name: string }>(
-    path,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('source_artifacts', 'resume_artifacts') ORDER BY name;",
-  );
-  if (tables.length === 0) return;
-  await engine.transaction(
-    path,
-    tables.map(({ name }) => `UPDATE ${name} SET managed_path = ${sqlText(toPrefix)} || substr(managed_path, ${fromPrefix.length + 1}) WHERE ${underFrom};`),
-  );
-  for (const { name } of tables) {
-    const [row] = await engine.queryAll<{ remaining: number }>(path, `SELECT count(*) AS remaining FROM ${name} WHERE ${underFrom};`);
-    if (row?.remaining) throw new Error(`${row.remaining} managed artifact path(s) in ${name} still point to the earlier workspace.`);
-  }
+async function rebaseRestoredManagedPaths(engine: WasmSqliteEngine): Promise<void> {
+  const databasePath = await resolveWorkspaceDatabasePath(dataDirectory);
+  if (!(await fs.stat(databasePath).then(() => true, () => false))) return;
+  await rebaseManagedPaths(engine, databasePath, join(LEGACY_USER_DATA_DIRECTORY, basename(DATA_DIRECTORY)), dataDirectory);
 }
 
 /**
@@ -367,7 +354,7 @@ async function openWorkspaceRoot(sqlite3: unknown, engineFs: EngineFs): Promise<
     dataDirectoryName: basename(DATA_DIRECTORY),
     databaseFileName: DATABASE_FILE_NAME,
     legacyDatabaseFileName: LEGACY_DATABASE_FILE_NAME,
-    rebaseDatabase: (path, from, to) => withCopyEngine(sqlite3, engineFs, (engine) => rebaseManagedPaths(engine, path, from, to)),
+    rebaseDatabase: (path, from, to) => withCopyEngine(sqlite3, engineFs, async (engine) => { await rebaseManagedPaths(engine, path, from, to); }),
     verifyDatabase: (path) =>
       withCopyEngine(sqlite3, engineFs, async (engine) => {
         const rows = await engine.queryAll<{ integrity_check: string }>(path, "PRAGMA integrity_check;");
@@ -446,12 +433,14 @@ async function boot(): Promise<void> {
       stat: (target) => fs.stat(target),
     };
     if (!IS_DEMO_FLAVOR) workspace = await openWorkspaceRoot(sqlite3, engineFs);
-    setActiveWasmSqliteEngine(new WasmSqliteEngine({ sqlite3, fs: engineFs, dirname }));
+    const engine = new WasmSqliteEngine({ sqlite3, fs: engineFs, dirname });
+    setActiveWasmSqliteEngine(engine);
     engineReady = true;
 
     await fs.mkdir(userDataDirectory, { recursive: true });
     await applyPendingRestore({ userDataDirectory, dataDirectory });
     pendingRestoreSettled = true;
+    if (workspace?.root === "current") await rebaseRestoredManagedPaths(engine);
 
     const backend = new SojournerBackend({
       dataDirectory,
