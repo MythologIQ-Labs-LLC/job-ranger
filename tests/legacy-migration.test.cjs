@@ -38,7 +38,7 @@ function managedPaths(databasePath) {
 
 /** Migration with the real sqlite3-backed rebase unless a test overrides it. */
 function migrate(input) {
-  return migration.migrateLegacyUserData({ rebaseManagedPaths, ...input });
+  return migration.migrateLegacyUserData({ rebaseManagedPaths, sleep: () => undefined, ...input });
 }
 
 function write(file, content) {
@@ -421,6 +421,145 @@ test("the same folder for target and legacy is never copied", () => {
   assert.deepEqual(migrate({ target: legacy, legacy, verifyDatabase, log }), { kind: "current", userDataDirectory: legacy });
 });
 
+function writeLock(root, owner) {
+  fs.writeFileSync(migration.migrationLockPath(path.join(root, "Sojourner")), JSON.stringify(owner));
+}
+
+test("a start that finds another start migrating waits, then uses its result", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const before = snapshot(legacy);
+  // The other start's copy in progress must survive the wait untouched.
+  const inProgress = path.join(root, ".Sojourner-migration-2026-11-02T10-00-00-000Z-0therpid");
+  write(path.join(inProgress, "data", "partial.bin"), "copying");
+  writeLock(root, { pid: 4242, startedAt: new Date().toISOString(), token: "other" });
+  let sleeps = 0;
+  const result = migrate({
+    target,
+    legacy,
+    verifyDatabase,
+    log,
+    isProcessAlive: (pid) => pid === 4242,
+    sleep: () => {
+      sleeps += 1;
+      assert.ok(fs.existsSync(path.join(inProgress, "data", "partial.bin")), "the other start's copy is never deleted");
+      if (sleeps === 3) {
+        // The other start finishes: its staging folder becomes the target, then it unlocks.
+        fs.renameSync(inProgress, target);
+        write(path.join(target, "data", DATABASE_FILE_NAME), "migrated by the other start");
+        fs.rmSync(migration.migrationLockPath(target));
+      }
+    },
+  });
+  assert.deepEqual(result, { kind: "current", userDataDirectory: target });
+  assert.equal(sleeps, 3);
+  assert.deepEqual(snapshot(legacy), before);
+  assert.match(fs.readFileSync(migration.migrationLogPath(target), "utf8"), /is moving the data folder; waiting[\s\S]*finished moving/);
+});
+
+test("a stale lock (its process is gone) and its partial copy are removed, then the data is migrated", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  write(path.join(root, ".Sojourner-migration-2026-11-01T00-00-00-000Z-crashed1", "data", "half.bin"), "partial");
+  writeLock(root, { pid: 4243, startedAt: new Date().toISOString(), token: "crashed" });
+  const result = migrate({ target, legacy, verifyDatabase, log, isProcessAlive: () => false });
+  assert.equal(result.kind, "migrated");
+  assert.deepEqual(stagingLeftovers(root), []);
+  assert.equal(fs.existsSync(migration.migrationLockPath(target)), false, "the lock is released");
+  assert.equal(companies(path.join(target, "data", DATABASE_FILE_NAME)), "Acme Health");
+});
+
+test("a lock whose process id is alive but far too old is stale", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  writeLock(root, { pid: process.pid, startedAt: "2026-01-01T00:00:00.000Z", token: "reused-pid" });
+  assert.equal(migrate({ target, legacy, verifyDatabase, log, staleLockMs: 60_000 }).kind, "migrated");
+});
+
+test("waiting is bounded: fall back to the legacy folder and leave the other start's lock", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  writeLock(root, { pid: 4244, startedAt: new Date().toISOString(), token: "slow" });
+  const before = snapshot(legacy);
+  const result = migrate({ target, legacy, verifyDatabase, log, isProcessAlive: () => true, lockWaitMs: 0 });
+  assert.equal(result.kind, "fallback");
+  assert.equal(result.userDataDirectory, legacy);
+  assert.match(result.reason, /still moving the data folder/);
+  assert.equal(JSON.parse(fs.readFileSync(migration.migrationLockPath(target), "utf8")).token, "slow");
+  assert.deepEqual(snapshot(legacy), before);
+});
+
+test("three real concurrent first starts end on the same migrated folder", async () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const before = snapshot(legacy);
+  const runtime = path.join(__dirname, "..", "electron-runtime", "electron", "src");
+  const script = `
+    const m = require(${JSON.stringify(path.join(runtime, "legacy-migration.cjs"))});
+    const s = require(${JSON.stringify(path.join(runtime, "sqlite-sync.cjs"))});
+    const bin = s.resolveSqliteBinarySync();
+    const r = m.migrateLegacyUserData({ target: ${JSON.stringify(target)}, legacy: ${JSON.stringify(legacy)},
+      verifyDatabase: s.sqliteIntegrityCheck(bin), rebaseManagedPaths: s.sqliteManagedPathRebase(bin) });
+    process.stdout.write(JSON.stringify(r));`;
+  const { spawn } = require("node:child_process");
+  const start = () =>
+    new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ["-e", script], { env: process.env });
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk) => (out += chunk));
+      child.stderr.on("data", (chunk) => (err += chunk));
+      child.on("close", (code) => (code === 0 ? resolve(JSON.parse(out)) : reject(new Error(err))));
+    });
+  const results = await Promise.all([start(), start(), start()]);
+  assert.ok(results.every((result) => result.userDataDirectory === target), JSON.stringify(results));
+  assert.deepEqual(results.map((result) => result.kind).sort(), ["current", "current", "migrated"]);
+  assert.deepEqual(stagingLeftovers(root), []);
+  assert.equal(fs.existsSync(migration.migrationLockPath(target)), false);
+  assert.deepEqual(withoutNote(snapshot(legacy)), before);
+  assert.equal(companies(path.join(target, "data", DATABASE_FILE_NAME)), "Acme Health");
+});
+
+test("a briefly locked staging folder (antivirus) is renamed on retry", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  let busy = 2;
+  const delays = [];
+  const result = migrate({
+    target,
+    legacy,
+    verifyDatabase,
+    log,
+    sleep: (ms) => delays.push(ms),
+    renamePath: (from, to) => {
+      if (to === target && busy-- > 0) throw Object.assign(new Error("EBUSY: resource busy or locked, rename"), { code: "EBUSY" });
+      fs.renameSync(from, to);
+    },
+  });
+  assert.equal(result.kind, "migrated");
+  assert.deepEqual(delays, [100, 250]);
+});
+
+test("the outcome is written to a log next to the target", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  migrate({ target, legacy, verifyDatabase, log });
+  assert.equal(migration.migrationLogPath(target), path.join(root, "Sojourner-migration.log"));
+  assert.match(fs.readFileSync(migration.migrationLogPath(target), "utf8"), /Moved data from .* \(\d+ files, \d+ bytes, verified\)/);
+  const failedRoot = appData();
+  const failedLegacy = makeLegacy(failedRoot);
+  const failedTarget = path.join(failedRoot, "Sojourner");
+  migrate({ target: failedTarget, legacy: failedLegacy, verifyDatabase: () => "not ok", log });
+  assert.match(fs.readFileSync(migration.migrationLogPath(failedTarget), "utf8"), /did not complete \(The copied database failed its integrity check: not ok\); using /);
+});
+
 test("sqlite3 discovery honours SQLITE3_PATH and the packaged Windows binary", () => {
   assert.equal(resolveSqliteBinarySync({ SQLITE3_PATH: "C:\\tools\\sqlite3.exe" }, "win32", undefined), "C:\\tools\\sqlite3.exe");
   const resources = appData();
@@ -428,10 +567,11 @@ test("sqlite3 discovery honours SQLITE3_PATH and the packaged Windows binary", (
   assert.equal(resolveSqliteBinarySync({}, "win32", resources), path.join(resources, "sqlite3.exe"));
 });
 
+(async () => {
 let failed = 0;
 for (const { name, run } of tests) {
   try {
-    run();
+    await run();
     console.log(`ok   ${name}`);
   } catch (error) {
     failed += 1;
@@ -444,3 +584,4 @@ if (failed) {
   process.exit(1);
 }
 console.log(`Legacy data-folder migration tests passed (${tests.length})`);
+})();

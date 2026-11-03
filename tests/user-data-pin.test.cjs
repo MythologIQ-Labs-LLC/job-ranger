@@ -66,5 +66,10 @@ assert.ok(pinAt > migrateAt, "main.cts applies the folder the migration chose");
 assert.ok(pinAt < main.indexOf('getPath("userData")'), "the pin precedes every userData read");
 assert.ok(pinAt < main.indexOf("new SojournerBackend("), "the pin precedes opening the database");
 assert.ok(pinAt < main.indexOf("app.whenReady"), "the pin precedes app ready");
+// One running app per data folder, taken after the folder is final (so it is the migrated one).
+const lockAt = main.indexOf("app.requestSingleInstanceLock()");
+assert.ok(lockAt > pinAt && lockAt < main.indexOf("app.whenReady"), "the single-instance lock follows the pin and precedes ready");
+assert.match(main, /app\.on\("second-instance"/);
+assert.match(main, /app\.whenReady\(\)\.then\(async \(\) => \{\s+if \(!hasInstanceLock\) return;/);
 
 console.log("User-data pin tests passed");

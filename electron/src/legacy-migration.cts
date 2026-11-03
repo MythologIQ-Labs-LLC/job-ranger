@@ -19,6 +19,12 @@ import { DATABASE_FILE_NAME, DATABASE_FILE_NAMES, LEGACY_DATABASE_FILE_NAME } fr
  * partial copy). A note is then left in the legacy folder. Any failure removes
  * only the staging copy and the app runs on the legacy folder, so no user is ever
  * stranded; the next start tries again.
+ *
+ * Concurrent first starts (two launches before either finished): the whole migration
+ * runs under an exclusive lock file next to the target. A second process waits for it
+ * (bounded) and then uses the result; staging copies are only removed while holding the
+ * lock, so a copy in progress is never deleted. Outcomes are appended to a small log
+ * file next to the target (for example %APPDATA%\Sojourner-migration.log).
  */
 
 /** Note written into the legacy folder after a verified migration. */
@@ -51,11 +57,89 @@ export interface LegacyMigrationInput {
    */
   rebaseManagedPaths: (databasePath: string, fromDataDirectory: string, toDataDirectory: string) => number;
   log?: (message: string) => void;
-  /** Test seams; production uses node:fs. */
+  /** Outcome log (default `<parent>/<target name>-migration.log`); null disables it. */
+  logFile?: string | null;
+  /** Longest wait for another process's migration (default 10 minutes). */
+  lockWaitMs?: number;
+  /** A lock older than this is stale even if its process id is in use (default 6 hours). */
+  staleLockMs?: number;
+  /** Test seams; production uses node:fs, this process and a blocking sleep. */
   copyTree?: (source: string, destination: string) => void;
   renamePath?: (from: string, to: string) => void;
   now?: () => Date;
+  sleep?: (milliseconds: number) => void;
+  pid?: number;
+  isProcessAlive?: (pid: number) => boolean;
 }
+
+const DEFAULT_LOCK_WAIT_MS = 10 * 60_000;
+const DEFAULT_STALE_LOCK_MS = 6 * 60 * 60_000;
+const LOCK_POLL_MS = 250;
+/** Windows antivirus and indexers briefly lock new folders; renames are retried. */
+const RENAME_RETRY_DELAYS_MS = [100, 250, 500, 1000, 2000, 4000];
+const TRANSIENT_RENAME_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
+
+function blockingSleep(milliseconds: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/** Exclusive lock held for the whole migration (next to the target, not inside it). */
+export function migrationLockPath(target: string): string {
+  return path.join(path.dirname(target), `.${path.basename(target)}-migration.lock`);
+}
+
+/** Outcome log next to the target, for example %APPDATA%\Sojourner-migration.log. */
+export function migrationLogPath(target: string): string {
+  return path.join(path.dirname(target), `${path.basename(target)}-migration.log`);
+}
+
+interface LockOwner {
+  pid: number;
+  startedAt: string;
+  token: string;
+}
+
+function readLock(lockPath: string): LockOwner | null {
+  try {
+    const value = JSON.parse(fs.readFileSync(lockPath, "utf8")) as Partial<LockOwner>;
+    if (typeof value.pid === "number" && typeof value.startedAt === "string" && typeof value.token === "string") {
+      return value as LockOwner;
+    }
+  } catch {
+    // Unreadable: judged by its age below.
+  }
+  return null;
+}
+
+function lockIsStale(
+  lockPath: string,
+  owner: LockOwner | null,
+  nowMs: number,
+  staleMs: number,
+  alive: (pid: number) => boolean,
+): boolean {
+  if (!owner) {
+    // Written right after it is created; an unreadable lock older than 30 s was abandoned.
+    try {
+      return nowMs - fs.statSync(lockPath).mtimeMs > 30_000;
+    } catch {
+      return true;
+    }
+  }
+  if (!alive(owner.pid)) return true;
+  const started = Date.parse(owner.startedAt);
+  return Number.isNaN(started) || nowMs - started > staleMs;
+}
+
 
 function isFile(filePath: string): boolean {
   try {
@@ -173,8 +257,112 @@ function migrationNote(target: string, date: Date): string {
   ].join("\r\n");
 }
 
+function renameWithRetry(
+  rename: (from: string, to: string) => void,
+  sleep: (milliseconds: number) => void,
+  from: string,
+  to: string,
+): void {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      rename(from, to);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (!code || !TRANSIENT_RENAME_CODES.has(code) || attempt >= RENAME_RETRY_DELAYS_MS.length) throw error;
+      sleep(RENAME_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+}
+
 export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrationResult {
-  const log = input.log ?? (() => undefined);
+  const consoleLog = input.log ?? (() => undefined);
+  const now = input.now ?? (() => new Date());
+  const target = path.resolve(input.target);
+  const legacy = path.resolve(input.legacy);
+  const logFile = input.logFile === undefined ? migrationLogPath(target) : input.logFile;
+  const log = (message: string) => {
+    consoleLog(message);
+    if (!logFile) return;
+    try {
+      fs.appendFileSync(logFile, `${now().toISOString()} [pid ${input.pid ?? process.pid}] ${message}\r\n`);
+    } catch {
+      // The log is a convenience; it never affects the migration.
+    }
+  };
+
+  if (target.toLowerCase() === legacy.toLowerCase()) return { kind: "current", userDataDirectory: target };
+  if (hasWorkspace(target)) return { kind: "current", userDataDirectory: target };
+  if (!hasWorkspace(legacy)) return { kind: "fresh", userDataDirectory: target };
+
+  const sleep = input.sleep ?? blockingSleep;
+  const alive = input.isProcessAlive ?? processAlive;
+  const pid = input.pid ?? process.pid;
+  const lockPath = migrationLockPath(target);
+  const waitMs = input.lockWaitMs ?? DEFAULT_LOCK_WAIT_MS;
+  const staleMs = input.staleLockMs ?? DEFAULT_STALE_LOCK_MS;
+  const token = randomUUID();
+  const waitStarted = Date.now();
+  let waited = false;
+
+  // Acquire the lock, or wait for the process holding it and use what it produced.
+  for (;;) {
+    try {
+      fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+      const handle = fs.openSync(lockPath, "wx");
+      try {
+        fs.writeSync(handle, JSON.stringify({ pid, startedAt: now().toISOString(), token } satisfies LockOwner));
+      } finally {
+        fs.closeSync(handle);
+      }
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== "EEXIST") {
+        const reason = `could not take the migration lock (${error instanceof Error ? error.message : String(error)})`;
+        log(`Data-folder migration did not start: ${reason}; using ${legacy} this time.`);
+        return { kind: "fallback", userDataDirectory: legacy, legacyDirectory: legacy, reason };
+      }
+    }
+    const owner = readLock(lockPath);
+    if (lockIsStale(lockPath, owner, now().getTime(), staleMs, alive)) {
+      log(`Removing a stale migration lock${owner ? ` (pid ${owner.pid}, ${owner.startedAt})` : ""}.`);
+      fs.rmSync(lockPath, { force: true });
+      continue;
+    }
+    if (!waited) {
+      log(`Another Sojourner start (pid ${owner?.pid ?? "unknown"}) is moving the data folder; waiting for it.`);
+      waited = true;
+    }
+    if (Date.now() - waitStarted >= waitMs) {
+      const reason = "another Sojourner start is still moving the data folder";
+      log(`Data-folder migration did not complete (${reason}); using ${legacy} this time.`);
+      return { kind: "fallback", userDataDirectory: legacy, legacyDirectory: legacy, reason };
+    }
+    sleep(LOCK_POLL_MS);
+    if (hasWorkspace(target)) {
+      log(`The other start finished moving the data folder; using ${target}.`);
+      return { kind: "current", userDataDirectory: target };
+    }
+  }
+
+  try {
+    // Re-check under the lock: another process may have finished just before we took it.
+    if (hasWorkspace(target)) return { kind: "current", userDataDirectory: target };
+    if (!hasWorkspace(legacy)) return { kind: "fresh", userDataDirectory: target };
+    return migrateUnderLock(input, target, legacy, log, sleep, now);
+  } finally {
+    if (readLock(lockPath)?.token === token) fs.rmSync(lockPath, { force: true });
+  }
+}
+
+function migrateUnderLock(
+  input: LegacyMigrationInput,
+  target: string,
+  legacy: string,
+  log: (message: string) => void,
+  sleep: (milliseconds: number) => void,
+  now: () => Date,
+): LegacyMigrationResult {
   const copyTree =
     input.copyTree ??
     ((source: string, destination: string) =>
@@ -186,18 +374,11 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
         verbatimSymlinks: true,
       }));
   const rename = input.renamePath ?? ((from: string, to: string) => fs.renameSync(from, to));
-  const now = input.now ?? (() => new Date());
-  const target = path.resolve(input.target);
-  const legacy = path.resolve(input.legacy);
-
-  if (target.toLowerCase() === legacy.toLowerCase()) return { kind: "current", userDataDirectory: target };
-  if (hasWorkspace(target)) return { kind: "current", userDataDirectory: target };
-  if (!hasWorkspace(legacy)) return { kind: "fresh", userDataDirectory: target };
-
   const startedAt = now();
   const staging = path.join(path.dirname(target), `${stagingPrefix(target)}${stamp(startedAt)}-${randomUUID().slice(0, 8)}`);
   let setAside: string | null = null;
   try {
+    // Only the lock holder gets here, so every staging folder left is from a start that died.
     removeStaleStaging(target, log);
     // A target folder without a workspace (an interrupted earlier start, an empty folder):
     // an empty one is removed, anything else is kept under another name, never deleted.
@@ -206,7 +387,7 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
         fs.rmdirSync(target);
       } else {
         setAside = `${target}.before-migration-${stamp(startedAt)}`;
-        rename(target, setAside);
+        renameWithRetry(rename, sleep, target, setAside);
         log(`Kept the existing ${path.basename(target)} folder (no workspace) as ${path.basename(setAside)}.`);
       }
     }
@@ -222,7 +403,7 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
     if (typeof integrity === "string" && integrity.trim() !== "ok") {
       throw new Error(`The copied database failed its integrity check: ${integrity.trim().slice(0, 200)}`);
     }
-    rename(staging, target);
+    renameWithRetry(rename, sleep, staging, target);
 
     try {
       fs.writeFileSync(path.join(legacy, MIGRATION_NOTE_FILE), migrationNote(target, startedAt), { flag: "w" });
@@ -236,11 +417,11 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
     try {
       fs.rmSync(staging, { recursive: true, force: true });
     } catch {
-      // A stale staging copy is removed on the next start.
+      // A stale staging copy is removed by the next start that holds the lock.
     }
     if (setAside && !fs.existsSync(target)) {
       try {
-        rename(setAside, target);
+        renameWithRetry(rename, sleep, setAside, target);
       } catch {
         // The set-aside folder is kept under its other name.
       }

@@ -78,6 +78,21 @@ let backend: SojournerBackend | null = null;
 let careerBackend: CareerBackend | null = null;
 let requirementBackend: RequirementBackend | null = null;
 let isQuitting = false;
+
+// One running app per data folder: a second launch focuses the existing window instead of
+// opening the same database twice. Automated runs pass their own --user-data-dir, so
+// parallel test instances each hold their own lock; the packaged smoke run is exempt.
+const hasInstanceLock = packageSmokeReport !== null || app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.exit(0);
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
 let storageService: StorageService | null = null;
 let quitFlushDone = false;
 
@@ -282,6 +297,7 @@ async function runPackageSmokeAndExit(reportPath: string): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  if (!hasInstanceLock) return;
   if (packageSmokeReport) {
     await runPackageSmokeAndExit(packageSmokeReport);
     return;
