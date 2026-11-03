@@ -80,11 +80,22 @@ Sojourner is a **Windows application first**. The same app also runs as a **prog
 
 | Option | Best for | Status |
 | --- | --- | --- |
-| **Windows installer** | Everyday use on Windows 10 and 11 | Every release is code-signed by **MythologIQ Labs, LLC**, and that signature is verified before publication. The first signed alpha is **v1.0.0-alpha.1** (a pre-release, being prepared). Watch [Releases](https://github.com/MythologIQ-Labs-LLC/sojourner/releases) for it. |
+| **Windows installer** | Everyday use on Windows 10 and 11 | **Available now:** [**v1.0.0-alpha.1**](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.0.0-alpha.1) (pre-release). Download [`Sojourner-v1.0.0-alpha.1-windows-x64.exe`](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/download/v1.0.0-alpha.1/Sojourner-v1.0.0-alpha.1-windows-x64.exe). Every release is code-signed by **MythologIQ Labs, LLC**, and that signature is verified before publication. |
 | **Run it locally in your browser** | Trying Sojourner today on any desktop with Chrome or Edge | Available now from source. See the quick start below. |
 | **Hosted web app** | Use without installing anything | Planned. It needs a production web origin and broader browser validation first. |
 
-> Earlier releases were published as **Job Ranger**, a separate product line. They are archived as `job-ranger-v*` git tags (for example `job-ranger-v1.2.0`) and are no longer offered as downloads; their installers were **unsigned**. Please wait for the signed Sojourner release rather than turning off SmartScreen or other platform protections. If you use Job Ranger v1.2.0, the Sojourner installer replaces it and Sojourner moves your data to its own folder on first start (the old folder is kept unchanged); create a backup first.
+> Earlier releases were published as **Job Ranger**, a separate product line. They are archived as `job-ranger-v*` git tags (for example `job-ranger-v1.2.0`) and are no longer offered as downloads; their installers were **unsigned**. Use the signed Sojourner installer rather than turning off SmartScreen or other platform protections. If you use Job Ranger v1.2.0, the Sojourner installer replaces it and Sojourner moves your data to its own folder on first start (the old folder is kept unchanged); create a backup first.
+
+### Verify your download
+
+The release publishes SHA-256 checksums, a signing report and a GitHub build attestation next to the installer. In PowerShell:
+
+```powershell
+Get-FileHash .\Sojourner-v1.0.0-alpha.1-windows-x64.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Sojourner-v1.0.0-alpha.1-windows-x64.exe | Format-List Status, SignerCertificate
+```
+
+The hash must be `d33758d3fe32e3a033e5daf3d2b3d65deca5fd000d5cd9780d50843641aa0cc1` (also in `windows-SHA256SUMS.txt`), the status `Valid`, and the signer `MythologIQ Labs, LLC`. With the GitHub CLI you can also run `gh attestation verify Sojourner-v1.0.0-alpha.1-windows-x64.exe --repo MythologIQ-Labs-LLC/sojourner`.
 
 ### Quick start: run Sojourner locally
 

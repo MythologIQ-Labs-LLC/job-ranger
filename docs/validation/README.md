@@ -26,6 +26,7 @@ The governing rule is simple: schema acceptance alone is not universality. A wor
 
 ## Documentation and release-readiness validation
 
+- `RELEASE_V1.0.0-ALPHA.1.md` records the published Sojourner v1.0.0-alpha.1 release: tag and commit, assets and checksums, signing and attestation verification, local gates, and the checks waived or not yet performed.
 - `RELEASE_CANDIDATE_V1.3.0.md` records the v1.3.0 scope decision, pre-tag validation, upgrade evidence from v1.2.0, remaining gates, and packaged-candidate history.
 - `DISTRIBUTION_IMPLEMENTATION_2026-10-05.md` records the distribution-architecture implementation (#142): hosted CI runs, Windows Store in-package evidence, and what was not performed (certification, PWA deployment, cross-browser validation).
 - `DOCUMENTATION_REMEDIATION_2026-10-03.md` records the platinum documentation/product-gap audit, manual validation strategy, reused unchanged-code evidence, and explicit limitations.

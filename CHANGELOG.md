@@ -8,9 +8,9 @@ All notable user-facing, architecture, governance, and maintenance changes shoul
 
 Nothing yet beyond `1.0.0-alpha.1`.
 
-## 1.0.0-alpha.1 - Sojourner (prepared, not yet tagged)
+## 1.0.0-alpha.1 - 2026-11-03 (Sojourner, pre-release)
 
-The first Sojourner release: a signed Windows installer published as a GitHub **pre-release** (#363, #339). It contains everything on `main` since Job Ranger v1.2.0, detailed in the sections below and under v1.3.0. Release acceptance: [`docs/RELEASE_READINESS.md`](./docs/RELEASE_READINESS.md), "Current Windows release acceptance".
+The first Sojourner release: a signed Windows installer published as a GitHub [**pre-release**](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.0.0-alpha.1) (#363, #339). It contains everything on `main` since Job Ranger v1.2.0, detailed in the sections below and under v1.3.0. Release acceptance: [`docs/RELEASE_READINESS.md`](./docs/RELEASE_READINESS.md), "Current Windows release acceptance".
 
 ### Highlights
 
