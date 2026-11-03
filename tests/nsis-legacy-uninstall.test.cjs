@@ -1,4 +1,4 @@
-// The NSIS installer removes a legacy Job Ranger install (appId com.jobranger.app) before
+// The NSIS installer removes a legacy Job Ranger install (appId com.jobranger.app) after
 // installing Sojourner (appId com.mythologiq.sojourner), keeping the user's data.
 // The legacy uninstall-key GUID is recomputed with electron-builder's own derivation.
 const assert = require("node:assert/strict");
@@ -36,11 +36,19 @@ assert.ok(script.includes(`!define SOJOURNER_LEGACY_APP_GUID "${LEGACY_GUID}"`))
 assert.ok(script.includes('"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${SOJOURNER_LEGACY_APP_GUID}"'));
 assert.ok(script.includes('"Software\\${SOJOURNER_LEGACY_APP_GUID}"'), "InstallLocation comes from the legacy install key");
 
-const customInit = script.match(/!macro customInit\r?\n([\s\S]*?)!macroend/)?.[1];
-assert.ok(customInit, "customInit is defined");
-const hkcu = customInit.indexOf('sojournerRemoveLegacyInstall HKCU "/currentuser"');
-const hklm = customInit.indexOf('sojournerRemoveLegacyInstall HKLM "/allusers"');
+// Nothing is removed before the user chooses to install.
+assert.doesNotMatch(script, /!macro customInit\b/);
+const customInstall = script.match(/!macro customInstall\r?\n([\s\S]*?)!macroend/)?.[1];
+assert.ok(customInstall, "customInstall is defined");
+const hkcu = customInstall.indexOf('sojournerRemoveLegacyInstall HKCU "/currentuser"');
+const hklm = customInstall.indexOf('sojournerRemoveLegacyInstall HKLM "/allusers"');
 assert.ok(hkcu >= 0 && hklm > hkcu, "HKCU is checked, then HKLM");
+// electron-builder inserts customInstall at the end of the install section, after the files.
+const installSection = fs.readFileSync(require.resolve("app-builder-lib/templates/nsis/installSection.nsh"), "utf8");
+assert.ok(
+  installSection.indexOf("!insertmacro customInstall") > installSection.indexOf("!insertmacro installApplicationFiles"),
+  "customInstall runs after Sojourner's files are installed",
+);
 
 const remove = script.match(/!macro sojournerRemoveLegacyInstall ROOT_KEY SCOPE_FLAG\r?\n([\s\S]*?)!macroend/)?.[1];
 assert.ok(remove, "the removal macro is defined");
@@ -49,9 +57,23 @@ const plain = remove.indexOf('"UninstallString"');
 assert.ok(quiet >= 0 && plain > quiet, "QuietUninstallString first, UninstallString as fallback");
 const exec = remove.match(/ExecWait '([^']*)' \$R6/)?.[1];
 assert.ok(exec, "the uninstaller runs through ExecWait and its exit code is read");
-for (const flag of ["/S", "/KEEP_APP_DATA", "${SCOPE_FLAG}", "--updated", "_?=$R4"]) {
-  assert.ok(exec.split(/\s+/).includes(flag), `the legacy uninstaller gets ${flag}`);
+assert.deepEqual(exec.split(/\s+/), ['"$R1"', "$R5", "_?=$R4"], "the legacy uninstaller runs against its own folder and is waited for");
+const flags = remove.match(/StrCpy \$R5 "([^"]*)"/)?.[1] ?? "";
+for (const flag of ["/S", "${SCOPE_FLAG}", "--updated"]) {
+  assert.ok(flags.split(/\s+/).includes(flag), `the legacy uninstaller gets ${flag}`);
 }
+assert.match(remove, /\$\{If\} \$R1 == "\$\{SHORTCUT_NAME\}"\s+StrCpy \$R5 "\$R5 --keep-shortcuts"/, "shortcuts sharing Sojourner's name are kept");
+assert.match(
+  remove,
+  /\$\{If\} \$R4 == \$INSTDIR[\s\S]*?DeleteRegKey \$\{ROOT_KEY\} "\$\{SOJOURNER_LEGACY_UNINSTALL_KEY\}"[\s\S]*?\$\{ElseIf\}/,
+  "a legacy install in this folder only loses its registration",
+);
+assert.match(script, /!define SOJOURNER_LEGACY_UNINSTALL_ATTEMPTS 5/);
+assert.match(
+  remove,
+  /\$\{Do\}[\s\S]*ExecWait[\s\S]*\$\{If\} \$R3 >= \$\{SOJOURNER_LEGACY_UNINSTALL_ATTEMPTS\}[\s\S]*Sleep 1000[\s\S]*\$\{Loop\}/,
+  "the legacy uninstaller is retried",
+);
 assert.doesNotMatch(script, /--delete-app-data|RMDir|Delete\s+"\$APPDATA/i, "the include never deletes app data");
 assert.doesNotMatch(remove, /Abort|Quit/, "a failed removal never blocks the install");
 
