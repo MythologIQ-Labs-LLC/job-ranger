@@ -9,7 +9,7 @@
  * against the SHA-256 recorded in the build's font manifest before use.
  */
 import * as pdfLib from "pdf-lib";
-import pdfFontManifest from "virtual:job-ranger-pdf-fonts";
+import pdfFontManifest from "virtual:sojourner-pdf-fonts";
 import type { PreparedResumeRender } from "../../../electron/src/resume-service.cjs";
 import { promises as fs } from "./node-fs";
 import { renderResumePdfBytes, type PdfFontEntry, type UnicodeFontSupport } from "../runtime/resume-pdf";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-const onboardingDismissedKey = "job-ranger.onboarding.dismissed.v1";
-const onboardingEvent = "job-ranger:onboarding-preference-changed";
+const onboardingDismissedKey = "sojourner.onboarding.dismissed.v1";
+const onboardingEvent = "sojourner:onboarding-preference-changed";
 
 function readDismissed(): boolean {
   try {

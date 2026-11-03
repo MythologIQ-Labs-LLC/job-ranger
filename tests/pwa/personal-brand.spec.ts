@@ -411,7 +411,7 @@ test("historical LinkedIn posts remain user-attested and match only consistent X
   await page.goto(`${server.url}#/personal-brand`);
   const historical = page.getByTestId("linkedin-historical-archive");
   const link = "https://www.linkedin.com/posts/example-user-historical-career-443";
-  const body = "A historical post pasted by its author, never pre-approved in Job Ranger.";
+  const body = "A historical post pasted by its author, never pre-approved in Sojourner.";
   await expect(historical.getByText(/No historical posts archived yet/)).toBeVisible();
   await historical.getByLabel("Historical LinkedIn post permalink").fill(link + "?trk=feed");
   await historical.getByLabel(/Original publication date/).fill("2026-09-20");

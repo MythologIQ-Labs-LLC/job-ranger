@@ -13,7 +13,7 @@ test("unconfigured Sojourner PWA never silently loads Google or advertises an un
       google.push(request.url());
     }
   });
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url + "#/resume");
   await waitForRuntime(page);
   await expect(page.getByTestId("drive-resume-export")).toHaveCount(0);

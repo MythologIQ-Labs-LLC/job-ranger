@@ -33,7 +33,7 @@ import {
   ONBOARDING_DISMISSED_KEY,
   completeDemoSession,
   demoSessionId,
-  isJobRangerLocalStorageKey,
+  isSojournerLocalStorageKey,
   resetDemoLocalStorage,
 } from "../src/demo/session.ts";
 
@@ -68,20 +68,20 @@ assert.equal(buildIdMatchesFlavor("1.3.0+058f34db445a", undefined), false);
 // --- separate output directories, archives and trust evidence that cannot be confused
 assert.equal(pwaOutDirName(undefined), "dist-pwa");
 assert.equal(pwaOutDirName("demo"), "dist-pwa-demo");
-assert.equal(pwaArchiveName("1.3.0", "standard"), "job-ranger-web-v1.3.0.zip");
-assert.equal(pwaArchiveName("1.3.0", "demo"), "job-ranger-web-demo-v1.3.0.zip");
+assert.equal(pwaArchiveName("1.3.0", "standard"), "sojourner-web-v1.3.0.zip");
+assert.equal(pwaArchiveName("1.3.0", "demo"), "sojourner-web-demo-v1.3.0.zip");
 assert.equal(pwaTrustFileName("standard"), "web-build-info.json");
 assert.equal(pwaTrustFileName("demo"), "web-demo-build-info.json");
 assert.notEqual(pwaArchiveName("1.3.0", "demo"), pwaArchiveName("1.3.0", "standard"));
 // A demo archive in release/ is never selected as the standard web release artifact.
 assert.deepEqual(
   selectPlatformArtifacts([pwaArchiveName("1.3.0", "demo"), pwaArchiveName("1.3.0", "standard")], "web"),
-  ["job-ranger-web-v1.3.0.zip"],
+  ["sojourner-web-v1.3.0.zip"],
 );
 
 // --- the vite define reaches the page and the worker, and defaults to standard elsewhere
 const viteConfig = (await readFile(path.join(root, "vite.pwa.config.ts"), "utf8")).replace(/\r\n/g, "\n");
-assert.match(viteConfig, /__JOB_RANGER_PWA_FLAVOR__: JSON\.stringify\(flavor\)/);
+assert.match(viteConfig, /__SOJOURNER_PWA_FLAVOR__: JSON\.stringify\(flavor\)/);
 assert.match(viteConfig, /const flavor = parsePwaFlavor\(process\.env\[PWA_FLAVOR_ENV\]\)/);
 assert.equal(PWA_FLAVOR, "standard", "outside the PWA build (Electron, Node) the flavor is standard");
 assert.equal(IS_DEMO_FLAVOR, false);
@@ -144,15 +144,15 @@ assert.notEqual(demoSessionId(otherTab, () => "cccccccc-cccc-4ccc-8ccc-ccccccccc
 assert.equal(demoSessionId(memoryStorage({ [DEMO_SESSION_KEY]: "2026-10-16T00:00:00Z" }), () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd"), "dddddddd-dddd-4ddd-8ddd-dddddddddddd");
 assert.equal(demoSessionId(null, () => "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"), "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "without sessionStorage every load is new");
 assert.match(demoSessionId(memoryStorage()), /^[0-9a-f-]{36}$/);
-assert.equal(isJobRangerLocalStorageKey("theme"), true);
-assert.equal(isJobRangerLocalStorageKey("job-ranger.onboarding.dismissed.v1"), true);
-assert.equal(isJobRangerLocalStorageKey("job-ranger.career-profile.v1"), true);
-assert.equal(isJobRangerLocalStorageKey("someone-else"), false);
+assert.equal(isSojournerLocalStorageKey("theme"), true);
+assert.equal(isSojournerLocalStorageKey("sojourner.onboarding.dismissed.v1"), true);
+assert.equal(isSojournerLocalStorageKey("sojourner.career-profile.v1"), true);
+assert.equal(isSojournerLocalStorageKey("someone-else"), false);
 const local = memoryStorage({
   theme: "canopy",
-  "job-ranger.career-profile.v1": "{}",
-  "job-ranger.applications.v1": "[]",
-  "job-ranger.onboarding.dismissed.v1": "false",
+  "sojourner.career-profile.v1": "{}",
+  "sojourner.applications.v1": "[]",
+  "sojourner.onboarding.dismissed.v1": "false",
   unrelated: "kept",
 });
 resetDemoLocalStorage(local);
@@ -202,8 +202,8 @@ assert.match(viteConfig, /preview:\s*\{[\s\S]*?host:\s*"localhost"[\s\S]*?port:\
 // --- release and deploy workflows can never pick up demo artifacts
 const deploy = (await readFile(path.join(root, ".github/workflows/deploy-pwa.yml"), "utf8")).replace(/\r\n/g, "\n");
 const release = (await readFile(path.join(root, ".github/workflows/release-build.yml"), "utf8")).replace(/\r\n/g, "\n");
-assert.doesNotMatch(deploy, /job-ranger-web-\*/);
-assert.equal((deploy.match(/job-ranger-web-v\*\.zip/g) ?? []).length, 3);
+assert.doesNotMatch(deploy, /sojourner-web-\*/);
+assert.equal((deploy.match(/sojourner-web-v\*\.zip/g) ?? []).length, 3);
 assert.match(deploy, /const standard = \(x\) => x\.flavor === 'standard' \|\| \(x\.flavor === undefined && typeof x\.buildId === 'string' && !x\.buildId\.endsWith\('\.demo'\)\); if \(!standard\(a\) \|\| !standard\(b\)\)/, "production deploy asserts the standard flavor (legacy builds without a flavor only when not .demo)");
 {
   // Exercise the exact deploy guard expression against standard, legacy, demo and forged inputs.
@@ -218,9 +218,9 @@ assert.match(deploy, /const standard = \(x\) => x\.flavor === 'standard' \|\| \(
 }
 assert.match(deploy, /verify-studio-handoff\.mjs --site site --build-id "\$expected" --flavor standard/);
 assert.match(deploy, /--build-info-sha256 "\$approved_digest" \\\n\s+--flavor standard/);
-assert.doesNotMatch(release, /job-ranger-web-\*|build\/trust\/web-\*/);
-assert.match(release, /subject-path: web\/release\/job-ranger-web-v\*\.zip/);
-assert.match(release, /gh release upload "\$tag" web\/release\/job-ranger-web-v\*\.zip web\/build\/trust\/web-build-info\.json web\/build\/trust\/web-pwa-e2e\.json web\/build\/trust\/web-SHA256SUMS\.txt web\/build\/trust\/web-release-manifest\.json --clobber/);
+assert.doesNotMatch(release, /sojourner-web-\*|build\/trust\/web-\*/);
+assert.match(release, /subject-path: web\/release\/sojourner-web-v\*\.zip/);
+assert.match(release, /gh release upload "\$tag" web\/release\/sojourner-web-v\*\.zip web\/build\/trust\/web-build-info\.json web\/build\/trust\/web-pwa-e2e\.json web\/build\/trust\/web-SHA256SUMS\.txt web\/build\/trust\/web-release-manifest\.json --clobber/);
 
 // --- the demo has its own guarded deploy path, never the real web app's project or origin
 const demoDeploy = (await readFile(path.join(root, ".github/workflows/deploy-pwa-demo.yml"), "utf8")).replace(/\r\n/g, "\n");
@@ -233,10 +233,10 @@ assert.doesNotMatch(demoDeploy, /inputs\.|\n      ref:/, "no caller-chosen ref: 
 assert.match(demoDeploy, /^on:\n  workflow_dispatch:\n\n/m, "workflow_dispatch takes no inputs");
 // The guard's inputs come from exactly these repository variables (renaming one would silently disable it).
 for (const [name, variable] of [
-  ["DEMO_PROJECT", "JOB_RANGER_DEMO_PAGES_PROJECT"],
-  ["DEMO_ORIGIN", "JOB_RANGER_DEMO_ORIGIN"],
-  ["APP_PROJECT", "JOB_RANGER_PWA_PAGES_PROJECT"],
-  ["APP_ORIGIN", "JOB_RANGER_PWA_ORIGIN"],
+  ["DEMO_PROJECT", "SOJOURNER_DEMO_PAGES_PROJECT"],
+  ["DEMO_ORIGIN", "SOJOURNER_DEMO_ORIGIN"],
+  ["APP_PROJECT", "SOJOURNER_PWA_PAGES_PROJECT"],
+  ["APP_ORIGIN", "SOJOURNER_PWA_ORIGIN"],
 ]) {
   assert.match(demoDeploy, new RegExp(`- name: Refuse a project or origin shared with the real web app\\n        env:\\n(?:          [A-Z_]+: \\$\\{\\{ vars\\.[A-Z_]+ \\}\\}\\n)*          ${name}: \\$\\{\\{ vars\\.${variable} \\}\\}\\n`), `${name} <- vars.${variable}`);
 }
@@ -268,9 +268,9 @@ assert.doesNotMatch(demoDeploy, /^\s+cache:|actions\/cache@/m, "no dependency ca
     console.warn("SKIPPED: demo deploy guard execution (Git bash not found); CI runs it on Linux");
   } else {
     const run = (env) => spawnSync(bash, ["-c", guard], { env: { PATH: process.env.PATH, GITHUB_REF: "refs/heads/main", ...env }, encoding: "utf8" }).status;
-    const ok = { DEMO_PROJECT: "job-ranger-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "job-ranger", APP_ORIGIN: "https://app.example.org" };
+    const ok = { DEMO_PROJECT: "sojourner-demo", DEMO_ORIGIN: "https://demo.example.org", APP_PROJECT: "sojourner", APP_ORIGIN: "https://app.example.org" };
     assert.equal(run(ok), 0, "distinct demo project and origin pass");
-    assert.notEqual(run({ ...ok, DEMO_PROJECT: " Job-Ranger " }), 0, "same project (case, whitespace) is refused");
+    assert.notEqual(run({ ...ok, DEMO_PROJECT: " Sojourner " }), 0, "same project (case, whitespace) is refused");
     for (const same of ["https://APP.example.org/", "https://app.example.org:443", "https://app.example.org/some/path", " https://app.example.org "]) {
       assert.notEqual(run({ ...ok, DEMO_ORIGIN: same }), 0, `same origin is refused: ${same}`);
     }

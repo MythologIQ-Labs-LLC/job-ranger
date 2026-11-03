@@ -45,7 +45,7 @@ function expectClear(clearances: Clearance[], expected: number) {
 }
 
 test("form-control text clears its icons and affixes in the web app", async ({ page, context }) => {
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(`${server.url}#/jobs`);
   await waitForRuntime(page);
   const search = page.getByPlaceholder("Search title or description");

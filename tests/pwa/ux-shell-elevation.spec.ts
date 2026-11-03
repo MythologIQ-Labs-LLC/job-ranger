@@ -11,7 +11,7 @@ test.afterAll(async () => { await server.close(); });
 async function openHome(page: Page, theme: string) {
   await page.addInitScript((name) => {
     localStorage.setItem("theme", name);
-    localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true");
+    localStorage.setItem("sojourner.onboarding.dismissed.v1", "true");
   }, theme);
   // Going to "#/" from "#/" is a same-document fragment change: no reload, so the
   // init script above would never apply the next theme. Start a fresh document.

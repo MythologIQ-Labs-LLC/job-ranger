@@ -9,7 +9,7 @@ test.beforeAll(async () => { server = await startPwaServer(distPwa); });
 test.afterAll(async () => { await server.close(); });
 
 async function seedFilter(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url);
   await waitForRuntime(page);
   const filter = await page.evaluate(() => window.electronAPI.filters.create({
@@ -94,7 +94,7 @@ test("editing a filter starts from its saved rules, cancel keeps them, save repl
 });
 
 test("editing can clear the minimum salary and widen scope to all companies", async ({ page }) => {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url);
   await waitForRuntime(page);
   const id = await page.evaluate(async () => {

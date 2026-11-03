@@ -11,7 +11,7 @@ test("career exploration creates an opt-in handoff, then only an unsaved, paused
   context.on("request", (request) => {
     if (new URL(request.url()).origin !== new URL(server.url).origin) outbound.push(request.url());
   });
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url);
   await waitForRuntime(page);
 
@@ -90,7 +90,7 @@ test("approved exploration brief cannot copy superseded evidence", async ({ page
   context.on("request", (request) => {
     if (new URL(request.url()).origin !== new URL(server.url).origin) outbound.push(request.url());
   });
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(server.url);
   await waitForRuntime(page);
 

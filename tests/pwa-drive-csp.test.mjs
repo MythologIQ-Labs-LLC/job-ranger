@@ -9,10 +9,10 @@ const directives = (csp) => Object.fromEntries(csp.split("; ").map(item => [item
 test("normal production PWA keeps its existing no-Google network/remote script posture", () => {
   const csp = buildContentSecurityPolicy();
   const headers = buildSecurityHeaders();
-  assert.doesNotMatch(csp, /accounts\.google\.com|googleapis\.com|job-ranger-google-gis/);
+  assert.doesNotMatch(csp, /accounts\.google\.com|googleapis\.com|sojourner-google-gis/);
   assert.match(csp, /script-src 'self' 'wasm-unsafe-eval'/);
   assert.match(csp, /frame-src 'none'/);
-  assert.match(csp, /trusted-types job-ranger-script-url$/);
+  assert.match(csp, /trusted-types sojourner-script-url$/);
   assert.equal(headers["Cross-Origin-Opener-Policy"], "same-origin");
   assert.equal(headers["Content-Security-Policy"], csp);
 });
@@ -25,8 +25,8 @@ test("configured PWA gains only the two Drive API paths; Google sign-in stays on
   assert.equal(parsed["script-src"], "script-src 'self' 'wasm-unsafe-eval'");
   assert.equal(parsed["style-src"], "style-src 'self'");
   assert.equal(parsed["frame-src"], "frame-src 'none'");
-  assert.equal(parsed["trusted-types"], "trusted-types job-ranger-script-url");
-  assert.doesNotMatch(csp, /'unsafe-eval'|unsafe-inline|job-ranger-google-gis/);
+  assert.equal(parsed["trusted-types"], "trusted-types sojourner-script-url");
+  assert.doesNotMatch(csp, /'unsafe-eval'|unsafe-inline|sojourner-google-gis/);
   assert.equal(buildSecurityHeaders(options)["Cross-Origin-Opener-Policy"], "same-origin-allow-popups");
   assert.equal(buildSecurityHeaders(options)["Content-Security-Policy"], csp);
 });
@@ -71,7 +71,7 @@ test("no main-origin source loads Google Identity Services", () => {
   assert.ok(files.length > 50);
   for (const file of files) {
     const source = readFileSync(file, "utf8");
-    assert.doesNotMatch(source, /accounts\.google\.com\/gsi|initTokenClient|job-ranger-google-gis/, file.pathname);
+    assert.doesNotMatch(source, /accounts\.google\.com\/gsi|initTokenClient|sojourner-google-gis/, file.pathname);
   }
   assert.equal(existsSync(new URL("pwa/drive/gis-sdk.ts", root)), false);
 });

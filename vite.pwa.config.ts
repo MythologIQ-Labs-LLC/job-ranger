@@ -58,7 +58,7 @@ const buildId = pwaBuildId({
   version: packageJson.version,
   commit,
   flavor,
-  override: process.env.JOB_RANGER_BUILD_ID,
+  override: process.env.SOJOURNER_BUILD_ID,
 });
 
 // Drive is enabled only through the isolated OAuth helper origin, and never in the demo flavor
@@ -66,7 +66,7 @@ const buildId = pwaBuildId({
 // to the helper build (scripts/build-drive-oauth-helper.mjs), because Google sign-in never runs here.
 const { googleOAuthHelperOrigin, driveSecurity } = resolveDriveBuildConfig({
   flavor,
-  clientId: process.env.VITE_JOB_RANGER_GOOGLE_WEB_CLIENT_ID,
+  clientId: process.env.VITE_SOJOURNER_GOOGLE_WEB_CLIENT_ID,
   helperOrigin: process.env.VITE_SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN,
 });
 
@@ -80,7 +80,7 @@ function runtimeAdapterPlugin(target: RuntimeTarget): Plugin {
   });
 }
 
-const PDF_FONTS_MODULE = "virtual:job-ranger-pdf-fonts";
+const PDF_FONTS_MODULE = "virtual:sojourner-pdf-fonts";
 const PDF_FONTS_DIRECTORY = "fonts";
 
 /**
@@ -92,7 +92,7 @@ function pdfFontsPlugin(emit: boolean): Plugin {
   let fonts: Awaited<ReturnType<typeof buildPdfFonts>> | null = null;
   const load = async () => (fonts ??= await buildPdfFonts());
   return {
-    name: `job-ranger-pdf-fonts${emit ? "" : ":worker"}`,
+    name: `sojourner-pdf-fonts${emit ? "" : ":worker"}`,
     resolveId(source) {
       return source === PDF_FONTS_MODULE ? `\0${PDF_FONTS_MODULE}` : null;
     },
@@ -174,7 +174,7 @@ function writeDemoManifest(): void {
 /** Demo flavor: never serve on the standard web app's local addresses (even with --port). */
 function demoPortGuardPlugin(): Plugin {
   return {
-    name: "job-ranger-demo-port-guard",
+    name: "sojourner-demo-port-guard",
     configResolved(config) {
       if (config.command !== "serve") return;
       assertDemoPortAllowed(config.server.port);
@@ -185,12 +185,12 @@ function demoPortGuardPlugin(): Plugin {
 
 function shellManifestPlugin(): Plugin {
   return {
-    name: "job-ranger-shell-manifest",
+    name: "sojourner-shell-manifest",
     apply: "build",
     transformIndexHtml(html) {
       const shell = html
-        .replace("%JOB_RANGER_CSP%", buildContentSecurityPolicy(driveSecurity).replace(/; frame-ancestors 'none'/, ""))
-        .replace("%JOB_RANGER_BUILD_ID%", buildId);
+        .replace("%SOJOURNER_CSP%", buildContentSecurityPolicy(driveSecurity).replace(/; frame-ancestors 'none'/, ""))
+        .replace("%SOJOURNER_BUILD_ID%", buildId);
       return flavor === "demo" ? demoIndexHtml(shell) : shell;
     },
     closeBundle() {
@@ -216,9 +216,9 @@ function shellManifestPlugin(): Plugin {
       writeFileSync(
         path.join(outDir, "sw.js"),
         template
-          .replace("__JOB_RANGER_BUILD_ID__", buildId)
-          .replace("__JOB_RANGER_PRECACHE__", JSON.stringify(assets, null, 2))
-          .replace("__JOB_RANGER_ON_DEMAND__", JSON.stringify(fontFiles)),
+          .replace("__SOJOURNER_BUILD_ID__", buildId)
+          .replace("__SOJOURNER_PRECACHE__", JSON.stringify(assets, null, 2))
+          .replace("__SOJOURNER_ON_DEMAND__", JSON.stringify(fontFiles)),
       );
       writeFileSync(path.join(outDir, "_headers"), headersFile());
       writeFileSync(
@@ -226,7 +226,7 @@ function shellManifestPlugin(): Plugin {
         `${JSON.stringify(
           {
             schemaVersion: 1,
-            product: "job-ranger-web",
+            product: "sojourner-web",
             version: packageJson.version,
             buildId,
             flavor,
@@ -277,9 +277,9 @@ export default defineConfig({
     alias: { "@": path.resolve(root, "src") },
   },
   define: {
-    __JOB_RANGER_VERSION__: JSON.stringify(packageJson.version),
-    __JOB_RANGER_BUILD_ID__: JSON.stringify(buildId),
-    __JOB_RANGER_PWA_FLAVOR__: JSON.stringify(flavor),
+    __SOJOURNER_VERSION__: JSON.stringify(packageJson.version),
+    __SOJOURNER_BUILD_ID__: JSON.stringify(buildId),
+    __SOJOURNER_PWA_FLAVOR__: JSON.stringify(flavor),
     __SOJOURNER_GOOGLE_OAUTH_HELPER_ORIGIN__: JSON.stringify(googleOAuthHelperOrigin),
   },
   worker: {

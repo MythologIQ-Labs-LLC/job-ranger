@@ -12,8 +12,10 @@
  * Nothing here runs in the standard flavor: only the demo-flavor branch of
  * src/pwa/main.tsx uses this module.
  */
-export const DEMO_SESSION_KEY = "job-ranger.demo.session.v1";
-export const ONBOARDING_DISMISSED_KEY = "job-ranger.onboarding.dismissed.v1";
+import { LEGACY_EVENT_PREFIX, LEGACY_STORAGE_KEY_PREFIX } from "../browser-storage-migration.ts";
+
+export const DEMO_SESSION_KEY = "sojourner.demo.session.v1";
+export const ONBOARDING_DISMISSED_KEY = "sojourner.onboarding.dismissed.v1";
 const SESSION_ID = /^[A-Za-z0-9-]{16,80}$/;
 
 interface StorageLike {
@@ -64,18 +66,27 @@ export function demoSessionId(
   return id;
 }
 
-/** Job Ranger's own localStorage keys: `job-ranger.*` preferences/legacy keys and the theme. */
-export function isJobRangerLocalStorageKey(key: string): boolean {
-  return key === "theme" || key.startsWith("job-ranger.") || key.startsWith("job-ranger:");
+/**
+ * Sojourner's own localStorage keys: `sojourner.*` preferences, the theme, and the keys of builds
+ * released as Job Ranger (a demo session starts clean of those too).
+ */
+export function isSojournerLocalStorageKey(key: string): boolean {
+  return (
+    key === "theme" ||
+    key.startsWith("sojourner.") ||
+    key.startsWith("sojourner:") ||
+    key.startsWith(LEGACY_STORAGE_KEY_PREFIX) ||
+    key.startsWith(LEGACY_EVENT_PREFIX)
+  );
 }
 
-/** Removes Job Ranger's localStorage keys and marks onboarding dismissed (the workspace is pre-seeded). */
+/** Removes Sojourner's localStorage keys and marks onboarding dismissed (the workspace is pre-seeded). */
 export function resetDemoLocalStorage(storage: StorageLike | null = localStore()): void {
   if (!storage) return;
   const keys: string[] = [];
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
-    if (key !== null && isJobRangerLocalStorageKey(key)) keys.push(key);
+    if (key !== null && isSojournerLocalStorageKey(key)) keys.push(key);
   }
   for (const key of keys) storage.removeItem(key);
   storage.setItem(ONBOARDING_DISMISSED_KEY, "true");

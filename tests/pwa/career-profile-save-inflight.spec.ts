@@ -15,7 +15,7 @@ type SaveTestControl = { pending: boolean; release: () => void };
 type ControlledPage = typeof window & { __jrInFlightSave?: SaveTestControl };
 
 async function openProfile(page: Page) {
-  await page.context().addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await page.context().addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await page.goto(`${server.url}#/career-profile`);
   await waitForRuntime(page);
   const payBasis = page.getByRole("combobox", { name: "Pay basis", exact: true });
@@ -145,7 +145,7 @@ test("rapid text and list edits during a pending save are kept, and a background
       state.__profileReads += 1;
       return value;
     };
-    window.dispatchEvent(new CustomEvent("job-ranger:career-profile-changed"));
+    window.dispatchEvent(new CustomEvent("sojourner:career-profile-changed"));
   });
   await page.waitForFunction(() => (window as unknown as { __profileReads: number }).__profileReads > 0);
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));

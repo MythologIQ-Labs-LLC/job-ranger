@@ -85,7 +85,7 @@ test("non-Latin resumes render with verified on-demand fonts, pass the Parseabil
   expect(first.parseabilityGate.issues.filter((issue: { severity: string }) => issue.severity === "critical")).toEqual([]);
   expect(fontRequests.length).toBeGreaterThan(0);
   expect(fontRequests.every((url) => /\/fonts\/noto-sans(-sc)?-[\w-]+\.[0-9a-f]{12}\.ttf$/.test(url))).toBe(true);
-  const cachedFonts = await page.evaluate(async () => (await (await caches.open("job-ranger-on-demand-v1")).keys()).length);
+  const cachedFonts = await page.evaluate(async () => (await (await caches.open("sojourner-on-demand-v1")).keys()).length);
   expect(cachedFonts).toBeGreaterThan(0);
 
   // The same fonts are served from the verified cache with the network gone.

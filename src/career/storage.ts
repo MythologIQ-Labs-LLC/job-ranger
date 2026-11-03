@@ -24,10 +24,10 @@ type StoredCareerProfile = Omit<Partial<CareerProfile>, "version"> & {
   version?: number;
 };
 
-const profileKey = "job-ranger.career-profile.v1";
-const applicationsKey = "job-ranger.applications.v1";
-const profileEvent = "job-ranger:career-profile-changed";
-const applicationsEvent = "job-ranger:applications-changed";
+const profileKey = "sojourner.career-profile.v1";
+const applicationsKey = "sojourner.applications.v1";
+const profileEvent = "sojourner:career-profile-changed";
+const applicationsEvent = "sojourner:applications-changed";
 
 export const emptyCareerProfile: CareerProfile = {
   version: 2,

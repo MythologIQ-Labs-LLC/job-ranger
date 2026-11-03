@@ -2,7 +2,8 @@
  * Sojourner's local-only durable artifact-export receipt journal.
  * No access tokens, refresh tokens or document bytes are stored here.
  * IndexedDB enforces unique operation and approval IDs transactionally.
- * Compatibility name is intentionally stable across the Job Ranger rebrand.
+ * Receipts written by builds released as Job Ranger (LEGACY_DB_NAME) are copied into this
+ * journal the first time it opens; the legacy database is never changed or deleted.
  *
  * Record schema v2 (reserved Drive file ID, terminal resolution) needs no
  * IndexedDB object-store change, so the database version stays 1 and other open
@@ -14,7 +15,15 @@ import { blocksFreshArtifactExport, checkJournalTransition, upgradeJournalRecord
 import type { DurableExportJournalStore, ExportJournalRecord } from "../../shared/artifact-export-journal.ts";
 import type { ExportStatus } from "../../shared/artifact-export-approval.ts";
 
-const DB_NAME = "job-ranger.drive-artifact-export-journal.v1";
+const DB_NAME = "sojourner.drive-artifact-export-journal.v1";
+/**
+ * LEGACY: the receipt journal of builds released as Job Ranger. Its receipts are copied (never
+ * moved) into DB_NAME on every open. Receipts are only ever added and never deleted, so copying
+ * only receipts this journal does not hold yet is idempotent, never overwrites a newer state, and
+ * can only make the export gate stricter (an unresolved legacy receipt keeps blocking).
+ */
+const LEGACY_DB_NAME = "job-ranger.drive-artifact-export-journal.v1";
+const MAX_RECORDS = 10_000;
 const STORE = "exports";
 const VERSION = 1;
 const ERROR = "Sojourner could not safely save the Google Drive export receipt. No upload is authorized.";
@@ -26,7 +35,26 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
 
   private open(): Promise<IDBDatabase> {
     if (this.db) return this.db;
-    this.db = new Promise<IDBDatabase>((resolve, reject) => {
+    this.db = this.openCurrent()
+      .then(async (database) => {
+        try {
+          await importLegacyReceipts(this.factory, database);
+        } catch (error) {
+          // Fail closed: without the legacy receipts an earlier upload could be repeated.
+          database.close();
+          throw error;
+        }
+        return database;
+      })
+      .catch((error: unknown) => {
+        this.db = null;
+        throw error;
+      });
+    return this.db;
+  }
+
+  private openCurrent(): Promise<IDBDatabase> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
       let request: IDBOpenDBRequest;
       try { request = this.factory.open(DB_NAME, VERSION); }
       catch { reject(new Error(ERROR)); return; }
@@ -40,11 +68,7 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(new Error(ERROR));
       request.onblocked = () => reject(new Error("Close other Sojourner tabs before managing Google Drive export receipts."));
-    }).catch((error: unknown) => {
-      this.db = null;
-      throw error;
     });
-    return this.db;
   }
 
   private async transaction<T>(
@@ -188,4 +212,69 @@ export class BrowserDriveExportJournal implements DurableExportJournalStore {
       request.onsuccess = () => done(request.result === undefined ? null : upgradeJournalRecord(request.result));
     });
   }
+}
+
+/** Opens the legacy journal only if it exists (an open that would create it is aborted). */
+function openLegacyJournal(factory: IDBFactory): Promise<IDBDatabase | null> {
+  return new Promise<IDBDatabase | null>((resolve, reject) => {
+    let request: IDBOpenDBRequest;
+    try { request = factory.open(LEGACY_DB_NAME); }
+    catch { reject(new Error(ERROR)); return; }
+    let absent = false;
+    request.onupgradeneeded = () => {
+      absent = true;
+      request.transaction?.abort();
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (event) => {
+      if (!absent) { reject(new Error(ERROR)); return; }
+      event.preventDefault();
+      resolve(null);
+    };
+  });
+}
+
+function legacyReceipts(database: IDBDatabase): Promise<unknown[]> {
+  return new Promise<unknown[]>((resolve, reject) => {
+    if (!database.objectStoreNames.contains(STORE)) { resolve([]); return; }
+    let tx: IDBTransaction;
+    try { tx = database.transaction(STORE, "readonly"); }
+    catch { reject(new Error(ERROR)); return; }
+    const request = tx.objectStore(STORE).getAll(undefined, MAX_RECORDS + 1);
+    request.onsuccess = () => {
+      if (request.result.length > MAX_RECORDS) { reject(new Error(ERROR)); return; }
+      resolve(request.result);
+    };
+    tx.onerror = () => reject(new Error(ERROR));
+    tx.onabort = () => reject(new Error(ERROR));
+  });
+}
+
+async function importLegacyReceipts(factory: IDBFactory, database: IDBDatabase): Promise<void> {
+  const legacy = await openLegacyJournal(factory);
+  if (!legacy) return;
+  let receipts: unknown[];
+  try { receipts = await legacyReceipts(legacy); }
+  finally { legacy.close(); }
+  if (receipts.length === 0) return;
+  await new Promise<void>((resolve, reject) => {
+    let tx: IDBTransaction;
+    try { tx = database.transaction(STORE, "readwrite"); }
+    catch { reject(new Error(ERROR)); return; }
+    const store = tx.objectStore(STORE);
+    for (const receipt of receipts) {
+      // add() never replaces: a receipt this journal already holds (same operation or approval
+      // ID) keeps its current state.
+      const request = store.add(receipt);
+      request.onerror = (event) => {
+        if (request.error?.name === "ConstraintError") {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(new Error(ERROR));
+    tx.onabort = () => reject(new Error(ERROR));
+  });
 }

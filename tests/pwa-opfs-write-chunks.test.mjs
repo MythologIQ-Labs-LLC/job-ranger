@@ -96,7 +96,7 @@ Object.defineProperty(globalThis, "navigator", {
   configurable: true,
 });
 
-const { promises: fs, onStorageFailure, JobRangerStorageError } = await import("../src/pwa/adapters/node-fs.ts");
+const { promises: fs, onStorageFailure, SojournerStorageError } = await import("../src/pwa/adapters/node-fs.ts");
 const storageFailures = [];
 onStorageFailure((error) => storageFailures.push(error));
 
@@ -107,11 +107,11 @@ function chunks(count, size) {
 test("writeFile streams an async iterable through one writable and commits it on close", async () => {
   const { committed, log } = fakeOpfs();
   const parts = chunks(5, 1024);
-  await fs.writeFile("/archive.jobranger.partial", (async function* () { yield* parts; })());
+  await fs.writeFile("/archive.sojourner.partial", (async function* () { yield* parts; })());
   assert.deepEqual(log.writes, [1024, 1024, 1024, 1024, 1024]);
   assert.equal(log.closed, 1);
   assert.equal(log.aborted, 0);
-  assert.deepEqual(new Uint8Array(committed.get("archive.jobranger.partial")), new Uint8Array(Buffer.concat(parts)));
+  assert.deepEqual(new Uint8Array(committed.get("archive.sojourner.partial")), new Uint8Array(Buffer.concat(parts)));
 });
 
 test("a Uint8Array is still written once, not iterated byte by byte", async () => {
@@ -125,7 +125,7 @@ test("a failure of the data aborts the write and is rethrown unchanged, not as a
   const failure = new Error("artifact changed while the backup archive was being written");
   const before = storageFailures.length;
   await assert.rejects(
-    fs.writeFile("/archive.jobranger.partial", (async function* () {
+    fs.writeFile("/archive.sojourner.partial", (async function* () {
       yield new Uint8Array(10);
       throw failure;
     })()),
@@ -133,7 +133,7 @@ test("a failure of the data aborts the write and is rethrown unchanged, not as a
   );
   assert.equal(log.aborted, 1);
   assert.equal(log.closed, 0);
-  assert.equal(committed.has("archive.jobranger.partial"), false, "the file this call created is removed");
+  assert.equal(committed.has("archive.sojourner.partial"), false, "the file this call created is removed");
   assert.equal(storageFailures.length, before);
 });
 
@@ -143,7 +143,7 @@ test("quota exhaustion mid-stream aborts, stops reading the source and reports s
   let sourceClosed = false;
   const before = storageFailures.length;
   await assert.rejects(
-    fs.writeFile("/archive.jobranger.partial", (async function* () {
+    fs.writeFile("/archive.sojourner.partial", (async function* () {
       try {
         for (const chunk of chunks(10, 64)) {
           produced += 1;
@@ -153,13 +153,13 @@ test("quota exhaustion mid-stream aborts, stops reading the source and reports s
         sourceClosed = true;
       }
     })()),
-    (error) => error instanceof JobRangerStorageError && error.code === "EQUOTA",
+    (error) => error instanceof SojournerStorageError && error.code === "EQUOTA",
   );
   assert.equal(produced, 3);
   assert.equal(sourceClosed, true, "source iterator released");
   assert.equal(log.aborted, 1);
   assert.equal(log.closed, 0);
-  assert.equal(committed.has("archive.jobranger.partial"), false);
+  assert.equal(committed.has("archive.sojourner.partial"), false);
   assert.equal(storageFailures.length, before + 1);
 });
 
@@ -176,14 +176,14 @@ test("rename (a copy on OPFS) streams the file instead of reading it whole", asy
   const { committed, log } = fakeOpfs();
   const bytes = new Uint8Array(OPFS_READ_CHUNK_BYTES * 2 + 9);
   for (let index = 0; index < bytes.length; index += 1) bytes[index] = index % 251;
-  await fs.writeFile("/backup.jobranger.partial", bytes);
+  await fs.writeFile("/backup.sojourner.partial", bytes);
   state.refuseWholeReads = true;
   log.writes = [];
-  await fs.rename("/backup.jobranger.partial", "/backup.jobranger");
+  await fs.rename("/backup.sojourner.partial", "/backup.sojourner");
   assert.ok(log.writes.length > 1, "copied in more than one write");
   assert.ok(Math.max(...log.writes) <= OPFS_READ_CHUNK_BYTES);
-  assert.deepEqual(new Uint8Array(committed.get("backup.jobranger")), bytes);
-  assert.equal(committed.has("backup.jobranger.partial"), false);
+  assert.deepEqual(new Uint8Array(committed.get("backup.sojourner")), bytes);
+  assert.equal(committed.has("backup.sojourner.partial"), false);
 });
 
 test("copying a missing file fails without creating the destination", async () => {
@@ -197,7 +197,7 @@ test("a copy whose source fails mid-read leaves no new file and reports storage 
   await fs.writeFile("/source.bin", new Uint8Array(64).fill(3));
   state.failStreamOf = "source.bin";
   const before = storageFailures.length;
-  await assert.rejects(fs.copyFile("/source.bin", "/copy.bin"), (error) => error instanceof JobRangerStorageError && error.code === "EIO");
+  await assert.rejects(fs.copyFile("/source.bin", "/copy.bin"), (error) => error instanceof SojournerStorageError && error.code === "EIO");
   assert.equal(committed.has("copy.bin"), false);
   assert.equal(storageFailures.length, before + 1);
 });

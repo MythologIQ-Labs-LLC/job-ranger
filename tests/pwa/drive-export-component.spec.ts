@@ -22,7 +22,7 @@ const ACCOUNT_A = "permissionAccountA";
 const ACCOUNT_B = "permissionAccountB";
 const ROOT_ID = "rootFolderOpaque1";
 const OPERATION_PROPERTY = "sojournerExportOperation";
-const JOURNAL_DB = "job-ranger.drive-artifact-export-journal.v1";
+const JOURNAL_DB = "sojourner.drive-artifact-export-journal.v1";
 
 let server: PwaServer;
 
@@ -158,7 +158,7 @@ async function install(context: BrowserContext): Promise<Harness> {
   const google: string[] = [];
   const tokenInUrl: string[] = [];
   const appOrigin = new URL(server.url).origin;
-  await context.addInitScript(() => localStorage.setItem("job-ranger.onboarding.dismissed.v1", "true"));
+  await context.addInitScript(() => localStorage.setItem("sojourner.onboarding.dismissed.v1", "true"));
   await context.route(url => url.origin === DRIVE_E2E_HELPER_ORIGIN, route =>
     route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: helperPage(appOrigin) }));
   await context.route(url => url.hostname === "www.googleapis.com", route => drive.handle(route));

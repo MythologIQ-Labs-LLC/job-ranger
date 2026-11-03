@@ -11,8 +11,8 @@ const damaged = [
 ];
 const notDamaged = [
   new Error("This Sojourner workspace was upgraded by a newer version (database schema 99). Update Sojourner to open it; your data has not been changed."),
-  Object.assign(new Error("Sojourner could not save its database to browser storage: QuotaExceededError"), { name: "SqliteStorageError", code: "EJOBRANGERSTORAGE" }),
-  Object.assign(new Error("ENOENT: no such file or directory, open '/job-ranger/data/x'"), { code: "ENOENT" }),
+  Object.assign(new Error("Sojourner could not save its database to browser storage: QuotaExceededError"), { name: "SqliteStorageError", code: "ESOJOURNERSTORAGE" }),
+  Object.assign(new Error("ENOENT: no such file or directory, open '/sojourner/data/x'"), { code: "ENOENT" }),
   new Error("Pending restore marker is invalid"),
   new Error("Backup artifact hash mismatch: artifacts/a.pdf"),
   new Error("No handler registered for 'career:get-profile'"),

@@ -39,6 +39,11 @@ const MiB = 1024 * 1024;
  * browser the picker must be shown inside the user's click, before the
  * request reaches the worker.
  */
+/** Portable backup archives (written by the shared core). */
+const BACKUP_FILE_EXTENSION = ".sojourner";
+/** LEGACY: archives exported by builds released as Job Ranger, which still restore. */
+const LEGACY_BACKUP_FILE_EXTENSION = ".jobranger";
+
 export const OPEN_DIALOG_CHANNELS: Record<string, OpenDialogSpec> = {
   "career:select-resume-import": {
     accept: ".docx,.pdf,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -46,11 +51,15 @@ export const OPEN_DIALOG_CHANNELS: Record<string, OpenDialogSpec> = {
     label: "resume or career document",
   },
   "json-resume:import": { accept: ".json,application/json", maxBytes: 10 * MiB, label: "JSON Resume file" },
-  "backups:select-restore": { accept: ".jobranger", maxBytes: 1024 * MiB, label: "Sojourner backup" },
+  "backups:select-restore": {
+    accept: [BACKUP_FILE_EXTENSION, LEGACY_BACKUP_FILE_EXTENSION].join(","),
+    maxBytes: 1024 * MiB,
+    label: "Sojourner backup",
+  },
 };
 
-export const STORAGE_FAILURE_EVENT = "job-ranger:storage-failure";
-export const BOOT_STATE_EVENT = "job-ranger:boot-state";
+export const STORAGE_FAILURE_EVENT = "sojourner:storage-failure";
+export const BOOT_STATE_EVENT = "sojourner:boot-state";
 
 function pickFile(spec: OpenDialogSpec): Promise<File | null> {
   return new Promise((resolve) => {

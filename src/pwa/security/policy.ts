@@ -62,7 +62,7 @@ export function buildContentSecurityPolicy(options: PwaSecurityOptions = {}): st
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
     "require-trusted-types-for 'script'",
-    "trusted-types job-ranger-script-url",
+    "trusted-types sojourner-script-url",
   ].join("; ");
 }
 
