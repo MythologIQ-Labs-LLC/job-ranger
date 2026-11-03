@@ -24,7 +24,7 @@ def git(repo: Path, *args: str, stdin: bytes | None = None) -> str:
 
 class LocalEvidenceTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(prefix='job-ranger-evidence-')
+        self.tmp = tempfile.TemporaryDirectory(prefix='sojourner-evidence-')
         self.repo = Path(self.tmp.name)
         git(self.repo, 'init', '-q')
         git(self.repo, 'config', 'user.name', 'Test')
@@ -178,7 +178,7 @@ class LocalEvidenceTests(unittest.TestCase):
     def test_partial_clone_never_fetches_missing_objects(self):
         head = self.commit_inventory()
         git(self.repo, 'config', 'uploadpack.allowfilter', 'true')
-        clone_dir = tempfile.TemporaryDirectory(prefix='job-ranger-partial-')
+        clone_dir = tempfile.TemporaryDirectory(prefix='sojourner-partial-')
         self.addCleanup(clone_dir.cleanup)
         clone = Path(clone_dir.name) / 'clone'
         subprocess.run(['git', 'clone', '-q', '--no-checkout', '--filter=blob:none', self.repo.as_uri(), str(clone)],

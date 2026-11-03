@@ -48,7 +48,7 @@ export const MICROSOFT_CONTENT_HOST_SUFFIXES: readonly string[] = Object.freeze(
 
 /** JSON answers (token, metadata, listings) are small. */
 export const STORAGE_JSON_RESPONSE_LIMIT = 1024 * 1024;
-/** Media downloads are streamed; a `.jobranger` archive is at most 2 GiB - 1. */
+/** Media downloads are streamed; a `.sojourner` archive is at most 2 GiB - 1. */
 export const STORAGE_MEDIA_RESPONSE_LIMIT = 2 * 1024 * 1024 * 1024 - 1;
 
 export class StorageEgressError extends TypeError {

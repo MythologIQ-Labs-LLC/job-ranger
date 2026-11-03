@@ -59,7 +59,7 @@ export async function fetchDiscoveryJson<T>(
       const response = await fetchImpl(currentUrl, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "Job Ranger Desktop/1.0 source discovery",
+          "User-Agent": "Sojourner Desktop/1.0 source discovery",
         },
         redirect: "manual",
         signal: controller.signal,

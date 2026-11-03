@@ -5,9 +5,9 @@
 // passes the values from repository variables to `npm run electron:build:win`.
 //
 // Inputs (environment: release-build.yml repository variables; never committed):
-//   JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID      e.g. 123456789012-abc123.apps.googleusercontent.com
-//   JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET  Google's Desktop-app client "secret"
-//   JOB_RANGER_REQUIRE_GOOGLE_DRIVE_CLIENT=1 fail when the pair is absent
+//   SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID      e.g. 123456789012-abc123.apps.googleusercontent.com
+//   SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET  Google's Desktop-app client "secret"
+//   SOJOURNER_REQUIRE_GOOGLE_DRIVE_CLIENT=1 fail when the pair is absent
 //
 // A Desktop-app client secret is not confidential: it ships inside every copy
 // of the app. Security rests on PKCE, the loopback redirect and the person's
@@ -21,19 +21,19 @@ const CLIENT_ID = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
 const CLIENT_SECRET = /^[A-Za-z0-9_-]{8,128}$/;
 
 export function googleClientConfigFromEnv(env) {
-  const clientId = env.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID?.trim() ?? "";
-  const clientSecret = env.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET?.trim() ?? "";
+  const clientId = env.SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID?.trim() ?? "";
+  const clientSecret = env.SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET?.trim() ?? "";
   if (!clientId && !clientSecret) {
-    if (env.JOB_RANGER_REQUIRE_GOOGLE_DRIVE_CLIENT === "1") {
-      throw new Error("JOB_RANGER_REQUIRE_GOOGLE_DRIVE_CLIENT=1 but no Google Desktop OAuth client was provided.");
+    if (env.SOJOURNER_REQUIRE_GOOGLE_DRIVE_CLIENT === "1") {
+      throw new Error("SOJOURNER_REQUIRE_GOOGLE_DRIVE_CLIENT=1 but no Google Desktop OAuth client was provided.");
     }
     return null;
   }
   if (!clientId || !clientSecret) {
-    throw new Error("Google Drive client is partially configured. Provide JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID and JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET together.");
+    throw new Error("Google Drive client is partially configured. Provide SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID and SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET together.");
   }
-  if (!CLIENT_ID.test(clientId)) throw new Error("JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID is not a Google OAuth client id.");
-  if (!CLIENT_SECRET.test(clientSecret)) throw new Error("JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET has an unexpected format.");
+  if (!CLIENT_ID.test(clientId)) throw new Error("SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID is not a Google OAuth client id.");
+  if (!CLIENT_SECRET.test(clientSecret)) throw new Error("SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET has an unexpected format.");
   return { clientId, clientSecret };
 }
 

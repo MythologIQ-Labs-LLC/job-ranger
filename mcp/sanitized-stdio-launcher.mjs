@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fixed MCP command for tunnel-client. It deliberately inherits no tunnel
- * control-plane keys into the Job Ranger data-reading subprocess.
+ * control-plane keys into the Sojourner data-reading subprocess.
  *
  * The operator passes scopes/data path through explicit nonsecret environment
  * variables; external MCP requests cannot set these values.
@@ -27,17 +27,17 @@ export function scrubForAdapter(input) {
 }
 
 export function adapterArguments(env) {
-  const raw = env.JOB_RANGER_MCP_SCOPES;
+  const raw = env.SOJOURNER_MCP_SCOPES;
   if (!raw) throw new Error("The tunnel operator did not explicitly grant a scope selection.");
   if (raw === "none") return ["--scopes=none"];
   const scopes = raw.split(",");
   if (!scopes.length || scopes.some((scope) => !ALLOWED_SCOPES.includes(scope)) ||
       new Set(scopes).size !== scopes.length)
     throw new Error("Invalid fixed read-only scope selection.");
-  if (!env.JOB_RANGER_MCP_DATA_DIR || !path.isAbsolute(env.JOB_RANGER_MCP_DATA_DIR))
+  if (!env.SOJOURNER_MCP_DATA_DIR || !path.isAbsolute(env.SOJOURNER_MCP_DATA_DIR))
     throw new Error("Private reads require an absolute native workspace path.");
   return [
-    `--data-dir=${env.JOB_RANGER_MCP_DATA_DIR}`,
+    `--data-dir=${env.SOJOURNER_MCP_DATA_DIR}`,
     `--scopes=${scopes.join(",")}`,
   ];
 }

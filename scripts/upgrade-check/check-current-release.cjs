@@ -5,6 +5,11 @@
 // Usage: node check-current-release.cjs <outputRoot>
 //
 // For every fixture listed in <outputRoot>/baseline-fixtures.json:
+// - the baseline data folder is first migrated exactly as a Sojourner install does at
+//   start-up (electron/src/legacy-migration.cts: %APPDATA%\job-ranger ->
+//   %APPDATA%\Sojourner, jobscout.sqlite3 -> sojourner.sqlite3): the copy is verified,
+//   holds every record, and the baseline folder itself is left unchanged;
+// and then, on the migrated folder:
 // - every table that existed before is unchanged after the current build opens
 //   the data (settings compare by key/value: startup re-saves timestamps);
 // - every migration the current build knows is applied;
@@ -22,7 +27,7 @@ const { outputLines } = require("./sqlite-output.cjs");
 
 const runtimeDir = path.join(__dirname, "..", "..", "electron-runtime", "electron", "src");
 const load = (file) => require(path.join(runtimeDir, file));
-const { JobScoutBackend } = load("backend.cjs");
+const { SojournerBackend } = load("backend.cjs");
 const { CareerBackend } = load("career-backend.cjs");
 const { ApplicationLifecycleBackend } = load("application-lifecycle-backend.cjs");
 const { CareerStoryBackend } = load("career-story-backend.cjs");
@@ -36,6 +41,14 @@ const { BackupService, applyPendingRestore } = load("backup-service.cjs");
 const { migrations } = load("migrations.cjs");
 const { FEATURE_MIGRATION_VERSIONS } = load("feature-migrations.cjs");
 const { resolveSqliteBinary, SqliteClient } = load("sqlite.cjs");
+const { sqliteIntegrityCheck, sqliteManagedPathRebase } = load("sqlite-sync.cjs");
+const { migrateLegacyUserData, MIGRATION_NOTE_FILE } = load("legacy-migration.cjs");
+const { DATABASE_FILE_NAME, DATABASE_FILE_NAMES, LEGACY_DATABASE_FILE_NAME } = load("database-file.cjs");
+const { existsSync } = require("node:fs");
+
+function databaseIn(dataDirectory) {
+  return DATABASE_FILE_NAMES.map((name) => path.join(dataDirectory, name)).find((file) => existsSync(file)) ?? null;
+}
 
 const outputRoot = path.resolve(process.argv[2] ?? "");
 
@@ -56,8 +69,86 @@ function fingerprint(sqliteBinaryPath, databasePath) {
   return result;
 }
 
+/** Same as fingerprint, but artifact rows by id and content (their absolute paths are rebased). */
+function recordFingerprint(sqliteBinaryPath, databasePath) {
+  const result = fingerprint(sqliteBinaryPath, databasePath);
+  for (const table of ["source_artifacts", "resume_artifacts"]) {
+    if (!(table in result)) continue;
+    const rows = sqliteQuery(sqliteBinaryPath, databasePath, `SELECT id, content_hash FROM "${table}" ORDER BY 1;`);
+    result[table] = createHash("sha256").update(rows).digest("hex");
+  }
+  return result;
+}
+
+async function treeDigest(root) {
+  const entries = [];
+  const visit = async (relative) => {
+    for (const entry of await fs.readdir(path.join(root, relative), { withFileTypes: true })) {
+      const child = path.join(relative, entry.name);
+      if (!relative && entry.name === MIGRATION_NOTE_FILE) continue;
+      if (entry.isDirectory()) await visit(child);
+      else {
+        const bytes = await fs.readFile(path.join(root, child));
+        entries.push(`${child}:${bytes.length}:${createHash("sha256").update(bytes).digest("hex")}`);
+      }
+    }
+  };
+  await visit("");
+  return entries.sort().join("\n");
+}
+
+/**
+ * Lays the baseline data out as an installed legacy folder (<legacy>\data\jobscout.sqlite3)
+ * and migrates it with the current build's start-up migration. Returns the migrated data
+ * directory. Feature-smoke fixtures that kept a bare data directory are first copied into
+ * that layout (their artifact paths moved with them), as an installed baseline would hold it.
+ */
+async function migrateFixture(fixture, sqliteBinaryPath) {
+  const safeName = fixture.name.replace(/[\\/]/g, "_");
+  const rebaseManagedPaths = sqliteManagedPathRebase(sqliteBinaryPath);
+  let legacy;
+  if (path.basename(fixture.dataDirectory) === "data") {
+    legacy = path.dirname(fixture.dataDirectory);
+  } else {
+    legacy = path.join(outputRoot, ".legacy-layout", safeName, "job-ranger");
+    await fs.rm(legacy, { recursive: true, force: true });
+    await fs.mkdir(legacy, { recursive: true });
+    await fs.cp(fixture.dataDirectory, path.join(legacy, "data"), { recursive: true });
+    rebaseManagedPaths(databaseIn(path.join(legacy, "data")), fixture.dataDirectory, path.join(legacy, "data"));
+  }
+  const legacyDatabase = databaseIn(path.join(legacy, "data"));
+  if (!legacyDatabase) throw new Error("Baseline fixture has no database");
+  const legacyRecords = recordFingerprint(sqliteBinaryPath, legacyDatabase);
+  const legacyBefore = await treeDigest(legacy);
+
+  const target = path.join(outputRoot, ".migrated", safeName, "Sojourner");
+  await fs.rm(path.dirname(target), { recursive: true, force: true });
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  const result = migrateLegacyUserData({
+    target,
+    legacy,
+    verifyDatabase: sqliteIntegrityCheck(sqliteBinaryPath),
+    rebaseManagedPaths,
+  });
+  if (result.kind !== "migrated") {
+    throw new Error(`Start-up migration did not migrate the baseline folder: ${JSON.stringify(result)}`);
+  }
+  if ((await treeDigest(legacy)) !== legacyBefore) {
+    throw new Error("Start-up migration changed the baseline (legacy) data folder");
+  }
+  if (!existsSync(path.join(legacy, MIGRATION_NOTE_FILE))) throw new Error("No migration note in the legacy folder");
+  const dataDirectory = path.join(target, "data");
+  if (!existsSync(path.join(dataDirectory, DATABASE_FILE_NAME)) || existsSync(path.join(dataDirectory, LEGACY_DATABASE_FILE_NAME))) {
+    throw new Error(`The migrated database is not named ${DATABASE_FILE_NAME}`);
+  }
+  const migratedRecords = recordFingerprint(sqliteBinaryPath, path.join(dataDirectory, DATABASE_FILE_NAME));
+  const differing = Object.keys({ ...legacyRecords, ...migratedRecords }).filter((table) => legacyRecords[table] !== migratedRecords[table]);
+  if (differing.length > 0) throw new Error(`Migrated records differ from the baseline: ${differing.join(", ")}`);
+  return { dataDirectory, migration: { kind: result.kind, files: result.files, bytes: result.bytes } };
+}
+
 async function openCurrent(dataDirectory) {
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -113,7 +204,7 @@ async function openCurrent(dataDirectory) {
 }
 
 async function verifyFixture(fixture, sqliteBinaryPath) {
-  const databasePath = path.join(fixture.dataDirectory, "jobscout.sqlite3");
+  const databasePath = databaseIn(fixture.dataDirectory);
   const appliedVersions = () =>
     outputLines(sqliteQuery(sqliteBinaryPath, databasePath, "SELECT version FROM schema_migrations;"))
       .map(Number)
@@ -187,7 +278,9 @@ async function verifyFixture(fixture, sqliteBinaryPath) {
   const results = [];
   for (const fixture of manifest.fixtures) {
     try {
-      results.push({ name: fixture.name, status: "passed", ...(await verifyFixture(fixture, sqliteBinaryPath)) });
+      const migrated = await migrateFixture(fixture, sqliteBinaryPath);
+      const verified = await verifyFixture({ ...fixture, dataDirectory: migrated.dataDirectory }, sqliteBinaryPath);
+      results.push({ name: fixture.name, status: "passed", migration: migrated.migration, ...verified });
     } catch (error) {
       results.push({ name: fixture.name, status: "failed", error: error instanceof Error ? error.stack : String(error) });
     }
@@ -213,10 +306,12 @@ async function verifyFixture(fixture, sqliteBinaryPath) {
   await fs.writeFile(path.join(outputRoot, "release-upgrade-report.json"), `${JSON.stringify(report, null, 2)}\n`);
   for (const result of results) {
     const backupNote = result.backup?.checked ? "backup+restore ok" : `backup not checked (${result.backup?.reason ?? "n/a"})`;
-    console.log(`${result.status === "passed" ? "ok  " : "FAIL"} ${result.name}${result.counts ? ` ${JSON.stringify(result.counts)}` : ""}; ${backupNote}`);
+    const migrationNote = result.migration ? `migrated ${result.migration.files} files; ` : "";
+    console.log(`${result.status === "passed" ? "ok  " : "FAIL"} ${result.name}${result.counts ? ` ${JSON.stringify(result.counts)}` : ""}; ${migrationNote}${backupNote}`);
     if (result.error) console.log(result.error);
   }
-  console.log(`${results.length} baseline data directories checked; ${backedUp} backed up and restored.`);
+  const migratedCount = results.filter((result) => result.migration?.kind === "migrated").length;
+  console.log(`${results.length} baseline data directories checked; ${migratedCount} migrated to the Sojourner folder; ${backedUp} backed up and restored.`);
   if (failures.length) {
     for (const failure of failures.filter((item) => !results.includes(item))) console.log(`FAIL ${failure.name}: ${failure.error}`);
     process.exitCode = 1;

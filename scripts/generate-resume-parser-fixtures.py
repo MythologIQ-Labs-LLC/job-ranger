@@ -131,7 +131,7 @@ def main() -> None:
     with zipfile.ZipFile(OUT / "malformed.docx", "w") as archive:
         archive.writestr("broken.txt", "this is not a Word document package")
 
-    (OUT / "unsupported.bin").write_bytes(b"\x00\x01JOBRANGER\xff\xfeunsupported-format")
+    (OUT / "unsupported.bin").write_bytes(b"\x00\x01SOJOURNER\xff\xfeunsupported-format")
 
     print(f"Generated parser fixtures in {OUT}")
 

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { JobScoutBackend } from "./backend.cjs";
+import type { SojournerBackend } from "./backend.cjs";
 import type { CareerBackend } from "./career-backend.cjs";
 import type { RequirementBackend } from "./requirement-backend.cjs";
 import { BackupService } from "./backup-service.cjs";
@@ -9,7 +9,7 @@ import { JsonResumeAdapter } from "./json-resume-adapter.cjs";
 import { SqliteClient, sql } from "./sqlite.cjs";
 
 export interface PackageSmokeOptions {
-  backend: JobScoutBackend;
+  backend: SojournerBackend;
   careerBackend: CareerBackend;
   requirementBackend: RequirementBackend;
   userDataDirectory: string;
@@ -50,7 +50,7 @@ async function insertSyntheticHealthcareJob(
 ): Promise<{ jobId: string; snapshotId: string }> {
   const now = new Date().toISOString();
   const sourceJobId = "package-smoke-healthcare-job";
-  const sourceUrl = "https://boards.greenhouse.io/job-ranger-package-smoke/jobs/healthcare-001";
+  const sourceUrl = "https://boards.greenhouse.io/sojourner-package-smoke/jobs/healthcare-001";
   const sourceText = [
     "Medical Office Coordinator",
     "Coordinate patient scheduling, referrals, insurance verification, and front-desk workflows for a multi-provider clinic.",
@@ -222,7 +222,7 @@ export async function runPackagedSmoke(
 
     const company = await options.backend.createCompany({
       name: "Package Smoke Healthcare Employer",
-      url: "https://boards.greenhouse.io/job-ranger-package-smoke",
+      url: "https://boards.greenhouse.io/sojourner-package-smoke",
       frequencyMinutes: 1440,
       isActive: false,
     });

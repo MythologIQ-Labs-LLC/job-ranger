@@ -11,7 +11,7 @@ const proposal = {
   fileName: "Resume.pdf", mimeType: "application/pdf", bytesSha256: hash,
   byteLength: blob.size, providerId: "google-drive",
   accountId: "account:1", approvedDestinationId: "folder:1",
-  destinationLabel: "Job Ranger", expiresAt: new Date(now + 60_000).toISOString(),
+  destinationLabel: "Sojourner", expiresAt: new Date(now + 60_000).toISOString(),
 };
 const approval = {
   kind: "explicit_export_artifact", approvalId: "approval:1", proposalId: "prop:1",

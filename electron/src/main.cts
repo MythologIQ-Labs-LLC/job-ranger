@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
-import { JobScoutBackend } from "./backend.cjs";
+import { SojournerBackend } from "./backend.cjs";
 import { CareerBackend } from "./career-backend.cjs";
 import { RequirementBackend } from "./requirement-backend.cjs";
 import { initializeResumeIpc } from "./resume-ipc.cjs";
@@ -23,6 +23,8 @@ import {
   storeHostPath,
 } from "./distribution.cjs";
 import { initializeLegacyInstallIpc } from "./legacy-install-ipc.cjs";
+import { migrateLegacyUserData } from "./legacy-migration.cjs";
+import { resolveSqliteBinarySync, sqliteIntegrityCheck, sqliteManagedPathRebase } from "./sqlite-sync.cjs";
 import { parsePackageSmokeArgument, runStorePackageSmoke } from "./store-package-smoke.cjs";
 
 const distributionChannel = detectDistributionChannel({
@@ -31,17 +33,27 @@ const distributionChannel = detectDistributionChannel({
   env: process.env,
 });
 
-// Pin the data root before anything reads userData: Store (AppX) builds isolate
-// theirs from direct-download installations, and packaged direct-download builds
-// keep the historical "job-ranger" folder (Job Ranger v1.2.0) although the app is named Sojourner.
-// Development runs and an explicit --user-data-dir keep Electron's default.
-const pinnedUserDataDirectory = resolvePinnedUserDataDirectory({
+// Pin the data root before anything reads userData or opens the database: packaged
+// direct-download builds use %APPDATA%\Sojourner and Store (AppX) builds their isolated
+// "Sojourner Store" folder. Data written before the rename (%APPDATA%\job-ranger,
+// "Job Ranger Store") is copied there and verified first (legacy-migration.cts); if
+// that fails, this run uses the untouched legacy folder. Development runs and an
+// explicit --user-data-dir keep Electron's default.
+const pinnedUserData = resolvePinnedUserDataDirectory({
   channel: distributionChannel,
   appDataDirectory: app.getPath("appData"),
   hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
 });
-if (pinnedUserDataDirectory) {
-  app.setPath("userData", pinnedUserDataDirectory);
+if (pinnedUserData) {
+  const sqliteBinary = resolveSqliteBinarySync();
+  const userDataMigration = migrateLegacyUserData({
+    target: pinnedUserData.target,
+    legacy: pinnedUserData.legacy,
+    verifyDatabase: sqliteIntegrityCheck(sqliteBinary),
+    rebaseManagedPaths: sqliteManagedPathRebase(sqliteBinary),
+    log: (message) => console.log(`[data folder] ${message}`),
+  });
+  app.setPath("userData", userDataMigration.userDataDirectory);
 }
 
 /** Path the OS file manager sees for a path inside Sojourner's data root. */
@@ -62,7 +74,7 @@ const pinnedDiscoveryFetch = createPinnedFetch();
 
 let mainWindow: BrowserWindow | null = null;
 let helpWindow: BrowserWindow | null = null;
-let backend: JobScoutBackend | null = null;
+let backend: SojournerBackend | null = null;
 let careerBackend: CareerBackend | null = null;
 let requirementBackend: RequirementBackend | null = null;
 let isQuitting = false;
@@ -279,7 +291,7 @@ app.whenReady().then(async () => {
     const dataDirectory = path.join(userDataDirectory, "data");
     await applyPendingRestore({ userDataDirectory, dataDirectory });
 
-    backend = new JobScoutBackend({
+    backend = new SojournerBackend({
       dataDirectory,
       browserPageLoader: loadPageHtmlInHiddenWindow,
     });
@@ -323,7 +335,7 @@ app.whenReady().then(async () => {
       runtime: "electron" as const,
       channel: distributionChannel,
       appVersion: app.getVersion(),
-      buildId: process.env.JOB_RANGER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
+      buildId: process.env.SOJOURNER_BUILD_ID?.trim() || `electron-${app.getVersion()}`,
     };
     const backupService = initializeBackupIpc({
       dataDirectory,
@@ -364,7 +376,7 @@ app.whenReady().then(async () => {
           platform: process.platform,
           userDataDirectory,
           sqliteBinaryPath: systemStatus.sqliteBinaryPath,
-          buildId: process.env.JOB_RANGER_BUILD_ID,
+          buildId: process.env.SOJOURNER_BUILD_ID,
         }),
     });
     initializeLegacyInstallIpc({
@@ -372,6 +384,7 @@ app.whenReady().then(async () => {
       appDataDirectory: app.getPath("appData"),
       userDataDirectory,
       dataDirectory,
+      databasePath: systemStatus.databasePath,
       sqliteBinaryPath: systemStatus.sqliteBinaryPath,
       appVersion: app.getVersion(),
     });

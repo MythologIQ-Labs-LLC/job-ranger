@@ -3,7 +3,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 const { CareerBackend } = require("../electron-runtime/electron/src/career-backend.cjs");
 const { SqliteClient } = require("../electron-runtime/electron/src/sqlite.cjs");
 
@@ -66,10 +66,10 @@ function trackInput(overrides = {}) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-target-tracks-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-target-tracks-"));
 
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => {
@@ -250,7 +250,7 @@ async function run() {
 
     await backend.dispose();
 
-    const reloadedBackend = new JobScoutBackend({
+    const reloadedBackend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => {

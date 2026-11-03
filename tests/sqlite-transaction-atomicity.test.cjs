@@ -8,7 +8,7 @@ const path = require('node:path');
 const { SqliteClient, resolveSqliteBinary } = require('../electron-runtime/electron/src/sqlite.cjs');
 
 async function run() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-atomicity-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-atomicity-'));
   try {
     const db = new SqliteClient(path.join(dir, 'atomicity.sqlite3'), await resolveSqliteBinary());
     await db.exec('CREATE TABLE t (x INTEGER PRIMARY KEY); CREATE TABLE r (n INTEGER NOT NULL);');

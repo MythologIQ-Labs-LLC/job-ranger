@@ -39,26 +39,26 @@ async function run() {
   assert.deepEqual(
     selectPlatformArtifacts(
       [
-        "Job Ranger-v1.0.0-alpha.1-windows-store-x64.appx",
+        "Sojourner-v1.0.0-alpha.1-windows-store-x64.appx",
         "Sojourner-v1.0.0-alpha.1-windows-x64.exe",
-        "job-ranger-web-v1.0.0-alpha.1.zip",
+        "sojourner-web-v1.0.0-alpha.1.zip",
       ],
       "windows-store",
     ),
-    ["Job Ranger-v1.0.0-alpha.1-windows-store-x64.appx"],
+    ["Sojourner-v1.0.0-alpha.1-windows-store-x64.appx"],
   );
   assert.deepEqual(
-    selectPlatformArtifacts(["job-ranger-web-v1.0.0-alpha.1.zip", "Sojourner-v1.0.0-alpha.1-windows-x64.exe"], "web"),
-    ["job-ranger-web-v1.0.0-alpha.1.zip"],
+    selectPlatformArtifacts(["sojourner-web-v1.0.0-alpha.1.zip", "Sojourner-v1.0.0-alpha.1-windows-x64.exe"], "web"),
+    ["sojourner-web-v1.0.0-alpha.1.zip"],
   );
   // The demo flavor archive is never mistaken for the standard web release.
   assert.deepEqual(
-    selectPlatformArtifacts(["job-ranger-web-demo-v1.3.0.zip", "job-ranger-web-v1.3.0.zip"], "web"),
-    ["job-ranger-web-v1.3.0.zip"],
+    selectPlatformArtifacts(["sojourner-web-demo-v1.3.0.zip", "sojourner-web-v1.3.0.zip"], "web"),
+    ["sojourner-web-v1.3.0.zip"],
   );
   assert.throws(() => selectPlatformArtifacts([], "linux"), /Unsupported release-manifest platform/);
 
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-release-manifest-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-release-manifest-"));
   const releaseDirectory = path.join(root, "release");
   const outputDirectory = path.join(root, "trust");
 
@@ -66,7 +66,7 @@ async function run() {
     await fs.mkdir(releaseDirectory, { recursive: true });
     await fs.mkdir(outputDirectory, { recursive: true });
     const installerName = "Sojourner-v1.0.0-alpha.1-windows-x64.exe";
-    const installerBytes = Buffer.from("job-ranger-test-installer");
+    const installerBytes = Buffer.from("sojourner-test-installer");
     await fs.writeFile(path.join(releaseDirectory, installerName), installerBytes);
     await fs.writeFile(
       path.join(releaseDirectory, `${installerName}.blockmap`),
@@ -148,16 +148,16 @@ async function run() {
   // Release-upgrade baseline (scripts/verify-release-upgrade.mjs): the newest stable Sojourner
   // vX.Y.Z tag, else the newest stable archived Job Ranger tag; never a pre-release.
   const { selectDefaultBaseline } = await import("../scripts/upgrade-check/baseline-tag.mjs");
-  const jobRangerTags = [
+  const archivedTags = [
     "job-ranger-v1.0.0",
     "job-ranger-v1.1.2",
     "job-ranger-v1.2.0",
     "job-ranger-v1.2.0-rc.5",
     "",
   ];
-  assert.equal(selectDefaultBaseline(jobRangerTags), "job-ranger-v1.2.0");
-  assert.equal(selectDefaultBaseline(["v1.0.0-alpha.1", ...jobRangerTags]), "job-ranger-v1.2.0");
-  assert.equal(selectDefaultBaseline(["v1.0.0", "v0.10.0", "v1.0.0-alpha.1", ...jobRangerTags]), "v1.0.0");
+  assert.equal(selectDefaultBaseline(archivedTags), "job-ranger-v1.2.0");
+  assert.equal(selectDefaultBaseline(["v1.0.0-alpha.1", ...archivedTags]), "job-ranger-v1.2.0");
+  assert.equal(selectDefaultBaseline(["v1.0.0", "v0.10.0", "v1.0.0-alpha.1", ...archivedTags]), "v1.0.0");
   assert.equal(selectDefaultBaseline(["job-ranger-v1.9.0", "job-ranger-v1.10.0"]), "job-ranger-v1.10.0");
   assert.equal(selectDefaultBaseline(["v1.0.0-alpha.1"]), null);
 

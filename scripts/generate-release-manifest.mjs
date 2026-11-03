@@ -5,13 +5,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PLATFORM_PATTERNS = {
-  // The direct-download app is named Sojourner (Sojourner-v<version>-windows-x64.exe);
-  // the Store package keeps its historical Job Ranger identity (electron-builder.store.cjs).
+  // Both Windows packages are named Sojourner: Sojourner-v<version>-windows-x64.exe and
+  // Sojourner-v<version>-windows-store[-validation]-x64.appx (electron-builder.store.cjs).
   windows: /^Sojourner.*windows.*\.exe$/i,
-  "windows-store": /^Job.*windows-store.*\.appx$/i,
+  "windows-store": /^Sojourner.*windows-store.*\.appx$/i,
   macos: /^Sojourner.*macos.*\.(?:dmg|zip)$/i,
-  // The demo flavor's archive (job-ranger-web-demo-v*.zip) is never the web release artifact.
-  web: /^job-ranger-web-v\d[^/\\]*\.zip$/i,
+  // The demo flavor's archive (sojourner-web-demo-v*.zip) is never the web release artifact.
+  web: /^sojourner-web-v\d[^/\\]*\.zip$/i,
 };
 
 function parseBoolean(value) {

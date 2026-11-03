@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { BackupService, applyPendingRestore } = require('../electron-runtime/electron/src/backup-service.cjs');
 const { migrations } = require('../electron-runtime/electron/src/migrations.cjs');
@@ -17,7 +17,7 @@ function sha256(buffer) {
 async function seedV112Database(dataDirectory) {
   await fs.mkdir(dataDirectory, { recursive: true });
   const sqliteBinaryPath = await resolveSqliteBinary();
-  const databasePath = path.join(dataDirectory, 'jobscout.sqlite3');
+  const databasePath = path.join(dataDirectory, 'sojourner.sqlite3');
   const sqlite = new SqliteClient(databasePath, sqliteBinaryPath);
 
   for (const migration of migrations.filter((item) => item.version <= 2)) {
@@ -131,7 +131,7 @@ function legacyCareerPayload() {
 
 async function initializeCandidate(userDataDirectory) {
   const dataDirectory = path.join(userDataDirectory, 'data');
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -197,7 +197,7 @@ async function assertUpgradedState(installation) {
 }
 
 async function run() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-v112-upgrade-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-v112-upgrade-'));
 
   try {
     const sourceUserData = path.join(root, 'source-user-data');

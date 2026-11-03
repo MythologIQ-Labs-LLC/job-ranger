@@ -20,12 +20,12 @@ const id = "6aea1e3a-0000-4000-8000-000000000002";
 
 // Build-time client configuration (public client: an id, no secret).
 assert.equal(microsoftClientConfigFromEnv({}), null);
-assert.throws(() => microsoftClientConfigFromEnv({ JOB_RANGER_REQUIRE_MICROSOFT_CLIENT: "1" }), /no Microsoft client id/);
-assert.throws(() => microsoftClientConfigFromEnv({ JOB_RANGER_MICROSOFT_CLIENT_ID: "not-a-guid" }), /not a Microsoft application/);
-assert.deepEqual(microsoftClientConfigFromEnv({ JOB_RANGER_MICROSOFT_CLIENT_ID: ` ${id.toUpperCase()} ` }), { clientId: id });
+assert.throws(() => microsoftClientConfigFromEnv({ SOJOURNER_REQUIRE_MICROSOFT_CLIENT: "1" }), /no Microsoft client id/);
+assert.throws(() => microsoftClientConfigFromEnv({ SOJOURNER_MICROSOFT_CLIENT_ID: "not-a-guid" }), /not a Microsoft application/);
+assert.deepEqual(microsoftClientConfigFromEnv({ SOJOURNER_MICROSOFT_CLIENT_ID: ` ${id.toUpperCase()} ` }), { clientId: id });
 const directory = mkdtempSync(path.join(os.tmpdir(), "sojourner-microsoft-client-"));
 try {
-  const target = writeMicrosoftClientConfig(directory, { JOB_RANGER_MICROSOFT_CLIENT_ID: id });
+  const target = writeMicrosoftClientConfig(directory, { SOJOURNER_MICROSOFT_CLIENT_ID: id });
   assert.deepEqual(JSON.parse(readFileSync(target, "utf8")), { clientId: id });
   writeFileSync(path.join(directory, "other.txt"), "kept");
   assert.equal(writeMicrosoftClientConfig(directory, {}), null);
@@ -44,7 +44,7 @@ for (const script of ["electron:build", "electron:build:win", "electron:pack"]) 
     `${script} generates the Microsoft client config before packaging`);
 }
 assert.match(read(".gitignore"), /^\/build\/microsoft-oauth\/$/m);
-assert.match(read(".github/workflows/release-build.yml"), /JOB_RANGER_MICROSOFT_CLIENT_ID: \$\{\{ vars\.JOB_RANGER_MICROSOFT_CLIENT_ID \}\}/);
+assert.match(read(".github/workflows/release-build.yml"), /SOJOURNER_MICROSOFT_CLIENT_ID: \$\{\{ vars\.SOJOURNER_MICROSOFT_CLIENT_ID \}\}/);
 // The registration's id lives only in the repository variable, never in source.
 const sourceFiles = (dir) => readdirSync(path.join(root, dir), { recursive: true }).filter((file) => /\.(cts|ts|tsx|mjs|cjs|json|yml)$/.test(file));
 for (const dir of ["electron/src", "src", "scripts", ".github"]) {
@@ -81,6 +81,6 @@ assert.match(config, /https:\/\/login\.microsoftonline\.com\/common\/oauth2\/v2\
 assert.doesNotMatch(code(read("electron/src/storage/microsoft-auth.cts")), /client_secret|Files\.ReadWrite\.All|Files\.Read\b|User\.Read|openid|Sites\./);
 assert.doesNotMatch(code(read("electron/src/storage/google-storage-provider.cts")), /auth\/drive"|drive\.readonly|drive\.appdata/);
 // The working database is never placed at a location: only archives and documents are uploaded.
-assert.doesNotMatch(code(read("electron/src/storage/storage-service.cts")), /databasePath|jobscout\.sqlite3/);
+assert.doesNotMatch(code(read("electron/src/storage/storage-service.cts")), /databasePath|sojourner\.sqlite3/);
 
 console.log("Windows storage location build and boundary tests passed");

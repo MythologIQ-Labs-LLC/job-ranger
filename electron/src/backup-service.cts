@@ -5,18 +5,20 @@ import path from "node:path";
 import type {
   BackupArchiveRecord,
   BackupCreateResult,
-  JobRangerArchiveProducer,
+  SojournerArchiveProducer,
   BackupFileRecord,
   BackupManagedPathRecord,
   BackupMigrationRecord,
   BackupRestoreSelection,
   BackupSummary,
-  JobRangerBackupManifest,
+  SojournerBackupManifest,
 } from "../../src/shared/backup.js";
 import {
-  JOB_RANGER_BACKUP_FORMAT,
-  JOB_RANGER_BACKUP_VERSION,
+  BACKUP_FORMAT,
+  BACKUP_VERSION,
+  isBackupFormat,
 } from "../../src/shared/backup.js";
+import { DATABASE_FILE_NAME, DATABASE_FILE_NAMES, LEGACY_DATABASE_FILE_NAME } from "./database-file.cjs";
 import { sql, SqliteClient } from "./sqlite.cjs";
 import { describeNulText, describeRepairFailures, findNulText, repairNulText } from "./nul-text.cjs";
 import { migrations as coreMigrations } from "./migrations.cjs";
@@ -29,10 +31,20 @@ import {
 } from "./portable-archive.cjs";
 
 const BACKUP_MANIFEST_FILE = "manifest.json";
-const BACKUP_DATABASE_FILE = "jobscout.sqlite3";
+const BACKUP_DATABASE_FILE = DATABASE_FILE_NAME;
 const PENDING_RESTORE_FILE = "pending-restore.json";
-const STAGED_RESTORE_STATE_FILE = ".job-ranger-restore-state.json";
-const ARCHIVE_WORK_PREFIX = ".job-ranger-archive-work-";
+const STAGED_RESTORE_STATE_FILE = ".sojourner-restore-state.json";
+const ARCHIVE_WORK_PREFIX = ".sojourner-archive-work-";
+const STAGE_DIRECTORY_PREFIX = ".sojourner-restore-stage-";
+/**
+ * LEGACY names a restore staged by Job Ranger (or by Sojourner before the rename) carries.
+ * A restore staged before an upgrade is still applied after it, including in the
+ * migrated data folder.
+ */
+const LEGACY_STAGED_RESTORE_STATE_FILE = ".job-ranger-restore-state.json";
+const LEGACY_ARCHIVE_WORK_PREFIX = ".job-ranger-archive-work-";
+const LEGACY_PENDING_RESTORE_FORMAT = "job-ranger-pending-restore";
+const LEGACY_STAGED_RESTORE_FORMAT = "job-ranger-staged-restore";
 const MAX_MANIFEST_BYTES = 10 * 1024 * 1024;
 const MAX_BACKUP_FILES = 100_000;
 
@@ -62,15 +74,17 @@ type IntegrityRow = {
 };
 
 type PendingRestoreMarker = {
-  format: "job-ranger-pending-restore";
+  format: "sojourner-pending-restore";
   version: 1;
   stageDirectory: string;
   createdAt: string;
 };
 
 type StagedRestoreState = {
-  format: "job-ranger-staged-restore";
+  format: "sojourner-staged-restore";
   version: 1;
+  /** File name of the staged database (absent in restores staged before the rename). */
+  databaseFile?: string;
   databaseSha256: string;
   artifactFiles: BackupFileRecord[];
 };
@@ -122,7 +136,7 @@ function relativeToDataRoot(dataDirectory: string, managedPath: string): string 
   const target = path.resolve(managedPath);
   const relative = path.relative(root, target);
   if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new Error(`Managed artifact is outside the Job Ranger data directory: ${managedPath}`);
+    throw new Error(`Managed artifact is outside the Sojourner data directory: ${managedPath}`);
   }
   const portable = relative.split(path.sep).join("/");
   const normalized = normalizeRelativePath(portable);
@@ -216,10 +230,10 @@ function parseManagedPath(value: unknown): BackupManagedPathRecord {
   };
 }
 
-function parseManifest(value: unknown): JobRangerBackupManifest {
+function parseManifest(value: unknown): SojournerBackupManifest {
   if (!isObject(value)) throw new Error("Backup manifest is invalid");
-  if (value.format !== JOB_RANGER_BACKUP_FORMAT || value.version !== JOB_RANGER_BACKUP_VERSION) {
-    throw new Error("This backup format is not supported by this version of Job Ranger");
+  if (!isBackupFormat(value.format) || value.version !== BACKUP_VERSION) {
+    throw new Error("This backup format is not supported by this version of Sojourner");
   }
   if (
     typeof value.createdAt !== "string" ||
@@ -236,7 +250,8 @@ function parseManifest(value: unknown): JobRangerBackupManifest {
   }
 
   const database = parseBackupFile(value.database);
-  if (database.path !== BACKUP_DATABASE_FILE) {
+  // Bundles written before the rename name the database jobscout.sqlite3 (LEGACY).
+  if (!(DATABASE_FILE_NAMES as readonly string[]).includes(database.path)) {
     throw new Error("Backup database path is invalid");
   }
   const artifactFiles = value.artifactFiles.map(parseBackupFile);
@@ -269,8 +284,8 @@ function parseManifest(value: unknown): JobRangerBackupManifest {
   }
 
   return {
-    format: JOB_RANGER_BACKUP_FORMAT,
-    version: JOB_RANGER_BACKUP_VERSION,
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
     createdAt: value.createdAt,
     appVersion: value.appVersion,
     database,
@@ -280,7 +295,7 @@ function parseManifest(value: unknown): JobRangerBackupManifest {
   };
 }
 
-function backupSummary(bundlePath: string, manifest: JobRangerBackupManifest): BackupSummary {
+function backupSummary(bundlePath: string, manifest: SojournerBackupManifest): BackupSummary {
   return {
     bundlePath,
     createdAt: manifest.createdAt,
@@ -320,9 +335,25 @@ async function verifyFileRecord(root: string, record: BackupFileRecord): Promise
   }
 }
 
+async function stagedStateFile(root: string): Promise<string> {
+  const current = path.join(root, STAGED_RESTORE_STATE_FILE);
+  if (await pathExists(current)) return current;
+  const legacy = path.join(root, LEGACY_STAGED_RESTORE_STATE_FILE);
+  return (await pathExists(legacy)) ? legacy : current;
+}
+
+/** The staged database: named in the state file, else whichever known name the stage holds. */
+async function stagedDatabaseFile(root: string, state: StagedRestoreState): Promise<string> {
+  if (state.databaseFile) return state.databaseFile;
+  for (const name of DATABASE_FILE_NAMES) {
+    if (await pathExists(path.join(root, name))) return name;
+  }
+  return LEGACY_DATABASE_FILE_NAME;
+}
+
 async function verifyStagedRestore(root: string): Promise<void> {
-  const state = parseStagedState(await readJsonFile(path.join(root, STAGED_RESTORE_STATE_FILE)));
-  const stagedHash = await hashFile(path.join(root, BACKUP_DATABASE_FILE));
+  const state = parseStagedState(await readJsonFile(await stagedStateFile(root)));
+  const stagedHash = await hashFile(path.join(root, await stagedDatabaseFile(root, state)));
   if (stagedHash.sha256.toLowerCase() !== state.databaseSha256.toLowerCase()) {
     throw new Error("Pending restore database changed after validation");
   }
@@ -334,16 +365,17 @@ async function verifyStagedRestore(root: string): Promise<void> {
 function parsePendingMarker(value: unknown): PendingRestoreMarker {
   if (
     !isObject(value) ||
-    value.format !== "job-ranger-pending-restore" ||
+    (value.format !== "sojourner-pending-restore" && value.format !== LEGACY_PENDING_RESTORE_FORMAT) ||
     value.version !== 1 ||
     typeof value.stageDirectory !== "string" ||
-    !/^\.job-ranger-restore-stage-[a-z0-9-]+$/i.test(value.stageDirectory) ||
+    // LEGACY: restores staged before the rename use the .job-ranger-restore-stage- prefix.
+    !/^\.(sojourner|job-ranger)-restore-stage-[a-z0-9-]+$/i.test(value.stageDirectory) ||
     typeof value.createdAt !== "string"
   ) {
     throw new Error("Pending restore marker is invalid");
   }
   return {
-    format: "job-ranger-pending-restore",
+    format: "sojourner-pending-restore",
     version: 1,
     stageDirectory: value.stageDirectory,
     createdAt: value.createdAt,
@@ -353,8 +385,9 @@ function parsePendingMarker(value: unknown): PendingRestoreMarker {
 function parseStagedState(value: unknown): StagedRestoreState {
   if (
     !isObject(value) ||
-    value.format !== "job-ranger-staged-restore" ||
+    (value.format !== "sojourner-staged-restore" && value.format !== LEGACY_STAGED_RESTORE_FORMAT) ||
     value.version !== 1 ||
+    (value.databaseFile !== undefined && !(DATABASE_FILE_NAMES as readonly unknown[]).includes(value.databaseFile)) ||
     !isSha256(value.databaseSha256) ||
     !Array.isArray(value.artifactFiles) ||
     value.artifactFiles.length > MAX_BACKUP_FILES
@@ -362,8 +395,9 @@ function parseStagedState(value: unknown): StagedRestoreState {
     throw new Error("Staged restore state is invalid");
   }
   return {
-    format: "job-ranger-staged-restore",
+    format: "sojourner-staged-restore",
     version: 1,
+    ...(typeof value.databaseFile === "string" ? { databaseFile: value.databaseFile } : {}),
     databaseSha256: value.databaseSha256,
     artifactFiles: value.artifactFiles.map(parseBackupFile),
   };
@@ -397,11 +431,11 @@ export class BackupService {
       throw new Error("Backup destination must be a normal local directory");
     }
 
-    const finalName = `job-ranger-backup-${timestampSlug()}.jobranger-backup`;
+    const finalName = `sojourner-backup-${timestampSlug()}.sojourner-backup`;
     const finalPath = path.join(destinationParent, finalName);
     const temporaryPath = path.join(
       destinationParent,
-      `.job-ranger-backup-temp-${randomUUID()}`,
+      `.sojourner-backup-temp-${randomUUID()}`,
     );
     await fs.mkdir(temporaryPath, { recursive: false });
 
@@ -444,9 +478,9 @@ export class BackupService {
       await copyManagedRows("resume_artifacts", resumeRows);
 
       const databaseHash = await hashFile(databasePath);
-      const manifest: JobRangerBackupManifest = {
-        format: JOB_RANGER_BACKUP_FORMAT,
-        version: JOB_RANGER_BACKUP_VERSION,
+      const manifest: SojournerBackupManifest = {
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
         createdAt: new Date().toISOString(),
         appVersion: this.options.appVersion,
         database: {
@@ -477,14 +511,14 @@ export class BackupService {
 
   /**
    * Creates a validated backup bundle in a private work directory and packs it
-   * into a single portable `.jobranger` archive at `archivePath`.
+   * into a single portable `.sojourner` archive at `archivePath`.
    */
   async createArchive(
     archivePath: string,
-    producer: JobRangerArchiveProducer,
+    producer: SojournerArchiveProducer,
   ): Promise<BackupCreateResult> {
     if (!isArchiveFileName(archivePath)) {
-      archivePath = `${archivePath}.jobranger`;
+      archivePath = `${archivePath}.sojourner`;
       // The save dialog only confirmed overwriting the name the user typed.
       if (await pathExists(archivePath)) {
         throw new Error(
@@ -523,7 +557,7 @@ export class BackupService {
   }
 
   /**
-   * Accepts either a `.jobranger` archive or the `manifest.json` inside a
+   * Accepts either a `.sojourner` archive or the `manifest.json` inside a
    * legacy directory bundle (v1.2.0 and earlier backups) and returns a fully
    * validated restore selection.
    */
@@ -543,7 +577,7 @@ export class BackupService {
       const selection = await this.validateBackup(extracted);
       if (archive.producer.runtime !== "electron" || archive.producer.appVersion !== this.options.appVersion) {
         selection.warnings.push(
-          `This archive was exported by the Job Ranger ${archive.producer.runtime === "web" ? "web app" : "desktop app"} ${archive.producer.appVersion} (${archive.producer.channel}).`,
+          `This archive was exported by the Sojourner ${archive.producer.runtime === "web" ? "web app" : "desktop app"} ${archive.producer.appVersion} (${archive.producer.channel}).`,
         );
       }
       return { ...selection, archive };
@@ -562,7 +596,7 @@ export class BackupService {
       return;
     }
     for (const name of names) {
-      if (name.startsWith(ARCHIVE_WORK_PREFIX)) {
+      if (name.startsWith(ARCHIVE_WORK_PREFIX) || name.startsWith(LEGACY_ARCHIVE_WORK_PREFIX)) {
         await fs.rm(path.join(this.options.userDataDirectory, name), {
           recursive: true,
           force: true,
@@ -574,7 +608,7 @@ export class BackupService {
   async validateBackup(bundlePath: string): Promise<BackupRestoreSelection> {
     const bundleStat = await fs.lstat(bundlePath);
     if (!bundleStat.isDirectory() || bundleStat.isSymbolicLink()) {
-      throw new Error("Select a Job Ranger backup directory");
+      throw new Error("Select a Sojourner backup directory");
     }
     const manifest = parseManifest(
       await readJsonFile(path.join(bundlePath, BACKUP_MANIFEST_FILE)),
@@ -611,7 +645,7 @@ export class BackupService {
       const knownName = liveMigrationMap.get(migration.version);
       if (!knownName || knownName !== migration.name) {
         throw new Error(
-          `Backup uses database migration ${migration.version} (${migration.name}) that this Job Ranger installation does not recognize`,
+          `Backup uses database migration ${migration.version} (${migration.name}) that this Sojourner installation does not recognize`,
         );
       }
     }
@@ -649,12 +683,12 @@ export class BackupService {
     const nulText = await findNulText(backupSqlite);
     if (nulText.length > 0) {
       warnings.push(
-        `Some text in this backup contains NUL characters (U+0000), which Job Ranger shows as \uFFFD; it will be restored that way: ${describeNulText(nulText)}.`,
+        `Some text in this backup contains NUL characters (U+0000), which Sojourner shows as \uFFFD; it will be restored that way: ${describeNulText(nulText)}.`,
       );
     }
     if (manifest.appVersion !== this.options.appVersion) {
       warnings.push(
-        `This backup was created by Job Ranger ${manifest.appVersion}; the database migrations are compatible with ${this.options.appVersion}, but the restored data will be upgraded on startup if needed.`,
+        `This backup was created by version ${manifest.appVersion}; the database migrations are compatible with ${this.options.appVersion}, but the restored data will be upgraded on startup if needed.`,
       );
     }
     return {
@@ -669,14 +703,21 @@ export class BackupService {
     const selection = await this.validateBackup(bundlePath);
     const markerPath = path.join(this.options.userDataDirectory, PENDING_RESTORE_FILE);
     if (await pathExists(markerPath)) {
-      throw new Error("A Job Ranger restore is already pending restart");
+      throw new Error("A Sojourner restore is already pending restart");
     }
 
-    const stageDirectoryName = `.job-ranger-restore-stage-${randomUUID()}`;
+    const stageDirectoryName = `${STAGE_DIRECTORY_PREFIX}${randomUUID()}`;
     const stagePath = path.join(this.options.userDataDirectory, stageDirectoryName);
+    // The staged database keeps the live database's file name, so the swapped-in data
+    // directory opens under the same name (the legacy name only in a fallback run on the
+    // legacy folder, see legacy-migration.cts).
+    const liveDatabaseFile = path.basename(this.options.databasePath);
+    const stagedDatabaseFileName = (DATABASE_FILE_NAMES as readonly string[]).includes(liveDatabaseFile)
+      ? liveDatabaseFile
+      : DATABASE_FILE_NAME;
     await fs.mkdir(stagePath, { recursive: false });
     try {
-      const stagedDatabasePath = path.join(stagePath, BACKUP_DATABASE_FILE);
+      const stagedDatabasePath = path.join(stagePath, stagedDatabaseFileName);
       await copyVerifiedFile(
         resolveInside(bundlePath, selection.manifest.database.path),
         stagedDatabasePath,
@@ -718,8 +759,9 @@ export class BackupService {
 
       const stagedHash = await hashFile(stagedDatabasePath);
       const state: StagedRestoreState = {
-        format: "job-ranger-staged-restore",
+        format: "sojourner-staged-restore",
         version: 1,
+        databaseFile: stagedDatabaseFileName,
         databaseSha256: stagedHash.sha256,
         artifactFiles: selection.manifest.artifactFiles,
       };
@@ -730,7 +772,7 @@ export class BackupService {
       );
 
       const marker: PendingRestoreMarker = {
-        format: "job-ranger-pending-restore",
+        format: "sojourner-pending-restore",
         version: 1,
         stageDirectory: stageDirectoryName,
         createdAt: new Date().toISOString(),
@@ -752,6 +794,11 @@ export class BackupService {
   }
 }
 
+async function removeStagedStateFiles(dataDirectory: string): Promise<void> {
+  await fs.rm(path.join(dataDirectory, STAGED_RESTORE_STATE_FILE), { force: true });
+  await fs.rm(path.join(dataDirectory, LEGACY_STAGED_RESTORE_STATE_FILE), { force: true });
+}
+
 export async function applyPendingRestore(options: {
   userDataDirectory: string;
   dataDirectory: string;
@@ -763,7 +810,7 @@ export async function applyPendingRestore(options: {
   const stagePath = path.join(options.userDataDirectory, marker.stageDirectory);
   const expectedStageParent = path.resolve(options.userDataDirectory);
   if (path.dirname(path.resolve(stagePath)) !== expectedStageParent) {
-    throw new Error("Pending restore stage is outside the Job Ranger user-data directory");
+    throw new Error("Pending restore stage is outside the Sojourner user-data directory");
   }
   try {
     await verifyStagedRestore(stagePath);
@@ -776,7 +823,7 @@ export async function applyPendingRestore(options: {
     if (await verifyStagedRestore(options.dataDirectory).then(() => true, () => false)) {
       await fs.rm(markerPath, { force: true });
       await fs.rm(stagePath, { recursive: true, force: true });
-      await fs.rm(path.join(options.dataDirectory, STAGED_RESTORE_STATE_FILE), { force: true });
+      await removeStagedStateFiles(options.dataDirectory);
       return true;
     }
     throw stageError;
@@ -784,7 +831,7 @@ export async function applyPendingRestore(options: {
 
   const rollbackPath = path.join(
     options.userDataDirectory,
-    `.job-ranger-restore-rollback-${randomUUID()}`,
+    `.sojourner-restore-rollback-${randomUUID()}`,
   );
   const liveExists = await pathExists(options.dataDirectory);
   if (liveExists) await fs.rename(options.dataDirectory, rollbackPath);
@@ -808,7 +855,7 @@ export async function applyPendingRestore(options: {
     throw error;
   }
 
-  await fs.rm(path.join(options.dataDirectory, STAGED_RESTORE_STATE_FILE), { force: true });
+  await removeStagedStateFiles(options.dataDirectory);
   if (liveExists) await fs.rm(rollbackPath, { recursive: true, force: true });
   return true;
 }

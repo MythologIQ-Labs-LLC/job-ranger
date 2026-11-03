@@ -177,7 +177,7 @@ export type InferenceFailurePhase = "pre-transmission" | "provider" | "validatio
 export interface InferenceFailure {
   code: InferenceFailureCode;
   phase: InferenceFailurePhase;
-  /** Bounded, authored by Job Ranger. Never provider-supplied text. */
+  /** Bounded, authored by Sojourner. Never provider-supplied text. */
   message: string;
   retryAfterSeconds?: number;
 }

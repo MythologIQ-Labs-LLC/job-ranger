@@ -220,7 +220,7 @@ export function StorageLocationPanel() {
           <h2 id={headingId} className="text-2xl font-semibold">Storage location</h2>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          Sojourner saves a full backup of your workspace (a <code>.jobranger</code> file) to this location a few minutes after you make changes and when you quit, and copies resume PDFs and other documents there when you export them. Your working data always stays on this computer; the location holds copies you can restore. Nothing else leaves your device.
+          Sojourner saves a full backup of your workspace (a <code>.sojourner</code> file) to this location a few minutes after you make changes and when you quit, and copies resume PDFs and other documents there when you export them. Your working data always stays on this computer; the location holds copies you can restore. Nothing else leaves your device.
         </p>
       </div>
 

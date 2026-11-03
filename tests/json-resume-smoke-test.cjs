@@ -3,14 +3,14 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { JsonResumeAdapter } = require('../electron-runtime/electron/src/json-resume-adapter.cjs');
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-json-resume-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-json-resume-'));
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => { throw new Error('JSON Resume smoke test must not use the network'); },

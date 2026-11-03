@@ -7,7 +7,7 @@ const path = require('node:path');
 const sqliteModule = require('../electron-runtime/electron/src/sqlite.cjs');
 
 async function run() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-literal-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-literal-'));
   try {
     const { SqliteClient, resolveSqliteBinary, sql } = sqliteModule;
     const db = new SqliteClient(path.join(dir, 'literal.sqlite3'), await resolveSqliteBinary());
@@ -29,7 +29,7 @@ async function run() {
     }
     // Literals stay usable in comparisons.
     assert.equal((await db.queryOne(sql`SELECT id FROM t WHERE v = ${cases[4]};`)).id, 4);
-    console.log(`SQL literal round-trip test passed on ${globalThis.__JOB_RANGER_SQL_ENGINE__ ?? 'sqlite3-cli'}`);
+    console.log(`SQL literal round-trip test passed on ${globalThis.__SOJOURNER_SQL_ENGINE__ ?? 'sqlite3-cli'}`);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

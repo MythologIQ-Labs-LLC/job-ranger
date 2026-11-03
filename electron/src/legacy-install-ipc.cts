@@ -5,43 +5,71 @@ import type { RuntimeDistributionChannel } from "../../src/shared/runtime.js";
 import type { LegacyInstallStatus } from "../../src/shared/legacy-install.js";
 import { randomUUID } from "node:crypto";
 import { BackupService } from "./backup-service.cjs";
-import { resolveLegacyDirectUserDataDirectory } from "./distribution.cjs";
+import { resolveDirectUserDataDirectory, resolveLegacyDirectUserDataDirectory } from "./distribution.cjs";
+import { DATABASE_FILE_NAME, LEGACY_DATABASE_FILE_NAME } from "./database-file.cjs";
 
 export interface LegacyInstallOptions {
   channel: RuntimeDistributionChannel;
   appDataDirectory: string;
   userDataDirectory: string;
   dataDirectory: string;
+  /** The Store installation's live database. */
+  databasePath: string;
   sqliteBinaryPath: string;
   appVersion: string;
 }
 
-const DATABASE_FILE = "jobscout.sqlite3";
+/**
+ * Where a direct-download (NSIS) installation keeps its data, newest first:
+ * %APPDATA%\Sojourner, then the LEGACY %APPDATA%\job-ranger folder of Job Ranger and
+ * of Sojourner before the rename (the database there is the LEGACY jobscout.sqlite3).
+ */
+function directDownloadCandidates(appDataDirectory: string): Array<{ userData: string; databaseFile: string }> {
+  const current = resolveDirectUserDataDirectory(appDataDirectory);
+  const legacy = resolveLegacyDirectUserDataDirectory(appDataDirectory);
+  return [
+    { userData: current, databaseFile: DATABASE_FILE_NAME },
+    { userData: current, databaseFile: LEGACY_DATABASE_FILE_NAME },
+    { userData: legacy, databaseFile: LEGACY_DATABASE_FILE_NAME },
+    { userData: legacy, databaseFile: DATABASE_FILE_NAME },
+  ];
+}
+
+async function findDirectDownloadDatabase(
+  options: LegacyInstallOptions,
+): Promise<{ dataDirectory: string; databasePath: string; stat: { size: number; mtime: Date } } | null> {
+  for (const candidate of directDownloadCandidates(options.appDataDirectory)) {
+    if (path.resolve(candidate.userData) === path.resolve(options.userDataDirectory)) continue;
+    const dataDirectory = path.join(candidate.userData, "data");
+    const databasePath = path.join(dataDirectory, candidate.databaseFile);
+    try {
+      const stat = await fs.stat(databasePath);
+      if (stat.isFile()) return { dataDirectory, databasePath, stat };
+    } catch {
+      // Try the next location.
+    }
+  }
+  return null;
+}
 
 export async function detectLegacyInstall(
   options: LegacyInstallOptions,
 ): Promise<LegacyInstallStatus> {
-  const legacyUserData = resolveLegacyDirectUserDataDirectory(options.appDataDirectory);
-  const applicable =
-    options.channel === "microsoft-store" &&
-    path.resolve(legacyUserData) !== path.resolve(options.userDataDirectory);
-  if (!applicable) {
+  if (options.channel !== "microsoft-store") {
     return { applicable: false, found: false, dataDirectory: null, databaseBytes: null, lastModified: null };
   }
-  const legacyData = path.join(legacyUserData, "data");
-  try {
-    const stat = await fs.stat(path.join(legacyData, DATABASE_FILE));
-    if (!stat.isFile()) throw new Error("not a file");
-    return {
-      applicable: true,
-      found: true,
-      dataDirectory: legacyData,
-      databaseBytes: stat.size,
-      lastModified: stat.mtime.toISOString(),
-    };
-  } catch {
-    return { applicable: true, found: false, dataDirectory: legacyData, databaseBytes: null, lastModified: null };
+  const found = await findDirectDownloadDatabase(options);
+  if (!found) {
+    const fallbackData = path.join(resolveDirectUserDataDirectory(options.appDataDirectory), "data");
+    return { applicable: true, found: false, dataDirectory: fallbackData, databaseBytes: null, lastModified: null };
   }
+  return {
+    applicable: true,
+    found: true,
+    dataDirectory: found.dataDirectory,
+    databaseBytes: found.stat.size,
+    lastModified: found.stat.mtime.toISOString(),
+  };
 }
 
 /**
@@ -50,20 +78,20 @@ export async function detectLegacyInstall(
  * kept as the rollback candidate until the staged restore is applied.
  */
 export async function stageLegacyImport(options: LegacyInstallOptions): Promise<void> {
-  const status = await detectLegacyInstall(options);
-  if (!status.applicable || !status.found || !status.dataDirectory) {
-    throw new Error("No historical Job Ranger desktop installation data was found to import.");
+  const found = options.channel === "microsoft-store" ? await findDirectDownloadDatabase(options) : null;
+  if (!found) {
+    throw new Error("No direct-download Sojourner (or earlier Job Ranger) installation data was found to import.");
   }
   const workDirectory = path.join(
     options.userDataDirectory,
-    `.job-ranger-legacy-import-${randomUUID()}`,
+    `.sojourner-legacy-import-${randomUUID()}`,
   );
   await fs.mkdir(workDirectory, { recursive: true });
   try {
     const legacyService = new BackupService({
-      dataDirectory: status.dataDirectory,
+      dataDirectory: found.dataDirectory,
       userDataDirectory: workDirectory,
-      databasePath: path.join(status.dataDirectory, DATABASE_FILE),
+      databasePath: found.databasePath,
       sqliteBinaryPath: options.sqliteBinaryPath,
       appVersion: options.appVersion,
       readOnlySource: true,
@@ -72,7 +100,7 @@ export async function stageLegacyImport(options: LegacyInstallOptions): Promise<
     const storeService = new BackupService({
       dataDirectory: options.dataDirectory,
       userDataDirectory: options.userDataDirectory,
-      databasePath: path.join(options.dataDirectory, DATABASE_FILE),
+      databasePath: options.databasePath,
       sqliteBinaryPath: options.sqliteBinaryPath,
       appVersion: options.appVersion,
     });

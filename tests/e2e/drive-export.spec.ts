@@ -1,6 +1,6 @@
 // Windows (Electron) Google Drive export through the real main/renderer boundary (#314).
 // Every Google request goes to an in-process fake (tests/support/fake-google-drive.cjs)
-// through the non-packaged JOB_RANGER_GOOGLE_TEST_BASE_URL override; shell.openExternal
+// through the non-packaged SOJOURNER_GOOGLE_TEST_BASE_URL override; shell.openExternal
 // is replaced in the main process so the "system browser" follows the fake authorize
 // redirect to the app's 127.0.0.1 loopback receiver. The verified PDF is produced by the
 // real ResumeService and renderer. No real Google endpoint is contacted.
@@ -58,14 +58,14 @@ async function launch(options: { userDataDir?: string; configured?: boolean } = 
   const launched = await launchElectronApp({
     userDataDir: options.userDataDir,
     env: configured ? {
-      JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: CLIENT_ID,
-      JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: "GOCSPX-e2e-not-a-secret",
-      JOB_RANGER_GOOGLE_TEST_BASE_URL: server.baseUrl,
-      JOB_RANGER_GOOGLE_TEST_TIMEOUT_MS: "8000",
+      SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: CLIENT_ID,
+      SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: "GOCSPX-e2e-not-a-secret",
+      SOJOURNER_GOOGLE_TEST_BASE_URL: server.baseUrl,
+      SOJOURNER_GOOGLE_TEST_TIMEOUT_MS: "8000",
     } : {
-      JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: "",
-      JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: "",
-      JOB_RANGER_GOOGLE_TEST_BASE_URL: server.baseUrl,
+      SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: "",
+      SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: "",
+      SOJOURNER_GOOGLE_TEST_BASE_URL: server.baseUrl,
     },
   });
   await launched.electronApp.evaluate(({ shell }, fakeOrigin) => {
@@ -131,7 +131,7 @@ async function reviewAndConfirm(page: Page) {
 function journalRows(userDataDir: string): Array<{ status: string; reservedFileId: string; remoteId: string | null; resolution: string | null }> {
   const sqlite = process.env.SQLITE3_PATH;
   if (!sqlite) throw new Error("SQLITE3_PATH is required for the Electron E2E.");
-  const output = execFileSync(sqlite, ["-json", path.join(userDataDir, "data", "jobscout.sqlite3"),
+  const output = execFileSync(sqlite, ["-json", path.join(userDataDir, "data", "sojourner.sqlite3"),
     "SELECT record_json FROM google_drive_export_journal ORDER BY updated_at;"], { encoding: "utf8" }).trim();
   return output ? (JSON.parse(output) as Array<{ record_json: string }>).map((row) => JSON.parse(row.record_json)) : [];
 }
@@ -191,7 +191,7 @@ test("connect, review, confirm: the reserved file is created once, verified, and
 
   // The refresh token is never on disk in plaintext, in the database or in the renderer.
   const [refreshToken] = google.state.refreshTokens.keys();
-  const database = await fs.readFile(path.join(tempDataDir, "data", "jobscout.sqlite3"));
+  const database = await fs.readFile(path.join(tempDataDir, "data", "sojourner.sqlite3"));
   expect(database.includes(Buffer.from(refreshToken))).toBe(false);
   const storage = await credentialStorage(page);
   if (storage === "encrypted") {

@@ -47,14 +47,14 @@ assert(spec.args.includes("--mcp.max-concurrent-requests=1"));
 assert(spec.args.some((v) => v.includes("mcp/sanitized-stdio-launcher.mjs")));
 assert(!JSON.stringify(spec.args).includes(mockWorkspace));
 assert(!JSON.stringify(spec.args).includes("SENTINEL"));
-assert.equal(spec.env.JOB_RANGER_MCP_SCOPES, "posts:read,evidence:read");
-assert.equal(spec.env.JOB_RANGER_MCP_DATA_DIR, mockWorkspace);
+assert.equal(spec.env.SOJOURNER_MCP_SCOPES, "posts:read,evidence:read");
+assert.equal(spec.env.SOJOURNER_MCP_DATA_DIR, mockWorkspace);
 assert.deepEqual(adapterArguments(spec.env), [
   `--data-dir=${mockWorkspace}`, "--scopes=posts:read,evidence:read",
 ]);
 const minimal = buildLaunchSpec({ ...off, mode: "run", binary: "tunnel-client" }, env);
-assert.equal(minimal.env.JOB_RANGER_MCP_SCOPES, "none");
-assert.equal(minimal.env.JOB_RANGER_MCP_DATA_DIR, undefined);
+assert.equal(minimal.env.SOJOURNER_MCP_SCOPES, "none");
+assert.equal(minimal.env.SOJOURNER_MCP_DATA_DIR, undefined);
 assert.deepEqual(adapterArguments(minimal.env), ["--scopes=none"]);
 const scrubbed = scrubForAdapter(spec.env);
 assert.equal(scrubbed.CONTROL_PLANE_API_KEY, undefined);
@@ -63,8 +63,8 @@ assert.equal(scrubbed.CONTROL_PLANE_TUNNEL_ID, undefined);
 assert.equal(scrubbed.NODE_OPTIONS, undefined);
 assert.equal(scrubbed.SQLITE3_PATH, env.SQLITE3_PATH);
 assert.throws(() => adapterArguments({}), /explicitly grant/);
-assert.throws(() => adapterArguments({ JOB_RANGER_MCP_SCOPES: "all:read" }), /Invalid/);
-assert.throws(() => adapterArguments({ JOB_RANGER_MCP_SCOPES: "posts:read" }), /workspace path/);
+assert.throws(() => adapterArguments({ SOJOURNER_MCP_SCOPES: "all:read" }), /Invalid/);
+assert.throws(() => adapterArguments({ SOJOURNER_MCP_SCOPES: "posts:read" }), /workspace path/);
 const fakeFs = {
   realpathSync: (v) => v,
   lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false }),
@@ -84,7 +84,7 @@ assert.equal(inspectLocalPrerequisites(config, {
 async function spawnMcpWithoutData() {
   const child = spawn(process.execPath,
     [path.join(root, "mcp", "sanitized-stdio-launcher.mjs")], {
-      cwd: root, env: { ...process.env, ...env, NODE_OPTIONS: "", JOB_RANGER_MCP_SCOPES: "none" },
+      cwd: root, env: { ...process.env, ...env, NODE_OPTIONS: "", SOJOURNER_MCP_SCOPES: "none" },
       stdio: ["pipe", "pipe", "pipe"],
     });
   let transcript = "";
@@ -109,7 +109,7 @@ async function spawnMcpWithoutData() {
   assert.equal(code, 0, errors);
   const messages = transcript.trim().split("\n").map(JSON.parse);
   assert.equal(messages.length, 2);
-  assert.equal(messages[0].result.serverInfo.name, "job-ranger-local-readonly");
+  assert.equal(messages[0].result.serverInfo.name, "sojourner-local-readonly");
   assert.deepEqual(messages[1].result.tools.map((t) => t.name), ["get_capabilities"]);
   assert(!transcript.includes("SENTINEL"));
   assert(!errors.includes("SENTINEL"));

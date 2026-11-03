@@ -68,7 +68,7 @@ function defaultBaseline() {
 }
 
 const baseline = option("--baseline") ?? defaultBaseline();
-const work = path.resolve(option("--work") ?? mkdtempSync(path.join(os.tmpdir(), "job-ranger-release-upgrade-")));
+const work = path.resolve(option("--work") ?? mkdtempSync(path.join(os.tmpdir(), "sojourner-release-upgrade-")));
 const baselineRoot = path.join(work, "baseline");
 const dataRoot = path.join(work, "data");
 const keep = flag("--keep");

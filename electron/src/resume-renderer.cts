@@ -20,7 +20,7 @@ export async function renderResumePdf(prepared: PreparedResumeRender): Promise<v
       contextIsolation: true,
       webSecurity: true,
       javascript: false,
-      partition: `job-ranger-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      partition: `sojourner-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     },
   });
 

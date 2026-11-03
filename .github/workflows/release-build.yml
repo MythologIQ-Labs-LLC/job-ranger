@@ -83,10 +83,10 @@ jobs:
           # Every published Windows installer is signed; a build-only candidate never is.
           if [[ "$PUBLISH_RELEASE" == "true" ]]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_WINDOWS_SIGNING=1" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_WINDOWS_SIGNING=1" >> "$GITHUB_ENV"
           else
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_WINDOWS_SIGNING=0" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_WINDOWS_SIGNING=0" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Node.js
@@ -121,7 +121,7 @@ jobs:
           if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
             throw "The signing client is not Microsoft-signed: $($sig.Status) $($sig.SignerCertificate.Subject)"
           }
-          "JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR=$dir" >> $env:GITHUB_ENV
+          "SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR=$dir" >> $env:GITHUB_ENV
 
       - name: Provision pinned SQLite CLI
         uses: ./.github/actions/provision-windows-sqlite
@@ -138,11 +138,11 @@ jobs:
           # Google Drive export (#314): an installed app's Desktop OAuth client id and
           # secret are distributed application configuration, not confidential values.
           # Repository variables; when unset the build ships with Drive export disabled.
-          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID }}
-          JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET }}
+          SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID }}
+          SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET }}
           # OneDrive storage location (#249): the Microsoft public client's application id
           # (no secret exists). Repository variable; when unset OneDrive shows as not set up.
-          JOB_RANGER_MICROSOFT_CLIENT_ID: ${{ vars.JOB_RANGER_MICROSOFT_CLIENT_ID }}
+          SOJOURNER_MICROSOFT_CLIENT_ID: ${{ vars.SOJOURNER_MICROSOFT_CLIENT_ID }}
 
       - name: Verify packaged SQLite runtime
         shell: pwsh
@@ -232,7 +232,7 @@ jobs:
         if: env.PUBLISH_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: job-ranger-windows-build-only-${{ github.run_id }}
+          name: sojourner-windows-build-only-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: error
           path: |
@@ -269,10 +269,10 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && "$PUBLISH_RELEASE" == "true" ]]; then
             echo "public=true" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_NOTARIZATION=1" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_NOTARIZATION=1" >> "$GITHUB_ENV"
           else
             echo "public=false" >> "$GITHUB_OUTPUT"
-            echo "JOB_RANGER_REQUIRE_NOTARIZATION=0" >> "$GITHUB_ENV"
+            echo "SOJOURNER_REQUIRE_NOTARIZATION=0" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Node.js
@@ -400,7 +400,7 @@ jobs:
         if: env.PUBLISH_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: job-ranger-macos-build-only-${{ github.run_id }}
+          name: sojourner-macos-build-only-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: error
           path: |
@@ -418,7 +418,7 @@ jobs:
     uses: ./.github/workflows/windows-store-package.yml
     with:
       ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-      submission: ${{ vars.JOB_RANGER_STORE_IDENTITY_NAME != '' }}
+      submission: ${{ vars.SOJOURNER_STORE_IDENTITY_NAME != '' }}
 
   publish-store-package:
     needs: store-package
@@ -476,7 +476,7 @@ jobs:
       - name: Attest build provenance (web build)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: web/release/job-ranger-web-v*.zip
+          subject-path: web/release/sojourner-web-v*.zip
 
       - name: Upload web build and evidence
         shell: bash
@@ -488,4 +488,4 @@ jobs:
           set -euo pipefail
           tag="$RELEASE_TAG"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
-          gh release upload "$tag" web/release/job-ranger-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber
+          gh release upload "$tag" web/release/sojourner-web-v*.zip web/build/trust/web-build-info.json web/build/trust/web-pwa-e2e.json web/build/trust/web-SHA256SUMS.txt web/build/trust/web-release-manifest.json --clobber

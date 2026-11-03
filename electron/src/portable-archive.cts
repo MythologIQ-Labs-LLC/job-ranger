@@ -2,21 +2,23 @@ import { createHash } from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import type {
-  JobRangerArchiveManifest,
-  JobRangerArchiveProducer,
+  SojournerArchiveManifest,
+  SojournerArchiveProducer,
 } from "../../src/shared/backup.js";
 import {
-  JOB_RANGER_ARCHIVE_FILE_EXTENSION,
-  JOB_RANGER_ARCHIVE_FORMAT,
-  JOB_RANGER_ARCHIVE_VERSION,
-  JOB_RANGER_BACKUP_FORMAT,
-  JOB_RANGER_BACKUP_VERSION,
+  ARCHIVE_FORMAT,
+  ARCHIVE_VERSION,
+  BACKUP_FORMAT,
+  BACKUP_VERSION,
+  isArchiveFileName as hasArchiveFileExtension,
+  isArchiveFormat,
+  isBackupFormat,
 } from "../../src/shared/backup.js";
 
 /**
- * Job Ranger portable archive (`.jobranger`).
+ * Sojourner portable archive (`.sojourner`).
  *
- * A single-file, runtime-neutral container for a validated Job Ranger backup
+ * A single-file, runtime-neutral container for a validated Sojourner backup
  * bundle so data can move Electron → PWA, PWA → Electron, and PWA → PWA
  * without either runtime touching the other's live database.
  *
@@ -27,7 +29,10 @@ import {
  * SQLite snapshot and every managed artifact.
  */
 
-export const ARCHIVE_MANIFEST_FILE = "job-ranger-archive.json";
+export const ARCHIVE_MANIFEST_FILE = "sojourner-archive.json";
+/** LEGACY: archive manifest entry name inside `.jobranger` archives. Still read; never written. */
+export const LEGACY_ARCHIVE_MANIFEST_FILES = ["job-ranger-archive.json"] as const;
+const ARCHIVE_MANIFEST_FILES: readonly string[] = [ARCHIVE_MANIFEST_FILE, ...LEGACY_ARCHIVE_MANIFEST_FILES];
 export const BACKUP_MANIFEST_FILE = "manifest.json";
 export const MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024 - 1;
 export const MAX_ARCHIVE_ENTRIES = 100_010;
@@ -128,7 +133,7 @@ export interface ArchiveEntryInput {
 
 export function encodeStoreZip(entries: readonly ArchiveEntryInput[]): Uint8Array {
   if (entries.length > MAX_ARCHIVE_ENTRIES) {
-    throw new PortableArchiveError("Too many files for a Job Ranger archive");
+    throw new PortableArchiveError("Too many files for a Sojourner archive");
   }
   const encoder = new TextEncoder();
   const seen = new Set<string>();
@@ -147,7 +152,7 @@ export function encodeStoreZip(entries: readonly ArchiveEntryInput[]): Uint8Arra
   }
   const totalSize = localSize + centralSize + 22;
   if (totalSize > MAX_ARCHIVE_BYTES || totalSize > 0xffffffff) {
-    throw new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+    throw new PortableArchiveError("Sojourner archive exceeds the supported 2 GB size");
   }
 
   const output = new Uint8Array(totalSize);
@@ -213,9 +218,9 @@ export interface DecodedArchiveEntry {
 }
 
 export function decodeStoreZip(archive: Uint8Array): DecodedArchiveEntry[] {
-  if (archive.length < 22) throw new PortableArchiveError("This file is not a Job Ranger archive");
+  if (archive.length < 22) throw new PortableArchiveError("This file is not a Sojourner archive");
   if (archive.length > MAX_ARCHIVE_BYTES) {
-    throw new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+    throw new PortableArchiveError("Sojourner archive exceeds the supported 2 GB size");
   }
   const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
   let eocd = -1;
@@ -226,7 +231,7 @@ export function decodeStoreZip(archive: Uint8Array): DecodedArchiveEntry[] {
       break;
     }
   }
-  if (eocd < 0) throw new PortableArchiveError("This file is not a Job Ranger archive");
+  if (eocd < 0) throw new PortableArchiveError("This file is not a Sojourner archive");
 
   const diskNumber = view.getUint16(eocd + 4, true);
   const centralDisk = view.getUint16(eocd + 6, true);
@@ -283,7 +288,7 @@ export function decodeStoreZip(archive: Uint8Array): DecodedArchiveEntry[] {
     }
     if (method !== 0 || compressedSize !== size) {
       throw new PortableArchiveError(
-        "This archive was re-compressed or modified by another tool. Use the original .jobranger file exported by Job Ranger.",
+        "This archive was re-compressed or modified by another tool. Use the original .sojourner file exported by Sojourner.",
       );
     }
     const name = normalizeArchivePath(rawName);
@@ -314,19 +319,19 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-export function parseArchiveManifest(value: unknown): JobRangerArchiveManifest {
-  if (!isObject(value) || value.format !== JOB_RANGER_ARCHIVE_FORMAT) {
-    throw new PortableArchiveError("This file is not a Job Ranger archive");
+export function parseArchiveManifest(value: unknown): SojournerArchiveManifest {
+  if (!isObject(value) || !isArchiveFormat(value.format)) {
+    throw new PortableArchiveError("This file is not a Sojourner archive");
   }
   if (typeof value.archiveVersion !== "number" || !Number.isInteger(value.archiveVersion)) {
-    throw new PortableArchiveError("Job Ranger archive version is invalid");
+    throw new PortableArchiveError("Sojourner archive version is invalid");
   }
-  if (value.archiveVersion > JOB_RANGER_ARCHIVE_VERSION) {
+  if (value.archiveVersion > ARCHIVE_VERSION) {
     throw new PortableArchiveError(
-      `This archive was created by a newer Job Ranger (archive format v${value.archiveVersion}). Update Job Ranger before restoring it.`,
+      `This archive was created by a newer Sojourner (archive format v${value.archiveVersion}). Update Sojourner before restoring it.`,
     );
   }
-  if (value.archiveVersion < 1) throw new PortableArchiveError("Job Ranger archive version is invalid");
+  if (value.archiveVersion < 1) throw new PortableArchiveError("Sojourner archive version is invalid");
   const producer = value.producer;
   const content = value.content;
   const backupManifest = value.backupManifest;
@@ -339,7 +344,7 @@ export function parseArchiveManifest(value: unknown): JobRangerArchiveManifest {
     typeof producer.appVersion !== "string" ||
     typeof producer.buildId !== "string" ||
     !isObject(content) ||
-    content.format !== JOB_RANGER_BACKUP_FORMAT ||
+    !isBackupFormat(content.format) ||
     typeof content.version !== "number" ||
     !isObject(backupManifest) ||
     backupManifest.path !== BACKUP_MANIFEST_FILE ||
@@ -347,16 +352,16 @@ export function parseArchiveManifest(value: unknown): JobRangerArchiveManifest {
     !/^[a-f0-9]{64}$/.test(backupManifest.sha256) ||
     typeof backupManifest.bytes !== "number"
   ) {
-    throw new PortableArchiveError("Job Ranger archive manifest is invalid");
+    throw new PortableArchiveError("Sojourner archive manifest is invalid");
   }
-  if (content.version !== JOB_RANGER_BACKUP_VERSION) {
+  if (content.version !== BACKUP_VERSION) {
     throw new PortableArchiveError(
-      `This archive contains backup format v${content.version}, which this Job Ranger version cannot restore.`,
+      `This archive contains backup format v${content.version}, which this Sojourner version cannot restore.`,
     );
   }
   return {
-    format: JOB_RANGER_ARCHIVE_FORMAT,
-    archiveVersion: JOB_RANGER_ARCHIVE_VERSION,
+    format: ARCHIVE_FORMAT,
+    archiveVersion: ARCHIVE_VERSION,
     createdAt: value.createdAt,
     producer: {
       runtime: producer.runtime,
@@ -364,7 +369,7 @@ export function parseArchiveManifest(value: unknown): JobRangerArchiveManifest {
       appVersion: producer.appVersion,
       buildId: producer.buildId,
     },
-    content: { format: JOB_RANGER_BACKUP_FORMAT, version: JOB_RANGER_BACKUP_VERSION },
+    content: { format: BACKUP_FORMAT, version: BACKUP_VERSION },
     backupManifest: {
       path: BACKUP_MANIFEST_FILE,
       sha256: backupManifest.sha256,
@@ -400,7 +405,7 @@ async function measureFile(sourcePath: string, maxBytes: number): Promise<{ crc:
   for await (const chunk of createReadStream(sourcePath)) {
     const bytes = chunk as Uint8Array;
     size += bytes.length;
-    if (size > maxBytes) throw new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+    if (size > maxBytes) throw new PortableArchiveError("Sojourner archive exceeds the supported 2 GB size");
     crc = crc32Update(crc, bytes);
   }
   return { crc: crc32Final(crc), size };
@@ -523,7 +528,7 @@ async function prepareBundleEntries(
   }
   const files = [manifest.database, ...manifest.artifactFiles];
   if (files.length + 2 > MAX_ARCHIVE_ENTRIES) {
-    throw new PortableArchiveError("Too many files for a Job Ranger archive");
+    throw new PortableArchiveError("Too many files for a Sojourner archive");
   }
   const encoder = new TextEncoder();
   const seen = new Set<string>();
@@ -543,7 +548,7 @@ async function prepareBundleEntries(
     inMemory(ARCHIVE_MANIFEST_FILE, archiveManifestFor(manifestBytes)),
     inMemory(BACKUP_MANIFEST_FILE, manifestBytes),
   ];
-  const tooLarge = () => new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+  const tooLarge = () => new PortableArchiveError("Sojourner archive exceeds the supported 2 GB size");
   let totalSize = 22 + entries.reduce((sum, entry) => sum + entryArchiveBytes(entry, entry.size), 0);
   for (const file of files) {
     const entry = named(file.path);
@@ -567,7 +572,7 @@ async function prepareBundleEntries(
 
 /**
  * Packs a backup bundle directory (already integrity-validated by
- * BackupService) into a single `.jobranger` archive file.
+ * BackupService) into a single `.sojourner` archive file.
  *
  * The archive is streamed to disk: each file is read twice in bounded chunks
  * (once for its CRC-32, once to write it) instead of holding every file plus a
@@ -576,17 +581,17 @@ async function prepareBundleEntries(
 export async function packBackupBundle(input: {
   bundleDirectory: string;
   archivePath: string;
-  producer: JobRangerArchiveProducer;
+  producer: SojournerArchiveProducer;
   createdAt?: string;
-}): Promise<{ manifest: JobRangerArchiveManifest; bytes: number; sha256: string }> {
-  let manifest: JobRangerArchiveManifest | undefined;
+}): Promise<{ manifest: SojournerArchiveManifest; bytes: number; sha256: string }> {
+  let manifest: SojournerArchiveManifest | undefined;
   const entries = await prepareBundleEntries(input.bundleDirectory, (backupManifestBytes) => {
     manifest = {
-      format: JOB_RANGER_ARCHIVE_FORMAT,
-      archiveVersion: JOB_RANGER_ARCHIVE_VERSION,
+      format: ARCHIVE_FORMAT,
+      archiveVersion: ARCHIVE_VERSION,
       createdAt: input.createdAt ?? new Date().toISOString(),
       producer: input.producer,
-      content: { format: JOB_RANGER_BACKUP_FORMAT, version: JOB_RANGER_BACKUP_VERSION },
+      content: { format: BACKUP_FORMAT, version: BACKUP_VERSION },
       backupManifest: {
         path: BACKUP_MANIFEST_FILE,
         sha256: sha256Hex(backupManifestBytes),
@@ -614,7 +619,7 @@ export async function packBackupBundle(input: {
     await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
     throw error;
   }
-  return { manifest: manifest as JobRangerArchiveManifest, bytes, sha256: hash.digest("hex") };
+  return { manifest: manifest as SojournerArchiveManifest, bytes, sha256: hash.digest("hex") };
 }
 
 /**
@@ -625,25 +630,26 @@ export async function packBackupBundle(input: {
 export async function extractArchiveToBundle(
   archivePath: string,
   destinationDirectory: string,
-): Promise<JobRangerArchiveManifest> {
+): Promise<SojournerArchiveManifest> {
   const stat = await fs.lstat(archivePath);
   if (!stat.isFile() || stat.isSymbolicLink()) {
-    throw new PortableArchiveError("Select a Job Ranger archive file");
+    throw new PortableArchiveError("Select a Sojourner archive file");
   }
   if (stat.size > MAX_ARCHIVE_BYTES) {
-    throw new PortableArchiveError("Job Ranger archive exceeds the supported 2 GB size");
+    throw new PortableArchiveError("Sojourner archive exceeds the supported 2 GB size");
   }
   const entries = decodeStoreZip(await fs.readFile(archivePath));
   const byName = new Map(entries.map((entry) => [entry.name, entry]));
-  const manifestEntry = byName.get(ARCHIVE_MANIFEST_FILE);
+  const manifestName = ARCHIVE_MANIFEST_FILES.find((name) => byName.has(name));
+  const manifestEntry = manifestName ? byName.get(manifestName) : undefined;
   if (!manifestEntry || manifestEntry.bytes.length > MAX_ARCHIVE_MANIFEST_BYTES) {
-    throw new PortableArchiveError("This file is not a Job Ranger archive");
+    throw new PortableArchiveError("This file is not a Sojourner archive");
   }
   let manifestJson: unknown;
   try {
     manifestJson = JSON.parse(new TextDecoder().decode(manifestEntry.bytes));
   } catch {
-    throw new PortableArchiveError("Job Ranger archive manifest is not valid JSON");
+    throw new PortableArchiveError("Sojourner archive manifest is not valid JSON");
   }
   const manifest = parseArchiveManifest(manifestJson);
   const backupManifest = byName.get(BACKUP_MANIFEST_FILE);
@@ -652,12 +658,12 @@ export async function extractArchiveToBundle(
     backupManifest.bytes.length !== manifest.backupManifest.bytes ||
     sha256Hex(backupManifest.bytes) !== manifest.backupManifest.sha256
   ) {
-    throw new PortableArchiveError("Job Ranger archive backup manifest failed integrity verification");
+    throw new PortableArchiveError("Sojourner archive backup manifest failed integrity verification");
   }
 
   await fs.mkdir(destinationDirectory, { recursive: false });
   for (const entry of entries) {
-    if (entry.name === ARCHIVE_MANIFEST_FILE) continue;
+    if (entry.name === manifestName) continue;
     const target = path.join(destinationDirectory, ...entry.name.split("/"));
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, entry.bytes);
@@ -665,6 +671,7 @@ export async function extractArchiveToBundle(
   return manifest;
 }
 
+/** `.sojourner`, or a LEGACY `.jobranger` archive written before the rename. */
 export function isArchiveFileName(fileName: string): boolean {
-  return fileName.toLowerCase().endsWith(JOB_RANGER_ARCHIVE_FILE_EXTENSION);
+  return hasArchiveFileExtension(fileName);
 }

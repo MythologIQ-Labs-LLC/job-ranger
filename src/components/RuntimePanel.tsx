@@ -80,7 +80,7 @@ export function RuntimePanel() {
         </div>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
           Sojourner keeps your career data on this device. Different installations (the web app at another address, or an
-          earlier desktop installation) keep separate data; move data between them with a portable <code>.jobranger</code> backup.
+          earlier desktop installation) keep separate data; move data between them with a portable <code>.sojourner</code> backup.
         </p>
       </div>
       <div className="panel panel-strong space-y-4 p-6 text-sm text-[var(--color-text-secondary)]">
@@ -154,7 +154,7 @@ export function RuntimePanel() {
             {legacy.found ? (
               <>
                 <p className="mt-2 leading-6">
-                  Sojourner found data from an earlier Job Ranger direct-download installation (last changed{" "}
+                  Sojourner found data from a direct-download installation of Sojourner (or of Job Ranger, its former name) (last changed{" "}
                   {legacy.lastModified ? new Date(legacy.lastModified).toLocaleString() : "unknown"}). Importing copies it into
                   this Microsoft Store installation and replaces the Store app's current data. The original installation
                   and its data are left untouched.
@@ -167,7 +167,7 @@ export function RuntimePanel() {
             ) : (
               <p className="mt-2 leading-6">
                 No direct-download installation data was found. To move data from another computer or the web app, restore a
-                <code> .jobranger</code> backup below.
+                <code> .sojourner</code> backup below.
               </p>
             )}
           </div>

@@ -2,7 +2,7 @@
  * Notarization hook for macOS release builds.
  *
  * RC/beta/tester builds may be produced without Apple credentials when
- * JOB_RANGER_REQUIRE_NOTARIZATION is not set. Stable public releases set that
+ * SOJOURNER_REQUIRE_NOTARIZATION is not set. Stable public releases set that
  * flag and must fail closed if signing/notarization credentials are absent.
  */
 
@@ -15,7 +15,7 @@ exports.default = async function notarizing(context) {
     return;
   }
 
-  const requireNotarization = process.env.JOB_RANGER_REQUIRE_NOTARIZATION === "1";
+  const requireNotarization = process.env.SOJOURNER_REQUIRE_NOTARIZATION === "1";
   const credentials = {
     appleId: process.env.APPLE_ID,
     appleIdPassword:

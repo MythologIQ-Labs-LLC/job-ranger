@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Extract only the owner-approved circular Job Ranger mark from the clean
-# repository lockup. Source: docs/assets/branding/job-ranger-logo.png.
+# Extract only the owner-approved circular Sojourner mark from the clean
+# repository lockup. Source: the historical Job Ranger lockup
+# docs/assets/branding/job-ranger-logo.png (the emblem was kept for Sojourner).
 #
 # IMPORTANT: the red-circled preview is an annotation, not the source art.
 # This extraction is a crop only: no AI redraw, recoloring or resampling.
@@ -33,5 +34,5 @@ actual="$(identify -format '%wx%h' "$out")"
 
 cp "$out" public/favicon.png
 bash scripts/generate-distribution-icons.sh
-echo "Job Ranger emblem extracted to $out; favicon, PWA and AppX icons regenerated."
+echo "Sojourner emblem extracted to $out; favicon, PWA and AppX icons regenerated."
 echo "Inspect the output visually at 16, 32, 44, 192 and 512px before shipping."

@@ -2,7 +2,7 @@
  * Schema migrations owned by feature modules (applied lazily by the module
  * that owns the tables) share the `schema_migrations` table with the core
  * migrations in migrations.cts. Listing them here lets every runtime recognize
- * a database written by a newer Job Ranger and refuse to downgrade it.
+ * a database written by a newer Sojourner and refuse to downgrade it.
  */
 export const FEATURE_MIGRATIONS = {
   applicationLifecycle: { version: 1001, name: "application_lifecycle_foundation" },

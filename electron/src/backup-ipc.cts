@@ -1,10 +1,10 @@
 import { app, dialog, ipcMain } from "electron";
-import type { JobRangerArchiveProducer } from "../../src/shared/backup.js";
-import { JOB_RANGER_ARCHIVE_FILE_EXTENSION } from "../../src/shared/backup.js";
+import type { SojournerArchiveProducer } from "../../src/shared/backup.js";
+import { ARCHIVE_FILE_EXTENSION, ARCHIVE_FILE_EXTENSIONS } from "../../src/shared/backup.js";
 import { BackupService } from "./backup-service.cjs";
 
 function archiveFileName(now = new Date()): string {
-  return `job-ranger-backup-${now.toISOString().replace(/[:.]/g, "-")}${JOB_RANGER_ARCHIVE_FILE_EXTENSION}`;
+  return `sojourner-backup-${now.toISOString().replace(/[:.]/g, "-")}${ARCHIVE_FILE_EXTENSION}`;
 }
 
 export function initializeBackupIpc(options: {
@@ -13,7 +13,7 @@ export function initializeBackupIpc(options: {
   databasePath: string;
   sqliteBinaryPath: string;
   appVersion: string;
-  producer: JobRangerArchiveProducer;
+  producer: SojournerArchiveProducer;
 }): BackupService {
   const service = new BackupService(options);
   void service.removeArchiveWorkDirectories();
@@ -23,7 +23,7 @@ export function initializeBackupIpc(options: {
       title: "Save a portable Sojourner backup",
       defaultPath: archiveFileName(),
       filters: [
-        { name: "Sojourner backup", extensions: [JOB_RANGER_ARCHIVE_FILE_EXTENSION.slice(1)] },
+        { name: "Sojourner backup", extensions: [ARCHIVE_FILE_EXTENSION.slice(1)] },
       ],
     });
     if (selection.canceled || !selection.filePath) return null;
@@ -32,12 +32,12 @@ export function initializeBackupIpc(options: {
 
   ipcMain.handle("backups:select-restore", async () => {
     const selection = await dialog.showOpenDialog({
-      title: "Select a Sojourner backup (.jobranger file, or manifest.json inside an older backup folder)",
+      title: "Select a Sojourner backup (.sojourner or older .jobranger file, or manifest.json inside an older backup folder)",
       properties: ["openFile"],
       filters: [
         {
           name: "Sojourner backup",
-          extensions: [JOB_RANGER_ARCHIVE_FILE_EXTENSION.slice(1), "json"],
+          extensions: [...ARCHIVE_FILE_EXTENSIONS.map((extension) => extension.slice(1)), "json"],
         },
       ],
     });

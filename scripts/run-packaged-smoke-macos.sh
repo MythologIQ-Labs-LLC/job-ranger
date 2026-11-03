@@ -2,7 +2,7 @@
 set -euo pipefail
 
 app_version="${1:?App version is required}"
-smoke_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/job-ranger-package-smoke-macos"
+smoke_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/sojourner-package-smoke-macos"
 trust_root="$(pwd)/build/trust"
 report_path="$trust_root/macos-package-smoke.json"
 
@@ -46,9 +46,9 @@ esac
 script_path="$resources/app.asar/electron-runtime/electron/src/package-smoke-cli.cjs"
 
 ELECTRON_RUN_AS_NODE=1 \
-JOB_RANGER_PACKAGE_SMOKE_USER_DATA="$smoke_root" \
-JOB_RANGER_PACKAGE_SMOKE_REPORT="$report_path" \
-JOB_RANGER_PACKAGE_SMOKE_VERSION="$app_version" \
+SOJOURNER_PACKAGE_SMOKE_USER_DATA="$smoke_root" \
+SOJOURNER_PACKAGE_SMOKE_REPORT="$report_path" \
+SOJOURNER_PACKAGE_SMOKE_VERSION="$app_version" \
 "$binary" "$script_path"
 
 node - "$report_path" "$app_version" "$runner_arch" <<'NODE'

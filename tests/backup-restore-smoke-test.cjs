@@ -5,7 +5,7 @@ const fsSync = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { BackupService, applyPendingRestore } = require('../electron-runtime/electron/src/backup-service.cjs');
 const { SqliteClient, sql } = require('../electron-runtime/electron/src/sqlite.cjs');
@@ -16,7 +16,7 @@ function sha256(buffer) {
 
 async function initializeInstallation(userDataDirectory) {
   const dataDirectory = path.join(userDataDirectory, 'data');
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => { throw new Error('backup smoke test must not use the network'); },
@@ -27,7 +27,7 @@ async function initializeInstallation(userDataDirectory) {
 }
 
 async function run() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-backup-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-backup-'));
   try {
     const sourceUserData = path.join(root, 'source-user-data');
     const targetUserData = path.join(root, 'target-user-data');
@@ -174,7 +174,7 @@ async function run() {
 
     await restored.backend.dispose();
 
-    const corruptBundle = path.join(root, 'corrupt-backup.jobranger-backup');
+    const corruptBundle = path.join(root, 'corrupt-backup.sojourner-backup');
     await fs.cp(created.summary.bundlePath, corruptBundle, { recursive: true });
     const corruptArtifact = path.join(
       corruptBundle,
@@ -210,7 +210,7 @@ async function run() {
     const stagePath = path.join(validatorUserData, marker.stageDirectory);
     await fs.rm(finalInstall.dataDirectory, { recursive: true, force: true });
     await fs.cp(stagePath, finalInstall.dataDirectory, { recursive: true });
-    await fs.rm(path.join(stagePath, 'jobscout.sqlite3'));
+    await fs.rm(path.join(stagePath, 'sojourner.sqlite3'));
     assert.equal(
       await applyPendingRestore({ userDataDirectory: validatorUserData, dataDirectory: finalInstall.dataDirectory }),
       true,
@@ -219,7 +219,7 @@ async function run() {
     assert.equal(fsSync.existsSync(path.join(validatorUserData, 'pending-restore.json')), false);
     assert.equal(fsSync.existsSync(stagePath), false, 'the half-deleted stage must be removed');
     assert.equal(
-      fsSync.existsSync(path.join(finalInstall.dataDirectory, '.job-ranger-restore-state.json')),
+      fsSync.existsSync(path.join(finalInstall.dataDirectory, '.sojourner-restore-state.json')),
       false,
     );
 
@@ -235,12 +235,54 @@ async function run() {
     await refusingService.stageRestore(created.summary.bundlePath);
     await refusing.backend.dispose();
     const refusingMarker = JSON.parse(await fs.readFile(path.join(validatorUserData, 'pending-restore.json'), 'utf8'));
-    await fs.writeFile(path.join(validatorUserData, refusingMarker.stageDirectory, 'jobscout.sqlite3'), 'tampered');
+    await fs.writeFile(path.join(validatorUserData, refusingMarker.stageDirectory, 'sojourner.sqlite3'), 'tampered');
     await assert.rejects(
       applyPendingRestore({ userDataDirectory: validatorUserData, dataDirectory: refusing.dataDirectory }),
       /changed after validation/i,
       'a tampered stage must not be applied',
     );
+
+    // LEGACY: a restore staged before the rename (Job Ranger, or Sojourner before
+    // 2026-11-02) with its job-ranger marker, stage folder, state file and
+    // jobscout.sqlite3 is still applied after the upgrade, and the workspace opens.
+    const legacyStageUserData = path.join(root, 'legacy-stage-user-data');
+    const legacyStaged = await initializeInstallation(legacyStageUserData);
+    await new BackupService({
+      dataDirectory: legacyStaged.dataDirectory,
+      userDataDirectory: legacyStageUserData,
+      databasePath: legacyStaged.status.databasePath,
+      sqliteBinaryPath: legacyStaged.status.sqliteBinaryPath,
+      appVersion: 'test-1',
+    }).stageRestore(created.summary.bundlePath);
+    await legacyStaged.backend.dispose();
+    const markerPath = path.join(legacyStageUserData, 'pending-restore.json');
+    const currentMarker = JSON.parse(await fs.readFile(markerPath, 'utf8'));
+    const legacyStageName = currentMarker.stageDirectory.replace('.sojourner-restore-stage-', '.job-ranger-restore-stage-');
+    const legacyStagePath = path.join(legacyStageUserData, legacyStageName);
+    await fs.rename(path.join(legacyStageUserData, currentMarker.stageDirectory), legacyStagePath);
+    await fs.rename(path.join(legacyStagePath, 'sojourner.sqlite3'), path.join(legacyStagePath, 'jobscout.sqlite3'));
+    const currentState = JSON.parse(await fs.readFile(path.join(legacyStagePath, '.sojourner-restore-state.json'), 'utf8'));
+    assert.equal(currentState.databaseFile, 'sojourner.sqlite3');
+    const { databaseFile: _databaseFile, ...legacyState } = { ...currentState, format: 'job-ranger-staged-restore' };
+    await fs.rm(path.join(legacyStagePath, '.sojourner-restore-state.json'));
+    await fs.writeFile(path.join(legacyStagePath, '.job-ranger-restore-state.json'), JSON.stringify(legacyState));
+    await fs.writeFile(markerPath, JSON.stringify({ ...currentMarker, format: 'job-ranger-pending-restore', stageDirectory: legacyStageName }));
+    assert.equal(
+      await applyPendingRestore({ userDataDirectory: legacyStageUserData, dataDirectory: legacyStaged.dataDirectory }),
+      true,
+      'a restore staged before the rename is applied',
+    );
+    assert.equal(fsSync.existsSync(path.join(legacyStaged.dataDirectory, '.job-ranger-restore-state.json')), false);
+    const afterLegacy = await initializeInstallation(legacyStageUserData);
+    assert.equal(path.basename(afterLegacy.status.databasePath), 'jobscout.sqlite3', 'the restored legacy database opens under its name');
+    const afterLegacyCareer = new CareerBackend({
+      dataDirectory: afterLegacy.dataDirectory,
+      databasePath: afterLegacy.status.databasePath,
+      sqliteBinaryPath: afterLegacy.status.sqliteBinaryPath,
+    });
+    await afterLegacyCareer.initialize();
+    assert.equal((await afterLegacyCareer.getProfile()).fullName, 'Portable Person');
+    await afterLegacy.backend.dispose();
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

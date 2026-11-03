@@ -10,7 +10,7 @@ import type {
 
 export interface InferenceRegistryEntry {
   adapter: InferenceProviderAdapter;
-  /** Assigned by Job Ranger; the descriptor's declaredLocation is never used for policy. */
+  /** Assigned by Sojourner; the descriptor's declaredLocation is never used for policy. */
   location: InferenceLocation;
   modelId: string;
   timeoutMs: number;

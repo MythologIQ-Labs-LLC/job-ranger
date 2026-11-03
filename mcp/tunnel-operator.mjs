@@ -64,10 +64,13 @@ export function inspectLocalPrerequisites(config, fileSystem = {
   if (config.scopes.length) {
     try {
       realDirectory = fileSystem.realpathSync(config.dataDir);
-      const database = path.join(realDirectory, "jobscout.sqlite3");
+      // LEGACY: a data folder not yet migrated still holds jobscout.sqlite3.
+      const LEGACY_DATABASE_FILE_NAME = "jobscout.sqlite3";
+      const current = path.join(realDirectory, "sojourner.sqlite3");
+      const database = fileSystem.existsSync(current) ? current : path.join(realDirectory, LEGACY_DATABASE_FILE_NAME);
       const meta = fileSystem.lstatSync(database);
       if (!meta.isFile() || meta.isSymbolicLink())
-        errors.push("Expected a regular native jobscout.sqlite3 database, not a link or directory.");
+        errors.push("Expected a regular native sojourner.sqlite3 database, not a link or directory.");
     } catch {
       errors.push("A native SQLite workspace is unavailable at the supplied directory.");
     }
@@ -107,10 +110,10 @@ export function buildLaunchSpec(config, env) {
   ];
   const childEnv = {
     ...env,
-    JOB_RANGER_MCP_SCOPES: config.scopes.length ? config.scopes.join(",") : "none",
+    SOJOURNER_MCP_SCOPES: config.scopes.length ? config.scopes.join(",") : "none",
   };
-  if (config.scopes.length) childEnv.JOB_RANGER_MCP_DATA_DIR = config.dataDir;
-  else delete childEnv.JOB_RANGER_MCP_DATA_DIR;
+  if (config.scopes.length) childEnv.SOJOURNER_MCP_DATA_DIR = config.dataDir;
+  else delete childEnv.SOJOURNER_MCP_DATA_DIR;
   return { binary: config.binary, args, cwd: repoRoot, env: childEnv };
 }
 

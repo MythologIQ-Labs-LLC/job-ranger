@@ -4,7 +4,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron/backend.cjs");
+const { SojournerBackend } = require("../electron/backend.cjs");
 const { CareerBackend } = require("../electron/career-backend.cjs");
 const {
   canEvidenceSupportFactualClaim,
@@ -26,10 +26,10 @@ function sha256(bytes) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-resume-import-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-resume-import-"));
 
   try {
-    const jobBackend = new JobScoutBackend({
+    const jobBackend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
     });
@@ -55,10 +55,10 @@ async function run() {
     assert.equal(imported.duplicate, false);
     assert.equal(imported.failureCode, null);
     assert.equal(imported.artifact.extractionState, "review-required");
-    assert.equal(imported.artifact.parserId, "job-ranger/native-text");
+    assert.equal(imported.artifact.parserId, "sojourner/native-text");
     assert.equal(imported.artifact.parserVersion, "1");
     assert.ok(imported.extractionSnapshot, "extraction snapshot should exist");
-    assert.equal(imported.extractionSnapshot.parserId, "job-ranger/native-text");
+    assert.equal(imported.extractionSnapshot.parserId, "sojourner/native-text");
     assert.equal(imported.extractionSnapshot.rawText, sourceText);
     assert.ok(imported.proposedEvidence.length >= 5, "expected reviewable evidence proposals");
     assert.equal(
@@ -178,7 +178,7 @@ async function run() {
 
     await jobBackend.dispose();
 
-    const reloadedJobBackend = new JobScoutBackend({
+    const reloadedJobBackend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
     });

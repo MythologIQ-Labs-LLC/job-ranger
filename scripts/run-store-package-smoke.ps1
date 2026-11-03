@@ -3,12 +3,12 @@
   validates the packaged runtime *inside the package context*:
 
   1. seeds a historical direct-download (NSIS-style) data root under
-     %APPDATA%\Job Ranger to exercise coexistence;
+     %APPDATA%\Sojourner to exercise coexistence;
   2. signs a COPY of the package with an ephemeral, self-signed certificate
      whose subject equals the package publisher (local install only — the
      artifact submitted to Partner Center stays unsigned; Microsoft signs it
      after certification);
-  3. installs it, runs `Job Ranger.exe --job-ranger-package-smoke-report=...`
+  3. installs it, runs `Sojourner.exe --sojourner-package-smoke-report=...`
      in the package context (real Electron main process, package identity,
      file-system virtualization);
   4. records data isolation (virtualized LocalCache path, no leak into the
@@ -45,23 +45,23 @@ try {
 $identityName = $manifest.Package.Identity.Name
 $publisher = $manifest.Package.Identity.Publisher
 
-$work = Join-Path $env:RUNNER_TEMP "job-ranger-store-smoke"
+$work = Join-Path $env:RUNNER_TEMP "sojourner-store-smoke"
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $work -Force | Out-Null
 
 # --- 1. Historical direct-download data (coexistence) ---
-$legacyUserData = Join-Path $env:APPDATA "Job Ranger"
+$legacyUserData = Join-Path $env:APPDATA "Sojourner"
 $legacySeedReport = Join-Path $work "legacy-seed.json"
-$env:JOB_RANGER_PACKAGE_SMOKE_USER_DATA = $legacyUserData
-$env:JOB_RANGER_PACKAGE_SMOKE_REPORT = $legacySeedReport
-$env:JOB_RANGER_PACKAGE_SMOKE_VERSION = "1.2.0"
+$env:SOJOURNER_PACKAGE_SMOKE_USER_DATA = $legacyUserData
+$env:SOJOURNER_PACKAGE_SMOKE_REPORT = $legacySeedReport
+$env:SOJOURNER_PACKAGE_SMOKE_VERSION = "1.2.0"
 try {
   node electron-runtime/electron/src/package-smoke-cli.cjs | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Could not seed the historical direct-download data root." }
 } finally {
-  Remove-Item Env:JOB_RANGER_PACKAGE_SMOKE_USER_DATA, Env:JOB_RANGER_PACKAGE_SMOKE_REPORT, Env:JOB_RANGER_PACKAGE_SMOKE_VERSION -ErrorAction SilentlyContinue
+  Remove-Item Env:SOJOURNER_PACKAGE_SMOKE_USER_DATA, Env:SOJOURNER_PACKAGE_SMOKE_REPORT, Env:SOJOURNER_PACKAGE_SMOKE_VERSION -ErrorAction SilentlyContinue
 }
-$legacyDatabase = Join-Path $legacyUserData "data\jobscout.sqlite3"
+$legacyDatabase = Join-Path $legacyUserData "data\sojourner.sqlite3"
 $legacyHashBefore = (Get-FileHash -Algorithm SHA256 -LiteralPath $legacyDatabase).Hash
 
 # --- 2. Ephemeral signature for local installation only ---
@@ -70,7 +70,7 @@ Copy-Item -LiteralPath $appx.FullName -Destination $signedAppx
 $password = [guid]::NewGuid().ToString("N")
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
-  -FriendlyName "Job Ranger package validation (ephemeral)" -CertStoreLocation "Cert:\CurrentUser\My" `
+  -FriendlyName "Sojourner package validation (ephemeral)" -CertStoreLocation "Cert:\CurrentUser\My" `
   -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}") -NotAfter (Get-Date).AddDays(1)
 $pfx = Join-Path $work "ephemeral.pfx"
 $cer = Join-Path $work "ephemeral.cer"
@@ -94,19 +94,19 @@ try {
   Add-AppxPackage -Path $signedAppx
   $package = Get-AppxPackage -Name $identityName
   if (-not $package) { throw "The AppX package did not install." }
-  $exe = Join-Path $package.InstallLocation "app\Job Ranger.exe"
-  $smokeArgument = "--job-ranger-package-smoke-report=$report"
+  $exe = Join-Path $package.InstallLocation "app\Sojourner.exe"
+  $smokeArgument = "--sojourner-package-smoke-report=$report"
 
   if (Get-Command Invoke-CommandInDesktopPackage -ErrorAction SilentlyContinue) {
     $launchMethod = "Invoke-CommandInDesktopPackage"
-    Invoke-CommandInDesktopPackage -PackageFamilyName $package.PackageFamilyName -AppId "JobRanger" -Command $exe -Args $smokeArgument
+    Invoke-CommandInDesktopPackage -PackageFamilyName $package.PackageFamilyName -AppId "Sojourner" -Command $exe -Args $smokeArgument
   } else {
     $launchMethod = "Start-Process"
     Start-Process -FilePath $exe -ArgumentList $smokeArgument | Out-Null
   }
   $deadline = (Get-Date).AddMinutes(6)
   while ((Get-Date) -lt $deadline) {
-    if ((Test-Path -LiteralPath $report) -and -not (Get-Process -Name "Job Ranger" -ErrorAction SilentlyContinue)) { break }
+    if ((Test-Path -LiteralPath $report) -and -not (Get-Process -Name "Sojourner" -ErrorAction SilentlyContinue)) { break }
     Start-Sleep -Seconds 3
   }
   if (-not (Test-Path -LiteralPath $report)) {
@@ -125,9 +125,9 @@ try {
   if ($smoke.checks.windowsStore -ne $true) { $failures += "Runtime did not run with package identity (process.windowsStore)." }
 
   # --- 4. Isolation, coexistence, uninstall evidence ---
-  $virtualizedData = Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalCache\Roaming\Job Ranger Store"
+  $virtualizedData = Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalCache\Roaming\Sojourner Store"
   $storeDataInPackageStorage = Test-Path -LiteralPath $virtualizedData
-  $storeDataLeakedToRealAppData = Test-Path -LiteralPath (Join-Path $env:APPDATA "Job Ranger Store")
+  $storeDataLeakedToRealAppData = Test-Path -LiteralPath (Join-Path $env:APPDATA "Sojourner Store")
   $legacyHashAfter = (Get-FileHash -Algorithm SHA256 -LiteralPath $legacyDatabase).Hash
   if (-not $storeDataInPackageStorage) { $failures += "Store data was not found in the package's private LocalCache storage." }
   if ($storeDataLeakedToRealAppData) { $failures += "Store data leaked into the real %APPDATA% folder." }

@@ -1,22 +1,22 @@
 import path from "node:path";
-import { JobScoutBackend } from "./backend.cjs";
+import { SojournerBackend } from "./backend.cjs";
 import { CareerBackend } from "./career-backend.cjs";
 import { RequirementBackend } from "./requirement-backend.cjs";
 import { runPackagedSmoke, writePackageSmokeReport } from "./package-smoke.cjs";
 
 async function run(): Promise<void> {
-  const userDataDirectory = process.env.JOB_RANGER_PACKAGE_SMOKE_USER_DATA?.trim();
+  const userDataDirectory = process.env.SOJOURNER_PACKAGE_SMOKE_USER_DATA?.trim();
   if (!userDataDirectory) {
-    throw new Error("JOB_RANGER_PACKAGE_SMOKE_USER_DATA is required for packaged smoke validation");
+    throw new Error("SOJOURNER_PACKAGE_SMOKE_USER_DATA is required for packaged smoke validation");
   }
 
-  const appVersion = process.env.JOB_RANGER_PACKAGE_SMOKE_VERSION?.trim() || "unknown";
+  const appVersion = process.env.SOJOURNER_PACKAGE_SMOKE_VERSION?.trim() || "unknown";
   const reportPath =
-    process.env.JOB_RANGER_PACKAGE_SMOKE_REPORT?.trim() ||
+    process.env.SOJOURNER_PACKAGE_SMOKE_REPORT?.trim() ||
     path.join(userDataDirectory, "package-smoke-result.json");
   const dataDirectory = path.join(userDataDirectory, "data");
 
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {

@@ -3,19 +3,19 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 const { CareerBackend } = require("../electron-runtime/electron/src/career-backend.cjs");
 const { RequirementBackend } = require("../electron-runtime/electron/src/requirement-backend.cjs");
 const { runPackagedSmoke } = require("../electron-runtime/electron/src/package-smoke.cjs");
 
 async function run() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-package-smoke-test-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-package-smoke-test-"));
   const userDataDirectory = path.join(root, "user-data");
   const dataDirectory = path.join(userDataDirectory, "data");
   const reportPath = path.join(root, "package-smoke-report.json");
   await fs.mkdir(userDataDirectory, { recursive: true });
 
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {

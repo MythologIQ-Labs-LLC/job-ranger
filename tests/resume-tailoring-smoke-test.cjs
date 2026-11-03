@@ -3,17 +3,17 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 const { CareerEvidenceRepository } = require("../electron-runtime/electron/src/career-evidence-repository.cjs");
 const { ResumeService } = require("../electron-runtime/electron/src/resume-service.cjs");
 const { ResumeTailoringService } = require("../electron-runtime/electron/src/resume-tailoring-service.cjs");
 const { SqliteClient, sql } = require("../electron-runtime/electron/src/sqlite.cjs");
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-tailoring-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-tailoring-"));
 
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => {
@@ -69,7 +69,7 @@ async function run() {
       managedPath: path.join(tempDir, "artifacts", "synthetic-career-history.txt"),
       byteSize: 512,
       importedAt: now,
-      parserId: "job-ranger-text",
+      parserId: "sojourner-text",
       parserVersion: "1",
       extractionState: "extracted",
       warnings: [],
@@ -77,7 +77,7 @@ async function run() {
     const snapshot = await evidenceRepository.createExtractionSnapshot({
       id: "snapshot-r4-smoke",
       sourceArtifactId: sourceArtifact.id,
-      parserId: "job-ranger-text",
+      parserId: "sojourner-text",
       parserVersion: "1",
       rawText: [
         "Coordinated delivery schedules across teams.",

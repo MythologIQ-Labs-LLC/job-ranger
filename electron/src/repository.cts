@@ -217,7 +217,7 @@ function serializeArray(value: string[]): string {
   return JSON.stringify(value.filter(Boolean));
 }
 
-export class JobScoutRepository {
+export class SojournerRepository {
   constructor(private readonly sqlite: SqliteClient) {}
 
   async listCompanies(): Promise<Company[]> {

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { BackupCreateResult, BackupRestoreSelection, JobRangerArchiveProducer } from "../../../src/shared/backup.js";
+import type { BackupCreateResult, BackupRestoreSelection, SojournerArchiveProducer } from "../../../src/shared/backup.js";
+import { ARCHIVE_FILE_EXTENSION, isArchiveFileName } from "../../../src/shared/backup.js";
 import {
   STORAGE_PROVIDER_LABELS,
   type StorageBackupOutcome, type StorageBackupStatus, type StorageCredentialStorage, type StorageDisconnectResult,
@@ -20,10 +21,12 @@ import {
 import type { StorageRecord, StorageRecords } from "./storage-records.cjs";
 import type { WorkspaceChangeMonitor } from "./workspace-change-monitor.cjs";
 
-export const STORAGE_WORK_PREFIX = ".job-ranger-storage-work-";
-/** Largest file Sojourner downloads from a location (a .jobranger archive is < 2 GiB). */
+export const STORAGE_WORK_PREFIX = ".sojourner-storage-work-";
+/** LEGACY: work-file prefix of builds before the rename; still cleaned up. */
+export const LEGACY_STORAGE_WORK_PREFIX = ".job-ranger-storage-work-";
+/** Largest file Sojourner downloads from a location (a .sojourner archive is < 2 GiB). */
 export const STORAGE_DOWNLOAD_LIMIT = 2 * 1024 * 1024 * 1024 - 1;
-const ARCHIVE_EXTENSION = ".jobranger";
+const ARCHIVE_EXTENSION = ARCHIVE_FILE_EXTENSION;
 
 /** The Google side of #369's Drive sign-in, as the storage location uses it. */
 export interface GoogleAuthPort {
@@ -76,10 +79,10 @@ export interface StorageServiceOptions {
   userDataDirectory: string;
   defaultLocalFolder: string;
   backups: {
-    createArchive(archivePath: string, producer: JobRangerArchiveProducer): Promise<BackupCreateResult>;
+    createArchive(archivePath: string, producer: SojournerArchiveProducer): Promise<BackupCreateResult>;
     validateRestoreSource(selectedPath: string): Promise<BackupRestoreSelection>;
   };
-  producer: JobRangerArchiveProducer;
+  producer: SojournerArchiveProducer;
   config: StorageConfigStore;
   records: StorageRecords;
   monitor: WorkspaceChangeMonitor;
@@ -164,7 +167,7 @@ function itemKey(provider: StorageProviderKind, entry: RemoteEntry): string {
  * Storage locations for the Windows app (#249): automatic and manual workspace backups
  * and exported documents copied to one chosen location, listed and restored from there.
  *
- * - The live database never leaves the user-data folder; backups are full `.jobranger`
+ * - The live database never leaves the user-data folder; backups are full `.sojourner`
  *   archives from the existing streaming export, restores go through the existing
  *   validate -> stage -> restart path.
  * - One operation at a time (backups, document copies, retention, recovery).
@@ -236,7 +239,7 @@ export class StorageService {
       return;
     }
     for (const name of names) {
-      if (name.startsWith(STORAGE_WORK_PREFIX)) {
+      if (name.startsWith(STORAGE_WORK_PREFIX) || name.startsWith(LEGACY_STORAGE_WORK_PREFIX)) {
         await fs.rm(path.join(this.options.userDataDirectory, name), { recursive: true, force: true }).catch(() => undefined);
       }
     }
@@ -743,7 +746,7 @@ export class StorageService {
           name: entry.name, size: entry.size, createdAt: entry.createdAt ?? record?.createdAt ?? null, folder: entry.folder,
           kind: record?.kind ?? null,
           status: match === null ? null : match.exact ? record!.status : "replaced",
-          restorable: entry.folder === "Backups" && entry.name.toLowerCase().endsWith(ARCHIVE_EXTENSION) && !bad,
+          restorable: entry.folder === "Backups" && isArchiveFileName(entry.name) && !bad,
           openable: entry.folder === "Documents" && verified && record?.kind === "document" && openableDocumentName(entry.name),
         };
       };
@@ -809,8 +812,8 @@ export class StorageService {
     return this.enqueue(async () => {
       const provider = await this.activeProvider();
       const entry = await this.resolveItem(provider, itemId);
-      if (entry.folder !== "Backups" || !entry.name.toLowerCase().endsWith(ARCHIVE_EXTENSION)) {
-        throw new Error("Only a Sojourner backup (.jobranger) can be restored.");
+      if (entry.folder !== "Backups" || !isArchiveFileName(entry.name)) {
+        throw new Error("Only a Sojourner backup (.sojourner, or .jobranger from an earlier version) can be restored.");
       }
       const match = await this.recordFor(provider, entry);
       if (match && !match.exact) {

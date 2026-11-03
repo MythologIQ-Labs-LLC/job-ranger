@@ -12,7 +12,7 @@ import { useTheme } from "../theme/ThemeProvider";
 import { getSourceProfile, type Settings as RuntimeSettings } from "../types";
 
 const fallbackSettings: RuntimeSettings = {
-  userAgent: "Job Ranger Desktop/1.0",
+  userAgent: "Sojourner Desktop/1.0",
   maxConcurrentScrapes: 2,
   scrapeTimeoutMs: 20000,
   retryCount: 1,

@@ -181,7 +181,7 @@ export class ApplicationMaterialsBackend {
 
     if (chosen.length === 0) {
       throw new Error(
-        "Job Ranger cannot create a factual cover letter yet because no confirmed Career Evidence supports the saved job requirements.",
+        "Sojourner cannot create a factual cover letter yet because no confirmed Career Evidence supports the saved job requirements.",
       );
     }
 

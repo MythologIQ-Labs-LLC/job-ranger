@@ -1,5 +1,5 @@
 // #302 measurement (not part of npm test): peak Node memory while packing a synthetic,
-// non-sensitive backup bundle into a .jobranger archive.
+// non-sensitive backup bundle into a .sojourner archive.
 //
 //   node --expose-gc tests/portable-archive-memory-benchmark.cjs [totalMiB] [portable-archive.cjs]
 //
@@ -20,7 +20,7 @@ async function makeBundle(root) {
   const bundle = path.join(root, 'bundle');
   // One database of a quarter of the total, the rest in equal 16 MiB artifacts.
   const databaseMiB = Math.max(1, Math.round(totalMiB / 4));
-  const files = [['database/job-ranger.sqlite', databaseMiB]];
+  const files = [['database/sojourner.sqlite', databaseMiB]];
   for (let index = 0, left = totalMiB - databaseMiB; left > 0; index += 1, left -= 16) {
     files.push([`artifacts/synthetic-${index}.bin`, Math.min(16, left)]);
   }
@@ -64,7 +64,7 @@ async function main() {
     const started = Date.now();
     const packed = await archive.packBackupBundle({
       bundleDirectory: bundle,
-      archivePath: path.join(root, 'backup.jobranger'),
+      archivePath: path.join(root, 'backup.sojourner'),
       producer: { runtime: 'web', channel: 'bench', appVersion: 'bench', buildId: 'bench' },
       createdAt: '2026-10-17T12:00:00.000Z',
     });

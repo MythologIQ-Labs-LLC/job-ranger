@@ -5,8 +5,8 @@
 // into resources (Windows). release-build.yml passes the repository variable.
 //
 // Input (environment: the release-build.yml repository variable; never committed):
-//   JOB_RANGER_MICROSOFT_CLIENT_ID          the app registration's Application (client) ID
-//   JOB_RANGER_REQUIRE_MICROSOFT_CLIENT=1   fail when it is absent
+//   SOJOURNER_MICROSOFT_CLIENT_ID          the app registration's Application (client) ID
+//   SOJOURNER_REQUIRE_MICROSOFT_CLIENT=1   fail when it is absent
 //
 // The registration is a PUBLIC client: no secret exists or is needed. Security rests on
 // PKCE, the loopback redirect and the person's own consent. Without the id the build
@@ -18,14 +18,14 @@ import { fileURLToPath } from "node:url";
 const CLIENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function microsoftClientConfigFromEnv(env) {
-  const clientId = env.JOB_RANGER_MICROSOFT_CLIENT_ID?.trim() ?? "";
+  const clientId = env.SOJOURNER_MICROSOFT_CLIENT_ID?.trim() ?? "";
   if (!clientId) {
-    if (env.JOB_RANGER_REQUIRE_MICROSOFT_CLIENT === "1") {
-      throw new Error("JOB_RANGER_REQUIRE_MICROSOFT_CLIENT=1 but no Microsoft client id was provided.");
+    if (env.SOJOURNER_REQUIRE_MICROSOFT_CLIENT === "1") {
+      throw new Error("SOJOURNER_REQUIRE_MICROSOFT_CLIENT=1 but no Microsoft client id was provided.");
     }
     return null;
   }
-  if (!CLIENT_ID.test(clientId)) throw new Error("JOB_RANGER_MICROSOFT_CLIENT_ID is not a Microsoft application (client) id.");
+  if (!CLIENT_ID.test(clientId)) throw new Error("SOJOURNER_MICROSOFT_CLIENT_ID is not a Microsoft application (client) id.");
   return { clientId: clientId.toLowerCase() };
 }
 

@@ -1,7 +1,7 @@
 // Windows storage location (#249) through the real main/renderer boundary: This computer
 // (a temporary folder), Google Drive (the fake Google with storage routes) and OneDrive
 // (the fake Microsoft identity platform and Graph). Backups are the real streaming
-// .jobranger export; restores go through the real validate -> stage -> restart path (the
+// .sojourner export; restores go through the real validate -> stage -> restart path (the
 // restart is replaced by a relaunch from the test). No real cloud endpoint is contacted
 // and nothing is written to the real Documents folder.
 import { test, expect, type Page } from "@playwright/test";
@@ -44,13 +44,13 @@ test.afterEach(async () => {
 
 function storageEnv(extra: Record<string, string> = {}): Record<string, string> {
   return {
-    JOB_RANGER_STORAGE_TEST_DEFAULT_FOLDER: path.join(locationRoot, "Sojourner"),
-    JOB_RANGER_STORAGE_TEST_DEBOUNCE_MS: "1500",
-    JOB_RANGER_STORAGE_TEST_POLL_MS: "200",
-    JOB_RANGER_STORAGE_TEST_RETRY_MS: "500",
-    JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: "",
-    JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: "",
-    JOB_RANGER_MICROSOFT_CLIENT_ID: "",
+    SOJOURNER_STORAGE_TEST_DEFAULT_FOLDER: path.join(locationRoot, "Sojourner"),
+    SOJOURNER_STORAGE_TEST_DEBOUNCE_MS: "1500",
+    SOJOURNER_STORAGE_TEST_POLL_MS: "200",
+    SOJOURNER_STORAGE_TEST_RETRY_MS: "500",
+    SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: "",
+    SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: "",
+    SOJOURNER_MICROSOFT_CLIENT_ID: "",
     ...extra,
   };
 }
@@ -153,7 +153,7 @@ test("This computer: choose the folder, a change is backed up automatically, res
 
 test("This computer: quitting with unbacked changes backs them up first", async () => {
   test.setTimeout(180_000);
-  const env = storageEnv({ JOB_RANGER_STORAGE_TEST_DEBOUNCE_MS: "600000" });
+  const env = storageEnv({ SOJOURNER_STORAGE_TEST_DEBOUNCE_MS: "600000" });
   fixture = await launch(env);
   const section = await openStorage(fixture.page);
   await section.getByRole("radio", { name: /This computer/ }).check();
@@ -170,7 +170,7 @@ test("This computer: quitting with unbacked changes backs them up first", async 
 
 test("This computer: an exported resume PDF is copied to Documents/ and opens from the location", async () => {
   test.setTimeout(180_000);
-  fixture = await launch(storageEnv({ JOB_RANGER_STORAGE_TEST_DEBOUNCE_MS: "600000" }));
+  fixture = await launch(storageEnv({ SOJOURNER_STORAGE_TEST_DEBOUNCE_MS: "600000" }));
   const { page, electronApp } = fixture;
   const section = await openStorage(page);
   await section.getByRole("radio", { name: /This computer/ }).check();
@@ -217,10 +217,10 @@ test("Google Drive (fake): connect, back up into the Sojourner folder, restore, 
   const server = await google.listen();
   servers.push(server);
   const env = storageEnv({
-    JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: GOOGLE_CLIENT_ID,
-    JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: "GOCSPX-e2e-not-a-secret",
-    JOB_RANGER_GOOGLE_TEST_BASE_URL: server.baseUrl,
-    JOB_RANGER_GOOGLE_TEST_TIMEOUT_MS: "8000",
+    SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: GOOGLE_CLIENT_ID,
+    SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: "GOCSPX-e2e-not-a-secret",
+    SOJOURNER_GOOGLE_TEST_BASE_URL: server.baseUrl,
+    SOJOURNER_GOOGLE_TEST_TIMEOUT_MS: "8000",
   });
   fixture = await launch(env);
   const { page, tempDataDir } = fixture;
@@ -252,8 +252,8 @@ test("OneDrive (fake): connect, back up into the app folder, restore, disconnect
   const server = await onedrive.listen();
   servers.push(server);
   const env = storageEnv({
-    JOB_RANGER_MICROSOFT_CLIENT_ID: MICROSOFT_CLIENT_ID,
-    JOB_RANGER_MICROSOFT_TEST_BASE_URL: server.baseUrl,
+    SOJOURNER_MICROSOFT_CLIENT_ID: MICROSOFT_CLIENT_ID,
+    SOJOURNER_MICROSOFT_TEST_BASE_URL: server.baseUrl,
   });
   fixture = await launch(env);
   const { page, tempDataDir } = fixture;

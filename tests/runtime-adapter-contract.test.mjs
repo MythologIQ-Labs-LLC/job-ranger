@@ -67,8 +67,15 @@ for (const file of readdirSync(electronSource).filter((name) => name.endsWith(".
     assert.ok(electronAllowed.has(file), `${file} imports Electron but is not an IPC/infrastructure module`);
   }
   if (/from "node:child_process"/.test(source)) {
-    assert.equal(file, "sqlite.cts", `${file} must not spawn processes (only the CLI SQLite adapter does)`);
+    // sqlite-sync.cts: the desktop-only synchronous CLI helpers of the start-up data-folder
+    // migration; no shared-core module imports it (checked below).
+    assert.ok(["sqlite.cts", "sqlite-sync.cts"].includes(file), `${file} must not spawn processes (only the CLI SQLite adapters do)`);
   }
+}
+
+// Only the Electron main process uses the synchronous CLI helpers.
+for (const file of readdirSync(electronSource).filter((name) => name.endsWith(".cts") && name !== "main.cts")) {
+  assert.doesNotMatch(readFileSync(path.join(electronSource, file), "utf8"), /from "\.\/sqlite-sync\.cjs"/, `${file} must not import sqlite-sync`);
 }
 
 console.log("Runtime adapter contract passed");

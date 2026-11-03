@@ -105,7 +105,7 @@ async function run() {
   await assertPolicyRejects(() =>
     fetchJson("https://public.example/jobs", {
       fetchImpl: redirectingFetch,
-      userAgent: "Job Ranger Test",
+      userAgent: "Sojourner Test",
       timeoutMs: 1000,
       retryCount: 0,
       resolveHost: redirectResolver,

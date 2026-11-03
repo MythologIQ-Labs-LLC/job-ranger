@@ -11,7 +11,7 @@ const path = require('node:path');
 const sqliteModule = require('../electron-runtime/electron/src/sqlite.cjs');
 
 async function run() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-readback-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-readback-'));
   try {
     const { SqliteClient, resolveSqliteBinary, sql } = sqliteModule;
     const db = new SqliteClient(path.join(dir, 'readback.sqlite3'), await resolveSqliteBinary());
@@ -54,7 +54,7 @@ async function run() {
     await db.exec(sql`INSERT INTO t (id, v) VALUES (103, ${{ text: nulText }});`);
     assert.deepEqual(JSON.parse((await db.queryOne('SELECT v FROM t WHERE id = 103;')).v), { text: nulText });
 
-    console.log(`SQL text readback test passed on ${globalThis.__JOB_RANGER_SQL_ENGINE__ ?? 'sqlite3-cli'}`);
+    console.log(`SQL text readback test passed on ${globalThis.__SOJOURNER_SQL_ENGINE__ ?? 'sqlite3-cli'}`);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

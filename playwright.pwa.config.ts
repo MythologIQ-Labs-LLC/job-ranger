@@ -1,9 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
-// Browser tests for the Job Ranger web/PWA runtime. They run against the
+// Browser tests for the Sojourner web/PWA runtime. They run against the
 // production build in dist-pwa/ (npm run build:pwa) served with the
 // production security headers by tests/pwa/support/server.ts.
-const executablePath = process.env.JOB_RANGER_PW_CHROMIUM || undefined;
+const executablePath = process.env.SOJOURNER_PW_CHROMIUM || undefined;
 
 export default defineConfig({
   testDir: "./tests/pwa",

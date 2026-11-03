@@ -22,7 +22,8 @@ import {
 import { migrations } from "./migrations.cjs";
 import { describeRepairFailures, repairStoredNulTextOnce } from "./nul-text.cjs";
 import { FEATURE_MIGRATION_VERSIONS } from "./feature-migrations.cjs";
-import { JobScoutRepository } from "./repository.cjs";
+import { SojournerRepository } from "./repository.cjs";
+import { DATABASE_FILE_NAME, LEGACY_DATABASE_FILE_NAME } from "./database-file.cjs";
 import {
   detectSourceFromUrl,
   scraperAdapters,
@@ -37,7 +38,7 @@ import {
 } from "./scrape-guard.cjs";
 
 const defaultSettings: Settings = {
-  userAgent: "Job Ranger Desktop/1.0",
+  userAgent: "Sojourner Desktop/1.0",
   maxConcurrentScrapes: 2,
   scrapeTimeoutMs: 20000,
   retryCount: 1,
@@ -49,6 +50,30 @@ const defaultSettings: Settings = {
   notifyOnMatchedJobs: true,
   minimizeToTray: false,
 };
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.stat(filePath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/**
+ * The workspace database in `dataDirectory`: `sojourner.sqlite3`, or the LEGACY
+ * `jobscout.sqlite3` when only that exists (a workspace written before the rename that
+ * was not migrated, such as the fallback run on the legacy folder). A new workspace
+ * always gets the current name.
+ */
+export async function resolveWorkspaceDatabasePath(dataDirectory: string): Promise<string> {
+  const current = path.join(dataDirectory, DATABASE_FILE_NAME);
+  if (await fileExists(current)) return current;
+  const legacy = path.join(dataDirectory, LEGACY_DATABASE_FILE_NAME);
+  if (await fileExists(legacy)) return legacy;
+  return current;
+}
 
 function normalizeList(items: string[]): string[] {
   return items.map((item) => item.trim()).filter(Boolean);
@@ -123,10 +148,10 @@ interface BackendOptions {
   runnableSourceTypes?: readonly CompanySourceType[];
 }
 
-export class JobScoutBackend {
+export class SojournerBackend {
   private sqliteBinaryPath = "";
   private sqlite!: SqliteClient;
-  private repository!: JobScoutRepository;
+  private repository!: SojournerRepository;
   private readonly fetchImpl: typeof fetch;
   private readonly schedulerEnabled: boolean;
   private readonly browserPageLoader?: BrowserPageLoader;
@@ -136,10 +161,10 @@ export class JobScoutBackend {
   private readonly inFlightCompanyIds = new Set<string>();
   private readonly scrapeListeners = new Map<string, ScrapeListener[]>();
   private runningScrapes = 0;
-  private readonly databasePath: string;
+  private databasePath: string;
 
   constructor(private readonly options: BackendOptions) {
-    this.databasePath = path.join(this.options.dataDirectory, "jobscout.sqlite3");
+    this.databasePath = path.join(this.options.dataDirectory, DATABASE_FILE_NAME);
     this.fetchImpl = this.options.fetchImpl ?? fetch;
     this.schedulerEnabled = this.options.schedulerEnabled ?? true;
     this.browserPageLoader = this.options.browserPageLoader;
@@ -147,10 +172,11 @@ export class JobScoutBackend {
 
   async initialize(): Promise<void> {
     await fs.mkdir(this.options.dataDirectory, { recursive: true });
+    this.databasePath = await resolveWorkspaceDatabasePath(this.options.dataDirectory);
     this.sqliteBinaryPath =
       this.options.sqliteBinaryPath ?? (await resolveSqliteBinary());
     this.sqlite = new SqliteClient(this.databasePath, this.sqliteBinaryPath);
-    this.repository = new JobScoutRepository(this.sqlite);
+    this.repository = new SojournerRepository(this.sqlite);
 
     await this.runMigrations();
     // Text stored with NUL before #297 would read back cut off on the desktop engine.
@@ -608,3 +634,10 @@ export class JobScoutBackend {
 }
 
 
+
+/**
+ * TEMPORARY rename-integration alias, not part of the API: the web runtime
+ * (src/pwa/runtime/worker-main.ts, renamed on the parallel rename/pwa branch) still
+ * imports the pre-rename class name. Delete this line when rename/pwa is merged.
+ */
+export { SojournerBackend as JobScoutBackend };

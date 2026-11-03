@@ -189,7 +189,7 @@ export function Sidebar() {
               focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
-            aria-controls="job-ranger-primary-nav job-ranger-utility-nav"
+            aria-controls="sojourner-primary-nav sojourner-utility-nav"
             onClick={() => setMobileOpen(open => !open)}
           >
             {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> :
@@ -200,7 +200,7 @@ export function Sidebar() {
 
       <nav
         ref={navRef}
-        id="job-ranger-primary-nav"
+        id="sojourner-primary-nav"
         className={`app-sidebar-nav min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-3
           ${mobileOpen ? "block" : "hidden"} md:block`}
         aria-label="Primary navigation"
@@ -219,7 +219,7 @@ export function Sidebar() {
           {navGroups.map(group => {
             const expanded = openGroup === group.id;
             const containsCurrentPage = activeGroup === group.id;
-            const groupPanelId = `job-ranger-nav-group-${group.id}`;
+            const groupPanelId = `sojourner-nav-group-${group.id}`;
             return (
               <div key={group.id} className="mb-1">
                 <button
@@ -261,7 +261,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <nav id="job-ranger-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
+      <nav id="sojourner-utility-nav" className={`app-sidebar-footer border-t border-white/10 px-4 py-3 ${mobileOpen ? "block" : "hidden"} md:block`} aria-label="Utility navigation">
         <p className="sidebar-section-label px-3 pb-1.5">Preferences</p>
         {utilityLinks.map(item => (
           <SidebarNavLink

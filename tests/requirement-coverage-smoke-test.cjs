@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron/backend.cjs');
+const { SojournerBackend } = require('../electron/backend.cjs');
 const { CareerBackend } = require('../electron/career-backend.cjs');
 const { RequirementBackend } = require('../electron-runtime/electron/src/requirement-backend.cjs');
 const { RequirementRepository } = require('../electron-runtime/electron/src/requirement-repository.cjs');
@@ -36,10 +36,10 @@ function createMockFetch() {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-requirements-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-requirements-'));
 
   try {
-    const jobs = new JobScoutBackend({
+    const jobs = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: createMockFetch(),
       schedulerEnabled: false,

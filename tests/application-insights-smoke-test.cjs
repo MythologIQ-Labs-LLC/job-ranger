@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { ApplicationLifecycleBackend } = require('../electron-runtime/electron/src/application-lifecycle-backend.cjs');
 const { ApplicationInsightsBackend } = require('../electron-runtime/electron/src/application-insights-backend.cjs');
@@ -22,9 +22,9 @@ const constraints = {
 };
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-insights-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-insights-'));
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       schedulerEnabled: false,
       fetchImpl: async () => { throw new Error('application insights smoke test must not use the network'); },

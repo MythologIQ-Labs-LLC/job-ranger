@@ -6,24 +6,34 @@ import type {
 import { ELECTRON_CAPABILITIES } from "../../src/shared/runtime.js";
 
 /**
- * Folder name (under the per-user roaming AppData directory) used by Microsoft
- * Store (AppX) builds. It deliberately differs from the historical direct-download
- * folder ("job-ranger") so the Store package never shares a live SQLite database
- * with a side-by-side NSIS installation. Under AppX file-system virtualization a
- * folder created by the package is private to that package.
+ * Folder name (under the per-user roaming AppData directory) used by packaged
+ * direct-download (NSIS) builds: `%APPDATA%\Sojourner`.
  */
-export const STORE_USER_DATA_FOLDER = "Job Ranger Store";
+export const DIRECT_USER_DATA_FOLDER = "Sojourner";
 
 /**
- * Folder used by historical direct-download (NSIS) installations, including Job Ranger
- * v1.2.0. Electron names userData after the packaged package.json `productName` or,
- * failing that, `name`; electron-builder's `productName` only names the executable and
- * installer. package.json has never carried a productName, so every Job Ranger install
- * kept its data in `%APPDATA%\job-ranger` (verified on a real v1.2.0 install, 2026-11-02).
+ * Folder name used by Microsoft Store (AppX) builds. It deliberately differs from
+ * the direct-download folder so the Store package never shares a live SQLite
+ * database with a side-by-side NSIS installation. Under AppX file-system
+ * virtualization a folder created by the package is private to that package.
+ */
+export const STORE_USER_DATA_FOLDER = "Sojourner Store";
+
+/**
+ * LEGACY: folder used by direct-download (NSIS) installations before the rename,
+ * including Job Ranger v1.2.0 and the Sojourner pre-releases. Electron names userData
+ * after the packaged package.json `productName` or, failing that, `name`; package.json
+ * was named "job-ranger" and never carried a productName, so every such install kept
+ * its data in `%APPDATA%\job-ranger` (verified on a real v1.2.0 install, 2026-11-02).
+ * Startup migrates it to DIRECT_USER_DATA_FOLDER (legacy-migration.cts); it is never
+ * modified or deleted.
  */
 export const LEGACY_DIRECT_USER_DATA_FOLDER = "job-ranger";
 
-const CHANNEL_OVERRIDE_ENV = "JOB_RANGER_DISTRIBUTION_CHANNEL_OVERRIDE";
+/** LEGACY: Store (AppX) data folder before the rename. Migrated to STORE_USER_DATA_FOLDER. */
+export const LEGACY_STORE_USER_DATA_FOLDER = "Job Ranger Store";
+
+const CHANNEL_OVERRIDE_ENV = "SOJOURNER_DISTRIBUTION_CHANNEL_OVERRIDE";
 
 export interface DistributionDetectionInput {
   windowsStore: boolean | undefined;
@@ -49,33 +59,49 @@ export function resolveStoreUserDataDirectory(appDataDirectory: string): string 
   return path.join(appDataDirectory, STORE_USER_DATA_FOLDER);
 }
 
+export function resolveDirectUserDataDirectory(appDataDirectory: string): string {
+  return path.join(appDataDirectory, DIRECT_USER_DATA_FOLDER);
+}
+
 export function resolveLegacyDirectUserDataDirectory(appDataDirectory: string): string {
   return path.join(appDataDirectory, LEGACY_DIRECT_USER_DATA_FOLDER);
 }
 
+export function resolveLegacyStoreUserDataDirectory(appDataDirectory: string): string {
+  return path.join(appDataDirectory, LEGACY_STORE_USER_DATA_FOLDER);
+}
+
 /**
  * The userData directory a build must use instead of Electron's default
- * (`<appData>/<productName>`), or null to keep the default.
+ * (`<appData>/<package name>`), with the LEGACY folder its data may still be in,
+ * or null to keep the default.
  *
- * - Microsoft Store builds use their isolated STORE_USER_DATA_FOLDER.
- * - Packaged direct-download builds stay pinned to the historical
- *   LEGACY_DIRECT_USER_DATA_FOLDER ("job-ranger"), where Job Ranger v1.2.0 kept
- *   its data. The pin makes that independent of package metadata: if a
- *   productName were ever added, Electron would otherwise open an empty
- *   `<appData>/<productName>` and existing data would appear lost
- *   (docs/ARCHITECTURE_INDEX.md: storage identity does not change without a
- *   qualified migration).
+ * - Microsoft Store builds use STORE_USER_DATA_FOLDER (legacy: "Job Ranger Store").
+ * - Packaged direct-download builds use DIRECT_USER_DATA_FOLDER (legacy: "job-ranger").
+ *   Pinning makes the folder independent of package metadata.
  * - Development and E2E runs keep Electron's default, and an explicit
  *   --user-data-dir (used by automated tests) always wins.
+ *
+ * legacy-migration.cts copies the legacy folder into the target before first use.
  */
 export function resolvePinnedUserDataDirectory(input: {
   channel: RuntimeDistributionChannel;
   appDataDirectory: string;
   hasUserDataDirSwitch: boolean;
-}): string | null {
+}): { target: string; legacy: string } | null {
   if (input.hasUserDataDirSwitch) return null;
-  if (input.channel === "microsoft-store") return resolveStoreUserDataDirectory(input.appDataDirectory);
-  if (input.channel === "direct-download") return resolveLegacyDirectUserDataDirectory(input.appDataDirectory);
+  if (input.channel === "microsoft-store") {
+    return {
+      target: resolveStoreUserDataDirectory(input.appDataDirectory),
+      legacy: resolveLegacyStoreUserDataDirectory(input.appDataDirectory),
+    };
+  }
+  if (input.channel === "direct-download") {
+    return {
+      target: resolveDirectUserDataDirectory(input.appDataDirectory),
+      legacy: resolveLegacyDirectUserDataDirectory(input.appDataDirectory),
+    };
+  }
   return null;
 }
 

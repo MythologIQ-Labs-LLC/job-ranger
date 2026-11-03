@@ -8,7 +8,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron-runtime/electron/src/backend.cjs");
+const { SojournerBackend } = require("../electron-runtime/electron/src/backend.cjs");
 const { CareerEvidenceRepository } = require("../electron-runtime/electron/src/career-evidence-repository.cjs");
 const { ResumeService } = require("../electron-runtime/electron/src/resume-service.cjs");
 const { SqliteClient } = require("../electron-runtime/electron/src/sqlite.cjs");
@@ -21,7 +21,7 @@ const { nextRequestId, testHmac } = require("./support/inference-fixtures.cjs");
 const { withNetworkDenied } = require("./support/inference-network-denial.cjs");
 
 async function setup(tempDir) {
-  const backend = new JobScoutBackend({ dataDirectory: tempDir, schedulerEnabled: false,
+  const backend = new SojournerBackend({ dataDirectory: tempDir, schedulerEnabled: false,
     fetchImpl: async () => { throw new Error("Inference smoke test must not use the network"); } });
   await backend.initialize();
   const status = await backend.getSystemStatus(process.platform);
@@ -91,7 +91,7 @@ async function failurePathsLeaveStateUntouched(ctx, ids) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-inference-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-inference-"));
   try {
     const ctx = await setup(tempDir);
     const ids = await seedProjection(ctx);

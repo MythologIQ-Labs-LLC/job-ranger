@@ -1,5 +1,5 @@
 ﻿{
-    "appId":  "com.jobranger.app",
+    "appId":  "com.mythologiq.sojourner",
     "productName":  "Sojourner",
     "copyright":  "Copyright © 2026 MythologIQ Labs, LLC",
     "directories":  {
@@ -81,6 +81,7 @@
                  "perMachine":  false,
                  "allowElevation":  false,
                  "deleteAppDataOnUninstall":  false,
+                 "include":  "build/installer.nsh",
                  "runAfterFinish":  true
              }
 }

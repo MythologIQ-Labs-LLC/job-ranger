@@ -21,17 +21,17 @@ const secret = "GOCSPX-not-a-real-secret";
 
 // Build-time client configuration.
 assert.equal(googleClientConfigFromEnv({}), null);
-assert.throws(() => googleClientConfigFromEnv({ JOB_RANGER_REQUIRE_GOOGLE_DRIVE_CLIENT: "1" }), /no Google Desktop OAuth client/);
-assert.throws(() => googleClientConfigFromEnv({ JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: id }), /partially configured/);
-assert.throws(() => googleClientConfigFromEnv({ JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }), /partially configured/);
-assert.throws(() => googleClientConfigFromEnv({ JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: "abc", JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }), /not a Google OAuth client id/);
+assert.throws(() => googleClientConfigFromEnv({ SOJOURNER_REQUIRE_GOOGLE_DRIVE_CLIENT: "1" }), /no Google Desktop OAuth client/);
+assert.throws(() => googleClientConfigFromEnv({ SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: id }), /partially configured/);
+assert.throws(() => googleClientConfigFromEnv({ SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }), /partially configured/);
+assert.throws(() => googleClientConfigFromEnv({ SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: "abc", SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }), /not a Google OAuth client id/);
 assert.deepEqual(
-  googleClientConfigFromEnv({ JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: ` ${id} `, JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }),
+  googleClientConfigFromEnv({ SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: ` ${id} `, SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: secret }),
   { clientId: id, clientSecret: secret },
 );
 const directory = mkdtempSync(path.join(os.tmpdir(), "sojourner-google-client-"));
 try {
-  const target = writeGoogleClientConfig(directory, { JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: id, JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: secret });
+  const target = writeGoogleClientConfig(directory, { SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: id, SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: secret });
   assert.deepEqual(JSON.parse(readFileSync(target, "utf8")), { clientId: id, clientSecret: secret });
   // Running unconfigured afterwards removes the stale file instead of shipping it.
   writeFileSync(path.join(directory, "other.txt"), "kept");
@@ -53,8 +53,8 @@ for (const script of ["electron:build", "electron:build:win", "electron:pack"]) 
 }
 assert.match(read(".gitignore"), /^\/build\/google-oauth\/$/m, "generated client config is never committed");
 const release = read(".github/workflows/release-build.yml");
-assert.match(release, /JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID: \$\{\{ vars\.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID \}\}/);
-assert.match(release, /JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET: \$\{\{ vars\.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET \}\}/);
+assert.match(release, /SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID: \$\{\{ vars\.SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID \}\}/);
+assert.match(release, /SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET: \$\{\{ vars\.SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET \}\}/);
 
 // Channels: preload == main == DRIVE_DESKTOP_CHANNELS; the PWA worker has none.
 const contract = read("src/shared/google-drive-desktop.ts");

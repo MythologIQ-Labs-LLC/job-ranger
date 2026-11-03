@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { RuntimeDistributionChannel } from "../../src/shared/runtime.js";
-import { JobScoutBackend } from "./backend.cjs";
+import { SojournerBackend } from "./backend.cjs";
 import { CareerBackend } from "./career-backend.cjs";
 import { RequirementBackend } from "./requirement-backend.cjs";
 import { BackupService, applyPendingRestore } from "./backup-service.cjs";
@@ -11,7 +11,7 @@ import { ResumeService } from "./resume-service.cjs";
 import { renderResumePdf } from "./resume-renderer.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { detectLegacyInstall } from "./legacy-install-ipc.cjs";
-import { packageFamilyNameFromExecPath, storeHostPath } from "./distribution.cjs";
+import { packageFamilyNameFromExecPath, STORE_USER_DATA_FOLDER, storeHostPath } from "./distribution.cjs";
 import { encodeStoreZip } from "./portable-archive.cjs";
 
 /** Minimal OOXML package for a non-software resume (used to exercise native DOCX import). */
@@ -51,7 +51,7 @@ function healthcareResumeDocx(): Uint8Array {
 
 /**
  * Packaged-runtime smoke executed by the *real Electron main process* of an
- * installed package (`Job Ranger.exe --job-ranger-package-smoke-report=<file>`).
+ * installed package (`Sojourner.exe --sojourner-package-smoke-report=<file>`).
  *
  * Unlike the ELECTRON_RUN_AS_NODE smoke used for the NSIS build, this runs with
  * the package's identity and file-system virtualization, so it proves the
@@ -74,18 +74,18 @@ export interface StorePackageSmokeOptions {
 }
 
 export function parsePackageSmokeArgument(argv: readonly string[]): string | null {
-  const prefix = "--job-ranger-package-smoke-report=";
+  const prefix = "--sojourner-package-smoke-report=";
   const raw = argv.find((value) => value.startsWith(prefix));
   if (!raw) return null;
   const reportPath = raw.slice(prefix.length).replace(/^"|"$/g, "");
   if (!path.isAbsolute(reportPath) || !reportPath.toLowerCase().endsWith(".json")) {
-    throw new Error("--job-ranger-package-smoke-report must be an absolute path to a .json file");
+    throw new Error("--sojourner-package-smoke-report must be an absolute path to a .json file");
   }
   return reportPath;
 }
 
 async function openInstallation(dataDirectory: string, appVersion: string, userDataDirectory: string) {
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -116,7 +116,7 @@ export async function runStorePackageSmoke(options: StorePackageSmokeOptions): P
   const dataDirectory = path.join(smokeRoot, "data");
   const scenarioReport = path.join(smokeRoot, "scenario-report.json");
   const extra: Record<string, boolean | number | string> = {};
-  let backend: JobScoutBackend | null = null;
+  let backend: SojournerBackend | null = null;
 
   try {
     await fs.mkdir(dataDirectory, { recursive: true });
@@ -146,7 +146,7 @@ export async function runStorePackageSmoke(options: StorePackageSmokeOptions): P
     extra.windowsStore = options.windowsStore;
     extra.userDataFolder = path.basename(options.userDataDirectory);
     extra.storeDataIsolated =
-      options.channel !== "microsoft-store" || path.basename(options.userDataDirectory) === "Job Ranger Store";
+      options.channel !== "microsoft-store" || path.basename(options.userDataDirectory) === STORE_USER_DATA_FOLDER;
     extra.sqliteBinary = install.status.sqliteBinaryPath;
     extra.sqliteBundled =
       options.resourcesPath !== null &&
@@ -165,6 +165,7 @@ export async function runStorePackageSmoke(options: StorePackageSmokeOptions): P
       appDataDirectory: options.appDataDirectory,
       userDataDirectory: options.userDataDirectory,
       dataDirectory,
+      databasePath: install.status.databasePath,
       sqliteBinaryPath: install.status.sqliteBinaryPath,
       appVersion: options.appVersion,
     });
@@ -229,7 +230,7 @@ export async function runStorePackageSmoke(options: StorePackageSmokeOptions): P
     extra.resumePdfPages = parseability?.pageCount ?? 0;
 
     // 5. Portable archive round trip into a second data root.
-    const archivePath = path.join(smokeRoot, "smoke-backup.jobranger");
+    const archivePath = path.join(smokeRoot, "smoke-backup.sojourner");
     const archive = await install.backups.createArchive(archivePath, {
       runtime: "electron",
       channel: options.channel,

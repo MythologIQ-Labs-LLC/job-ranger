@@ -3,7 +3,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const { JobScoutBackend } = require("../electron/backend.cjs");
+const { SojournerBackend } = require("../electron/backend.cjs");
 const { CareerBackend } = require("../electron/career-backend.cjs");
 const { SqliteClient } = require("../electron/sqlite.cjs");
 const {
@@ -49,10 +49,10 @@ async function createCareerBackend(jobBackend, dataDirectory) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-career-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-career-"));
 
   try {
-    const backend = new JobScoutBackend({
+    const backend = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: createMockFetch(),
       schedulerEnabled: false,
@@ -238,7 +238,7 @@ async function run() {
 
     await backend.dispose();
 
-    const reloadedBackend = new JobScoutBackend({
+    const reloadedBackend = new SojournerBackend({
       dataDirectory: tempDir,
       fetchImpl: createMockFetch(),
       schedulerEnabled: false,

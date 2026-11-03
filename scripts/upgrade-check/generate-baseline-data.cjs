@@ -33,6 +33,12 @@ const FEATURE_SMOKE_TESTS = [
 ];
 
 const runtime = (file) => path.join(baselineRoot, "electron-runtime", "electron", "src", file);
+// The baseline's own database file name: LEGACY jobscout.sqlite3 for job-ranger-v* (and
+// Sojourner before the rename), sojourner.sqlite3 for later baselines.
+const LEGACY_DATABASE_FILE_NAME = "jobscout.sqlite3";
+const DATABASE_FILE_NAMES = ["sojourner.sqlite3", LEGACY_DATABASE_FILE_NAME];
+const databaseIn = (dataDirectory) =>
+  DATABASE_FILE_NAMES.map((name) => path.join(dataDirectory, name)).find((file) => fs.existsSync(file)) ?? null;
 const fixtures = [];
 const skipped = [];
 
@@ -51,6 +57,9 @@ function run(args, env) {
 const packageSmokeRoot = path.join(outputRoot, "package-smoke");
 fs.mkdirSync(packageSmokeRoot, { recursive: true });
 const smoke = run([runtime("package-smoke-cli.cjs")], {
+  SOJOURNER_PACKAGE_SMOKE_USER_DATA: packageSmokeRoot,
+  SOJOURNER_PACKAGE_SMOKE_VERSION: "baseline",
+  // LEGACY: the variable names a job-ranger-v* baseline reads.
   JOB_RANGER_PACKAGE_SMOKE_USER_DATA: packageSmokeRoot,
   JOB_RANGER_PACKAGE_SMOKE_VERSION: "baseline",
 });
@@ -68,14 +77,14 @@ for (const name of FEATURE_SMOKE_TESTS) {
     continue;
   }
   const keepRoot = path.join(outputRoot, name);
-  const result = run(["-r", hook, testFile], { JOB_RANGER_KEEP_TEMP_ROOT: keepRoot });
+  const result = run(["-r", hook, testFile], { SOJOURNER_KEEP_TEMP_ROOT: keepRoot });
   if (result.status !== 0) {
     throw new Error(`Baseline ${name} failed:\n${result.stdout}\n${result.stderr}`);
   }
   for (const entry of fs.existsSync(keepRoot) ? fs.readdirSync(keepRoot) : []) {
     const candidate = path.join(keepRoot, entry);
     for (const dataDirectory of [candidate, path.join(candidate, "data")]) {
-      if (fs.existsSync(path.join(dataDirectory, "jobscout.sqlite3"))) {
+      if (databaseIn(dataDirectory)) {
         fixtures.push({ name: `${name}/${entry}`, dataDirectory });
       }
     }
@@ -98,7 +107,7 @@ const { resolveSqliteBinary } = require(runtime("sqlite.cjs"));
       await new BackupService({
         dataDirectory: fixture.dataDirectory,
         userDataDirectory: path.dirname(fixture.dataDirectory),
-        databasePath: path.join(fixture.dataDirectory, "jobscout.sqlite3"),
+        databasePath: databaseIn(fixture.dataDirectory),
         sqliteBinaryPath,
         appVersion: "baseline",
       }).createBackup(backupParent);

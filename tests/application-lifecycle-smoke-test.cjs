@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { JobScoutBackend } = require('../electron-runtime/electron/src/backend.cjs');
+const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
 const { ApplicationLifecycleBackend } = require('../electron-runtime/electron/src/application-lifecycle-backend.cjs');
 const { SqliteClient, sql } = require('../electron-runtime/electron/src/sqlite.cjs');
@@ -21,7 +21,7 @@ const application = {
 };
 
 async function open(tempDir) {
-  const backend = new JobScoutBackend({
+  const backend = new SojournerBackend({
     dataDirectory: tempDir,
     schedulerEnabled: false,
     fetchImpl: async () => {
@@ -80,7 +80,7 @@ async function seedSubmittedArtifact(sqlite) {
 }
 
 async function run() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-ranger-application-lifecycle-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sojourner-application-lifecycle-'));
   try {
     let runtime = await open(tempDir);
     await runtime.career.migrateLegacy({ profile: null, applications: [application] });

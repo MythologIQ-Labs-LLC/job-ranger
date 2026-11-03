@@ -8,7 +8,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const runtime = path.join(__dirname, "..", "electron-runtime");
-const { JobScoutBackend } = require(path.join(runtime, "electron/src/backend.cjs"));
+const { SojournerBackend } = require(path.join(runtime, "electron/src/backend.cjs"));
 const { CareerBackend } = require(path.join(runtime, "electron/src/career-backend.cjs"));
 const { RequirementBackend } = require(path.join(runtime, "electron/src/requirement-backend.cjs"));
 const seed = require(path.join(runtime, "electron/src/demo-seed.cjs"));
@@ -25,7 +25,7 @@ async function deniedFetch(url) {
 }
 
 async function openWorkspace(directory) {
-  const backend = new JobScoutBackend({ dataDirectory: directory, fetchImpl: deniedFetch, schedulerEnabled: false });
+  const backend = new SojournerBackend({ dataDirectory: directory, fetchImpl: deniedFetch, schedulerEnabled: false });
   await backend.initialize();
   const status = await backend.getSystemStatus(process.platform);
   const careerBackend = new CareerBackend({
@@ -81,9 +81,9 @@ async function stableProjection(workspace) {
 async function run() {
   const { isDemoListing } = await import(pathToFileURL(path.join(runtime, "src/shared/demo-listing.js")).href);
   const { buildOpportunityAssessment } = await import(pathToFileURL(path.join(runtime, "src/shared/opportunity-assessment.js")).href);
-  const first = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-a-"));
-  const second = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-b-"));
-  const third = await fs.mkdtemp(path.join(os.tmpdir(), "job-ranger-demo-seed-c-"));
+  const first = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-demo-seed-a-"));
+  const second = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-demo-seed-b-"));
+  const third = await fs.mkdtemp(path.join(os.tmpdir(), "sojourner-demo-seed-c-"));
   try {
     const workspace = await openWorkspace(first);
     const started = Date.now();

@@ -9,7 +9,7 @@ const GOOGLE_CLIENT_SECRET_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
 
 /**
  * Generated at package time by scripts/write-google-oauth-client.mjs from the
- * JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID/_SECRET repository variables (release-build.yml)
+ * SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID/_SECRET repository variables (release-build.yml)
  * and copied into resources by electron-builder.json.
  */
 export const PACKAGED_CLIENT_CONFIG_RELATIVE_PATH = path.join("google-oauth", "google-desktop-client.json");
@@ -56,8 +56,8 @@ export function validateClientConfig(clientId: unknown, clientSecret: unknown): 
  */
 export function resolveGoogleClientConfig(runtime: GoogleRuntimeEnvironment): GoogleClientConfigResult {
   if (!runtime.isPackaged) {
-    const id = runtime.env.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_ID;
-    const secret = runtime.env.JOB_RANGER_GOOGLE_DESKTOP_CLIENT_SECRET;
+    const id = runtime.env.SOJOURNER_GOOGLE_DESKTOP_CLIENT_ID;
+    const secret = runtime.env.SOJOURNER_GOOGLE_DESKTOP_CLIENT_SECRET;
     if (id || secret) return validateClientConfig(id ?? "", secret ?? "");
   }
   if (!runtime.resourcesPath) return { configured: false, reason: "missing-client-config" };
@@ -86,7 +86,7 @@ export const GOOGLE_REVOKE_ENDPOINT = "https://oauth2.googleapis.com/revoke";
  */
 export function resolveGoogleTestOrigin(runtime: Pick<GoogleRuntimeEnvironment, "env" | "isPackaged">): string | null {
   if (runtime.isPackaged) return null;
-  const raw = runtime.env.JOB_RANGER_GOOGLE_TEST_BASE_URL;
+  const raw = runtime.env.SOJOURNER_GOOGLE_TEST_BASE_URL;
   if (!raw) return null;
   let parsed: URL;
   try {
@@ -102,6 +102,6 @@ export function resolveGoogleTestOrigin(runtime: Pick<GoogleRuntimeEnvironment, 
 /** Test-only shorter timeouts, honoured only alongside the test origin override. */
 export function resolveTestTimeoutMs(runtime: Pick<GoogleRuntimeEnvironment, "env" | "isPackaged">): number | null {
   if (!resolveGoogleTestOrigin(runtime)) return null;
-  const value = Number(runtime.env.JOB_RANGER_GOOGLE_TEST_TIMEOUT_MS);
+  const value = Number(runtime.env.SOJOURNER_GOOGLE_TEST_TIMEOUT_MS);
   return Number.isInteger(value) && value >= 100 && value <= 600_000 ? value : null;
 }

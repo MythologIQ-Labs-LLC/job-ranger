@@ -251,7 +251,7 @@ export class InterviewPrepBackend {
       const snapshot = parseSnapshot(artifact.projection_snapshot_json);
       if (!snapshot) {
         warnings.push(
-          "The submitted resume snapshot could not be read, so Job Ranger will not guess what the employer saw.",
+          "The submitted resume snapshot could not be read, so Sojourner will not guess what the employer saw.",
         );
       } else {
         submittedResume = {
