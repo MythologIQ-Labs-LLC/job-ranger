@@ -70,6 +70,8 @@ assert.ok(pinAt < main.indexOf("app.whenReady"), "the pin precedes app ready");
 const lockAt = main.indexOf("app.requestSingleInstanceLock()");
 assert.ok(lockAt > pinAt && lockAt < main.indexOf("app.whenReady"), "the single-instance lock follows the pin and precedes ready");
 assert.match(main, /app\.on\("second-instance"/);
+// A start that is still waiting for another start's migration opens no data at all.
+assert.match(main, /userDataMigration\.kind === "busy"\) \{[\s\S]*?dialog\.showErrorBox\([\s\S]*?app\.exit\(1\);\s*\} else \{\s*app\.setPath\("userData", userDataMigration\.userDataDirectory\);/);
 assert.match(main, /app\.whenReady\(\)\.then\(async \(\) => \{\s+if \(!hasInstanceLock\) return;/);
 
 console.log("User-data pin tests passed");

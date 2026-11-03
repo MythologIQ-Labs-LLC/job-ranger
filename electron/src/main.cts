@@ -54,7 +54,16 @@ if (pinnedUserData) {
     rebaseManagedPaths: sqliteManagedPathRebase(sqliteBinary),
     log: (message) => console.log(`[data folder] ${message}`),
   });
-  app.setPath("userData", userDataMigration.userDataDirectory);
+  if (userDataMigration.kind === "busy") {
+    // Never open either folder while another start may still be moving the data.
+    dialog.showErrorBox(
+      "Sojourner is still starting",
+      "Another Sojourner window is still moving your data to its new folder. Wait for it to open, then try again.",
+    );
+    app.exit(1);
+  } else {
+    app.setPath("userData", userDataMigration.userDataDirectory);
+  }
 }
 
 /** Path the OS file manager sees for a path inside Sojourner's data root. */

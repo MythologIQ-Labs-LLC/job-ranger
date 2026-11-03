@@ -471,26 +471,165 @@ test("a stale lock (its process is gone) and its partial copy are removed, then 
   assert.equal(companies(path.join(target, "data", DATABASE_FILE_NAME)), "Acme Health");
 });
 
-test("a lock whose process id is alive but far too old is stale", () => {
+function ageLock(root, milliseconds) {
+  const lock = migration.migrationLockPath(path.join(root, "Sojourner"));
+  const then = new Date(Date.now() - milliseconds);
+  fs.utimesSync(lock, then, then);
+}
+
+test("a crashed lock whose process id was reused goes stale once it stops being refreshed", () => {
   const root = appData();
   const legacy = makeLegacy(root);
   const target = path.join(root, "Sojourner");
-  writeLock(root, { pid: process.pid, startedAt: "2026-01-01T00:00:00.000Z", token: "reused-pid" });
-  assert.equal(migrate({ target, legacy, verifyDatabase, log, staleLockMs: 60_000 }).kind, "migrated");
+  // The pid is alive (reused by an unrelated process) but nothing refreshed the lock for 3 minutes.
+  writeLock(root, { pid: process.pid, startedAt: new Date().toISOString(), token: "reused-pid" });
+  ageLock(root, 3 * 60_000);
+  assert.equal(migrate({ target, legacy, verifyDatabase, log }).kind, "migrated");
 });
 
-test("waiting is bounded: fall back to the legacy folder and leave the other start's lock", () => {
+test("a refreshed lock of a live process is never stale, however old its start", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  writeLock(root, { pid: process.pid, startedAt: "2026-01-01T00:00:00.000Z", token: "long-copy" });
+  const result = migrate({ target, legacy, verifyDatabase, log, lockWaitMs: 0 });
+  assert.equal(result.kind, "busy");
+});
+
+test("waiting is bounded: report busy, never fall back while another start may be migrating", () => {
   const root = appData();
   const legacy = makeLegacy(root);
   const target = path.join(root, "Sojourner");
   writeLock(root, { pid: 4244, startedAt: new Date().toISOString(), token: "slow" });
   const before = snapshot(legacy);
   const result = migrate({ target, legacy, verifyDatabase, log, isProcessAlive: () => true, lockWaitMs: 0 });
-  assert.equal(result.kind, "fallback");
-  assert.equal(result.userDataDirectory, legacy);
-  assert.match(result.reason, /still moving the data folder/);
+  assert.deepEqual(result, { kind: "busy", reason: "another Sojourner start is still moving the data folder" });
   assert.equal(JSON.parse(fs.readFileSync(migration.migrationLockPath(target), "utf8")).token, "slow");
   assert.deepEqual(snapshot(legacy), before);
+});
+
+test("two starts breaking the same stale lock: the later one never deletes the winner's lock or copy", () => {
+  // Review probe (stale-race.cjs): C judges the crashed lock stale; before C breaks it,
+  // B also judged it stale, removed it and took its own lock.
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const lock = migration.migrationLockPath(target);
+  writeLock(root, { pid: 999999, startedAt: new Date().toISOString(), token: "dead" });
+  const bStaging = path.join(root, ".Sojourner-migration-2026-11-02T12-00-00-000Z-bbbbbbbb");
+  let injected = false;
+  let sleeps = 0;
+  const result = migrate({
+    target,
+    legacy,
+    verifyDatabase,
+    log,
+    pid: 3333,
+    isProcessAlive: (pid) => {
+      if (pid === 999999 && !injected) {
+        injected = true;
+        fs.rmSync(lock);
+        fs.writeFileSync(lock, JSON.stringify({ pid: 2222, startedAt: new Date().toISOString(), token: "B" }));
+        write(path.join(bStaging, "data", "partial.bin"), "B is copying");
+        return false;
+      }
+      return pid === 2222;
+    },
+    copyTree: () => assert.fail("C must not migrate while B holds the lock"),
+    sleep: () => {
+      sleeps += 1;
+      assert.equal(JSON.parse(fs.readFileSync(lock, "utf8")).token, "B", "B's lock is intact");
+      assert.ok(fs.existsSync(path.join(bStaging, "data", "partial.bin")), "B's copy is intact");
+      if (sleeps === 2) {
+        fs.renameSync(bStaging, target);
+        write(path.join(target, "data", DATABASE_FILE_NAME), "migrated by B");
+        fs.rmSync(lock);
+      }
+    },
+  });
+  assert.deepEqual(result, { kind: "current", userDataDirectory: target });
+  assert.equal(sleeps, 2);
+  assert.deepEqual(fs.readdirSync(root).filter((name) => name.includes(".stale-")), [], "no broken-lock leftovers");
+});
+
+test("the lock holder refreshes the lock while it works", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const lock = migration.migrationLockPath(target);
+  let beats = 0;
+  let refreshed = false;
+  const result = migrate({
+    target,
+    legacy,
+    log,
+    copyTree: (source, destination, heartbeat) => {
+      fs.cpSync(source, destination, { recursive: true });
+      heartbeat();
+      beats += 1;
+      // A long copy: the lock looks a minute old until the next refresh.
+      const old = new Date(Date.now() - 60_000);
+      fs.utimesSync(lock, old, old);
+    },
+    verifyDatabase: (databasePath) => {
+      refreshed = Date.now() - fs.statSync(lock).mtimeMs < 10_000;
+      return verifyDatabase(databasePath);
+    },
+  });
+  assert.equal(result.kind, "migrated");
+  assert.equal(beats, 1);
+  assert.ok(refreshed, "the lock was refreshed after the copy");
+});
+
+test("a holder that lost its lock stops and falls back without touching the target", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const lock = migration.migrationLockPath(target);
+  const result = migrate({
+    target,
+    legacy,
+    verifyDatabase,
+    log,
+    copyTree: (source, destination, heartbeat) => {
+      fs.cpSync(source, destination, { recursive: true });
+      fs.writeFileSync(lock, JSON.stringify({ pid: 1, startedAt: new Date().toISOString(), token: "someone-else" }));
+      heartbeat();
+    },
+  });
+  assert.equal(result.kind, "fallback");
+  assert.match(result.reason, /migration lock was lost/);
+  assert.equal(fs.existsSync(target), false);
+  assert.equal(JSON.parse(fs.readFileSync(lock, "utf8")).token, "someone-else", "another start's lock is left alone");
+});
+
+test("a legacy folder an app is running from is not copied; this start uses it too", () => {
+  const root = appData();
+  const legacy = makeLegacy(root);
+  const target = path.join(root, "Sojourner");
+  const before = snapshot(legacy);
+  const checked = [];
+  const result = migrate({
+    target,
+    legacy,
+    verifyDatabase,
+    log,
+    isUserDataInUse: (folder) => (checked.push(folder), true),
+    copyTree: () => assert.fail("a live legacy folder must not be copied"),
+  });
+  assert.equal(result.kind, "fallback");
+  assert.equal(result.userDataDirectory, legacy);
+  assert.match(result.reason, /an app is running from/);
+  assert.deepEqual(checked, [legacy]);
+  assert.deepEqual(snapshot(legacy), before);
+  assert.equal(fs.existsSync(migration.migrationLockPath(target)), false);
+});
+
+test("userDataInUse: a leftover, unlocked Chromium lockfile is not a running app", () => {
+  const root = appData();
+  write(path.join(root, "lockfile"), "");
+  assert.equal(migration.userDataInUse(root, () => false), false);
+  assert.equal(migration.userDataInUse(path.join(root, "missing"), () => false), false);
 });
 
 test("three real concurrent first starts end on the same migrated folder", async () => {

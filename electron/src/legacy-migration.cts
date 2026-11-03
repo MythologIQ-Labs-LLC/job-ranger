@@ -20,11 +20,21 @@ import { DATABASE_FILE_NAME, DATABASE_FILE_NAMES, LEGACY_DATABASE_FILE_NAME } fr
  * only the staging copy and the app runs on the legacy folder, so no user is ever
  * stranded; the next start tries again.
  *
- * Concurrent first starts (two launches before either finished): the whole migration
- * runs under an exclusive lock file next to the target. A second process waits for it
- * (bounded) and then uses the result; staging copies are only removed while holding the
- * lock, so a copy in progress is never deleted. Outcomes are appended to a small log
- * file next to the target (for example %APPDATA%\Sojourner-migration.log).
+ * Concurrent starts:
+ * - The whole migration runs under an exclusive lock file next to the target. Its holder
+ *   refreshes the lock's modification time while it works; a lock is stale when its
+ *   process is gone or it has not been refreshed for STALE_LOCK_MS. A stale lock is
+ *   broken atomically (renamed away, then checked to be the one judged stale), so two
+ *   starts can never both break it and both migrate.
+ * - A start that finds the lock held waits (bounded) and then uses the result. If the
+ *   wait runs out it reports "busy" (main.cts tells the person and exits); it never
+ *   falls back to the legacy folder while another start may still be migrating.
+ * - The legacy folder is not copied while an app instance runs from it (a fallback run,
+ *   or Job Ranger itself): this start then uses the legacy folder too, so the
+ *   single-instance lock (per data folder) hands the launch to the running instance.
+ * - Staging copies are only removed by the lock holder.
+ * Outcomes are appended to a small log next to the target
+ * (for example %APPDATA%\Sojourner-migration.log).
  */
 
 /** Note written into the legacy folder after a verified migration. */
@@ -40,8 +50,10 @@ export type LegacyMigrationResult =
   | { kind: "fresh"; userDataDirectory: string }
   /** The legacy workspace was copied, verified and is now used from the target. */
   | { kind: "migrated"; userDataDirectory: string; legacyDirectory: string; files: number; bytes: number }
-  /** Migration failed; the app runs on the untouched legacy folder this time. */
-  | { kind: "fallback"; userDataDirectory: string; legacyDirectory: string; reason: string };
+  /** Not migrated this time; the app runs on the untouched legacy folder. */
+  | { kind: "fallback"; userDataDirectory: string; legacyDirectory: string; reason: string }
+  /** Another start is still migrating after the bounded wait; this start must not open any data. */
+  | { kind: "busy"; reason: string };
 
 export interface LegacyMigrationInput {
   /** The folder this build uses (for example %APPDATA%\Sojourner). */
@@ -61,20 +73,23 @@ export interface LegacyMigrationInput {
   logFile?: string | null;
   /** Longest wait for another process's migration (default 10 minutes). */
   lockWaitMs?: number;
-  /** A lock older than this is stale even if its process id is in use (default 6 hours). */
+  /** A lock not refreshed for this long is stale even if its process id is in use (default 2 minutes). */
   staleLockMs?: number;
   /** Test seams; production uses node:fs, this process and a blocking sleep. */
-  copyTree?: (source: string, destination: string) => void;
+  copyTree?: (source: string, destination: string, heartbeat: () => void) => void;
   renamePath?: (from: string, to: string) => void;
   now?: () => Date;
   sleep?: (milliseconds: number) => void;
   pid?: number;
   isProcessAlive?: (pid: number) => boolean;
+  /** Whether an app instance is running from this user-data folder (default: its Chromium singleton lock). */
+  isUserDataInUse?: (userDataDirectory: string) => boolean;
 }
 
 const DEFAULT_LOCK_WAIT_MS = 10 * 60_000;
-const DEFAULT_STALE_LOCK_MS = 6 * 60 * 60_000;
+const DEFAULT_STALE_LOCK_MS = 2 * 60_000;
 const LOCK_POLL_MS = 250;
+const HEARTBEAT_INTERVAL_MS = 5_000;
 /** Windows antivirus and indexers briefly lock new folders; renames are retried. */
 const RENAME_RETRY_DELAYS_MS = [100, 250, 500, 1000, 2000, 4000];
 const TRANSIENT_RENAME_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
@@ -90,6 +105,31 @@ function processAlive(pid: number): boolean {
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === "EPERM";
   }
+}
+
+/**
+ * Whether an Electron/Chromium app runs from this user-data folder. Windows: the
+ * process holds `lockfile` open without sharing, so opening it fails. Elsewhere:
+ * `SingletonLock` is a link named `<host>-<pid>` whose process is alive.
+ */
+export function userDataInUse(userDataDirectory: string, alive: (pid: number) => boolean = processAlive): boolean {
+  const lockfile = path.join(userDataDirectory, "lockfile");
+  if (fs.existsSync(lockfile)) {
+    try {
+      fs.closeSync(fs.openSync(lockfile, "r+"));
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EBUSY" || code === "EPERM" || code === "EACCES") return true;
+    }
+  }
+  try {
+    const owner = fs.readlinkSync(path.join(userDataDirectory, "SingletonLock"));
+    const pid = Number(owner.slice(owner.lastIndexOf("-") + 1));
+    if (Number.isInteger(pid) && pid > 0 && alive(pid)) return true;
+  } catch {
+    // No singleton link.
+  }
+  return false;
 }
 
 /** Exclusive lock held for the whole migration (next to the target, not inside it). */
@@ -108,18 +148,28 @@ interface LockOwner {
   token: string;
 }
 
-function readLock(lockPath: string): LockOwner | null {
+function readLockText(lockPath: string): string | null {
   try {
-    const value = JSON.parse(fs.readFileSync(lockPath, "utf8")) as Partial<LockOwner>;
+    return fs.readFileSync(lockPath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function parseLock(text: string | null): LockOwner | null {
+  if (text === null) return null;
+  try {
+    const value = JSON.parse(text) as Partial<LockOwner>;
     if (typeof value.pid === "number" && typeof value.startedAt === "string" && typeof value.token === "string") {
       return value as LockOwner;
     }
   } catch {
-    // Unreadable: judged by its age below.
+    // Unreadable: judged by its age.
   }
   return null;
 }
 
+/** Stale: its process is gone, or it has not been refreshed (heartbeat) for staleMs. */
 function lockIsStale(
   lockPath: string,
   owner: LockOwner | null,
@@ -127,19 +177,40 @@ function lockIsStale(
   staleMs: number,
   alive: (pid: number) => boolean,
 ): boolean {
-  if (!owner) {
-    // Written right after it is created; an unreadable lock older than 30 s was abandoned.
-    try {
-      return nowMs - fs.statSync(lockPath).mtimeMs > 30_000;
-    } catch {
-      return true;
-    }
+  let refreshedMs: number;
+  try {
+    refreshedMs = fs.statSync(lockPath).mtimeMs;
+  } catch {
+    return true;
   }
-  if (!alive(owner.pid)) return true;
-  const started = Date.parse(owner.startedAt);
-  return Number.isNaN(started) || nowMs - started > staleMs;
+  if (nowMs - refreshedMs > staleMs) return true;
+  return owner !== null && !alive(owner.pid);
 }
 
+/**
+ * Breaks a stale lock atomically: rename it to a name only this start uses, then check
+ * it is the lock that was judged stale. If another start replaced it in between (its
+ * fresh, live lock), it is put back untouched. Returns true when the stale lock is gone.
+ */
+function breakStaleLock(lockPath: string, judgedText: string | null, token: string): boolean {
+  const aside = `${lockPath}.stale-${token}`;
+  try {
+    fs.renameSync(lockPath, aside);
+  } catch {
+    return false; // Already broken or replaced by another start; just retry.
+  }
+  if (readLockText(aside) === judgedText) {
+    fs.rmSync(aside, { force: true });
+    return true;
+  }
+  try {
+    fs.linkSync(aside, lockPath); // Restore it (fails if yet another lock exists).
+  } catch {
+    // Another start holds a newer lock; the restored one is not needed.
+  }
+  fs.rmSync(aside, { force: true });
+  return false;
+}
 
 function isFile(filePath: string): boolean {
   try {
@@ -199,6 +270,25 @@ function walk(root: string): TreeEntry[] {
   };
   visit("");
   return entries;
+}
+
+/** Copies a folder tree file by file (timestamps kept, links copied as links), refreshing the lock as it goes. */
+function copyTreeWithHeartbeat(source: string, destination: string, heartbeat: () => void): void {
+  fs.mkdirSync(destination, { recursive: false });
+  for (const entry of walk(source)) {
+    const from = path.join(source, entry.relative);
+    const to = path.join(destination, entry.relative);
+    if (entry.kind === "directory") {
+      fs.mkdirSync(to);
+    } else if (entry.kind === "symlink") {
+      fs.symlinkSync(fs.readlinkSync(from), to);
+    } else {
+      fs.copyFileSync(from, to, fs.constants.COPYFILE_EXCL);
+      const stat = fs.statSync(from);
+      fs.utimesSync(to, stat.atime, stat.mtime);
+    }
+    heartbeat();
+  }
 }
 
 /** Every legacy file and folder exists in the copy, files with the same size. */
@@ -275,17 +365,29 @@ function renameWithRetry(
   }
 }
 
+interface MigrationContext {
+  input: LegacyMigrationInput;
+  target: string;
+  legacy: string;
+  log: (message: string) => void;
+  sleep: (milliseconds: number) => void;
+  now: () => Date;
+  /** Refreshes the held lock; throws if this start no longer holds it. */
+  heartbeat: (force?: boolean) => void;
+}
+
 export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrationResult {
   const consoleLog = input.log ?? (() => undefined);
   const now = input.now ?? (() => new Date());
   const target = path.resolve(input.target);
   const legacy = path.resolve(input.legacy);
+  const pid = input.pid ?? process.pid;
   const logFile = input.logFile === undefined ? migrationLogPath(target) : input.logFile;
   const log = (message: string) => {
     consoleLog(message);
     if (!logFile) return;
     try {
-      fs.appendFileSync(logFile, `${now().toISOString()} [pid ${input.pid ?? process.pid}] ${message}\r\n`);
+      fs.appendFileSync(logFile, `${now().toISOString()} [pid ${pid}] ${message}\r\n`);
     } catch {
       // The log is a convenience; it never affects the migration.
     }
@@ -297,7 +399,6 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
 
   const sleep = input.sleep ?? blockingSleep;
   const alive = input.isProcessAlive ?? processAlive;
-  const pid = input.pid ?? process.pid;
   const lockPath = migrationLockPath(target);
   const waitMs = input.lockWaitMs ?? DEFAULT_LOCK_WAIT_MS;
   const staleMs = input.staleLockMs ?? DEFAULT_STALE_LOCK_MS;
@@ -305,7 +406,7 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
   const waitStarted = Date.now();
   let waited = false;
 
-  // Acquire the lock, or wait for the process holding it and use what it produced.
+  // Acquire the lock, or wait for the start holding it and use what it produced.
   for (;;) {
     try {
       fs.mkdirSync(path.dirname(lockPath), { recursive: true });
@@ -323,10 +424,12 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
         return { kind: "fallback", userDataDirectory: legacy, legacyDirectory: legacy, reason };
       }
     }
-    const owner = readLock(lockPath);
+    const judgedText = readLockText(lockPath);
+    const owner = parseLock(judgedText);
     if (lockIsStale(lockPath, owner, now().getTime(), staleMs, alive)) {
-      log(`Removing a stale migration lock${owner ? ` (pid ${owner.pid}, ${owner.startedAt})` : ""}.`);
-      fs.rmSync(lockPath, { force: true });
+      if (breakStaleLock(lockPath, judgedText, token)) {
+        log(`Removed a stale migration lock${owner ? ` (pid ${owner.pid}, ${owner.startedAt})` : ""}.`);
+      }
       continue;
     }
     if (!waited) {
@@ -335,8 +438,8 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
     }
     if (Date.now() - waitStarted >= waitMs) {
       const reason = "another Sojourner start is still moving the data folder";
-      log(`Data-folder migration did not complete (${reason}); using ${legacy} this time.`);
-      return { kind: "fallback", userDataDirectory: legacy, legacyDirectory: legacy, reason };
+      log(`Not opening any data: ${reason}.`);
+      return { kind: "busy", reason };
     }
     sleep(LOCK_POLL_MS);
     if (hasWorkspace(target)) {
@@ -345,40 +448,40 @@ export function migrateLegacyUserData(input: LegacyMigrationInput): LegacyMigrat
     }
   }
 
+  let lastBeat = 0;
+  const heartbeat = (force = false) => {
+    const nowMs = Date.now();
+    if (!force && nowMs - lastBeat < HEARTBEAT_INTERVAL_MS) return;
+    if (parseLock(readLockText(lockPath))?.token !== token) throw new Error("the migration lock was lost");
+    const touched = new Date(nowMs);
+    fs.utimesSync(lockPath, touched, touched);
+    lastBeat = nowMs;
+  };
   try {
-    // Re-check under the lock: another process may have finished just before we took it.
+    // Re-check under the lock: another start may have finished just before we took it.
     if (hasWorkspace(target)) return { kind: "current", userDataDirectory: target };
     if (!hasWorkspace(legacy)) return { kind: "fresh", userDataDirectory: target };
-    return migrateUnderLock(input, target, legacy, log, sleep, now);
+    if ((input.isUserDataInUse ?? ((folder) => userDataInUse(folder, alive)))(legacy)) {
+      const reason = `an app is running from ${legacy}`;
+      log(`Not moving the data folder: ${reason}; this start uses it too.`);
+      return { kind: "fallback", userDataDirectory: legacy, legacyDirectory: legacy, reason };
+    }
+    return migrateUnderLock({ input, target, legacy, log, sleep, now, heartbeat });
   } finally {
-    if (readLock(lockPath)?.token === token) fs.rmSync(lockPath, { force: true });
+    if (parseLock(readLockText(lockPath))?.token === token) fs.rmSync(lockPath, { force: true });
   }
 }
 
-function migrateUnderLock(
-  input: LegacyMigrationInput,
-  target: string,
-  legacy: string,
-  log: (message: string) => void,
-  sleep: (milliseconds: number) => void,
-  now: () => Date,
-): LegacyMigrationResult {
-  const copyTree =
-    input.copyTree ??
-    ((source: string, destination: string) =>
-      fs.cpSync(source, destination, {
-        recursive: true,
-        errorOnExist: true,
-        force: false,
-        preserveTimestamps: true,
-        verbatimSymlinks: true,
-      }));
+function migrateUnderLock(context: MigrationContext): LegacyMigrationResult {
+  const { input, target, legacy, log, sleep, now, heartbeat } = context;
+  const copyTree = input.copyTree ?? copyTreeWithHeartbeat;
   const rename = input.renamePath ?? ((from: string, to: string) => fs.renameSync(from, to));
   const startedAt = now();
   const staging = path.join(path.dirname(target), `${stagingPrefix(target)}${stamp(startedAt)}-${randomUUID().slice(0, 8)}`);
   let setAside: string | null = null;
   try {
     // Only the lock holder gets here, so every staging folder left is from a start that died.
+    heartbeat(true);
     removeStaleStaging(target, log);
     // A target folder without a workspace (an interrupted earlier start, an empty folder):
     // an empty one is removed, anything else is kept under another name, never deleted.
@@ -392,17 +495,20 @@ function migrateUnderLock(
       }
     }
 
-    copyTree(legacy, staging);
+    copyTree(legacy, staging, () => heartbeat());
+    heartbeat(true);
     const { files, bytes } = verifyCopy(legacy, staging);
     const databasePath = renameCopiedDatabase(staging, rename);
     // Managed artifacts are stored by absolute path; point them at the migrated copy so
     // nothing keeps reading (or depends on) the legacy folder.
     const stillLegacy = input.rebaseManagedPaths(databasePath, path.join(legacy, "data"), path.join(target, "data"));
     if (stillLegacy !== 0) throw new Error(`${stillLegacy} artifact paths still point into the old data folder`);
+    heartbeat(true);
     const integrity = input.verifyDatabase(databasePath);
     if (typeof integrity === "string" && integrity.trim() !== "ok") {
       throw new Error(`The copied database failed its integrity check: ${integrity.trim().slice(0, 200)}`);
     }
+    heartbeat(true);
     renameWithRetry(rename, sleep, staging, target);
 
     try {
