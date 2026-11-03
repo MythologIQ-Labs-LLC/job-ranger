@@ -632,12 +632,3 @@ export class SojournerBackend {
     }
   }
 }
-
-
-
-/**
- * TEMPORARY rename-integration alias, not part of the API: the web runtime
- * (src/pwa/runtime/worker-main.ts, renamed on the parallel rename/pwa branch) still
- * imports the pre-rename class name. Delete this line when rename/pwa is merged.
- */
-export { SojournerBackend as JobScoutBackend };
