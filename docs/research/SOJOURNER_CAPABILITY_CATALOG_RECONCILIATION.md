@@ -1,14 +1,14 @@
-# QOR Research: Job Ranger Technical Capability Catalog Reconciliation
+# QOR Research: Sojourner Technical Capability Catalog Reconciliation
 
 **Status:** Product-wide capability reconciliation supporting the accepted architecture  
 **Date:** 2026-09-24  
-**Scope:** Evaluate the maintained Technical Capability Catalog against Job Ranger as a whole, not only resume/import intelligence.
+**Scope:** Evaluate the maintained Technical Capability Catalog against Sojourner as a whole, not only resume/import intelligence.
 
 ## Executive conclusion
 
-The Technical Capability Catalog contains many sophisticated systems that overlap pieces of Job Ranger. Most of them should **not** be dependencies.
+The Technical Capability Catalog contains many sophisticated systems that overlap pieces of Sojourner. Most of them should **not** be dependencies.
 
-Job Ranger is strongest when it remains a focused consumer application with a small native core:
+Sojourner is strongest when it remains a focused consumer application with a small native core:
 
 - Electron desktop shell;
 - SQLite-backed durable state;
@@ -20,7 +20,7 @@ Job Ranger is strongest when it remains a focused consumer application with a sm
 - native Career Evidence and resume lifecycle;
 - optional inference behind a narrow provider boundary.
 
-The catalog is most valuable as a source of **specialized capability donors, implementation patterns, benchmarks, and explicit rejection evidence**. It should not turn Job Ranger into a composition of agent frameworks, browser clouds, memory systems, workflow engines, and hosted services simply because those products exist.
+The catalog is most valuable as a source of **specialized capability donors, implementation patterns, benchmarks, and explicit rejection evidence**. It should not turn Sojourner into a composition of agent frameworks, browser clouds, memory systems, workflow engines, and hosted services simply because those products exist.
 
 The accepted architectural principle is therefore:
 
@@ -30,13 +30,13 @@ The accepted architectural principle is therefore:
 
 A catalog resource earns adoption only when all of the following are true:
 
-1. it solves a material Job Ranger gap;
+1. it solves a material Sojourner gap;
 2. it is materially better than the native implementation path;
-3. its license is compatible with Job Ranger's MIT distribution and intended use;
+3. its license is compatible with Sojourner's MIT distribution and intended use;
 4. its transitive/bundled licensing is understood;
 5. it does not create an unnecessary cloud or credential boundary;
 6. it does not substantially increase installation/packaging burden for ordinary users;
-7. it preserves Job Ranger's authority and data model rather than becoming a second product inside the product;
+7. it preserves Sojourner's authority and data model rather than becoming a second product inside the product;
 8. it has a clear testable seam and can be replaced later.
 
 A resource can be excellent software and still fail this test.
@@ -81,7 +81,7 @@ The following sections reconcile each domain against catalog candidates.
 
 ## 1. Desktop runtime and persistence
 
-### Current Job Ranger capability
+### Current Sojourner capability
 
 - Electron 44 desktop runtime;
 - constrained preload/IPC boundary;
@@ -95,18 +95,18 @@ The catalog contains broad local/self-hosted workspaces, agent control planes, d
 
 ### Decision
 
-**Keep Job Ranger native. Adopt none of these as a core runtime.**
+**Keep Sojourner native. Adopt none of these as a core runtime.**
 
 Why:
 
-- Job Ranger does not have a distributed-workflow problem;
+- Sojourner does not have a distributed-workflow problem;
 - SQLite already provides sufficient durable state for a single-user desktop application;
 - most workflow/agent platforms introduce server processes, provider abstractions, cloud/storage requirements, or high-authority tool execution;
-- adding a general agent-memory platform would duplicate the career evidence/application state Job Ranger must own deterministically.
+- adding a general agent-memory platform would duplicate the career evidence/application state Sojourner must own deterministically.
 
 ### Architectural rule
 
-All new user-domain state should migrate behind Job Ranger's existing backend/SQLite repository boundary unless there is concrete evidence SQLite is insufficient.
+All new user-domain state should migrate behind Sojourner's existing backend/SQLite repository boundary unless there is concrete evidence SQLite is insufficient.
 
 ---
 
@@ -114,7 +114,7 @@ All new user-domain state should migrate behind Job Ranger's existing backend/SQ
 
 ### Current gap
 
-Job Ranger can monitor known employer career pages, but ordinary users should not need to know ATS URLs or employer source structure in advance.
+Sojourner can monitor known employer career pages, but ordinary users should not need to know ATS URLs or employer source structure in advance.
 
 This is a real product gap.
 
@@ -128,8 +128,8 @@ This is a real product gap.
 
 ### Licensing/boundary findings
 
-- `wigolo` is AGPL-3.0-only, so it is unsuitable for direct incorporation into Job Ranger's MIT product.
-- Firecrawl has component-scoped/mixed licensing and combines self-hosted and hosted service boundaries; it is too broad to become a default Job Ranger dependency without a much stronger need.
+- `wigolo` is AGPL-3.0-only, so it is unsuitable for direct incorporation into Sojourner's MIT product.
+- Firecrawl has component-scoped/mixed licensing and combines self-hosted and hosted service boundaries; it is too broad to become a default Sojourner dependency without a much stronger need.
 - generic browser/search agent platforms introduce far more authority and infrastructure than source discovery requires.
 
 ### Decision
@@ -179,9 +179,9 @@ Do not import its tech-company defaults or CLI workflow.
 
 ## 3. Source acquisition and scraping
 
-### Current Job Ranger capability
+### Current Sojourner capability
 
-Job Ranger already has:
+Sojourner already has:
 
 - Greenhouse adapter;
 - Lever adapter;
@@ -211,11 +211,11 @@ The current browser loader uses sandboxed Electron web contents, disables Node i
 
 Reasons:
 
-- Job Ranger already ships Chromium through Electron;
+- Sojourner already ships Chromium through Electron;
 - the hidden BrowserWindow path avoids another bundled browser/runtime;
 - managed browser services add cloud, credentials, pricing, session-state, and privacy boundaries;
 - browser-agent frameworks add model reasoning where deterministic extraction is preferable;
-- Job Ranger's use case is narrow: fetch enough page state to extract listings, not operate arbitrary user browser sessions.
+- Sojourner's use case is narrow: fetch enough page state to extract listings, not operate arbitrary user browser sessions.
 
 ### Allowed future exception
 
@@ -231,11 +231,11 @@ Keep Playwright in the **testing/E2E** role. Do not promote it into production s
 
 ### Current capability
 
-Job Ranger owns normalized job records and source adapters.
+Sojourner owns normalized job records and source adapters.
 
 ### Catalog relevance
 
-General web/document extraction platforms exist, but adopting one would push source semantics outside Job Ranger while still requiring Job Ranger-specific normalization.
+General web/document extraction platforms exist, but adopting one would push source semantics outside Sojourner while still requiring Sojourner-specific normalization.
 
 ### Decision
 
@@ -264,16 +264,16 @@ Career Profile captures user preferences and career context. Current renderer-lo
 
 **Do not add an agent-memory or generic profiling system.**
 
-Job Ranger needs two explicit native concepts:
+Sojourner needs two explicit native concepts:
 
 1. **Preferences/intent**: target roles, geography, compensation, commute, work preferences.
 2. **Career Evidence**: factual experience, skills, credentials, education, achievements, projects, publications, etc.
 
-These should live in Job Ranger's domain schema and SQLite.
+These should live in Sojourner's domain schema and SQLite.
 
 ### Useful catalog pattern
 
-Structured, resumable elicitation with confirmation gates is useful as a UX pattern. The data should still persist as native Job Ranger records.
+Structured, resumable elicitation with confirmation gates is useful as a UX pattern. The data should still persist as native Sojourner records.
 
 ---
 
@@ -281,7 +281,7 @@ Structured, resumable elicitation with confirmation gates is useful as a UX patt
 
 ### Current capability
 
-Job Ranger already has deterministic profile-to-listing fit guidance.
+Sojourner already has deterministic profile-to-listing fit guidance.
 
 ### Strongest catalog/domain source
 
@@ -299,7 +299,7 @@ Useful mechanisms:
 
 ### Decision
 
-**Expand the native Job Ranger fit engine rather than embedding Career-Ops or an agent framework.**
+**Expand the native Sojourner fit engine rather than embedding Career-Ops or an agent framework.**
 
 The next native model becomes:
 
@@ -322,7 +322,7 @@ Optional inference may suggest mappings, but deterministic/user-confirmed eviden
 
 ### No proprietary ATS score
 
-Hosted resume/ATS scoring services such as Hireflow are useful comparison references but should not define Job Ranger's fit score or product truth.
+Hosted resume/ATS scoring services such as Hireflow are useful comparison references but should not define Sojourner's fit score or product truth.
 
 ---
 
@@ -352,11 +352,11 @@ This is the main catalog-driven runtime addition currently justified.
 
 ### Current capability
 
-Job Ranger owns application statuses and notes. Planned maturity includes dates, contacts, interview milestones, offer data, reminders, and artifact linkage.
+Sojourner owns application statuses and notes. Planned maturity includes dates, contacts, interview milestones, offer data, reminders, and artifact linkage.
 
 ### Catalog candidates
 
-Career-Ops has strong workflow concepts, but no catalog resource justifies replacing Job Ranger's application domain with an external ATS/project/task system.
+Career-Ops has strong workflow concepts, but no catalog resource justifies replacing Sojourner's application domain with an external ATS/project/task system.
 
 ### Decision
 
@@ -378,7 +378,7 @@ Application
   outcome?
 ```
 
-This domain is strategically important because it connects job discovery, resume versions, interviews, and outcomes. Outsourcing it would break Job Ranger's product continuity.
+This domain is strategically important because it connects job discovery, resume versions, interviews, and outcomes. Outsourcing it would break Sojourner's product continuity.
 
 ---
 
@@ -418,7 +418,7 @@ Calendar integration can later be an optional connector boundary if users need i
 
 **Build interview preparation natively around the application's existing evidence.**
 
-Job Ranger has an advantage generic interview tools do not: it can know
+Sojourner has an advantage generic interview tools do not: it can know
 
 - the job description;
 - requirement/evidence map;
@@ -527,9 +527,9 @@ The catalog contains full agent frameworks and runtimes including Mastra, Open M
 
 ### Decision
 
-**Do not adopt an agent framework for Job Ranger's first inference layer.**
+**Do not adopt an agent framework for Sojourner's first inference layer.**
 
-Job Ranger needs a narrow provider abstraction, not agent infrastructure.
+Sojourner needs a narrow provider abstraction, not agent infrastructure.
 
 Conceptual API:
 
@@ -576,7 +576,7 @@ ResearchProvider
 
 No personal resume/evidence data should be included in general web search queries unless strictly necessary and explicitly allowed.
 
-Job Ranger can operate without this capability.
+Sojourner can operate without this capability.
 
 ---
 
@@ -590,7 +590,7 @@ Career automation workflows and browser agents demonstrate that form filling is 
 
 **Remain out of scope for the current architecture.**
 
-Job Ranger may eventually assist with form-answer preparation or browser handoff, but autonomous submission is not implied by the resume/application roadmap.
+Sojourner may eventually assist with form-answer preparation or browser handoff, but autonomous submission is not implied by the resume/application roadmap.
 
 A future implementation would require an explicit governance/product decision covering:
 
@@ -635,7 +635,7 @@ Build a native export/import bundle before considering sync services.
 Recommended portable bundle:
 
 ```text
-job-ranger-export.zip
+sojourner-export.zip
   manifest.json
   profile.json
   evidence.json
@@ -653,11 +653,11 @@ Properties:
 - explicit handling of sensitive personal data;
 - restore/import validation.
 
-JSON Resume can be offered separately as a career-document interoperability export, not as full Job Ranger backup.
+JSON Resume can be offered separately as a career-document interoperability export, not as full Sojourner backup.
 
 ---
 
-## 19. Search/indexing inside Job Ranger
+## 19. Search/indexing inside Sojourner
 
 The projected dataset is small enough that SQLite queries and ordinary full-text indexing should remain the default.
 
@@ -669,7 +669,7 @@ A vector/embedding index becomes justified only if measured semantic retrieval q
 
 ## 20. Accessibility/UI component systems
 
-The catalog contains mature React component libraries such as Mantine. Job Ranger already has an established lightweight component/theme system.
+The catalog contains mature React component libraries such as Mantine. Sojourner already has an established lightweight component/theme system.
 
 ### Decision
 
@@ -677,7 +677,7 @@ The catalog contains mature React component libraries such as Mantine. Job Range
 
 Continue improving the current design primitives and accessibility semantics. Introduce a component library only if the maintenance cost of the native system becomes demonstrably larger than migration cost.
 
-The recent sidebar/link defects are evidence for stronger accessibility/interaction tests, not evidence that Job Ranger needs a new design system.
+The recent sidebar/link defects are evidence for stronger accessibility/interaction tests, not evidence that Sojourner needs a new design system.
 
 ---
 
@@ -685,7 +685,7 @@ The recent sidebar/link defects are evidence for stronger accessibility/interact
 
 The catalog's strongest reusable lesson outside direct dependencies is systematic evaluation.
 
-Job Ranger should add domain benchmarks for:
+Sojourner should add domain benchmarks for:
 
 - source adapter fixtures;
 - parser/import corpus;
@@ -704,7 +704,7 @@ Optional inference features should have separate golden/benchmark sets so model/
 
 ## 22. Licensing architecture
 
-Job Ranger remains MIT.
+Sojourner remains MIT.
 
 External capability policy:
 
@@ -743,7 +743,7 @@ Every adopted component is reviewed at the exact dependency/asset boundary.
 
 The broader catalog review produces a deliberately small external stack.
 
-### Native Job Ranger core
+### Native Sojourner core
 
 - Electron shell;
 - SQLite and managed artifact storage;
@@ -782,7 +782,7 @@ The broader catalog review produces a deliberately small external stack.
 
 ### Rejected platform expansion
 
-Do not make Job Ranger depend on:
+Do not make Sojourner depend on:
 
 - a generic agent framework;
 - a general workflow engine;
@@ -794,7 +794,7 @@ Do not make Job Ranger depend on:
 - a proprietary ATS scoring service;
 - an autonomous application bot.
 
-Not because those categories are bad, but because Job Ranger does not currently need them.
+Not because those categories are bad, but because Sojourner does not currently need them.
 
 ---
 
@@ -802,7 +802,7 @@ Not because those categories are bad, but because Job Ranger does not currently 
 
 The catalog reconciliation yields a useful long-term rule:
 
-> **Job Ranger owns career truth, job-search state, and the user's application lifecycle. External capabilities are adapters, never authorities.**
+> **Sojourner owns career truth, job-search state, and the user's application lifecycle. External capabilities are adapters, never authorities.**
 
 That means:
 
@@ -813,7 +813,7 @@ That means:
 - a renderer can format but cannot become canonical storage;
 - a calendar can mirror reminders but cannot own the application lifecycle.
 
-This keeps Job Ranger small enough for ordinary people and extensible enough to grow without turning every future feature into a platform migration.
+This keeps Sojourner small enough for ordinary people and extensible enough to grow without turning every future feature into a platform migration.
 
 ## 25. Immediate roadmap consequence
 

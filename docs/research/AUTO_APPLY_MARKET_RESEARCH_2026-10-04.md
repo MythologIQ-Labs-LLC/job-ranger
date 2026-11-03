@@ -2,15 +2,15 @@
 
 ## Research question
 
-What does the rise of delegated and automated job-application submission mean for Job Ranger's product direction?
+What does the rise of delegated and automated job-application submission mean for Sojourner's product direction?
 
 This research pass focuses on services that do more than discover jobs or help prepare application materials. The relevant category is software or services that can **submit applications on the candidate's behalf**, especially at high volume or without per-application approval.
 
 ## Executive conclusion
 
-The market is already moving toward an application-volume arms race. That creates a poor strategic target for Job Ranger.
+The market is already moving toward an application-volume arms race. That creates a poor strategic target for Sojourner.
 
-Job Ranger should differentiate by making good career decisions cheaper and faster, not by making application submission effectively free. The product response is **quality over quantity**:
+Sojourner should differentiate by making good career decisions cheaper and faster, not by making application submission effectively free. The product response is **quality over quantity**:
 
 > **Person → Career Direction → Companies → People → Opportunities → Applications**
 
@@ -28,7 +28,7 @@ Observed product claims and terms on October 4, 2026:
 - the service terms cap submissions at **1,000 applications per user per calendar month** unless otherwise authorized;
 - ApplyBlast describes its own model as selective rather than indiscriminate, using role, compensation, location, seniority, experience, and preferences before submission.
 
-The important distinction for Job Ranger is that even a selective system can still optimize **right-fit volume** and automated throughput. Job Ranger should optimize the quality of the career path and the user's decision, not merely make higher-volume submission more discriminating.
+The important distinction for Sojourner is that even a selective system can still optimize **right-fit volume** and automated throughput. Sojourner should optimize the quality of the career path and the user's decision, not merely make higher-volume submission more discriminating.
 
 Sources:
 
@@ -89,9 +89,9 @@ A system that reduces the marginal cost of another application toward zero can c
 
 That dynamic becomes self-defeating at market scale: candidates automate more submissions, employers automate more filtering, candidates optimize around the filters, and both sides spend increasing effort manufacturing and removing noise.
 
-## Job Ranger product decision
+## Sojourner product decision
 
-Job Ranger should explicitly preserve these principles:
+Sojourner should explicitly preserve these principles:
 
 1. **Quality over quantity.** Application volume is not success by itself.
 2. **Person before resume.** Career direction includes what the user wants to become, not only what prior documents say they have done.
@@ -102,12 +102,12 @@ Job Ranger should explicitly preserve these principles:
 7. **Explore paths beyond the ATS.** Company targeting, legitimate networking, referrals, introductions, communities, recruiters, hiring managers, and other relationship paths can matter before a specific opening exists.
 8. **Do not automate networking spam.** Relationship discovery must not become mass connection requests, automated cold outreach, invented familiarity, or contact scraping by default.
 9. **Measure downstream quality.** Useful measures include qualified opportunities pursued, recruiter response, interviews, progression, offers, accepted outcomes, and evidence-backed learning. Applications sent should not become a vanity metric.
-10. **Preserve trust.** Job Ranger should be capable of becoming a positive signal that a candidate intentionally selected and prepared for an opportunity rather than another source of indiscriminate inbound volume.
+10. **Preserve trust.** Sojourner should be capable of becoming a positive signal that a candidate intentionally selected and prepared for an opportunity rather than another source of indiscriminate inbound volume.
 
 ## Governed follow-up
 
 Issue #121 tracks the next bounded design pass for Career Ops relationship-path discovery and intentional pursuit:
 
-- https://github.com/Knapp-Kevin/job-ranger/issues/121
+- https://github.com/Knapp-Kevin/sojourner/issues/121
 
 This research does **not** claim those future networking/path-discovery capabilities are implemented. It provides rationale for the product direction and for keeping autonomous mass auto-apply an explicit non-goal.

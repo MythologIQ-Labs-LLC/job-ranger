@@ -4,13 +4,13 @@ Issue: #65
 
 ## Purpose
 
-Job Ranger already owns tracked applications and exact resume artifact links. This R5 foundation makes that lifecycle usable without turning Applications into a generic CRM or task manager.
+Sojourner already owns tracked applications and exact resume artifact links. This R5 foundation makes that lifecycle usable without turning Applications into a generic CRM or task manager.
 
 The bounded lifecycle model adds three application-specific concerns:
 
 1. **People**: recruiters, hiring managers, interviewers, or other contacts attached to one application.
 2. **Events**: interviews, follow-ups, deadlines, offer milestones, and other meaningful application events.
-3. **Reminders**: an optional reminder timestamp attached to an application event. Reminders are native Job Ranger state, not a generic workflow engine.
+3. **Reminders**: an optional reminder timestamp attached to an application event. Reminders are native Sojourner state, not a generic workflow engine.
 
 Exact submitted resume history remains owned by the existing `application_artifact_links` authority and is surfaced read-only through the lifecycle view.
 

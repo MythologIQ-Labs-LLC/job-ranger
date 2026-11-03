@@ -1,4 +1,4 @@
-# Job Ranger agent working agreement
+# Sojourner agent working agreement
 
 Start with [docs/ARCHITECTURE_INDEX.md](./docs/ARCHITECTURE_INDEX.md), [GOVERNANCE.md](./GOVERNANCE.md), [docs/REPOSITORY_WORKFLOW.md](./docs/REPOSITORY_WORKFLOW.md), and [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -32,8 +32,8 @@ Windows binaries and installers this repository distributes **must be Authentico
 - A release is signed only after `signtool verify /pa` passes, the signer is `MythologIQ Labs, LLC`, and the signature is timestamped. Record that output in the release evidence.
 
 **This repository (Electron, electron-builder). Windows is the primary product channel (ARCH-001):**
-- `scripts/windows-sign.cjs` signs through SignTool and the Artifact Signing client with the Azure CLI credential only, the same pattern as `Knapp-Kevin/sonic-rift`. There is no client secret. `electron-builder.windows.cjs` uses it as the `win.signtoolOptions.sign` hook when `JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR` is set, and fails closed when `JOB_RANGER_REQUIRE_WINDOWS_SIGNING=1` and it is not.
+- `scripts/windows-sign.cjs` signs through SignTool and the Artifact Signing client with the Azure CLI credential only, the same pattern as `Knapp-Kevin/sonic-rift`. There is no client secret. `electron-builder.windows.cjs` uses it as the `win.signtoolOptions.sign` hook when `SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR` is set, and fails closed when `SOJOURNER_REQUIRE_WINDOWS_SIGNING=1` and it is not.
 - `release-build.yml` signs **every publishing run** (a `v*` tag, or a manual run with publish on) and never a build-only run. A publishing Windows job enters the `release` environment, waits for owner approval, signs in with `azure/login` (GitHub OIDC, environment variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), signs the bundled `sqlite3.exe`, builds and signs the app and installer, and then `scripts/verify-windows-distribution.ps1 -RequireSigned` fails the run unless every executable passes `signtool verify /pa`, is signed by `MythologIQ Labs, LLC` and is timestamped.
 - The CI sign-in needs a federated credential with subject `repo:MythologIQ-Labs-LLC@273517516/sojourner@1183592914:environment:release` on an app that has the Signer role on the profile, plus the `release` environment on this repository. Both are owner-provisioned.
-- Locally, the owner can sign after `az login` by setting `JOB_RANGER_WINDOWS_SIGNING_CLIENT_DIR` before `npm run electron:build:win`.
+- Locally, the owner can sign after `az login` by setting `SOJOURNER_WINDOWS_SIGNING_CLIENT_DIR` before `npm run electron:build:win`.
 - Microsoft Store packages (`electron-builder.store.cjs`, `windows-store-package.yml`) are not a shipping channel. If they are ever submitted, the Store signs them.

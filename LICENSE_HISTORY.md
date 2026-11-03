@@ -1,10 +1,10 @@
 # License History
 
-Job Ranger changed the license applied to its current development line on October 6, 2026.
+Sojourner changed the license applied to its current development line on October 6, 2026.
 
 ## Current development line
 
-From the license-transition commit forward, Job Ranger is licensed under the **GNU Affero General Public License v3.0 only (AGPL-3.0-only)**, except for third-party components that retain their own licenses as recorded in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+From the license-transition commit forward, Sojourner is licensed under the **GNU Affero General Public License v3.0 only (AGPL-3.0-only)**, except for third-party components that retain their own licenses as recorded in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## Historical MIT releases
 

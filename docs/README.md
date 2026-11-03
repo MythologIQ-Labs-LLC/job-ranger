@@ -2,7 +2,7 @@
 
 > **Architecture authority:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md). All architecture choices, supersessions and canonical domain routing start there. Older priority hierarchies below govern evidence/status only and cannot override the architecture index.
 
-Job Ranger documentation is intentionally divided into **current product truth**, **active design/roadmap**, **validation evidence**, **research**, **release evidence**, and **historical provenance**.
+Sojourner documentation is intentionally divided into **current product truth**, **active design/roadmap**, **validation evidence**, **research**, **release evidence**, and **historical provenance**.
 
 This hierarchy exists because the repository has accumulated multiple generations of planning documents. A reader should never have to guess whether an old phase plan still describes the product.
 
@@ -53,7 +53,7 @@ The [October 10, 2026 source-backed reconciliation](./validation/DOCUMENTATION_R
 | [`../SECURITY.md`](../SECURITY.md) | Current security model, boundaries, reporting, and dependency expectations. |
 | [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) | Required attribution and third-party provenance. |
 | [`../LICENSE_HISTORY.md`](../LICENSE_HISTORY.md) | License history: AGPL-3.0-only for development after v1.2.0; MIT grants for v1.2.0 and earlier. |
-| [`../TRADEMARKS.md`](../TRADEMARKS.md) | Job Ranger name/brand use and official-distribution identity. |
+| [`../TRADEMARKS.md`](../TRADEMARKS.md) | Sojourner name/brand use and official-distribution identity. |
 | [`DISTRIBUTION_TRUST.md`](./DISTRIBUTION_TRUST.md) | Forward distribution trust contract: provenance, channel trust, runtime security. |
 | [`TESTER_INSTALLATION.md`](./TESTER_INSTALLATION.md) | Bounded guidance for informed testers of unsigned/prerelease artifacts. |
 | [`CLEAN_MACHINE_TRUST_VALIDATION.md`](./CLEAN_MACHINE_TRUST_VALIDATION.md) | Clean-machine install/first-launch evidence procedure for promoted direct-download binaries. |
@@ -103,10 +103,10 @@ Research documents are inputs to product and architecture decisions, not a featu
 
 Key current research:
 
-- [`research/AUTO_APPLY_MARKET_RESEARCH_2026-10-04.md`](./research/AUTO_APPLY_MARKET_RESEARCH_2026-10-04.md) — delegated/automated submission market evidence and the rationale for Job Ranger's quality-over-quantity Career Ops direction;
+- [`research/AUTO_APPLY_MARKET_RESEARCH_2026-10-04.md`](./research/AUTO_APPLY_MARKET_RESEARCH_2026-10-04.md) — delegated/automated submission market evidence and the rationale for Sojourner's quality-over-quantity Career Ops direction;
 - [`research/RESUME_INTELLIGENCE_QOR.md`](./research/RESUME_INTELLIGENCE_QOR.md)
 - [`research/RESUME_INTELLIGENCE_CATALOG_HARVEST.md`](./research/RESUME_INTELLIGENCE_CATALOG_HARVEST.md)
-- [`research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/JOB_RANGER_CAPABILITY_CATALOG_RECONCILIATION.md)
+- [`research/SOJOURNER_CAPABILITY_CATALOG_RECONCILIATION.md`](./research/SOJOURNER_CAPABILITY_CATALOG_RECONCILIATION.md)
 - [`research/RESUME_PARSER_ADOPTION_2026-09-25.md`](./research/RESUME_PARSER_ADOPTION_2026-09-25.md)
 - [`research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md`](./research/ANYDOC_PARSER_BENCHMARK_PROTOCOL.md)
 - [`research/LOCAL_EVIDENCE_CLI_267.md`](./research/LOCAL_EVIDENCE_CLI_267.md) — **optional development-only tool, on main since #269** (`scripts/local_evidence_cli.py`), local-only typed Git-object evidence verifier; independent component review PASS, no PR enforcement or Qor acceptance. [Runnable sample](./examples/local-evidence-sample.evidence.json).
@@ -149,7 +149,7 @@ As of the October 2026 reconciliation, current docs must reflect that the v1.2 l
 - JSON Resume interoperability;
 - cross-career validation fixtures.
 
-Current product documentation must also preserve the accepted strategic distinction that Job Ranger is a **quality-over-quantity Career Ops product**. It may automate discovery, analysis, preparation, and organization aggressively while keeping consequential external actions intentional. Candidate relationship-path features tracked in #121 remain historical design context unless separately implemented.
+Current product documentation must also preserve the accepted strategic distinction that Sojourner is a **quality-over-quantity Career Ops product**. It may automate discovery, analysis, preparation, and organization aggressively while keeping consequential external actions intentional. Candidate relationship-path features tracked in #121 remain historical design context unless separately implemented.
 
 Current architecture documentation must preserve the accepted post-v1.2 distribution direction:
 

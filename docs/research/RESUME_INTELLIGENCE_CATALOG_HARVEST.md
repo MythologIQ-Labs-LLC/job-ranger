@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Job Ranger already has access to a maintained technical capability catalog that tracks canonical resource identity, license, maturity, data boundary, authority, adoption burden, and suggested disposition. Resume intelligence should use that work rather than rediscovering document and career tooling from scratch.
+Sojourner already has access to a maintained technical capability catalog that tracks canonical resource identity, license, maturity, data boundary, authority, adoption burden, and suggested disposition. Resume intelligence should use that work rather than rediscovering document and career tooling from scratch.
 
 This addendum applies a bounded filter to catalog resources relevant to:
 
@@ -19,7 +19,7 @@ This addendum applies a bounded filter to catalog resources relevant to:
 - PDF/rendering architecture;
 - OCR as a later capability.
 
-Anything incorporated into Job Ranger must preserve Job Ranger's MIT licensing boundary. Resources with incompatible, noncommercial, source-available, proprietary, or materially custom terms may still be studied as references, but their code/assets must not be copied into the product.
+Anything incorporated into Sojourner must preserve Sojourner's MIT licensing boundary. Resources with incompatible, noncommercial, source-available, proprietary, or materially custom terms may still be studied as references, but their code/assets must not be copied into the product.
 
 ## Decision vocabulary
 
@@ -33,9 +33,9 @@ Anything incorporated into Job Ranger must preserve Job Ranger's MIT licensing b
 
 The goal is not to build a parser collection.
 
-Job Ranger should prefer **one best-fit default parser** and add another only when a measured product gap justifies the additional packaging, security, licensing, and maintenance burden.
+Sojourner should prefer **one best-fit default parser** and add another only when a measured product gap justifies the additional packaging, security, licensing, and maintenance burden.
 
-The same principle applies to rendering. Tailit's Typst architecture is useful evidence, but Job Ranger already ships Chromium through Electron. The first resume renderer should therefore reuse the existing runtime unless a benchmark demonstrates that a second rendering engine materially improves output quality or reliability.
+The same principle applies to rendering. Tailit's Typst architecture is useful evidence, but Sojourner already ships Chromium through Electron. The first resume renderer should therefore reuse the existing runtime unless a benchmark demonstrates that a second rendering engine materially improves output quality or reliability.
 
 ## Strongest catalog candidates
 
@@ -47,7 +47,7 @@ The same principle applies to rendering. Tailit's Typst architecture is useful e
 
 Why it is unusually well aligned:
 
-- Rust core with first-party Node.js bindings, avoiding a Python sidecar for Job Ranger's Electron runtime;
+- Rust core with first-party Node.js bindings, avoiding a Python sidecar for Sojourner's Electron runtime;
 - parses DOC, DOCX, DOCM, RTF, OpenDocument, EPUB, CSV, text PDFs, and additional office formats;
 - content-based format detection rather than trusting filename extensions;
 - common document model plus consistent Markdown serialization;
@@ -59,7 +59,7 @@ Why it is unusually well aligned:
 Important boundary:
 
 - scanned/image-only PDF OCR is **not local** when using anydoc's hosted OCR option; it sends the whole document to Firecrawl Parse;
-- Job Ranger must therefore keep hosted OCR disabled by default. `NeedsOcr` should become a visible import state, not an automatic network fallback.
+- Sojourner must therefore keep hosted OCR disabled by default. `NeedsOcr` should become a visible import state, not an automatic network fallback.
 
 Recommended spike:
 
@@ -68,7 +68,7 @@ Recommended spike:
 3. Record parser name/version and warnings in the import record.
 4. Compare extracted text/structure against the benchmark corpus.
 5. Validate malformed/encrypted/resource-limit behavior with adversarial fixtures.
-6. Re-parse Job Ranger-generated PDFs and evaluate whether the same dependency can serve output parseability verification.
+6. Re-parse Sojourner-generated PDFs and evaluate whether the same dependency can serve output parseability verification.
 
 ### 2. EasyPeasyCV — OSS-1325
 
@@ -86,7 +86,7 @@ High-value patterns:
 - multilingual user-facing resume UX;
 - explicit privacy boundary with no server persistence.
 
-Job Ranger should inspect the implementation for interaction patterns and serialization decisions, not adopt EasyPeasyCV's resume object as the Job Ranger domain model. Job Ranger's canonical model must remain evidence/provenance-first rather than document-first.
+Sojourner should inspect the implementation for interaction patterns and serialization decisions, not adopt EasyPeasyCV's resume object as the Sojourner domain model. Sojourner's canonical model must remain evidence/provenance-first rather than document-first.
 
 ### 3. Tailit — OSS-1373
 
@@ -106,7 +106,7 @@ High-value patterns:
 
 Important boundaries:
 
-- the workflow sends resume/job text to Groq for rewriting, which is not acceptable as an implicit Job Ranger baseline;
+- the workflow sends resume/job text to Groq for rewriting, which is not acceptable as an implicit Sojourner baseline;
 - job extraction can use external Jina Reader;
 - the 65 bundled templates are **not one homogeneous MIT asset set**. Tailit's README explicitly says third-party templates, fonts, and Typst Universe packages retain their own licenses.
 
@@ -114,9 +114,9 @@ Recommendation:
 
 - harvest schema-validation, diff/tailoring, and adapter concepts;
 - consider JSON Resume as an import/export interchange format;
-- do **not** make JSON Resume Job Ranger's canonical evidence model;
+- do **not** make JSON Resume Sojourner's canonical evidence model;
 - do not bulk-copy Tailit templates. Review any desired template individually;
-- do not adopt Typst merely because Tailit uses it. Job Ranger's first renderer should use the existing Electron/Chromium runtime and keep the renderer contract replaceable.
+- do not adopt Typst merely because Tailit uses it. Sojourner's first renderer should use the existing Electron/Chromium runtime and keep the renderer contract replaceable.
 
 ### 4. Career-Ops — AC-0008 / upstream `career-ops-hq/career-ops`
 
@@ -133,7 +133,7 @@ Career-Ops remains the strongest domain-specific source for:
 - hiring-manager review as a separate relevance layer;
 - preservation of unsupported requirements as explicit gaps.
 
-Job Ranger should continue to harvest these mechanisms natively rather than embedding the Career-Ops runtime or exposing its CLI/file-oriented UX.
+Sojourner should continue to harvest these mechanisms natively rather than embedding the Career-Ops runtime or exposing its CLI/file-oriented UX.
 
 ### 5. MarkItDown — OSS-0041
 
@@ -170,7 +170,7 @@ Strengths:
 
 Trade-off:
 
-Docling is substantially heavier than the first Job Ranger import need and introduces Python/model packaging concerns. It is more attractive as a benchmark or advanced fallback than as the default R1 parser.
+Docling is substantially heavier than the first Sojourner import need and introduces Python/model packaging concerns. It is more attractive as a benchmark or advanced fallback than as the default R1 parser.
 
 Model/OCR components also require their own license review. MIT on the Docling repository does not magically relicense separately distributed models.
 
@@ -180,7 +180,7 @@ Model/OCR components also require their own license review. MIT on the Docling r
 **License:** Apache-2.0  
 **Disposition:** **PDF spatial/read-order benchmark**
 
-Potential Job Ranger value:
+Potential Sojourner value:
 
 - fast local PDF extraction;
 - spatial/bounding-box output;
@@ -190,7 +190,7 @@ Potential Job Ranger value:
 
 This may prove more useful for **verifying PDF output and reading order** than for general resume import.
 
-Apache-2.0 is compatible with Job Ranger's MIT project, but Apache attribution/NOTICE obligations must be preserved where applicable.
+Apache-2.0 is compatible with Sojourner's MIT project, but Apache attribution/NOTICE obligations must be preserved where applicable.
 
 Do not adopt it if the selected default parser can adequately verify the generated PDF itself.
 
@@ -222,7 +222,7 @@ A later OCR phase should compare PaddleOCR, Docling OCR paths, platform-native o
 **License:** MIT  
 **Disposition:** **Reference only**
 
-Its layout-aware PDF/DOCX ingestion is relevant, but the application is primarily a text-to-speech/document-reader product. It is useful for document UX and parsing comparisons, not a likely Job Ranger dependency.
+Its layout-aware PDF/DOCX ingestion is relevant, but the application is primarily a text-to-speech/document-reader product. It is useful for document UX and parsing comparisons, not a likely Sojourner dependency.
 
 ## Explicit non-adoption / licensing boundaries
 
@@ -231,7 +231,7 @@ Its layout-aware PDF/DOCX ingestion is relevant, but the application is primaril
 **License:** CC BY-NC-SA 1.0 / noncommercial share-alike  
 **Decision:** **Reject direct reuse**
 
-Useful visual/print reference only. Its noncommercial/share-alike terms are inappropriate for incorporation into Job Ranger's MIT code/template baseline.
+Useful visual/print reference only. Its noncommercial/share-alike terms are inappropriate for incorporation into Sojourner's MIT code/template baseline.
 
 ### MinerU — OSS-0097
 
@@ -261,7 +261,7 @@ Useful as a UX/heuristic comparison. Its score should not be treated as ground t
 
 They are useful for understanding resume transformation and authorization failure modes, not as code sources.
 
-## Recommended Job Ranger import architecture after catalog review
+## Recommended Sojourner import architecture after catalog review
 
 The catalog supports a layered adapter architecture, but not a permanently multi-parser runtime.
 
@@ -321,7 +321,7 @@ Tailit and EasyPeasyCV reinforce a useful separation:
 - generated outputs should remain selectable text;
 - live preview and export should derive from the same structured projection when possible.
 
-For Job Ranger, however, the canonical structure must be **Candidate Evidence**, not JSON Resume, Typst data, XML, HTML, or a PDF model.
+For Sojourner, however, the canonical structure must be **Candidate Evidence**, not JSON Resume, Typst data, XML, HTML, or a PDF model.
 
 Recommended relationships:
 
@@ -336,9 +336,9 @@ Candidate Evidence (canonical)
     └── application evidence/history
 ```
 
-JSON Resume is attractive as an interoperability surface because other tools already use it. It is not sufficient as the provenance-rich internal career record Job Ranger needs.
+JSON Resume is attractive as an interoperability surface because other tools already use it. It is not sufficient as the provenance-rich internal career record Sojourner needs.
 
-For the initial renderer, reuse Electron/Chromium and Job Ranger-owned HTML/CSS templates. Revisit Typst only if rendering benchmarks or future DOC/PDF requirements show a material advantage.
+For the initial renderer, reuse Electron/Chromium and Sojourner-owned HTML/CSS templates. Revisit Typst only if rendering benchmarks or future DOC/PDF requirements show a material advantage.
 
 ## Proposed R1 tool bake-off
 
@@ -367,7 +367,7 @@ Score each on:
 - Electron packaging complexity;
 - fully local operation;
 - license and transitive-license clarity;
-- ability to re-parse generated Job Ranger PDFs for output verification.
+- ability to re-parse generated Sojourner PDFs for output verification.
 
 The winner does not need the most features. It needs the best product fit for ordinary resume imports.
 
@@ -379,7 +379,7 @@ For every adopted external component:
 2. review transitive and bundled asset/model licenses when they are not covered by the root license;
 3. record the dependency or copied/modified source in `THIRD_PARTY_NOTICES.md`;
 4. retain required MIT/Apache notices;
-5. record whether Job Ranger copied code, modified code, imported an asset, or only uses the project as a runtime dependency/reference;
+5. record whether Sojourner copied code, modified code, imported an asset, or only uses the project as a runtime dependency/reference;
 6. do not import a template pack merely because the host application itself is MIT;
 7. rerun the check when upgrading across a license or packaging boundary.
 
@@ -412,6 +412,6 @@ For every adopted external component:
 
 The capability catalog reinforces the primary QOR conclusion:
 
-> Job Ranger should own the candidate-evidence and application lifecycle. External tools may help ingest, validate, or render documents, but no parser, resume schema, template engine, LLM workflow, or third-party career application should become the product's canonical source of truth.
+> Sojourner should own the candidate-evidence and application lifecycle. External tools may help ingest, validate, or render documents, but no parser, resume schema, template engine, LLM workflow, or third-party career application should become the product's canonical source of truth.
 
 That keeps the architecture user-agnostic, renderer-agnostic, inference-optional, and replaceable at every external capability boundary.

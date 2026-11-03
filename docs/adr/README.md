@@ -1,4 +1,4 @@
-# Job Ranger Architecture Decision Records
+# Sojourner Architecture Decision Records
 
 Architecture Decision Records capture durable product and technical decisions that should remain visible even as implementation changes.
 
@@ -16,7 +16,7 @@ Architecture Decision Records capture durable product and technical decisions th
 | --- | --- | --- |
 | [ADR-0001](0001-personal-brand-publishing-and-analytics.md) | Personal-brand publishing and analytics are a bounded Career Ops capability; provider overlap with Viable does not merge product authority | Accepted |
 
-## Relationship to other Job Ranger documentation
+## Relationship to other Sojourner documentation
 
 ADRs explain durable architectural decisions. They do not override current source, tests, published-release evidence, or the repository's documented authority hierarchy.
 

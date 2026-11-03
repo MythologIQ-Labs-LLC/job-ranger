@@ -84,7 +84,7 @@ Sojourner is a **Windows application first**. The same app also runs as a **prog
 | **Run it locally in your browser** | Trying Sojourner today on any desktop with Chrome or Edge | Available now from source. See the quick start below. |
 | **Hosted web app** | Use without installing anything | Planned. It needs a production web origin and broader browser validation first. |
 
-> Earlier releases were published as **Job Ranger**, a separate product line. They are archived as `job-ranger-v*` git tags (for example `job-ranger-v1.2.0`) and are no longer offered as downloads; their installers were **unsigned**. Please wait for the signed Sojourner release rather than turning off SmartScreen or other platform protections. If you use Job Ranger v1.2.0, the Sojourner installer is built to upgrade it in place and keep your data; create a backup first.
+> Earlier releases were published as **Job Ranger**, a separate product line. They are archived as `job-ranger-v*` git tags (for example `job-ranger-v1.2.0`) and are no longer offered as downloads; their installers were **unsigned**. Please wait for the signed Sojourner release rather than turning off SmartScreen or other platform protections. If you use Job Ranger v1.2.0, the Sojourner installer replaces it and Sojourner moves your data to its own folder on first start (the old folder is kept unchanged); create a backup first.
 
 ### Quick start: run Sojourner locally
 
@@ -101,7 +101,7 @@ Open **http://localhost:4174** and, if you like, install it as an app from Chrom
 
 - **Keep the same address.** Browser storage is tied to `http://localhost:4174`, so Sojourner refuses to fall back to another port.
 - **Updates replace the app, never your data.** Your workspace lives in your browser's private storage (OPFS).
-- **Back up before experiments.** Settings → **Create backup** writes a portable `.jobranger` file. It is also how you move to the Windows app or another browser.
+- **Back up before experiments.** Settings → **Create backup** writes a portable `.sojourner` file. It is also how you move to the Windows app or another browser.
 - **Recovery is built in.** If the workspace database is ever damaged, Sojourner leaves it untouched and offers to restore from a backup on the startup screen.
 
 ## What Sojourner does
@@ -118,7 +118,7 @@ Open **http://localhost:4174** and, if you like, install it as an app from Chrom
 | **Interview preparation** | Grounded in the actual job, your confirmed evidence, the requirement mapping and the resume you submitted. |
 | **Stories and insights** | Evidence-linked career stories, recurring-gap analysis and observed outcomes, without treating correlation as destiny. |
 | **Personal Brand** | Manual-first LinkedIn post drafting with readiness checks and exact-copy approval, plus analytics from your own LinkedIn exports. There is no account connection and no automatic posting. |
-| **Backup and portability** | Verified backup and staged restore, JSON Resume interoperability, and portable `.jobranger` archives that move between the Windows app and the PWA. |
+| **Backup and portability** | Verified backup and staged restore, JSON Resume interoperability, and portable `.sojourner` archives that move between the Windows app and the PWA. |
 | **Google Drive export** *(opt-in, off by default)* | Send one verified resume PDF to your own Drive, with approval each time and only the narrow `drive.file` permission. It is enabled once the Google OAuth client is provisioned ([#252](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/252)). |
 
 **Not goals:** mass auto-apply, invented qualifications or relationships, silent uploads to AI providers, and a single score posing as hiring truth.
@@ -202,7 +202,7 @@ npm run demo:record          # re-record the walkthrough with the fictional fixt
 npm run demo:screenshots     # regenerate the tour screenshots
 ```
 
-**Local MCP reader (developer preview).** An opt-in, read-only MCP stdio adapter lets a local agent client you authorize query bounded Career Evidence, objectives, opportunities and post readiness from the Windows app's workspace. It starts with zero data scopes and cannot edit records, approve posts, publish or send messages. It is not a published ChatGPT plugin. See [the adapter guide](./docs/integrations/JOB_RANGER_MCP_READONLY.md) and [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md).
+**Local MCP reader (developer preview).** An opt-in, read-only MCP stdio adapter lets a local agent client you authorize query bounded Career Evidence, objectives, opportunities and post readiness from the Windows app's workspace. It starts with zero data scopes and cannot edit records, approve posts, publish or send messages. It is not a published ChatGPT plugin. See [the adapter guide](./docs/integrations/SOJOURNER_MCP_READONLY.md) and [ADR-0002](./docs/adr/0002-local-readonly-mcp-boundary.md).
 
 </details>
 
@@ -218,4 +218,4 @@ Governance and truth-in-status rules are in [GOVERNANCE.md](./GOVERNANCE.md). Br
 
 Sojourner is open source under the [GNU Affero General Public License v3.0 only](./LICENSE). Commercial use and paid distribution are permitted, and covered modified versions remain subject to AGPL source-sharing. Versions released under MIT, including v1.2.0, keep their MIT grants ([LICENSE_HISTORY.md](./LICENSE_HISTORY.md)). The Sojourner name is governed separately by [TRADEMARKS.md](./TRADEMARKS.md).
 
-<sub>Sojourner was previously named Job Ranger. The repository, `MythologIQ-Labs-LLC/sojourner`, was renamed on 2026-11-02. Compatibility identifiers (the app ID, storage names and `.jobranger` archives) keep their original names so existing installations and backups keep working.</sub>
+<sub>Sojourner was previously named Job Ranger. The repository, `MythologIQ-Labs-LLC/sojourner`, was renamed on 2026-11-02. Every identifier now uses the Sojourner name (app ID `com.mythologiq.sojourner`, data folder `%APPDATA%\Sojourner`, `.sojourner` backups); existing data is migrated on first start and older `.jobranger` backups still restore.</sub>

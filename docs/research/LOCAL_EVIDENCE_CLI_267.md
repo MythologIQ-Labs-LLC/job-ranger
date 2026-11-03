@@ -67,7 +67,7 @@ Example inventory (placeholder SHA, not a factual repository claim):
       "kind": "text-present",
       "commit": "0123456789abcdef0123456789abcdef01234567",
       "path": "docs/README.md",
-      "text": "Job Ranger",
+      "text": "Sojourner",
       "purpose": "Illustrative exact source text check"
     }
   ],

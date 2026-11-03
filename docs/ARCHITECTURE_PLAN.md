@@ -3,15 +3,15 @@
 > **Authority routing:** [Canonical Architecture Index](./ARCHITECTURE_INDEX.md) is the single source for active architecture decisions, canonical document selection and explicit supersession. In case of conflict, the index prevails. This document remains canonical for product authority and trust boundaries only within that index.
 
 
-This document describes Job Ranger's current architecture and the boundaries that future work must preserve.
+This document describes Sojourner's current architecture and the boundaries that future work must preserve.
 
 Older phase plans are historical implementation records. They do not override this document, current source, tests, or published-release evidence.
 
 ## Product architecture principle
 
-Job Ranger is a focused job-search companion, not an agent platform.
+Sojourner is a focused job-search companion, not an agent platform.
 
-> **Job Ranger owns career truth, job-search state, and the user's application lifecycle. External capabilities are narrow replaceable adapters, never authorities.**
+> **Sojourner owns career truth, job-search state, and the user's application lifecycle. External capabilities are narrow replaceable adapters, never authorities.**
 
 Consequences:
 
@@ -21,7 +21,7 @@ Consequences:
 - a renderer formats an artifact but does not own canonical state;
 - a browser retrieves pages but does not silently submit consequential actions;
 - a calendar or notification integration may mirror lifecycle state but does not own it;
-- JSON Resume is an interoperability format, not Job Ranger's canonical career model.
+- JSON Resume is an interoperability format, not Sojourner's canonical career model.
 
 An accepted extension to this authority model is [ADR-0001: Personal-brand publishing and analytics authority](./adr/0001-personal-brand-publishing-and-analytics.md), implemented through the design contract in [Personal Brand Publishing and Analytics](./design/PERSONAL_BRAND_PUBLISHING_ANALYTICS.md). It keeps personal professional presence inside Career Ops while explicitly rejecting a general product-marketing role and any runtime dependency on Viable. The decision is authoritative for new implementation; the feature remains unimplemented until source and tests prove otherwise.
 
@@ -42,7 +42,7 @@ An accepted extension to this authority model is [ADR-0001: Personal-brand publi
 ┌──────────────────────────────────────────────────────────┐
 │ Electron main process                                    │
 ├──────────────────────────────────────────────────────────┤
-│ JobScoutBackend                                          │
+│ SojournerBackend                                          │
 │   companies / jobs / filters / settings                  │
 │   scrape history / scheduling / notifications            │
 │                                                          │
@@ -115,7 +115,7 @@ Rules:
 
 - `src/pwa/adapter-map.ts` lists every runtime-specific module and Node built-in the web runtime replaces. `tests/runtime-adapter-contract.test.mjs` requires each adapter to export the full contract and confines Electron imports to IPC/infrastructure modules. The web build fails on any unadapted `node:*` import.
 - Adapters implement mechanics only (persistence, files, parsing, rendering, transport). Domain rules (evidence authority, provenance, lineage, Truth Gate, explicit source approval) are never re-implemented per runtime.
-- Cross-runtime data movement uses the versioned `.jobranger` archive, never another runtime's live database.
+- Cross-runtime data movement uses the versioned `.sojourner` archive, never another runtime's live database.
 - Runtime identity and capabilities (`src/shared/runtime.ts`) are environment facts surfaced honestly in the UI. They are not product-truth switches.
 
 Details: [`design/PWA_RUNTIME.md`](./design/PWA_RUNTIME.md) and [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT_STORE_PACKAGING.md).
@@ -252,7 +252,7 @@ The normative contract is [design/INFERENCE_CONTRACT.md](./design/INFERENCE_CONT
 
 Core rules:
 
-- Job Ranger remains fully useful without inference.
+- Sojourner remains fully useful without inference.
 - The inference-disabled product is the reference baseline. Inference-specific governance is additive and may not replace or weaken existing deterministic gates or make those gates provider-dependent.
 - Inference tasks are explicit and schema-bounded; there is no generic autonomous-agent capability.
 - The shared core constructs the minimum task payload, computes the transmission manifest from everything it transmits, and validates every response.
@@ -261,13 +261,13 @@ Core rules:
 - Career Evidence authority, deterministic requirement/evidence state, Truth Gate, Parseability Gate, source approval, and consequential user actions remain authoritative.
 - Generated factual language must remain evidence-linked. Inference-generated resume wording is evaluated by the unchanged Truth Gate as edited text, bound to the source statement's own evidence, and then requires explicit user review. Truth Gate success is not semantic proof. Factual drafting for application materials, Career Stories, and interview answers cannot be enabled in contract v1, because those surfaces have no deterministic factual token gate. Every v1 task schema is closed and structured-only.
 - Inference failures fall back to deterministic behavior rather than turning into empty evidence, negative assessment, or partial state mutation.
-- Provider adapters are replaceable and runtime-gated. Job Ranger classifies provider location itself (`in-process`, `loopback`, or `remote`), and loopback endpoints need the same consent as remote ones for private data. A PWA must not claim remote-provider support until its credential/transport boundary is independently approved.
+- Provider adapters are replaceable and runtime-gated. Sojourner classifies provider location itself (`in-process`, `loopback`, or `remote`), and loopback endpoints need the same consent as remote ones for private data. A PWA must not claim remote-provider support until its credential/transport boundary is independently approved.
 - Deterministic modules never import inference modules; the inference layer receives deterministic gates by injection and never modifies them.
 - The first implementation slice (#164) is contract types + broker + adjudication hooks + a test-only synthetic fake provider + conformance tests, with no network, credentials, IPC, UI, or persistence. It lives in `electron/src/inference/`. The modules ship inert in desktop builds: no entry point loads them, the production registry is empty, and both runtimes report inference as `not-configured`. `tests/inference-baseline.test.cjs` enforces the one-way import boundary.
 
 The contract received its adversarial architecture/security review in Phase 13 (Draft 0.2). Remote provider implementation remains deferred until a separate provider/security decision is made.
 
-Job Ranger does not currently require a general agent framework, workflow engine, vector database, or agent-memory runtime.
+Sojourner does not currently require a general agent framework, workflow engine, vector database, or agent-memory runtime.
 
 ## Resume import architecture
 
@@ -290,7 +290,7 @@ Import rules:
 6. normalize only into proposed Career Evidence;
 7. require user authority before factual use.
 
-Image-only/scanned documents surface an explicit OCR-required state. Job Ranger does not silently upload them to a hosted OCR or inference service.
+Image-only/scanned documents surface an explicit OCR-required state. Sojourner does not silently upload them to a hosted OCR or inference service.
 
 ## Credential architecture
 
@@ -327,9 +327,9 @@ Confirmed/user-authored evidence is required for direct or transferable factual 
 
 ### Source-text limitation
 
-Job Ranger still does not preserve a canonical complete job-description artifact for every source.
+Sojourner still does not preserve a canonical complete job-description artifact for every source.
 
-Requirement reasoning therefore applies only to text Job Ranger actually collected. The absence of a requirement from stored text is not proof that the employer did not state it elsewhere on the posting.
+Requirement reasoning therefore applies only to text Sojourner actually collected. The absence of a requirement from stored text is not proof that the employer did not state it elsewhere on the posting.
 
 Canonical source/job-description preservation is a current needed gap, not a reason to weaken the mapping model.
 
@@ -375,7 +375,7 @@ Current provider coverage is partial. Additional providers must earn inclusion t
 
 ## Source acquisition architecture
 
-Job Ranger intentionally avoids a universal scraper.
+Sojourner intentionally avoids a universal scraper.
 
 Structured adapters:
 
@@ -400,7 +400,7 @@ Unknown or unsupported sources fail honestly.
 
 Automated acquisition is more privileged than a normal external-link click and therefore has a stricter network boundary.
 
-Before direct fetch or browser requests, Job Ranger rejects unsafe destinations including:
+Before direct fetch or browser requests, Sojourner rejects unsafe destinations including:
 
 - localhost/loopback;
 - link-local addresses;
@@ -431,7 +431,7 @@ A projection captures:
 
 ### Template strategy
 
-Current Job Ranger-owned templates:
+Current Sojourner-owned templates:
 
 - `ats-standard-v1`;
 - `ats-compact-v1`.
@@ -471,7 +471,7 @@ The hidden Chromium render surface uses:
 - document CSP denying remote resources;
 - HTML-escaped user content.
 
-After PDF generation, Job Ranger reparses the artifact (through Anydoc on desktop, pdf.js in the web runtime) and runs critical/advisory checks for extractable text, content retention, contact/section presence, reading order, and parser success. Comparison is Unicode-aware; right-to-left and Indic content, which parsers extract inconsistently, produces an advisory `unverified-script` issue instead of a critical failure (`electron/src/parseability-text.cts`).
+After PDF generation, Sojourner reparses the artifact (through Anydoc on desktop, pdf.js in the web runtime) and runs critical/advisory checks for extractable text, content retention, contact/section presence, reading order, and parser success. Comparison is Unicode-aware; right-to-left and Indic content, which parsers extract inconsistently, produces an advisory `unverified-script` issue instead of a critical failure (`electron/src/parseability-text.cts`).
 
 Critical failures prevent artifact finalization.
 
@@ -584,7 +584,7 @@ Managed artifact paths stored as absolute paths are rebased inside the staged da
 
 The old live data remains a rollback candidate until restored state successfully initializes.
 
-A backup bundle can be packed into a single-file `.jobranger` portable archive: ZIP STORE entries, CRC-32 per entry, and an archive manifest pinning the SHA-256 of the backup manifest. This is the interchange format between the Electron and web runtimes. Restore validation compares migrations against those the build knows and rejects newer formats or schemas explicitly.
+A backup bundle can be packed into a single-file `.sojourner` portable archive: ZIP STORE entries, CRC-32 per entry, and an archive manifest pinning the SHA-256 of the backup manifest. This is the interchange format between the Electron and web runtimes. Restore validation compares migrations against those the build knows and rejects newer formats or schemas explicitly.
 
 ## JSON Resume adapter
 
@@ -599,7 +599,7 @@ Import:
 Export:
 
 - projects current confirmed/user-authored evidence into compatible standard fields;
-- may be intentionally lossy where Job Ranger has richer provenance/semantics;
+- may be intentionally lossy where Sojourner has richer provenance/semantics;
 - does not mutate canonical state.
 
 ## Security boundaries
@@ -631,7 +631,7 @@ Any weakening of these boundaries is a material governance change.
 
 ## Persistence strategy
 
-SQLite owns durable structured metadata and relationships. Managed files live under the Job Ranger data/artifact directory rather than being stored as database blobs.
+SQLite owns durable structured metadata and relationships. Managed files live under the Sojourner data/artifact directory rather than being stored as database blobs.
 
 Durable domains include:
 

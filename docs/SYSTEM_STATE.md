@@ -11,7 +11,7 @@ After that snapshot, `main` gained only #319 (test-only: a busy timeout for two 
 
 - **Published Sojourner release:** none yet. The first is **v1.0.0-alpha.1**, a GitHub pre-release with a Windows installer signed by `MythologIQ Labs, LLC` (`Sojourner-v1.0.0-alpha.1-windows-x64.exe`, installing `Sojourner.exe`). It is prepared on the development line (`package.json` `1.0.0-alpha.1`) and not tagged; acceptance: [`RELEASE_READINESS.md`](./RELEASE_READINESS.md), "Current Windows release acceptance".
 - **Job Ranger releases (separate, earlier product line):** v1.0.0 to v1.2.0. On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits. The last stable one is `job-ranger-v1.2.0` → `71f9b790a1f456321aee2c783f39f4a6784b83a9` (promoted from rc.5, unsigned). The v1.3.0 Job Ranger candidate was never tagged; its content ships in Sojourner 1.0.0-alpha.1.
-- **Upgrade identity:** the Sojourner installer keeps `appId` `com.jobranger.app` so that it upgrades a Job Ranger v1.2.0 installation in place (manual check pending in the release acceptance), and the packaged app pins its data folder to the historical `%APPDATA%\job-ranger` (`resolvePinnedUserDataDirectory`, `electron/src/distribution.cts`). The Microsoft Store package keeps its own identity and `Job Ranger Store` data folder. `npm run test:release-upgrade` verifies upgrades from `job-ranger-v1.2.0`.
+- **Upgrade identity (owner decision 2026-11-02: every name is Sojourner):** the installer uses `appId` `com.mythologiq.sojourner` and removes a legacy Job Ranger install (old appId `com.jobranger.app`) silently while keeping its data (`build/installer.nsh`; manual check pending in the release acceptance). At first start the packaged app copies the legacy data folder `%APPDATA%\job-ranger` to `%APPDATA%\Sojourner` (Store: `Job Ranger Store` to `Sojourner Store`), renames the database to `sojourner.sqlite3`, verifies the copy and uses it; on any failure it runs on the untouched legacy folder (`electron/src/legacy-migration.cts`). `npm run test:release-upgrade` verifies that migration and upgrade from `job-ranger-v1.2.0`.
 
 The October 15 snapshot below still says "v1.2.0" for what was then the published release; read it as Job Ranger `job-ranger-v1.2.0`.
 
@@ -43,7 +43,7 @@ The accepted distribution architecture ([`design/DISTRIBUTION_ARCHITECTURE.md`](
 
 ### Shared core and runtimes
 
-- The Job Ranger application core (repositories, migrations, domain services, IPC channel table, boundary validators, Truth Gate, Parseability Gate, backup/archive) runs unchanged in two runtimes. Runtime infrastructure comes from explicit adapters (`src/pwa/adapter-map.ts`), enforced by a contract test.
+- The Sojourner application core (repositories, migrations, domain services, IPC channel table, boundary validators, Truth Gate, Parseability Gate, backup/archive) runs unchanged in two runtimes. Runtime infrastructure comes from explicit adapters (`src/pwa/adapter-map.ts`), enforced by a contract test.
 - **Web/PWA runtime** (implemented, not deployed): React app + dedicated runtime worker. Persistence is SQLite WASM written to OPFS as atomic snapshots, with an exclusive Web Lock so only one writer exists.
   - Browser DOCX/PDF parsing and a deterministic pdf-lib ATS PDF writer.
   - Strict CSP with Trusted Types and an explicit acquisition-origin allowlist.
@@ -54,7 +54,7 @@ The accepted distribution architecture ([`design/DISTRIBUTION_ARCHITECTURE.md`](
   - An in-package smoke runs the real main process.
   - Details: [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT_STORE_PACKAGING.md).
 - **Local self-hosting** (#145, #147, #149): `npm run selfhost:pwa` serves the production web build at the canonical origin `http://localhost:4174` with `strictPort`, so a busy port fails instead of silently changing the origin and hiding origin-bound browser data. This is the accepted pre-demand dogfood and trusted-testing path; a public HTTPS origin waits until external distribution is justified.
-- **Portable `.jobranger` archive**: single-file, versioned, CRC-32 and SHA-256 validated. Used for Electron ↔ PWA ↔ PWA moves. Restoring v1.2.0 directory backups (via their `manifest.json`) remains supported in the desktop app.
+- **Portable `.sojourner` archive**: single-file, versioned, CRC-32 and SHA-256 validated. Used for Electron ↔ PWA ↔ PWA moves. Restoring v1.2.0 directory backups (via their `manifest.json`) remains supported in the desktop app.
 
 ### Shared-core hardening found during implementation
 
@@ -82,7 +82,7 @@ The accepted distribution architecture ([`design/DISTRIBUTION_ARCHITECTURE.md`](
 - The web runtime cannot monitor career sites that need a full browser (Workday, iCIMS, etc.) or run scheduled checks while closed. These are documented platform limitations; the Windows app covers them.
 - The web PDF writer embeds Noto fonts for Latin extended, Vietnamese, Greek, Cyrillic, Thai, Chinese, Japanese, and Korean (downloaded on first use, then cached). It fails explicitly for right-to-left and Indic scripts, which still need the Windows app.
 - Pre-existing (both runtimes): notification preferences now save from their own Settings section (#276), but job notifications are still not wired to scrape completion (`showJobNotification` in `electron/src/tray-notifications.cts` has no caller).
-- Desktop (Electron `sqlite3` CLI path): text containing a NUL character can be truncated when read back ([#297](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/297), open). #296 and #316 make writes atomic and refuse raw NUL/0x1A in SQL text; they do not fix readback.
+- Desktop (Electron `sqlite3` CLI path): text containing a NUL character can be truncated when read back ([#297](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/297), open). #296 and #316 make writes atomic and refuse raw NUL/0x1A in SQL text; they do not fix readback.
 
 ## Additional development capabilities confirmed on main (not shipped)
 
@@ -104,7 +104,7 @@ This section reconciles source files and checked-in tests on `main` at the snaps
 
 ### Opt-in read-only MCP development adapter
 
-- `mcp/local-readonly-server.mjs`, `mcp/read-only-adapter.mjs`, and `mcp/tunnel-operator.mjs` provide a permission-filtered, **development-only**, opt-in read-only local-agent surface. See `docs/integrations/JOB_RANGER_MCP_READONLY.md` and `docs/adr/0002-local-readonly-mcp-boundary.md`.
+- `mcp/local-readonly-server.mjs`, `mcp/read-only-adapter.mjs`, and `mcp/tunnel-operator.mjs` provide a permission-filtered, **development-only**, opt-in read-only local-agent surface. See `docs/integrations/SOJOURNER_MCP_READONLY.md` and `docs/adr/0002-local-readonly-mcp-boundary.md`.
 - A documented outbound-only Secure MCP Tunnel pathway is **not evidence of a live verified ChatGPT plugin connection**. This is not a feature of the published v1.2.0 installer, and no remote-write authority is implied.
 
 ### Merged to main from 2026-10-10 to 2026-10-15 (not released)
@@ -118,7 +118,7 @@ These pull requests are merged on `main` at the snapshot commit. None is in the 
 - Keyboard and focus (#279): a "Skip to main content" link (`src/components/Layout.tsx`), Escape closes the mobile menu and returns focus, choosing a page from the mobile menu moves focus to the page's main content, and a collapsed group says when it contains the current page (`tests/pwa/nav-keyboard-a11y.spec.ts`).
 - Compact page introductions (#280): at widths up to 767 px or heights up to 700 px the shared page title and its panel are smaller; all text stays visible (`tests/pwa/compact-page-intros.spec.ts`).
 - Accessibility baseline (#305): themed status chips with at least 4.5:1 text contrast, visible Job search labels, a wrapping application action row and a reduced-motion preference (`tests/ux-a11y-badge-contrast.test.mjs`, `tests/pwa/ux-a11y-baseline.spec.ts`).
-- Branded shell (#317): the Job Ranger mountain emblem as app, favicon, web-app and Store icon; a branded sidebar header with task icons; an Atelier 60/30/10 ivory, navy and trail-green teal palette with an automated contrast test (`tests/atelier-palette-contract.test.mjs`) and a palette preview in the theme picker. Desktop windows 700 px tall or less drop decorative sidebar labels so every entry stays visible.
+- Branded shell (#317): the Sojourner mountain emblem as app, favicon, web-app and Store icon; a branded sidebar header with task icons; an Atelier 60/30/10 ivory, navy and trail-green teal palette with an automated contrast test (`tests/atelier-palette-contract.test.mjs`) and a palette preview in the theme picker. Desktop windows 700 px tall or less drop decorative sidebar labels so every entry stays visible.
 
 **Pages**
 
@@ -145,8 +145,8 @@ These pull requests are merged on `main` at the snapshot commit. None is in the 
 
 ### Active drafts explicitly excluded from main
 
-- Issue [#136](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/136): Himalayas remains a gated draft candidate under PRs #232/#233. We Work Remotely RSS remains on **HOLD** pending publisher-terms clearance (PR #238). No draft feed should appear as a shipped or main provider.
-- Issue [#228](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/228): candidate-controlled application handoff remains draft-only on PRs #229/#230. Do not infer approval to submit applications or an implemented main-line feature from those PRs.
+- Issue [#136](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/136): Himalayas remains a gated draft candidate under PRs #232/#233. We Work Remotely RSS remains on **HOLD** pending publisher-terms clearance (PR #238). No draft feed should appear as a shipped or main provider.
+- Issue [#228](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/228): candidate-controlled application handoff remains draft-only on PRs #229/#230. Do not infer approval to submit applications or an implemented main-line feature from those PRs.
 - The Phase 17 governance ledger entries after #94 are on the separate draft plan branch, not the authoritative main ledger. Its independent review has returned VETO; no gate PASS, implementation or SEAL may be implied.
 
 ## v1.2.0 shipped capabilities
@@ -195,7 +195,7 @@ Image-only/scanned OCR remains deferred rather than silently invoking a hosted s
 
 #117 is complete.
 
-Job Ranger preserves durable source snapshots for collected job content, including:
+Sojourner preserves durable source snapshots for collected job content, including:
 
 - source URL;
 - retrieval time;
@@ -204,7 +204,7 @@ Job Ranger preserves durable source snapshots for collected job content, includi
 - completeness state;
 - changed-content history and deduplication.
 
-Requirement analysis reasons over preserved source text rather than relying on the legacy short description snippet. Requirement/evidence mappings retain source linkage so later application/interview context can identify the exact text Job Ranger used.
+Requirement analysis reasons over preserved source text rather than relying on the legacy short description snippet. Requirement/evidence mappings retain source linkage so later application/interview context can identify the exact text Sojourner used.
 
 ### Source reliability diagnostics
 
@@ -368,9 +368,9 @@ Every platform package build emits:
 
 The release manifest is fail-closed: it is not generated unless both the trust report and packaged-smoke report exist.
 
-Windows Smart App Control may make an unsigned tester build non-runnable without a safe per-app override. Job Ranger does not recommend disabling Smart App Control, SmartScreen, or Defender.
+Windows Smart App Control may make an unsigned tester build non-runnable without a safe per-app override. Sojourner does not recommend disabling Smart App Control, SmartScreen, or Defender.
 
-macOS tester guidance uses Apple's bounded Privacy & Security → Open Anyway flow when macOS offers it. Job Ranger does not recommend disabling Gatekeeper globally.
+macOS tester guidance uses Apple's bounded Privacy & Security → Open Anyway flow when macOS offers it. Sojourner does not recommend disabling Gatekeeper globally.
 
 ### Clean-machine evidence tooling
 
@@ -398,7 +398,7 @@ Passed:
 
 - NSIS x64 packaging;
 - bundled SQLite verification and packaged resolver verification;
-- packaged `Job Ranger.exe` execution from its own `app.asar`;
+- packaged `Sojourner.exe` execution from its own `app.asar`;
 - deterministic healthcare-operations package-smoke scenario;
 - refactored Windows trust verifier execution on `windows-latest`;
 - prerelease trust-state verification;
@@ -511,7 +511,7 @@ Dedicated regressions cover:
 
 ## Product direction
 
-Job Ranger is a quality-over-quantity Career Ops product.
+Sojourner is a quality-over-quantity Career Ops product.
 
 Preferred progression:
 

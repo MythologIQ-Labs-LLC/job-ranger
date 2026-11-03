@@ -8,7 +8,7 @@ Universal downstream owner: #88
 
 R5 closes with three distinct portability boundaries:
 
-1. **Job Ranger backup/restore** is the durable protection path for canonical local state and managed artifacts.
+1. **Sojourner backup/restore** is the durable protection path for canonical local state and managed artifacts.
 2. **JSON Resume** is an optional structured interoperability adapter over Career Evidence, not a competing truth store.
 3. **OCR and DOCX output remain deferred** until product evidence demonstrates that their added dependency, security, testing, and maintenance costs solve a material user problem that current paths do not.
 
@@ -38,12 +38,12 @@ Adapter v1 deliberately does not auto-convert `volunteer`, `awards`, `languages`
 
 - only `user-confirmed` and `user-authored` Career Evidence participates;
 - Career Profile contributes non-evidentiary basic identity/location fields only;
-- evidence is emitted only where Job Ranger has an unambiguous standard section mapping;
+- evidence is emitted only where Sojourner has an unambiguous standard section mapping;
 - evidence with no unambiguous standard mapping is omitted with a visible count/warning;
-- Job Ranger-specific provenance, verification state, requirement mappings, application state, and source lineage are not smuggled into unrelated JSON Resume fields;
+- Sojourner-specific provenance, verification state, requirement mappings, application state, and source lineage are not smuggled into unrelated JSON Resume fields;
 - the export points to the canonical JSON Resume schema URL but does not claim a schema version it does not own.
 
-JSON Resume therefore remains a lossy interchange projection by design. The complete portable Job Ranger record is the versioned backup bundle.
+JSON Resume therefore remains a lossy interchange projection by design. The complete portable Sojourner record is the versioned backup bundle.
 
 ## OCR decision
 

@@ -7,15 +7,15 @@ Review: Phase 13 adversarial architecture/security review (`docs/plan-qor-phase1
 
 ## Purpose
 
-Job Ranger is deliberately useful without probabilistic inference. Its canonical career state, requirement/evidence model, opportunity assessment, document gates, application lifecycle, and portability model are deterministic and local-first.
+Sojourner is deliberately useful without probabilistic inference. Its canonical career state, requirement/evidence model, opportunity assessment, document gates, application lifecycle, and portability model are deterministic and local-first.
 
 Optional inference may improve semantic interpretation, drafting, explanation, and prioritization. It must not become a second authority for career truth or a hidden prerequisite for the product.
 
-This document defines the provider-neutral boundary between Job Ranger's deterministic core and any future local or remote inference provider.
+This document defines the provider-neutral boundary between Sojourner's deterministic core and any future local or remote inference provider.
 
 The governing rule is:
 
-> **Inference returns proposals. Job Ranger validates, explains, and decides what may enter product state.**
+> **Inference returns proposals. Sojourner validates, explains, and decides what may enter product state.**
 
 A model response is never Career Evidence, eligibility truth, an application action, or an approved factual claim merely because a provider returned it.
 
@@ -29,7 +29,7 @@ The inference boundary must:
 4. make data leaving the device explicit before remote transmission;
 5. keep provider responses schema-bounded and provenance-linked;
 6. prevent model output from directly mutating canonical state;
-7. work across Job Ranger runtimes only where the runtime can satisfy the same security contract;
+7. work across Sojourner runtimes only where the runtime can satisfy the same security contract;
 8. make failure degrade to deterministic behavior rather than product failure;
 9. preserve enough local provenance to explain how inference-assisted output was produced;
 10. allow future providers to be tested through one conformance contract.
@@ -40,7 +40,7 @@ The deterministic product is the baseline implementation and takes precedence ov
 
 Inference integration must be **additive**:
 
-- disabling or removing every inference provider must return Job Ranger to the same deterministic product behavior, authority model, and safety guarantees;
+- disabling or removing every inference provider must return Sojourner to the same deterministic product behavior, authority model, and safety guarantees;
 - inference must not become a prerequisite for Career Evidence, requirement mapping, opportunity assessment, resume generation, Truth Gate, Parseability Gate, application materials, interview preparation, Search Insights, backup/restore, or normal application lifecycle;
 - provider availability, model quality, rate limits, cost, or consent state must not reduce the correctness of the non-inference path;
 - an inference-specific safeguard may add restrictions to inference-assisted output, but it must not weaken or bypass the deterministic controls;
@@ -93,7 +93,7 @@ This contract does not:
 - choose OpenAI, Anthropic, Gemini, Ollama, or any other provider;
 - add a generic agent runtime;
 - grant models arbitrary tools, filesystem access, browser control, or application-write authority;
-- make inference required for Job Ranger;
+- make inference required for Sojourner;
 - permit autonomous application submission;
 - permit inference to establish factual Career Evidence;
 - permit inference to override, replace, or weaken the deterministic Truth Gate, Parseability Gate, source approval, network policy, or user confirmation;
@@ -104,7 +104,7 @@ Any remote implementation remains a security/privacy boundary change under `GOVE
 
 ## Authority model
 
-The existing Job Ranger authority hierarchy does not change.
+The existing Sojourner authority hierarchy does not change.
 
 ```text
 Canonical local state
@@ -140,7 +140,7 @@ Canonical local state
 
 - **Career Evidence** remains the factual career authority.
 - **Target Tracks** remain the user's intent/preferences authority.
-- **preserved job/source text** remains the authority for what Job Ranger actually observed in a listing.
+- **preserved job/source text** remains the authority for what Sojourner actually observed in a listing.
 - **Applications** remain lifecycle authority.
 - **deterministic gates** remain blocking controls.
 - **the user** remains the authority for confirming imported/proposed career facts and consequential external actions.
@@ -204,12 +204,12 @@ It may not:
 - read arbitrary application state;
 - read arbitrary files;
 - choose additional data to send;
-- call Job Ranger domain services;
+- call Sojourner domain services;
 - perform browser automation;
 - write canonical state;
 - retry on its own;
 - silently invoke another provider;
-- silently retain credentials in Job Ranger content stores.
+- silently retain credentials in Sojourner content stores.
 
 Provider-specific prompt construction belongs behind this adapter boundary. Provider-specific concepts must not leak into domain contracts.
 
@@ -236,7 +236,7 @@ type InferenceCapabilityReport =
 - Runtime capability reporting is an environment fact, not product truth.
 - Test-only providers, including the synthetic fake provider, are registered only from test code. They are never reachable from production entry points. A test proves the production registry is empty.
 - Until a conforming provider is configured, both Electron and PWA report `{ available: false, reason: "not-configured" }`.
-- A PWA must not store long-lived provider API keys in ordinary application state or in a portable `.jobranger` archive.
+- A PWA must not store long-lived provider API keys in ordinary application state or in a portable `.sojourner` archive.
 - A PWA remote-provider path requires a separately approved credential/transport design before it can claim parity.
 - A local browser-accessible inference endpoint must still satisfy browser origin/CORS/network policy and explicit provider configuration.
 
@@ -262,7 +262,7 @@ type InferenceTask =
 interface InferenceProviderDescriptor {
   providerId: string;
   adapterVersion: string;
-  /** Adapter's claim only. Job Ranger classifies location itself. */
+  /** Adapter's claim only. Sojourner classifies location itself. */
   declaredLocation: InferenceLocation;
   displayName: string;
   supportedContractVersions: string[];
@@ -286,13 +286,13 @@ Adding a new task type is an architecture change because it defines a new data a
 
 ### Location classification
 
-Job Ranger classifies a provider's location itself. It does not trust `declaredLocation`.
+Sojourner classifies a provider's location itself. It does not trust `declaredLocation`.
 
-- **`in-process`**: inference runs inside Job Ranger with no network connection, for example a bundled model. Because this class is exempt from remote consent, an adapter may be classified `in-process` only after review confirms it has no network capability. A conformance test runs it with networking denied, so an SDK wrapper cannot be labeled `in-process`.
+- **`in-process`**: inference runs inside Sojourner with no network connection, for example a bundled model. Because this class is exempt from remote consent, an adapter may be classified `in-process` only after review confirms it has no network capability. A conformance test runs it with networking denied, so an SDK wrapper cannot be labeled `in-process`.
 - **`loopback`**: the endpoint resolves to `127.0.0.0/8` or `::1`, and the connection is pinned to that address, so DNS rebinding cannot redirect it.
   - In Electron, the address is checked after name resolution and the connection is pinned to it.
   - In the PWA, browser `fetch` cannot resolve-then-pin, so only IP-literal loopback URLs (`http://127.x.x.x`, `http://[::1]`) count as `loopback`. Every hostname, including `localhost`, is `remote`.
-  - A loopback endpoint is **user-attested**: Job Ranger cannot verify that a local gateway does not forward data to a remote service, and the configuration disclosure says so.
+  - A loopback endpoint is **user-attested**: Sojourner cannot verify that a local gateway does not forward data to a remote service, and the configuration disclosure says so.
 - **`remote`**: everything else.
 
 For consent, `loopback` is treated exactly like `remote` for every private data class (see [Remote consent](#remote-consent)). Only `in-process` is exempt from remote consent.
@@ -316,7 +316,7 @@ interface InferenceRequestEnvelope<TTask extends InferenceTask, TPayload> {
   provider: {
     providerId: string;
     modelId: string;
-    location: InferenceLocation; // Job Ranger's classification
+    location: InferenceLocation; // Sojourner's classification
   };
 
   policy: {
@@ -347,7 +347,7 @@ In v1 each task is **one request, one response**. Provider output is never used 
 
 ## Data classes and transmission manifest
 
-Job Ranger records what a request contains **before** any call is made.
+Sojourner records what a request contains **before** any call is made.
 
 ```ts
 type InferenceDataClass =
@@ -380,7 +380,7 @@ interface InferenceTransmissionManifest {
 The broker **computes** the manifest from everything it transmits. It is not a declaration written beside the payload.
 
 - Coverage spans the whole transmitted envelope: `payload` and `context`. For example, an `applicationId` in `context` is covered as `application-history`.
-- Every transmitted field must be covered by a manifest item. An uncovered field is a `policy-violation` before anything is sent, so the manifest cannot understate what leaves Job Ranger.
+- Every transmitted field must be covered by a manifest item. An uncovered field is a `policy-violation` before anything is sent, so the manifest cannot understate what leaves Sojourner.
 
 The private data classes are every class except `public-job-text`.
 
@@ -400,11 +400,11 @@ Remote inference, and loopback inference involving any private data class, requi
 
 - provider;
 - model when known;
-- the location classification, and for loopback, that Job Ranger cannot verify the endpoint does not forward data;
-- data classes that will leave Job Ranger;
+- the location classification, and for loopback, that Sojourner cannot verify the endpoint does not forward data;
+- data classes that will leave Sojourner;
 - why each class is required;
-- that Job Ranger does not retain raw prompts or responses (see [Local provenance and retention](#local-provenance-and-retention));
-- known provider-side retention/training status when Job Ranger can state it from configured provider policy.
+- that Sojourner does not retain raw prompts or responses (see [Local provenance and retention](#local-provenance-and-retention));
+- known provider-side retention/training status when Sojourner can state it from configured provider policy.
 
 Consent must be specific enough to distinguish, for example, sending a public job description from sending private Career Evidence.
 
@@ -416,7 +416,7 @@ Revoking consent prevents future calls. It does not rewrite already accepted loc
 
 Resume text, job descriptions, employer pages, imported documents, application notes, and model output are all untrusted input.
 
-Provider instructions must treat user/source text as **data**, not instructions. Job Ranger does not rely on detecting injection. It relies on the provider having no authority to act on injected text.
+Provider instructions must treat user/source text as **data**, not instructions. Sojourner does not rely on detecting injection. It relies on the provider having no authority to act on injected text.
 
 No inference task may allow untrusted content to:
 
@@ -717,7 +717,7 @@ type InferenceFailurePhase = "pre-transmission" | "provider" | "validation" | "a
 interface InferenceFailure {
   code: InferenceFailureCode;
   phase: InferenceFailurePhase;
-  message: string; // bounded, authored by Job Ranger
+  message: string; // bounded, authored by Sojourner
   retryAfterSeconds?: number; // rate-limited only; validated integer clamped to 0-3600; advisory data
 }
 ```
@@ -732,7 +732,7 @@ Rules:
 - provider-supplied error and warning text is never logged, persisted, or shown verbatim, because it may echo prompt content;
 - v1 performs **no automatic retry**, in the broker or in the adapter. Retries are user-initiated, and a `retryAfterSeconds` hint is shown as data only;
 - the broker enforces the timeout whatever the adapter does. A response that arrives after cancellation or timeout is discarded and never applied;
-- Job Ranger never silently switches to a different provider because one failed. That includes switching from a local provider to a remote one or back;
+- Sojourner never silently switches to a different provider because one failed. That includes switching from a local provider to a remote one or back;
 - a deterministic result shown after a failure is labeled as deterministic, never as inference output.
 
 ## Credentials and secrets
@@ -744,7 +744,7 @@ They must:
 - live behind a runtime-specific secret/configuration boundary;
 - never appear in request envelopes, payloads, prompts, provenance, or the input to `providerSettingsHash`;
 - never be written to logs;
-- never be included in backup or portable `.jobranger` archives;
+- never be included in backup or portable `.sojourner` archives;
 - never be exposed to renderer/UI code beyond bounded configuration state such as `configured: true | false`;
 - be independently removable.
 
@@ -752,7 +752,7 @@ The PWA may not claim support for long-lived remote-provider credentials until a
 
 ## Local provenance and retention
 
-Job Ranger retains enough local metadata to explain inference-assisted state without turning storage into a raw prompt archive.
+Sojourner retains enough local metadata to explain inference-assisted state without turning storage into a raw prompt archive.
 
 A provenance record includes:
 
@@ -899,7 +899,7 @@ This proves the boundary before a provider exists.
 
 Only after Slice A review, and in a separate issue:
 
-- evaluate one local inference adapter against measured Job Ranger tasks;
+- evaluate one local inference adapter against measured Sojourner tasks;
 - preserve deterministic fallback;
 - measure semantic lift against the benchmark below;
 - do not change canonical authority rules.
@@ -971,7 +971,7 @@ Breaking changes to:
 
 require a new inference contract version (contract) or task schema version (task).
 
-Adapters declare supported contract versions and per-task schema versions. Job Ranger must fail closed on incompatible versions.
+Adapters declare supported contract versions and per-task schema versions. Sojourner must fail closed on incompatible versions.
 
 Model upgrades within a provider adapter must retain provenance and rerun the provider benchmark/conformance suite before promotion.
 

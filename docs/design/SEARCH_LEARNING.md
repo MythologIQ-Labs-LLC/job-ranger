@@ -5,7 +5,7 @@ User stories: US-27, US-28, US-29
 
 ## Purpose
 
-Job Ranger can learn from the user's own saved search history without pretending that a small local sample is the labor market and without allowing analytics to mutate Career Evidence or search intent.
+Sojourner can learn from the user's own saved search history without pretending that a small local sample is the labor market and without allowing analytics to mutate Career Evidence or search intent.
 
 The governing relationship is:
 
@@ -17,7 +17,7 @@ Never:
 
 ## Explicit application context
 
-An application may be assigned to one target track by the user. Job Ranger does not infer this association from the job title, because a single title can participate in different career directions and a user may intentionally pursue adjacent or stretch work.
+An application may be assigned to one target track by the user. Sojourner does not infer this association from the job title, because a single title can participate in different career directions and a user may intentionally pursue adjacent or stretch work.
 
 Unassigned applications remain visible as unassigned in analysis. Missing context is not repaired by guessing.
 
@@ -46,7 +46,7 @@ A requirement participates in recurring-gap analysis only when:
 
 `ambiguous`, `gap`, or unmapped requirements remain unsupported observations. Repeated gaps are grouped by normalized term when available and otherwise by bounded requirement text.
 
-A recurring gap means only: Job Ranger repeatedly observed a requirement for which the current saved evidence mapping does not show support. It does not prove the user lacks the capability. The user may need to add/confirm existing evidence, build the capability, or pursue different opportunities.
+A recurring gap means only: Sojourner repeatedly observed a requirement for which the current saved evidence mapping does not show support. It does not prove the user lacks the capability. The user may need to add/confirm existing evidence, build the capability, or pursue different opportunities.
 
 ## Outcome observations
 
@@ -57,7 +57,7 @@ Search Insights uses saved application/lifecycle state only. It may group observ
 - deterministic source class;
 - saved opportunity employment category.
 
-The current `Applied` count is explicitly the number of applications whose current status is `applied`. Job Ranger does not reconstruct a historical applied-stage event that was never stored.
+The current `Applied` count is explicitly the number of applications whose current status is `applied`. Sojourner does not reconstruct a historical applied-stage event that was never stored.
 
 Interview activity is observed when the application is currently at interview/offer or has a saved interview event. Offer activity is observed when the application is currently at offer or has an offer event/structured offer record.
 
@@ -79,7 +79,7 @@ Minimum sample guards prevent false precision:
 - source-pattern comparisons require at least three applications in each compared source group;
 - recurring-gap strategy feedback requires the same gap across at least three applications.
 
-Job Ranger does not recommend arbitrary application-volume quotas. It does not claim that a source, resume, target track, or behavior caused an observed result.
+Sojourner does not recommend arbitrary application-volume quotas. It does not claim that a source, resume, target track, or behavior caused an observed result.
 
 ## Authority boundary
 

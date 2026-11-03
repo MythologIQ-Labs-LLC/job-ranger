@@ -12,7 +12,7 @@ This document records failure patterns to prevent repetition.
 
 ### What Failed
 
-Pre-implementation audit of Job Ranger scraper enhancement blueprint. The blueprint itself was sound, but the existing codebase contained violations that would be compounded by new implementation.
+Pre-implementation audit of Sojourner scraper enhancement blueprint. The blueprint itself was sound, but the existing codebase contained violations that would be compounded by new implementation.
 
 ### Why It Failed
 

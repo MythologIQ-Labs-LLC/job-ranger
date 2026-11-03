@@ -1,6 +1,6 @@
 # Governance
 
-Job Ranger is an independently maintained open-source project. This document defines how product, release, documentation, security, and implementation decisions are made so contributors can distinguish discussion, implementation, and actual product commitments.
+Sojourner is an independently maintained open-source project. This document defines how product, release, documentation, security, and implementation decisions are made so contributors can distinguish discussion, implementation, and actual product commitments.
 
 ## Maintainer authority
 
@@ -18,7 +18,7 @@ Issues and pull requests are proposals until merged or otherwise explicitly acce
 
 ## Decision priorities
 
-When priorities conflict, Job Ranger generally favors:
+When priorities conflict, Sojourner generally favors:
 
 1. user safety and factual integrity;
 2. privacy and clear authority boundaries;
@@ -182,7 +182,7 @@ Competitor features, catalog entries, and interesting libraries are evidence inp
 Before adding a major capability, evaluate:
 
 - real user problem;
-- fit with Job Ranger's local-first/evidence-first model;
+- fit with Sojourner's local-first/evidence-first model;
 - privacy/security cost;
 - authority implications;
 - maintenance burden;

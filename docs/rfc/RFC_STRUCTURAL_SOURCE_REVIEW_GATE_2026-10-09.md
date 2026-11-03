@@ -2,13 +2,13 @@
 
 **Status:** Proposed for review; design only  
 **Date:** 2026-10-09  
-**Parent:** [#217](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/217)  
-**Implementation gate:** [#221](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/221)  
+**Parent:** [#217](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/217)  
+**Implementation gate:** [#221](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/221)  
 **Existing deterministic contract:** `src/shared/structural-signals.ts` (PR #220)
 
 ## Decision requested
 
-Before any external market data enters a user-facing Job Ranger pathway, require a separate human-verification record for *source identity*, *claim fidelity*, *methods*, and *quotation/reuse rights*. The current `reviewState: "reviewed"` field is self-described metadata, not proof of any of these conditions. **Do not reinterpret or silently promote that enum.**
+Before any external market data enters a user-facing Sojourner pathway, require a separate human-verification record for *source identity*, *claim fidelity*, *methods*, and *quotation/reuse rights*. The current `reviewState: "reviewed"` field is self-described metadata, not proof of any of these conditions. **Do not reinterpret or silently promote that enum.**
 
 This RFC defines a review packet and fail-closed display eligibility policy, **not** a provider, web retriever, scoring system, database migration, or permission to present reviewed claims to users. First acceptance must use fictional, locally bundled synthetic examples only. No production UI is authorized by this RFC alone.
 
@@ -18,7 +18,7 @@ Four independent questions must remain distinguishable:
 
 1. **Is the citation resolvable and genuinely from the claimed publisher?** Human reviewer verifies original publisher domain and/or official document identity through an independent channel, and records how. HTTPS and a title are insufficient.
 2. **Does the source actually make the summarized claim?** Reviewer checks context, time, measurements, denominator, sample and whether an estimate or projection was recast as an observation.
-3. **May Job Ranger reproduce the excerpt?** Human review of the actual license, publisher terms or specific permission; link-only unless permission is established. This is a rights check, not a statement that link-only content is independently accurate.
+3. **May Sojourner reproduce the excerpt?** Human review of the actual license, publisher terms or specific permission; link-only unless permission is established. This is a rights check, not a statement that link-only content is independently accurate.
 4. **Is the claim usable as bounded context?** Reviewer confirms matching geography, sector, business model and observed period; limitations and counterevidence remain visible. Passing a review **never** authenticates a prediction or an individual's prospects.
 
 A claim with no sufficient source proof remains quarantined. Disputes and withdrawals override earlier favorable reviews. Contradictory, verified observations must coexist; reviewers cannot choose a winner by deletion.

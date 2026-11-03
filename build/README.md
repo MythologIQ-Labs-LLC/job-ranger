@@ -1,6 +1,6 @@
 # Build Assets
 
-This directory contains build-time resources for Job Ranger. Public branding assets live under `docs/assets/branding/`; runtime static assets live under `public/`.
+This directory contains build-time resources for Sojourner. Public branding assets live under `docs/assets/branding/`; runtime static assets live under `public/`.
 
 ## Canonical Application Icon
 
@@ -45,10 +45,10 @@ Signing and notarization behavior depends on the Apple credentials available to 
 Repository/presentation assets do **not** belong in this directory. Use:
 
 ```text
-docs/assets/branding/job-ranger-logo.png
-docs/assets/branding/job-ranger-banner.png
-docs/assets/branding/job-ranger-social-preview.png
+docs/assets/branding/sojourner-banner.png
 ```
+
+The `docs/assets/branding/job-ranger-*.png` files are historical Job Ranger artwork kept for provenance (`job-ranger-logo.png` is still the source of the app emblem, see `scripts/extract-sojourner-icon.sh`).
 
 See `docs/BRANDING.md` for the canonical asset map.
 

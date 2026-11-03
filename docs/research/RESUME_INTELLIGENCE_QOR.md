@@ -1,12 +1,12 @@
 # QOR Research: Resume and Import Intelligence
 
-**Status:** Research synthesis for planned Job Ranger resume/import intelligence  
+**Status:** Research synthesis for planned Sojourner resume/import intelligence  
 **Date:** 2026-09-24  
-**Scope:** Resume creation, resume import, tailoring, ATS compatibility, human review, specialized formats, evidence integrity, and integration into the Job Ranger application lifecycle.
+**Scope:** Resume creation, resume import, tailoring, ATS compatibility, human review, specialized formats, evidence integrity, and integration into the Sojourner application lifecycle.
 
 ## Executive conclusion
 
-Job Ranger should not build a "resume generator" as a document-first feature.
+Sojourner should not build a "resume generator" as a document-first feature.
 
 It should build a **candidate evidence system** that can import, normalize, verify, select, tailor, and render truthful career evidence into different resume artifacts for different application contexts.
 
@@ -14,11 +14,11 @@ The resume is an output. The durable product asset is the evidence behind it.
 
 That distinction matters because there is no single universally optimal resume. A document that is easy for an Applicant Tracking System to parse is not necessarily the best document for a hiring manager to evaluate. A federal resume has explicit qualification requirements that differ from an ordinary private-sector resume. An academic CV is a different artifact again. A career changer may benefit from skills-forward organization while a candidate with a linear work history may be better served by reverse chronology.
 
-Job Ranger therefore needs a context-aware resume intelligence layer, not one template with increasingly elaborate conditionals.
+Sojourner therefore needs a context-aware resume intelligence layer, not one template with increasingly elaborate conditionals.
 
 ## Research question
 
-What should Job Ranger know, preserve, verify, and vary in order to help a person create or import a modern resume that remains truthful, parseable, relevant, readable, and appropriate for the actual hiring context?
+What should Sojourner know, preserve, verify, and vary in order to help a person create or import a modern resume that remains truthful, parseable, relevant, readable, and appropriate for the actual hiring context?
 
 ## Research model: the resume has multiple consumers
 
@@ -46,7 +46,7 @@ Modern hiring systems increasingly do more than extract fields. They compare ski
 
 NACE's 2026 Job Outlook research reports growing employer adoption of skills-based hiring. LinkedIn's current recruiter tooling similarly describes candidate evaluation in terms of qualifications, evidence, skills, and semantic retrieval rather than simple keyword identity.
 
-Implication for Job Ranger:
+Implication for Sojourner:
 
 - exact terminology still matters when the employer names an explicit requirement;
 - semantic equivalents matter too;
@@ -60,11 +60,11 @@ The recruiter's problem is speed and clarity.
 
 Harvard and MIT both emphasize that a resume must be concise, easy to skim, relevant to the target, fact-based, and organized so important information is immediately visible. Career-Ops operationalizes this as a "top third" or rapid-clarity gate.
 
-The precise folklore around a universal six-second scan should not become a scientific claim in Job Ranger. The useful design principle is simpler:
+The precise folklore around a universal six-second scan should not become a scientific claim in Sojourner. The useful design principle is simpler:
 
 > The first visible portion of the resume should quickly establish what the candidate is targeting, why they plausibly fit, and where the proof is.
 
-For Job Ranger this suggests a deterministic recruiter-read audit based on information hierarchy rather than a magical fixed number of seconds.
+For Sojourner this suggests a deterministic recruiter-read audit based on information hierarchy rather than a magical fixed number of seconds.
 
 ### 4. Hiring manager / domain reviewer
 
@@ -93,7 +93,7 @@ Examples:
 - **Creative/portfolio-driven work:** the resume may remain structurally conservative while portfolio evidence carries a larger share of proof.
 - **International markets:** conventions differ by country, including terminology, page size, photo expectations, personal information norms, and CV/resume meaning.
 
-Job Ranger should model these as **document contexts**, not occupations baked into the product.
+Sojourner should model these as **document contexts**, not occupations baked into the product.
 
 ## Resume formats and what they are actually for
 
@@ -119,13 +119,13 @@ It can be useful when:
 - relevant evidence is distributed across volunteering, projects, training, military experience, caregiving, contract work, or unrelated jobs;
 - the candidate is making a substantial career change.
 
-It should not erase chronology or become a mechanism for hiding facts. A safer Job Ranger default for career changers may be a **hybrid** rather than a pure functional resume.
+It should not erase chronology or become a mechanism for hiding facts. A safer Sojourner default for career changers may be a **hybrid** rather than a pure functional resume.
 
 ### Combination / hybrid
 
 This combines an evidence-forward skills or qualifications section with a recognizable reverse-chronological experience history.
 
-This is likely the most useful alternative projection for Job Ranger because it can foreground transferable evidence without sacrificing chronology or parser clarity.
+This is likely the most useful alternative projection for Sojourner because it can foreground transferable evidence without sacrificing chronology or parser clarity.
 
 ### Targeted
 
@@ -179,7 +179,7 @@ Useful defaults are contextual:
 - federal resumes currently have a hard two-page maximum under USAJOBS rules;
 - academic CVs are variable-length and can be substantially longer.
 
-Job Ranger should therefore implement **context-sensitive guidance and warnings**, not a global one-page or two-page hard gate.
+Sojourner should therefore implement **context-sensitive guidance and warnings**, not a global one-page or two-page hard gate.
 
 ## Section strategy: modular, not mandatory
 
@@ -207,7 +207,7 @@ A robust resume model should not assume every user has or needs every section.
 
 A trade professional may derive more value from licenses and equipment/domain experience than from an Education section. A senior operator may not need a Projects section. A recent graduate may place Education high on the page. An academic CV may contain sections that would be absurd on a retail supervisor's resume.
 
-Job Ranger should model sections as projections from evidence, with context-specific ordering rules.
+Sojourner should model sections as projections from evidence, with context-specific ordering rules.
 
 ## The content atom: evidence, not prose
 
@@ -244,7 +244,7 @@ This is not intended as the final database schema. It is the architectural bound
 
 A generated resume bullet should retain references to the evidence records that support it.
 
-That allows Job Ranger to answer:
+That allows Sojourner to answer:
 
 - Where did this claim come from?
 - Is it verified or inferred?
@@ -310,7 +310,7 @@ Examples include:
 - SCO: Skill + Context + Outcome;
 - X/Y/Z-style impact framing.
 
-Job Ranger should not worship one mnemonic. It should score for the underlying dimensions:
+Sojourner should not worship one mnemonic. It should score for the underlying dimensions:
 
 1. **Action:** what did the person actually do?
 2. **Context:** where, for whom, or under what constraint?
@@ -346,7 +346,7 @@ Penn's guidance is especially useful here:
 - objective/measurable skills can appear in a Skills section;
 - softer skills such as communication, leadership, collaboration, and teamwork are stronger when demonstrated through experience rather than merely listed.
 
-Job Ranger should therefore distinguish:
+Sojourner should therefore distinguish:
 
 - **declared/verified skills** appropriate for a skills list;
 - **demonstrated competencies** supported by evidence statements;
@@ -378,7 +378,7 @@ Classify each as:
 - **ambiguous, ask user**;
 - **gap / unsupported**.
 
-Career-Ops' `existing / supportedByResume / gap` model is a strong precedent and should be adapted into Job Ranger's native architecture.
+Career-Ops' `existing / supportedByResume / gap` model is a strong precedent and should be adapted into Sojourner's native architecture.
 
 ### Step 3: Select and reorder
 
@@ -386,7 +386,7 @@ Choose the evidence that matters for this target rather than rewriting every his
 
 ### Step 4: Translate vocabulary carefully
 
-If the job description uses a standard term that accurately describes the user's existing experience, Job Ranger may use that term.
+If the job description uses a standard term that accurately describes the user's existing experience, Sojourner may use that term.
 
 Example:
 
@@ -410,13 +410,13 @@ Every tailored artifact should retain:
 - final exported artifact;
 - which application used it.
 
-This is a natural fit for Job Ranger because it already owns the application lifecycle.
+This is a natural fit for Sojourner because it already owns the application lifecycle.
 
 ## ATS compatibility should be deterministic and advisory
 
 Career-Ops has a useful `verify-ats` pattern: structural checks are deterministic and separate from language-model writing.
 
-Job Ranger should implement its own native ATS/readability verifier that checks things such as:
+Sojourner should implement its own native ATS/readability verifier that checks things such as:
 
 - text layer exists;
 - reading order is sane;
@@ -437,7 +437,7 @@ Education, Skills, or Work Experience should not be globally hard-required secti
 
 A resume can parse perfectly and still be bad.
 
-Job Ranger should keep at least three separate review dimensions:
+Sojourner should keep at least three separate review dimensions:
 
 ### Truth gate
 
@@ -457,7 +457,7 @@ Does the document make a persuasive truthful case for this specific target?
 
 This should be advisory and user-controlled.
 
-Career-Ops' hiring-manager audit is a useful concept, especially the insistence that the reviewer context be role/company grounded and separate from the writer. Job Ranger can eventually implement this as an optional advanced review without making inference mandatory for basic resume creation.
+Career-Ops' hiring-manager audit is a useful concept, especially the insistence that the reviewer context be role/company grounded and separate from the writer. Sojourner can eventually implement this as an optional advanced review without making inference mandatory for basic resume creation.
 
 ## Rendering architecture
 
@@ -545,7 +545,7 @@ Bad uses:
 
 The user should be able to see and approve any new fact entering the canonical evidence store.
 
-## Career-Ops: what Job Ranger should harvest
+## Career-Ops: what Sojourner should harvest
 
 Career-Ops is MIT licensed and contains several mature ideas worth adapting.
 
@@ -565,7 +565,7 @@ Career-Ops is MIT licensed and contains several mature ideas worth adapting.
 - optional hiring-manager audit after fact verification;
 - preservation of what changed between tailored versions.
 
-### Things Job Ranger should not copy as universal policy
+### Things Sojourner should not copy as universal policy
 
 - tech-oriented section ordering;
 - globally mandatory Education, Skills, Projects, or Work Experience sections;
@@ -577,7 +577,7 @@ Career-Ops is MIT licensed and contains several mature ideas worth adapting.
 
 The value of Career-Ops here is the **pipeline discipline**, not its original candidate defaults.
 
-## Proposed Job Ranger domain model
+## Proposed Sojourner domain model
 
 The resume feature should probably introduce four durable domain concepts.
 
@@ -606,11 +606,11 @@ The primary UI should not ask users to understand ATS theory.
 A normal workflow could be:
 
 1. **Add your resume** or **build from scratch**.
-2. Job Ranger extracts what it can.
+2. Sojourner extracts what it can.
 3. User reviews uncertain facts.
-4. Job Ranger builds a reusable career evidence profile.
+4. Sojourner builds a reusable career evidence profile.
 5. On a job page, user selects **Prepare application**.
-6. Job Ranger shows:
+6. Sojourner shows:
    - strong evidence;
    - missing/uncertain requirements;
    - proposed resume version;
@@ -652,7 +652,7 @@ Each benchmark should include:
 - parseability fixtures;
 - expected final artifact metadata.
 
-This is the resume equivalent of preventing Job Ranger from accidentally becoming "HVAC + software developers: the application."
+This is the resume equivalent of preventing Sojourner from accidentally becoming "HVAC + software developers: the application."
 
 ## Recommended implementation sequence
 
@@ -708,9 +708,9 @@ This is the resume equivalent of preventing Job Ranger from accidentally becomin
 
 The planned roadmap item should be renamed mentally from **Resume / Import Intelligence** to something closer to **Career Evidence and Resume Intelligence**.
 
-The differentiator is not that Job Ranger can generate a prettier PDF. Hundreds of products can do that.
+The differentiator is not that Sojourner can generate a prettier PDF. Hundreds of products can do that.
 
-The differentiator is that Job Ranger can know:
+The differentiator is that Sojourner can know:
 
 - what the user has actually done;
 - where each claim came from;
@@ -721,7 +721,7 @@ The differentiator is that Job Ranger can know:
 - which exact resume version was sent with which application;
 - how that evidence should carry forward into interviews, follow-ups, negotiation, and future opportunities.
 
-That turns resume building from an isolated document task into part of the Job Ranger job-search system.
+That turns resume building from an isolated document task into part of the Sojourner job-search system.
 
 ## Primary research sources
 

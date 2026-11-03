@@ -28,7 +28,7 @@ The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies se
 
 ### Candidate identification
 - [ ] `package.json` and the top-level `package-lock.json` entries are `1.0.0-alpha.1`; the tag is `v1.0.0-alpha.1` on the reviewed `main` commit, and that commit is recorded.
-- [ ] `electron-builder.json` keeps `appId` `com.jobranger.app` and `nsis.deleteAppDataOnUninstall: false`, names the product `Sojourner`, and carries `Copyright © 2026 MythologIQ Labs, LLC`.
+- [ ] `electron-builder.json` uses `appId` `com.mythologiq.sojourner`, `nsis.deleteAppDataOnUninstall: false` and `nsis.include` `build/installer.nsh` (removes a legacy Job Ranger install, appId `com.jobranger.app`, keeping its data; `tests/nsis-legacy-uninstall.test.cjs`), names the product `Sojourner`, and carries `Copyright © 2026 MythologIQ Labs, LLC`.
 - [ ] The CHANGELOG `1.0.0-alpha.1` section describes only what is on the tagged commit (Windows Drive export #369 and storage locations #370 are on `main` since 2026-11-02).
 - [ ] Local gates pass on the tagged commit: `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run test:pwa:e2e`, `npm run test:release-upgrade` (baseline `job-ranger-v1.2.0`).
 
@@ -44,11 +44,11 @@ The gate for tagging and publishing `v1.0.0-alpha.1` (#363, #339). It applies se
 - [ ] The installer is only called "signed" in release notes or docs after the above evidence exists.
 
 ### Upgrade from Job Ranger v1.2.0 data
-- [ ] Automated: `npm run test:release-upgrade` passes from `job-ranger-v1.2.0` (all baseline directories open unchanged, migrations apply, backups restore).
-- [ ] On a Windows machine with Job Ranger v1.2.0 installed and real-looking data in `%APPDATA%\job-ranger`: create a `.jobranger` backup, run the Sojourner installer, and confirm it upgrades in place (one entry, "Sojourner", in Installed apps; the "Job Ranger" shortcuts are replaced by "Sojourner"; the install folder is the existing one or the old executable is gone).
-- [ ] First launch of Sojourner shows the existing Career Profile, Career Evidence, Target Tracks, applications and resumes; Settings → This installation reports the data location `%APPDATA%\job-ranger`, and no new `%APPDATA%\Sojourner` workspace is used.
-- [ ] Uninstalling Sojourner leaves `%APPDATA%\job-ranger` in place; reinstalling opens the same data.
-- [ ] A clean-machine install (no Job Ranger) launches normally, and SmartScreen / Smart App Control behavior is recorded (section 10).
+- [ ] Automated: `npm run test:release-upgrade` passes from `job-ranger-v1.2.0` (every baseline data folder is migrated by the start-up migration into a `Sojourner` folder with all records and the legacy folder unchanged, then opens, migrations apply, backups restore). `tests/legacy-migration.test.cjs` covers every migration branch, including fallback to the legacy folder.
+- [ ] On a Windows machine with Job Ranger v1.2.0 installed and real-looking data in `%APPDATA%\job-ranger`: create a `.jobranger` backup, run the Sojourner installer, and confirm the installer removed Job Ranger (one entry, "Sojourner", in Installed apps; no "Job Ranger" shortcuts or executable remain).
+- [ ] First launch of Sojourner shows the existing Career Profile, Career Evidence, Target Tracks, applications and resumes; Settings → This installation reports the data location `%APPDATA%\Sojourner`; `%APPDATA%\job-ranger` is unchanged and holds `MIGRATED-TO-SOJOURNER.txt`.
+- [ ] Uninstalling Sojourner leaves `%APPDATA%\Sojourner` in place; reinstalling opens the same data.
+- [ ] A clean-machine install (no Sojourner) launches normally, and SmartScreen / Smart App Control behavior is recorded (section 10).
 
 ### Publication (section 11)
 - [ ] The GitHub Release is titled "Sojourner v1.0.0-alpha.1" and is marked **pre-release** (the workflow does this for `-alpha`, `-beta` and `-rc.` tags).
@@ -183,7 +183,7 @@ For documentation-only remediation, code tests may reuse fresh evidence from the
 - [ ] `windows-package-smoke.json` reports `passed` for the required non-software scenario and is included in release evidence.
 - [ ] The Windows trust verifier executes successfully in the native release runner.
 - [ ] Installer launch/upgrade is exercised on a clean supported Windows system before stable publication.
-- [ ] Existing user data survives installer upgrade, including an upgrade from Job Ranger v1.2.0 (data folder `%APPDATA%\job-ranger`, pinned by `resolvePinnedUserDataDirectory` in `electron/src/distribution.cts`).
+- [ ] Existing user data survives installer upgrade, including an upgrade from Job Ranger v1.2.0 (legacy data folder `%APPDATA%\job-ranger`, migrated to `%APPDATA%\Sojourner` by `electron/src/legacy-migration.cts`).
 - [ ] Every published installer carries valid, timestamped Authenticode signatures by `MythologIQ Labs, LLC` (`verify-windows-distribution.ps1 -RequireSigned`), and observed SmartScreen / Smart App Control behavior is recorded on a clean supported machine. Only build-only candidates are unsigned; their release manifest marks them `testerOnly`.
 - [ ] A GitHub artifact attestation exists for the installer.
 
@@ -195,7 +195,7 @@ Design and procedure: [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT
   - `windows-store-package.json`: identity, version, capabilities exactly `runFullTrust` + `internetClient`, no extensions, canonical assets, bundled `sqlite3.exe`;
   - `windows-store-package-smoke.json`: in-package healthcare Career Ops smoke, `windowsStore: true`, isolated data root, native DOCX resume import, Chromium PDF and native parseability, archive round trip;
   - `windows-store-install.json`: data in package storage, no leak into `%APPDATA%`, historical NSIS data unchanged, uninstall behavior.
-- [ ] Partner Center identity variables are configured and the submission package was built with `JOB_RANGER_REQUIRE_STORE_IDENTITY=1`.
+- [ ] Partner Center identity variables are configured and the submission package was built with `SOJOURNER_REQUIRE_STORE_IDENTITY=1`.
 - [ ] The `.appx`, its checksums, `windows-store-release-manifest.json`, and its artifact attestation are attached to the release.
 - [ ] Partner Center certification passed (record the submission ID).
 - [ ] A clean supported Windows 11 install from the Store listing, first launch, an upgrade from an earlier Store version, and backup/restore are recorded.
@@ -206,7 +206,7 @@ Design and procedure: [`design/MICROSOFT_STORE_PACKAGING.md`](./design/MICROSOFT
 Design and procedure: [`design/PWA_RUNTIME.md`](./design/PWA_RUNTIME.md).
 
 - [ ] The `pwa` workflow passed for the release commit: production build, web-parser benchmark, and the browser suite (Career Ops end to end, Electron↔PWA portability, rejected backups, offline shell, verified/rejected updates, quota failure, tab lock).
-- [ ] `job-ranger-web-v<version>.zip`, `web-build-info.json` (build ID, commit, CSP, asset hashes), the browser-suite report, checksums, the release manifest, and the artifact attestation are attached to the release.
+- [ ] `sojourner-web-v<version>.zip`, `web-build-info.json` (build ID, commit, CSP, asset hashes), the browser-suite report, checksums, the release manifest, and the artifact attestation are attached to the release.
 - [ ] Deployment uses `deploy-pwa.yml` from the attested archive (no rebuild), behind the protected `production-web` environment, to an HTTPS origin that serves the shipped `_headers`.
 - [ ] The post-deploy check confirms the live build ID and security headers.
 - [ ] The browser/platform matrix is recorded from real validation: Chromium-based browsers on Windows, macOS, and Linux; Firefox; Safari, including install/standalone behavior where supported.

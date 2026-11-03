@@ -4,7 +4,7 @@
 **Tracked by:** #125, #130  
 **Last reviewed:** 2026-10-05
 
-Job Ranger separates **artifact provenance**, **platform installation trust**, and **runtime security**. A certificate is one possible trust mechanism, not the product's foundational security model.
+Sojourner separates **artifact provenance**, **platform installation trust**, and **runtime security**. A certificate is one possible trust mechanism, not the product's foundational security model.
 
 The accepted distribution architecture is defined in [`design/DISTRIBUTION_ARCHITECTURE.md`](./design/DISTRIBUTION_ARCHITECTURE.md).
 
@@ -27,11 +27,11 @@ The normal-user distribution strategy after v1.2.0 has two supported targets:
 1. **Cross-platform PWA/web runtime** delivered from a controlled HTTPS production origin.
 2. **Windows-native Microsoft Store package** certified and signed through the Store distribution path.
 
-Public code-signing certificates owned directly by Job Ranger are no longer a prerequisite for those supported paths.
+Public code-signing certificates owned directly by Sojourner are no longer a prerequisite for those supported paths.
 
 Direct native binaries published through GitHub may remain useful for development, testing, archival, or informed advanced users, but they are not the preferred mainstream installation path unless they independently satisfy applicable public OS trust requirements.
 
-Job Ranger documentation must never instruct users to disable SmartScreen, Smart App Control, Defender, Gatekeeper, browser security, or equivalent platform security globally.
+Sojourner documentation must never instruct users to disable SmartScreen, Smart App Control, Defender, Gatekeeper, browser security, or equivalent platform security globally.
 
 ## Trust layers
 
@@ -62,7 +62,7 @@ The supported channel determines how an ordinary user's platform establishes ins
 
 Trusting the installer or origin does not grant the application unlimited authority.
 
-Existing Job Ranger invariants remain in force, including:
+Existing Sojourner invariants remain in force, including:
 
 - local-first personal career data;
 - explicit user authority for consequential actions;
@@ -98,11 +98,11 @@ Once certified, the Store package should become the recommended Windows-native i
 
 ### Azure Artifact Signing disposition
 
-Azure Artifact Signing is no longer required to unblock Job Ranger's supported Windows distribution strategy.
+Azure Artifact Signing is no longer required to unblock Sojourner's supported Windows distribution strategy.
 
 Existing Azure signing integration may remain as optional/dormant infrastructure if its maintenance cost is low, but inability to obtain or maintain a Public Trust certificate profile must not block Store or PWA releases.
 
-If Job Ranger later chooses to make a direct-download native Windows installer a normal mainstream channel again, that decision must establish an appropriate public trust path before the installer is promoted as equivalent to the Store channel.
+If Sojourner later chooses to make a direct-download native Windows installer a normal mainstream channel again, that decision must establish an appropriate public trust path before the installer is promoted as equivalent to the Store channel.
 
 ## PWA / web distribution path
 
@@ -131,8 +131,8 @@ Implemented in PR #142. Nothing here is shipped until a release, a Store listing
 
 | Artifact | Built by | Evidence published with the release |
 | --- | --- | --- |
-| Microsoft Store package `Job Ranger-v<version>-windows-store-x64.appx` (keeps its historical identity; not a shipping channel) | `windows-store-package.yml` (called by `release-build.yml` only on a manual run with platform `windows-store`, never on a tag push) | `windows-store-package.json`, `windows-store-AppxManifest.xml`, `windows-store-package-smoke.json`, `windows-store-install.json`, `windows-store-SHA256SUMS.txt`, `windows-store-release-manifest.json`, GitHub artifact attestation |
-| Web build `job-ranger-web-v<version>.zip` | `pwa.yml` (called by `release-build.yml`) | `web-build-info.json` (build ID, commit, CSP, per-asset SHA-256), `web-pwa-e2e.json`, `web-SHA256SUMS.txt`, `web-release-manifest.json`, GitHub artifact attestation |
+| Microsoft Store package `Sojourner-v<version>-windows-store-x64.appx` (not a shipping channel) | `windows-store-package.yml` (called by `release-build.yml` only on a manual run with platform `windows-store`, never on a tag push) | `windows-store-package.json`, `windows-store-AppxManifest.xml`, `windows-store-package-smoke.json`, `windows-store-install.json`, `windows-store-SHA256SUMS.txt`, `windows-store-release-manifest.json`, GitHub artifact attestation |
+| Web build `sojourner-web-v<version>.zip` | `pwa.yml` (called by `release-build.yml`) | `web-build-info.json` (build ID, commit, CSP, per-asset SHA-256), `web-pwa-e2e.json`, `web-SHA256SUMS.txt`, `web-release-manifest.json`, GitHub artifact attestation |
 | Signed NSIS installer `Sojourner-v<version>-windows-x64.exe` (primary channel, ARCH-001) | `release-build.yml` | `windows-signing.json`, `windows-package-smoke.json`, `windows-SHA256SUMS.txt`, `windows-release-manifest.json` (`testerOnly: true` unless signed), GitHub artifact attestation |
 
 Verify any artifact:
@@ -168,7 +168,7 @@ Every publishing run of the release workflow signs the NSIS installer, following
 
 Native macOS distribution is not currently planned.
 
-Job Ranger will not make Apple Developer Program membership, Developer ID Application signing, notarization, or native macOS packaging a required dependency under the accepted architecture.
+Sojourner will not make Apple Developer Program membership, Developer ID Application signing, notarization, or native macOS packaging a required dependency under the accepted architecture.
 
 macOS users are served through the PWA/web runtime once that runtime meets its validation and capability-parity boundary.
 
@@ -184,7 +184,7 @@ A future native Linux package requires evidence that user value justifies its pa
 
 ## SignPath
 
-SignPath is explicitly **not part of the Job Ranger distribution strategy**.
+SignPath is explicitly **not part of the Sojourner distribution strategy**.
 
 Do not add it as a signing dependency without a future explicit architecture decision reversing this disposition.
 
@@ -245,4 +245,4 @@ The repository's existing Windows Authenticode verification, macOS verification 
 
 They should not be deleted solely because the distribution strategy changed. They may continue to support direct-artifact verification and historical releases.
 
-What changed is the **forward dependency**: normal Job Ranger distribution no longer requires Job Ranger to obtain and maintain both a Windows public-trust signing profile and Apple Developer ID credentials.
+What changed is the **forward dependency**: normal Sojourner distribution no longer requires Sojourner to obtain and maintain both a Windows public-trust signing profile and Apple Developer ID credentials.

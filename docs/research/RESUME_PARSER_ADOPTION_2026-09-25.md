@@ -21,7 +21,7 @@ source artifact
   -> confirmed career evidence
 ```
 
-Plain text and pasted text use Job Ranger's native text path. Anydoc is only required where document extraction earns its keep, initially DOCX and text-bearing PDF.
+Plain text and pasted text use Sojourner's native text path. Anydoc is only required where document extraction earns its keep, initially DOCX and text-bearing PDF.
 
 Scanned or image-only PDF must surface `ocr-required`. Hosted OCR is not enabled by default. No inference provider is required for import or extraction.
 
@@ -124,7 +124,7 @@ No license exception is required for the currently observed package boundary.
 
 ## Adoption decision
 
-Anydoc 0.2.4 clears the bounded parser adoption gate strongly enough to become Job Ranger's default local parser for DOCX and text-bearing PDF in R1.
+Anydoc 0.2.4 clears the bounded parser adoption gate strongly enough to become Sojourner's default local parser for DOCX and text-bearing PDF in R1.
 
 Reasons:
 
@@ -141,7 +141,7 @@ Reasons:
 
 Selection is not permission to skip product packaging proof.
 
-The R1 integration PR that first adds `@firecrawl/anydoc@0.2.4` to Job Ranger must still prove:
+The R1 integration PR that first adds `@firecrawl/anydoc@0.2.4` to Sojourner must still prove:
 
 - Electron Builder includes the correct native package for the target platform;
 - the packaged application can invoke extraction from its installed runtime;

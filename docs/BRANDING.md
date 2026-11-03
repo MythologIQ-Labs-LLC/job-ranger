@@ -44,7 +44,7 @@ GitHub's repository social preview is configured separately in repository settin
 
 ## Brand Direction
 
-Job Ranger's visual language is built around navigation, exploration, trails, mountains, and forward movement. The product should feel capable and approachable rather than technical for its own sake.
+Sojourner's visual language (inherited from the Job Ranger artwork) is built around navigation, exploration, trails, mountains, and forward movement. The product should feel capable and approachable rather than technical for its own sake.
 
 The current visual palette uses dark navy, teal/green, warm orange, cream, and natural landscape tones. New assets should remain compatible with that family rather than introducing unrelated AI-neon or enterprise-dashboard aesthetics.
 
@@ -52,7 +52,7 @@ The current visual palette uses dark navy, teal/green, warm orange, cream, and n
 
 The **approved source of truth is the emblem inside `docs/assets/branding/job-ranger-logo.png`**, specifically the circular mountain, forest and trail illustration to the left of the lettering. The owner supplied both an annotated preview (red circle indicating the selection) and a clean logo. The red circle is **not artwork**, and the wordmark/tagline must not appear in the square icon.
 
-Use `scripts/extract-job-ranger-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
+Use `scripts/extract-sojourner-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
 
 The committed `public/ICON.png` and `public/favicon.png` are the owner-supplied 550×550 transparent extraction of this emblem, used byte-for-byte (SHA-256 `3c557f2dbe8273d97ce05e9aacf49ec51df68bdbd66d466feb1a11d664a28e4c`, October 2026). The repository lockup is 2172×724, not the 2048×682 reference the script checks, so the script stops by design rather than guess a crop. Re-extract only after reconciling that geometry. The PWA and AppX sizes were regenerated from `public/ICON.png` with the same sizes, padding and `#FDF1DD` backgrounds as `scripts/generate-distribution-icons.sh`, using a high-quality stepwise resampler, and were inspected at 16, 32, 44, 192 and 512px.
 
@@ -92,7 +92,7 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 The historical assets below remain as provenance; they are **not current Sojourner presentation assets**. Until #365 is completed, do not represent a Job Ranger image as current Sojourner art. The legacy hierarchy was:
 
-1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-job-ranger-icon.sh`.
+1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-sojourner-icon.sh`.
 2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
 3. `docs/assets/branding/job-ranger-banner.png` for repository presentation.
 4. `docs/assets/branding/job-ranger-social-preview.png` for social/link previews.

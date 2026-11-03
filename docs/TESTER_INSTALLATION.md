@@ -7,7 +7,7 @@ Earlier releases were published as Job Ranger. Their GitHub Releases were remove
 
 ## Upgrading from Job Ranger v1.2.0
 
-The Sojourner installer keeps Job Ranger's application ID, so it upgrades an existing Job Ranger v1.2.0 installation in place: the "Job Ranger" shortcuts and uninstall entry are replaced by "Sojourner", and the app keeps using the existing data folder `%APPDATA%\job-ranger`. Uninstalling does not delete that folder. Create a `.jobranger` backup (Settings) before upgrading.
+The Sojourner installer finds an existing Job Ranger v1.2.0 installation and removes it silently before installing, keeping its data, so you end up with one app, "Sojourner". On first start Sojourner copies your data from `%APPDATA%\job-ranger` to `%APPDATA%\Sojourner`, checks the copy and uses it; the old folder is left unchanged, with a `MIGRATED-TO-SOJOURNER.txt` note, and can be deleted once you have confirmed your data. If the copy cannot be completed, Sojourner keeps using the old folder and tries again next time. Uninstalling never deletes either folder. Create a `.jobranger` backup (Settings) before upgrading.
 
 ## Verify the download first
 
@@ -55,19 +55,19 @@ A matching checksum proves that the downloaded file matches the release asset. I
 3. If Windows Defender SmartScreen presents an OS-native option to inspect the warning and explicitly run the app anyway, a tester who independently trusts the GitHub Release may choose that per-file override.
 4. If **Smart App Control** blocks the installer or Windows provides no per-app/per-file override, stop. The unsigned tester build is not supported on that configuration.
 
-Do not turn off Smart App Control, SmartScreen, Defender, or other Windows security merely to run Sojourner or Job Ranger.
+Do not turn off Smart App Control, SmartScreen, Defender, or other Windows security merely to run Sojourner or Sojourner.
 
 Microsoft documents Smart App Control as blocking unknown unsigned code by default when its intelligence service cannot establish trust. Signed Sojourner releases are the solution for those systems.
 
 ## macOS unsigned or unnotarized tester path
 
 1. Verify the SHA-256 checksum before opening the DMG or ZIP.
-2. Attempt to open Job Ranger normally.
+2. Attempt to open Sojourner normally.
 3. If macOS blocks the app because it is unidentified or not notarized, open **System Settings → Privacy & Security**.
-4. When macOS offers **Open Anyway** for the blocked Job Ranger app, confirm the exception only if you independently trust the GitHub Release and verified its checksum.
+4. When macOS offers **Open Anyway** for the blocked Sojourner app, confirm the exception only if you independently trust the GitHub Release and verified its checksum.
 5. macOS stores that decision as an exception for that app.
 
-Do not disable Gatekeeper globally and do not recursively remove quarantine metadata to make Job Ranger run.
+Do not disable Gatekeeper globally and do not recursively remove quarantine metadata to make Sojourner run.
 
 Apple explicitly documents the Privacy & Security → Open Anyway flow as the bounded user override for software from an unidentified developer or software that has not been notarized.
 

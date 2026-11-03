@@ -1,6 +1,6 @@
 # Clean-Machine Trust Validation
 
-This runbook records the external evidence required before Job Ranger promotes a stable public Windows/macOS release.
+This runbook records the external evidence required before Sojourner promotes a stable public Windows/macOS release.
 
 It complements hosted package validation. It does **not** replace the release pipeline's package-smoke, checksum, or signing checks.
 
@@ -69,7 +69,7 @@ A silent `/S` install may be useful as a separate automation check, but it is **
 
 ### 5. First launch
 
-Launch Job Ranger from the installed application shortcut/start-menu entry.
+Launch Sojourner from the installed application shortcut/start-menu entry.
 
 Record:
 
@@ -106,7 +106,7 @@ shasum -a 256 ~/Downloads/Sojourner-v<version>-macos-arm64.dmg
 
 ### 3. Mount/install normally
 
-Open the DMG and copy Job Ranger to `/Applications` using the normal user flow.
+Open the DMG and copy Sojourner to `/Applications` using the normal user flow.
 
 Do not use `xattr -dr com.apple.quarantine` or globally disable Gatekeeper.
 
@@ -138,7 +138,7 @@ Record:
 
 - whether Gatekeeper accepts the app without an unsigned-app override;
 - any warning/prompt shown;
-- whether Job Ranger reaches its normal first-run UI;
+- whether Sojourner reaches its normal first-run UI;
 - any startup error.
 
 A stable Developer ID-signed/notarized build should not depend on the tester-only **Open Anyway** path documented for unsigned prereleases.

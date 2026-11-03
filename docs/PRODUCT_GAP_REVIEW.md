@@ -3,7 +3,7 @@
 **Review date:** October 2026  
 **Scope:** current `main`, not only the published v1.2.0 release
 
-This document identifies meaningful product gaps without turning competitor feature lists into a shopping spree. Job Ranger's accepted strategic direction is **quality over quantity**: help a person find the right path to employment, not maximize application throughput.
+This document identifies meaningful product gaps without turning competitor feature lists into a shopping spree. Sojourner's accepted strategic direction is **quality over quantity**: help a person find the right path to employment, not maximize application throughput.
 
 ## Disposition vocabulary
 
@@ -45,7 +45,7 @@ The October 4, 2026 auto-apply research is retained in [`research/AUTO_APPLY_MAR
 
 Completed under #117.
 
-Job Ranger now stores durable source snapshots with source URL, retrieval time, content hash, extraction/version metadata, completeness state, changed-content history, and deduplication. Requirement analysis reasons over preserved source text rather than the legacy short description snippet and retains source linkage for later application/interview context.
+Sojourner now stores durable source snapshots with source URL, retrieval time, content hash, extraction/version metadata, completeness state, changed-content history, and deduplication. Requirement analysis reasons over preserved source text rather than the legacy short description snippet and retains source linkage for later application/interview context.
 
 Future source-specific improvements may still increase completeness, but the underlying truth/provenance gap is closed.
 
@@ -86,7 +86,7 @@ Those broader relationship-path features are **not implemented in v1.2.0** merel
 
 **Disposition: Done for v1.2.0; distribution channels in progress**
 
-v1.2.0 published the accumulated product on 2026-10-05 as an owner-approved unsigned desktop release. Ordinary-user delivery now runs through the Microsoft Store package (#125, which awaits Partner Center certification) and the local-first web/PWA runtime (#130, self-hosted on localhost until public demand justifies a production origin). Neither channel needs Job Ranger-owned signing certificates.
+v1.2.0 published the accumulated product on 2026-10-05 as an owner-approved unsigned desktop release. Ordinary-user delivery now runs through the Microsoft Store package (#125, which awaits Partner Center certification) and the local-first web/PWA runtime (#130, self-hosted on localhost until public demand justifies a production origin). Neither channel needs Sojourner-owned signing certificates.
 
 ## Strong candidates after v1.2.0
 
@@ -144,7 +144,7 @@ The #121 design contract is complete. Actual implementation should happen only a
 
 **Disposition: Candidate**
 
-A narrow opt-in adapter could mirror selected interviews/deadlines/follow-ups while keeping Job Ranger authoritative. Deleting a calendar event must not silently erase Job Ranger history.
+A narrow opt-in adapter could mirror selected interviews/deadlines/follow-ups while keeping Sojourner authoritative. Deleting a calendar event must not silently erase Sojourner history.
 
 ### Mock interview practice and answer feedback
 
@@ -220,19 +220,19 @@ Evaluation #133 is closed. Microsoft Store distribution is a legitimate way to o
 
 **Disposition: Rejected / non-goal**
 
-Job Ranger automates work around good employment decisions, not submission volume. It may automate discovery, assessment, preparation, reminders, and bounded user-controlled form assistance. Autonomous mass submission conflicts with user authority and the product's quality-over-quantity contract.
+Sojourner automates work around good employment decisions, not submission volume. It may automate discovery, assessment, preparation, reminders, and bounded user-controlled form assistance. Autonomous mass submission conflicts with user authority and the product's quality-over-quantity contract.
 
 ### Opaque ATS / hiring probability as product truth
 
 **Disposition: Rejected / non-goal**
 
-Job Ranger may expose evidence coverage, keywords, parseability, or known requirements. It must not present a proprietary percentage as an employer's hidden ranking or probability of being hired.
+Sojourner may expose evidence coverage, keywords, parseability, or known requirements. It must not present a proprietary percentage as an employer's hidden ranking or probability of being hired.
 
 ### Recruiter-facing ATS / team workspace
 
 **Disposition: Rejected unless product governance changes**
 
-The product is a personal job-seeker tool. Being recruiter-friendly through higher-intent candidates does not require Job Ranger to become recruiter software.
+The product is a personal job-seeker tool. Being recruiter-friendly through higher-intent candidates does not require Sojourner to become recruiter software.
 
 ### Generic agent framework, vector database, or workflow engine as product architecture
 
@@ -242,7 +242,7 @@ These are implementation choices, not user capabilities. Current vertical domain
 
 ## Competitive-pattern observations
 
-Public product/help material from Huntr, Teal, Simplify, Careerflow, Jobscan, ApplyBlast, LinkedIn, Indeed, and related tools remains useful directional evidence. It is not a feature-parity checklist. Job Ranger should be better at its own contract rather than becoming an offline imitation of every career SaaS simultaneously.
+Public product/help material from Huntr, Teal, Simplify, Careerflow, Jobscan, ApplyBlast, LinkedIn, Indeed, and related tools remains useful directional evidence. It is not a feature-parity checklist. Sojourner should be better at its own contract rather than becoming an offline imitation of every career SaaS simultaneously.
 
 ## Recommended next-work order
 

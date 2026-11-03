@@ -7,7 +7,7 @@
 
 ## Context
 
-Job Ranger owns Career Ops: career direction, factual Career Evidence, opportunity evaluation, application materials, application lifecycle, search learning, and the user's decisions about where to spend professional effort.
+Sojourner owns Career Ops: career direction, factual Career Evidence, opportunity evaluation, application materials, application lifecycle, search learning, and the user's decisions about where to spend professional effort.
 
 Professional presence is part of that system.
 
@@ -19,13 +19,13 @@ The same provider APIs may therefore be appropriate in both products. Architectu
 
 ## Decision
 
-Job Ranger will treat personal-brand publishing and analytics as a bounded Career Ops domain.
+Sojourner will treat personal-brand publishing and analytics as a bounded Career Ops domain.
 
-The required baseline is deterministic and inference-free. Job Ranger must not require an LLM or other model to create a Presence Brief, guide the user's composition, check evidence/readiness, approve exact content, publish it, collect analytics, calculate metrics, compare cohorts, or produce threshold-based advisory learning. A future optional language-assistance feature may be added only as a proposal layer under the existing inference contract and may not replace or weaken this deterministic path.
+The required baseline is deterministic and inference-free. Sojourner must not require an LLM or other model to create a Presence Brief, guide the user's composition, check evidence/readiness, approve exact content, publish it, collect analytics, calculate metrics, compare cohorts, or produce threshold-based advisory learning. A future optional language-assistance feature may be added only as a proposal layer under the existing inference contract and may not replace or weaken this deterministic path.
 
 Its purpose is to help a person make evidence-backed professional communication decisions and learn which content improves professional discovery and career outcomes.
 
-Job Ranger does not become a general marketing platform, company-page campaign manager, product-launch operating system, or multi-brand social suite.
+Sojourner does not become a general marketing platform, company-page campaign manager, product-launch operating system, or multi-brand social suite.
 
 The canonical loop is:
 
@@ -45,7 +45,7 @@ Career direction / Career Evidence / professional objective
 
 ### Domain ownership
 
-Job Ranger may own:
+Sojourner may own:
 
 - personal professional positioning;
 - target-audience intent such as recruiters, hiring managers, peers, founders, or a technical community;
@@ -56,7 +56,7 @@ Job Ranger may own:
 - career-relevant conversion evidence;
 - recommendations about future personal-brand content.
 
-Job Ranger does not own:
+Sojourner does not own:
 
 - a product's ICP;
 - product positioning;
@@ -66,11 +66,11 @@ Job Ranger does not own:
 - organization-page analytics;
 - generalized brand or marketing operations.
 
-A user's own project may appear in Job Ranger content when it is being used as truthful evidence of the person's work, expertise, or professional identity. That does not transfer product-marketing authority into Job Ranger.
+A user's own project may appear in Sojourner content when it is being used as truthful evidence of the person's work, expertise, or professional identity. That does not transfer product-marketing authority into Sojourner.
 
 ### Career truth and drafting
 
-Personal-brand content must inherit Job Ranger's truth boundary.
+Personal-brand content must inherit Sojourner's truth boundary.
 
 Career Evidence may support claims about:
 
@@ -106,7 +106,7 @@ Each personal-brand publication should preserve:
 
 ### Analytics snapshots
 
-Job Ranger should preserve time-stamped snapshots rather than only the latest metric totals.
+Sojourner should preserve time-stamped snapshots rather than only the latest metric totals.
 
 Where provider access supports them, snapshots may include:
 
@@ -131,7 +131,7 @@ If demographic analytics are unavailable through a supported API, a manually rec
 
 ### Derived measures
 
-Job Ranger may calculate:
+Sojourner may calculate:
 
 - impressions per member reached;
 - early distribution velocity;
@@ -151,7 +151,7 @@ Derived metrics must identify their inputs and formula.
 
 The highest-value signals are professional outcomes rather than raw attention.
 
-Where observable or user-recorded, Job Ranger may track:
+Where observable or user-recorded, Sojourner may track:
 
 - recruiter profile visits;
 - relevant new followers or connections;
@@ -164,11 +164,11 @@ Where observable or user-recorded, Job Ranger may track:
 - job opportunities;
 - other user-defined career outcomes.
 
-Job Ranger must not assume every social interaction is career value. Audience relevance and stated objective matter.
+Sojourner must not assume every social interaction is career value. Audience relevance and stated objective matter.
 
 ### Learning and recommendations
 
-Job Ranger may recommend:
+Sojourner may recommend:
 
 - professional themes;
 - hook families;
@@ -181,7 +181,7 @@ Job Ranger may recommend:
 
 Recommendations are advisory.
 
-Job Ranger must not infer a universal best posting time from generic social-media advice, nor claim one post proves causality.
+Sojourner must not infer a universal best posting time from generic social-media advice, nor claim one post proves causality.
 
 Timing recommendations require repeated comparable observations. Topic, hook, tone, format, media, audience, and time should be treated as separate experiment variables where practical.
 
@@ -191,7 +191,7 @@ A high-engagement post that attracts an audience poorly aligned with the user's 
 
 Publishing is an externally consequential action.
 
-Job Ranger must require explicit user approval for the exact content and destination before publication unless a future bounded scheduling policy is separately approved by architecture and product governance.
+Sojourner must require explicit user approval for the exact content and destination before publication unless a future bounded scheduling policy is separately approved by architecture and product governance.
 
 The first implementation should favor exact approved content over execution-time rewriting.
 
@@ -212,39 +212,39 @@ Provider adapters must distinguish:
 
 Successful publication does not imply analytics entitlement.
 
-For LinkedIn, self-service posting permissions and vetted Community Management analytics access are separate capabilities. Job Ranger must represent that distinction directly.
+For LinkedIn, self-service posting permissions and vetted Community Management analytics access are separate capabilities. Sojourner must represent that distinction directly.
 
 ### Boundary with Viable
 
-Job Ranger and Viable may both implement LinkedIn/social publishing and analytics.
+Sojourner and Viable may both implement LinkedIn/social publishing and analytics.
 
 This is acceptable and intentional.
 
-- Job Ranger optimizes the professional presence of a person.
+- Sojourner optimizes the professional presence of a person.
 - Viable optimizes the market presence of a product.
-- Job Ranger does not depend on Viable.
-- Viable does not depend on Job Ranger.
+- Sojourner does not depend on Viable.
+- Viable does not depend on Sojourner.
 - Credentials, workspaces, publication records, analytics, and learning remain product-local.
 - No product may silently read the other's canonical state.
 - A future shared library is permitted only for stateless/mechanical provider protocol code. It must not own Career Ops semantics, productization semantics, approval policy, storage, or recommendation logic.
 
-If one personal-profile post could plausibly serve both purposes, the user's declared intent determines which product owns the workflow. A post about a project as evidence of the user's expertise belongs in Job Ranger. A post intended to acquire users or validate product positioning belongs in Viable.
+If one personal-profile post could plausibly serve both purposes, the user's declared intent determines which product owns the workflow. A post about a project as evidence of the user's expertise belongs in Sojourner. A post intended to acquire users or validate product positioning belongs in Viable.
 
 ## Consequences
 
 ### Positive
 
 - personal branding becomes a coherent Career Ops capability rather than a detached social scheduler;
-- Job Ranger can learn from real professional outcomes, not just application outcomes;
+- Sojourner can learn from real professional outcomes, not just application outcomes;
 - the same Career Evidence truth boundary protects public professional claims;
 - timing, topic, hook, and format recommendations can become user-specific over time;
 - provider metrics are separated from career value;
 - manual analytics remain possible when provider access is unavailable;
-- Job Ranger and Viable retain clean product boundaries even when capabilities overlap.
+- Sojourner and Viable retain clean product boundaries even when capabilities overlap.
 
 ### Negative
 
-- social-provider functionality may be duplicated across Job Ranger and Viable;
+- social-provider functionality may be duplicated across Sojourner and Viable;
 - provider integrations add credential, permission, quota, and policy maintenance;
 - some valuable LinkedIn analytics may require app approval unavailable to ordinary users or developers;
 - demographic and qualitative comment analysis may remain partially manual;
@@ -257,7 +257,7 @@ If one personal-profile post could plausibly serve both purposes, the user's dec
 
 Rejected. Viable is a productization operating system. Making it the personal-brand authority would collapse a deliberate product boundary.
 
-### Keep Job Ranger limited to job applications
+### Keep Sojourner limited to job applications
 
 Rejected. Professional discovery and positioning affect career outcomes before an application exists and therefore fit the broader Career Ops model.
 
@@ -271,7 +271,7 @@ Rejected. That would create cross-product authority, privacy, migration, and cou
 
 ### Optimize for impressions or engagement rate
 
-Rejected. Reach and engagement are intermediate signals. Job Ranger should optimize for professional positioning and career-relevant outcomes.
+Rejected. Reach and engagement are intermediate signals. Sojourner should optimize for professional positioning and career-relevant outcomes.
 
 ### Automatically generate and publish based on analytics
 
@@ -279,7 +279,7 @@ Rejected. Analytics can recommend the next experiment but do not create publicat
 
 ## Implementation implications
 
-- introduce a Personal Brand / Professional Presence bounded context in the Job Ranger architecture;
+- introduce a Personal Brand / Professional Presence bounded context in the Sojourner architecture;
 - add a publication experiment record linked optionally to Target Tracks, Career Evidence, projects, and professional objectives;
 - add exact-content approval and provider destination records;
 - add provider-neutral publishing and analytics capability interfaces;
@@ -291,7 +291,7 @@ Rejected. Analytics can recommend the next experiment but do not create publicat
 - add comparison views by objective, audience, topic, hook, format, and timing window;
 - keep recommendations explainable and advisory;
 - reuse the existing inference contract for optional drafting assistance;
-- preserve local-first behavior and avoid requiring a hosted Job Ranger account;
+- preserve local-first behavior and avoid requiring a hosted Sojourner account;
 - do not introduce a Viable runtime dependency.
 
 ## Related requirements and documents

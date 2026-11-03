@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Job Ranger helps ordinary job seekers discover, monitor, evaluate, prepare for, and manage paths to employment from a private desktop workspace without requiring software-development expertise, a cloud account, or an AI provider just to get started.
+Sojourner helps ordinary job seekers discover, monitor, evaluate, prepare for, and manage paths to employment from a private desktop workspace without requiring software-development expertise, a cloud account, or an AI provider just to get started.
 
-Job Ranger is a **Career Ops** product, not an application-volume optimizer. Its job is to help the user understand who they are, what kind of work and environment they want, which career directions deserve investment, which companies and people may provide useful paths, and which opportunities are worth pursuing intentionally.
+Sojourner is a **Career Ops** product, not an application-volume optimizer. Its job is to help the user understand who they are, what kind of work and environment they want, which career directions deserve investment, which companies and people may provide useful paths, and which opportunities are worth pursuing intentionally.
 
 The resume is evidence about the person. It is not the person's identity, and it is not the sole input to discovery.
 
@@ -12,13 +12,13 @@ The product's preferred progression is:
 
 > **Person → Career Direction → Companies → People → Opportunities → Applications**
 
-That sequence is directional rather than mandatory. A user may enter through an existing job, a company, a contact, a resume, or a career goal. Job Ranger should still orient the workflow around finding a good path to employment rather than maximizing the number of applications sent.
+That sequence is directional rather than mandatory. A user may enter through an existing job, a company, a contact, a resume, or a career goal. Sojourner should still orient the workflow around finding a good path to employment rather than maximizing the number of applications sent.
 
 The product is not built around one occupation, one employment model, or one conventional career path. Its user-facing contract is defined through universal user stories and validated against materially different career contexts.
 
 ## North-star user story
 
-> **US-0:** As a job seeker, I want Job Ranger to adapt to the way my career works without requiring me to understand how Job Ranger works.
+> **US-0:** As a job seeker, I want Sojourner to adapt to the way my career works without requiring me to understand how Sojourner works.
 
 The full catalog lives in [`design/UNIVERSAL_USER_STORIES.md`](./design/UNIVERSAL_USER_STORIES.md).
 
@@ -49,7 +49,7 @@ This breadth does not change the product's authority model. Career Evidence rema
 
 ### Quality over quantity
 
-Job Ranger should optimize for **qualified, intentional progress**, not activity volume.
+Sojourner should optimize for **qualified, intentional progress**, not activity volume.
 
 Application count is not a success metric by itself. A smaller set of well-understood opportunities that fit the user's direction, constraints, evidence, and preferences is preferable to a large queue of weak matches.
 
@@ -57,11 +57,11 @@ The product should reduce the cost of good judgment rather than remove judgment 
 
 When future Career Ops capabilities expand beyond specific openings, they should help the user identify promising companies, relationships, introductions, communities, recruiters, hiring managers, professional-presence opportunities, or other legitimate paths to employment without encouraging indiscriminate or automated outreach.
 
-Professional presence is part of Career Ops when the objective is the person's career rather than marketing a product. Job Ranger may guide evidence-backed personal content, exact user-approved publication, and analytics-based learning about professional discovery and career outcomes. That capability must remain useful without inference and must not become a general company-brand or product-marketing system. The accepted boundary is [ADR-0001](./adr/0001-personal-brand-publishing-and-analytics.md).
+Professional presence is part of Career Ops when the objective is the person's career rather than marketing a product. Sojourner may guide evidence-backed personal content, exact user-approved publication, and analytics-based learning about professional discovery and career outcomes. That capability must remain useful without inference and must not become a general company-brand or product-marketing system. The accepted boundary is [ADR-0001](./adr/0001-personal-brand-publishing-and-analytics.md).
 
 ### Person before resume
 
-Job Ranger should learn from more than the document representing the user's previous work.
+Sojourner should learn from more than the document representing the user's previous work.
 
 Career Evidence establishes what the user can truthfully prove. Career Profile, Target Tracks, preferences, constraints, outcomes, and user-authored career direction describe what the user wants to become and how they want to work.
 
@@ -69,13 +69,13 @@ Experience is evidence for future choices, not a command to repeat the past inde
 
 ### Consumer first
 
-A person looking for work should not need to understand GitHub, Node.js, YAML, scraping architecture, model providers, agent terminology, or ATS vendor taxonomy to use Job Ranger.
+A person looking for work should not need to understand GitHub, Node.js, YAML, scraping architecture, model providers, agent terminology, or ATS vendor taxonomy to use Sojourner.
 
 Implementation sophistication should reduce user cognitive load rather than export it into the interface.
 
 ### Universal core, bounded extensions
 
-Job Ranger models the person, the opportunity, and the evidence without assuming what a “normal” career looks like.
+Sojourner models the person, the opportunity, and the evidence without assuming what a “normal” career looks like.
 
 The core remains shared across career contexts. Occupation-specific concepts such as licenses, clearances, shift requirements, grade systems, portfolios, or specialized document formats may be represented through bounded vocabularies/rules where evidence demonstrates the need.
 
@@ -91,11 +91,11 @@ A remote service must earn its place through a concrete benefit, explicit disclo
 
 Discovery, persistence, monitoring, evidence review, requirement mapping, opportunity assessment, resume creation/tailoring, application materials, interview prep, Career Stories, lifecycle tracking, and Search Insights all have deterministic paths.
 
-Optional inference may improve semantic interpretation or language later, but it should make Job Ranger more capable rather than deciding whether the product is usable.
+Optional inference may improve semantic interpretation or language later, but it should make Sojourner more capable rather than deciding whether the product is usable.
 
 ### Evidence before confidence
 
-Job Ranger must not invent user experience, credentials, compensation, employer requirements, application history, relationships, referrals, or outcomes.
+Sojourner must not invent user experience, credentials, compensation, employer requirements, application history, relationships, referrals, or outcomes.
 
 Career Evidence, not a resume or model response, is the canonical factual career domain.
 
@@ -107,7 +107,7 @@ Remote work, compensation, commute, schedule, employment arrangement, and simila
 
 ### Explain fit, do not simulate certainty
 
-Job Ranger separates:
+Sojourner separates:
 
 - eligibility;
 - evidence coverage;
@@ -122,11 +122,11 @@ Unknown information remains unknown. A single opaque percentage must not be pres
 
 Career sites vary wildly.
 
-Job Ranger distinguishes structured supported adapters, detected best-effort paths, browser-required sources, and manual-review cases. Discovery remains separate from acquisition, and a discovered source does not become trusted/monitored without explicit user approval.
+Sojourner distinguishes structured supported adapters, detected best-effort paths, browser-required sources, and manual-review cases. Discovery remains separate from acquisition, and a discovered source does not become trusted/monitored without explicit user approval.
 
 ### User authority
 
-Job Ranger is a decision-support tool.
+Sojourner is a decision-support tool.
 
 It can find, organize, explain, prepare, remind, preserve, analyze, and eventually surface useful relationship paths. The user remains responsible for consequential external actions, including submitting an application or contacting another person.
 
@@ -134,7 +134,7 @@ It can find, organize, explain, prepare, remind, preserve, analyze, and eventual
 
 The product must preserve what actually happened:
 
-- what source text Job Ranger saw;
+- what source text Sojourner saw;
 - what Career Evidence existed at the time;
 - what resume was submitted;
 - what application material was prepared;
@@ -143,9 +143,9 @@ The product must preserve what actually happened:
 
 A later correction should improve current truth without rewriting history.
 
-## What Job Ranger is not
+## What Sojourner is not
 
-Job Ranger is not currently:
+Sojourner is not currently:
 
 - a recruiter-facing applicant tracking system;
 - a hosted job-search social network;
@@ -173,7 +173,7 @@ Current **candidate** ideas include broader discovery providers, faster arbitrar
 
 Personal Brand / Professional Presence is no longer merely a candidate product idea: its architecture is accepted under ADR-0001, while implementation remains pending under issue #171. The first planned slice is deterministic composition guidance and exact-content approval, followed by manual analytics/learning before connected provider work.
 
-Issue [#121](https://github.com/MythologIQ-Labs-LLC/job-ranger/issues/121) governs the next design pass for relationship-path discovery and intentional pursuit. It is a candidate direction, not a claim that those capabilities are already implemented.
+Issue [#121](https://github.com/MythologIQ-Labs-LLC/sojourner/issues/121) governs the next design pass for relationship-path discovery and intentional pursuit. It is a candidate direction, not a claim that those capabilities are already implemented.
 
 Current **deferred** capabilities include remote inference, OCR, DOCX resume export, specialized federal/academic document projections, cloud sync, and Linux packaging until evidence justifies the complexity.
 
@@ -183,11 +183,11 @@ See [`PRODUCT_GAP_REVIEW.md`](./PRODUCT_GAP_REVIEW.md).
 
 The practical acceptance test remains:
 
-> Can a nontechnical job seeker install Job Ranger, understand what to do next, identify worthwhile paths and opportunities, prepare truthful materials, and manage their search without needing the person who built it sitting beside them?
+> Can a nontechnical job seeker install Sojourner, understand what to do next, identify worthwhile paths and opportunities, prepare truthful materials, and manage their search without needing the person who built it sitting beside them?
 
 The quality test is:
 
-> Does Job Ranger help the user make better career decisions and produce qualified downstream progress without training them to treat application count as achievement?
+> Does Sojourner help the user make better career decisions and produce qualified downstream progress without training them to treat application count as achievement?
 
 The universality test remains:
 
