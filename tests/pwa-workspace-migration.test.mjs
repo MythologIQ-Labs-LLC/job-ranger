@@ -277,6 +277,24 @@ test("when even the cleanup fails, the marker keeps the leftovers recognisable f
   assert.equal(await hasWorkspace(fs, NEW), true);
 });
 
+test("an interrupted cleanup removes the in-progress marker last, so leftovers are never taken for a workspace", async () => {
+  const fs = memoryFs(legacyWorkspace());
+  const rm = fs.rm.bind(fs);
+  let calls = 0;
+  fs.rm = async (target, options) => {
+    calls += 1;
+    if (calls === 2) throw Object.assign(new Error("interrupted"), { code: "EIO" });
+    return rm(target, options);
+  };
+  const outcome = await migrateLegacyWorkspace(fs, options({ verifyDatabase: async () => { throw new Error("not ok"); } }));
+  assert.equal(outcome.action, "failed");
+  assert.equal(outcome.cleanedUp, false);
+  assert.ok(fs.store.has(`${NEW}/${MIGRATION_IN_PROGRESS_FILE}`), "the marker outlives every other leftover");
+  assert.equal(await hasWorkspace(fs, NEW), false);
+  fs.rm = rm;
+  assert.equal((await migrateLegacyWorkspace(fs, options())).action, "migrated");
+});
+
 // --- browser storage keys ---------------------------------------------------------------------
 
 function memoryStorage(entries = {}) {

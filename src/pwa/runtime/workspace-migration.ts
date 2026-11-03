@@ -134,13 +134,13 @@ export async function migrateLegacyWorkspace(fs: MigrationFs, options: Workspace
   const legacyFiles = await listFiles(fs, legacy);
   if (legacyFiles.length === 0) {
     // An interrupted copy whose source is gone holds nothing worth keeping.
-    if (interrupted) await fs.rm(root, { recursive: true, force: true });
+    if (interrupted) await discardPartialCopy(fs, root);
     return { action: "none", reason: "no-legacy-workspace" };
   }
 
   try {
     // Discard an interrupted copy, then claim the new root before writing anything else into it.
-    if (interrupted) await fs.rm(root, { recursive: true, force: true });
+    if (interrupted) await discardPartialCopy(fs, root);
     await fs.mkdir(root, { recursive: true });
     const startedAt = new Date(options.now()).toISOString();
     await fs.writeFile(marker, encodeJson({ schemaVersion: 1, from: legacy, startedAt }));
@@ -177,13 +177,30 @@ export async function migrateLegacyWorkspace(fs: MigrationFs, options: Workspace
   } catch (error) {
     let cleanedUp = true;
     try {
-      await fs.rm(root, { recursive: true, force: true });
+      await discardPartialCopy(fs, root);
     } catch {
       // The marker (written first) still identifies whatever is left as a partial copy.
       cleanedUp = false;
     }
     return { action: "failed", error, cleanedUp };
   }
+}
+
+/**
+ * Removes a partial copy with its in-progress marker LAST: recursive removal is not atomic in OPFS,
+ * so an interrupted removal must still leave the marker that identifies the rest as a partial copy.
+ */
+async function discardPartialCopy(fs: MigrationFs, root: string): Promise<void> {
+  let names: string[] = [];
+  try {
+    names = await fs.readdir(root);
+  } catch (error) {
+    if (errorCode(error) !== "ENOENT") throw error;
+  }
+  for (const name of names) {
+    if (name !== MIGRATION_IN_PROGRESS_FILE) await fs.rm(joinPath(root, name), { recursive: true, force: true });
+  }
+  await fs.rm(root, { recursive: true, force: true });
 }
 
 function parentOf(path: string): string {
