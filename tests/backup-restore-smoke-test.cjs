@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const { SojournerBackend } = require('../electron-runtime/electron/src/backend.cjs');
 const { CareerBackend } = require('../electron-runtime/electron/src/career-backend.cjs');
-const { BackupService, applyPendingRestore } = require('../electron-runtime/electron/src/backup-service.cjs');
+const { BackupService, applyPendingRestore, rebaseRestoredManagedPaths } = require('../electron-runtime/electron/src/backup-service.cjs');
 const { SqliteClient, sql } = require('../electron-runtime/electron/src/sqlite.cjs');
 
 function sha256(buffer) {
@@ -283,6 +283,45 @@ async function run() {
     await afterLegacyCareer.initialize();
     assert.equal((await afterLegacyCareer.getProfile()).fullName, 'Portable Person');
     await afterLegacy.backend.dispose();
+
+    // A restore staged in the legacy folder and applied after the start-up migration copied
+    // that folder elsewhere keeps the legacy artifact paths until they are rebased; backups
+    // refuse paths outside the data directory, so startup rebases them (idempotently).
+    const stagedInLegacy = path.join(root, 'AppData', 'job-ranger');
+    const legacyInstall = await initializeInstallation(stagedInLegacy);
+    await new BackupService({
+      dataDirectory: legacyInstall.dataDirectory,
+      userDataDirectory: stagedInLegacy,
+      databasePath: legacyInstall.status.databasePath,
+      sqliteBinaryPath: legacyInstall.status.sqliteBinaryPath,
+      appVersion: 'test-1',
+    }).stageRestore(created.summary.bundlePath);
+    await legacyInstall.backend.dispose();
+    const migratedUserData = path.join(root, 'AppData', 'Sojourner');
+    await fs.cp(stagedInLegacy, migratedUserData, { recursive: true });
+    const migratedData = path.join(migratedUserData, 'data');
+    assert.equal(await applyPendingRestore({ userDataDirectory: migratedUserData, dataDirectory: migratedData }), true);
+    const migrated = await initializeInstallation(migratedUserData);
+    const migratedSqlite = new SqliteClient(migrated.status.databasePath, migrated.status.sqliteBinaryPath);
+    const managedPaths = async () =>
+      (await migratedSqlite.queryAll('SELECT managed_path FROM source_artifacts ORDER BY id;')).map((row) => row.managed_path);
+    assert.ok((await managedPaths()).every((item) => item.startsWith(path.join(stagedInLegacy, 'data'))), 'rows still point at the legacy folder');
+    const backupService = new BackupService({
+      dataDirectory: migratedData,
+      userDataDirectory: migratedUserData,
+      databasePath: migrated.status.databasePath,
+      sqliteBinaryPath: migrated.status.sqliteBinaryPath,
+      appVersion: 'test-1',
+    });
+    const migratedBackups = path.join(root, 'migrated-backups');
+    await fs.mkdir(migratedBackups);
+    await assert.rejects(backupService.createBackup(migratedBackups), /outside the Sojourner data directory/);
+    assert.equal(await rebaseRestoredManagedPaths(migratedSqlite, migratedData), 1);
+    assert.ok((await managedPaths()).every((item) => item.startsWith(migratedData + path.sep)));
+    assert.equal(await rebaseRestoredManagedPaths(migratedSqlite, migratedData), 0, 'running it again changes nothing');
+    const rebasedBackup = await backupService.createBackup(migratedBackups);
+    assert.equal(rebasedBackup.summary.artifactFileCount, created.summary.artifactFileCount);
+    await migrated.backend.dispose();
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

@@ -20,6 +20,7 @@ import {
 } from "../../src/shared/backup.js";
 import { DATABASE_FILE_NAME, DATABASE_FILE_NAMES, LEGACY_DATABASE_FILE_NAME } from "./database-file.cjs";
 import { sql, SqliteClient } from "./sqlite.cjs";
+import type { SqliteEngineClient } from "./sql-literal.cjs";
 import { describeNulText, describeRepairFailures, findNulText, repairNulText } from "./nul-text.cjs";
 import { migrations as coreMigrations } from "./migrations.cjs";
 import { FEATURE_MIGRATIONS } from "./feature-migrations.cjs";
@@ -858,4 +859,45 @@ export async function applyPendingRestore(options: {
   await removeStagedStateFiles(options.dataDirectory);
   if (liveExists) await fs.rm(rollbackPath, { recursive: true, force: true });
   return true;
+}
+
+/**
+ * Points restored managed-artifact rows at this data directory. A restore staged in
+ * another data folder (for example by Job Ranger in %APPDATA%\job-ranger, applied after
+ * the start-up migration copied the folder to %APPDATA%\Sojourner) keeps the absolute
+ * paths it was staged with; backups and exports refuse paths outside the data directory.
+ * Only rows outside this data directory whose `artifacts/...` file exists here are
+ * changed, so running it again changes nothing. Returns the number of rows updated.
+ */
+export async function rebaseRestoredManagedPaths(
+  sqlite: SqliteEngineClient,
+  dataDirectory: string,
+): Promise<number> {
+  const root = path.resolve(dataDirectory);
+  const statements: string[] = [];
+  for (const table of ["source_artifacts", "resume_artifacts"] as const) {
+    const present = await sqlite.queryOne<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${table};`,
+    );
+    if (!present) continue;
+    const rows = await sqlite.queryAll<{ id: string; managed_path: string }>(
+      `SELECT id, managed_path FROM ${table} ORDER BY id;`,
+    );
+    for (const row of rows) {
+      const relative = path.relative(root, path.resolve(row.managed_path));
+      if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) continue;
+      const portable = row.managed_path.replace(/\\/g, "/");
+      const marker = portable.lastIndexOf("/artifacts/");
+      if (marker < 0) continue;
+      const candidate = path.join(root, ...portable.slice(marker + 1).split("/"));
+      if (!(await pathExists(candidate))) continue;
+      statements.push(
+        table === "source_artifacts"
+          ? sql`UPDATE source_artifacts SET managed_path = ${candidate} WHERE id = ${row.id};`
+          : sql`UPDATE resume_artifacts SET managed_path = ${candidate} WHERE id = ${row.id};`,
+      );
+    }
+  }
+  await sqlite.transaction(statements);
+  return statements.length;
 }

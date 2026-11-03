@@ -9,7 +9,8 @@ import { initializeBackupIpc } from "./backup-ipc.cjs";
 import { initializeDriveIpc, registerUnavailableDriveIpc, type DriveIpcHandles } from "./drive-ipc.cjs";
 import { initializeStorageIpc } from "./storage-ipc.cjs";
 import type { StorageService } from "./storage/storage-service.cjs";
-import { applyPendingRestore } from "./backup-service.cjs";
+import { applyPendingRestore, rebaseRestoredManagedPaths } from "./backup-service.cjs";
+import { SqliteClient } from "./sqlite.cjs";
 import { validateExternalUrl } from "./validators.cjs";
 import { registerCoreIpcHandlers } from "./core-ipc.cjs";
 import { loadPageHtmlInHiddenWindow } from "./browser-loader.cjs";
@@ -305,7 +306,7 @@ app.whenReady().then(async () => {
   try {
     const userDataDirectory = app.getPath("userData");
     const dataDirectory = path.join(userDataDirectory, "data");
-    await applyPendingRestore({ userDataDirectory, dataDirectory });
+    const restoreApplied = await applyPendingRestore({ userDataDirectory, dataDirectory });
 
     backend = new SojournerBackend({
       dataDirectory,
@@ -314,6 +315,11 @@ app.whenReady().then(async () => {
     await backend.initialize();
 
     const systemStatus = await backend.getSystemStatus(process.platform);
+    if (restoreApplied) {
+      // A restore staged in another data folder (such as the legacy %APPDATA%\job-ranger,
+      // before the start-up migration) keeps that folder's artifact paths.
+      await rebaseRestoredManagedPaths(new SqliteClient(systemStatus.databasePath, systemStatus.sqliteBinaryPath), dataDirectory);
+    }
     careerBackend = new CareerBackend({
       dataDirectory,
       databasePath: systemStatus.databasePath,
