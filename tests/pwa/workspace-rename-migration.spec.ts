@@ -6,7 +6,7 @@
 //   origin/release/v1.0.0-alpha.1-prep): that real build creates the workspace through its UI runtime;
 // - otherwise the renamed build creates the records and the test rewrites them into the exact
 //   legacy layout (root, database file name, absolute managed-artifact paths, storage keys).
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -24,6 +24,7 @@ import {
 } from "../../src/pwa/runtime/protocol";
 import { MIGRATION_IN_PROGRESS_FILE, MIGRATION_RECORD_FILE } from "../../src/pwa/runtime/workspace-migration";
 import { LEGACY_STORAGE_KEY_PREFIX, STORAGE_KEYS_MIGRATED_KEY } from "../../src/browser-storage-migration";
+import { TRUSTED_TYPES_POLICY_NAME } from "../../src/pwa/security/trusted-types";
 
 test.setTimeout(5 * 60_000);
 
@@ -31,6 +32,8 @@ const LEGACY_DIST = process.env.SOJOURNER_LEGACY_PWA_DIST?.trim() || "";
 const NEW_ROOT = USER_DATA_DIRECTORY.slice(1);
 const LEGACY_ROOT = LEGACY_USER_DATA_DIRECTORY.slice(1);
 const ONBOARDING = "onboarding.dismissed.v1";
+/** LEGACY: the Trusted Types policy of builds released as Job Ranger (for serving such a build). */
+const LEGACY_TRUSTED_TYPES_POLICY_NAME = "job-ranger-script-url";
 
 type Tree = Record<string, { size: number; sha256: string }>;
 
@@ -195,11 +198,21 @@ async function toLegacyLayout(files: Record<string, string>): Promise<Record<str
 async function legacyWorkspace(context: BrowserContext, server: PwaServer): Promise<{ page: Page; records: Records }> {
   const page = await context.newPage();
   if (LEGACY_DIST) {
+    // The test server sends the renamed build's security headers; a deployed legacy build sent its
+    // own, whose Trusted Types policy has the legacy name.
+    const legacyHeaders = async (route: Route) => {
+      const response = await route.fetch();
+      const headers = Object.fromEntries(Object.entries(response.headers()).map(([name, value]) =>
+        [name, value.replaceAll(TRUSTED_TYPES_POLICY_NAME, LEGACY_TRUSTED_TYPES_POLICY_NAME)]));
+      await route.fulfill({ response, headers });
+    };
+    await context.route(`${server.url}**`, legacyHeaders);
     server.setRoot(LEGACY_DIST);
     await page.goto(server.url);
     await waitForRuntime(page);
     const records = await createRecords(page);
     await leaveApp(page, server);
+    await context.unroute(`${server.url}**`, legacyHeaders);
     server.setRoot(distPwa);
     return { page, records };
   }
@@ -226,7 +239,8 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await server.close(); });
 
 test(`a workspace created before the rename opens in the renamed build, intact, and the legacy copy is untouched (${LEGACY_DIST ? "legacy build" : "synthesized legacy layout"})`, async ({ browser }) => {
-  const context = await browser.newContext();
+  // No service worker: every request reaches the server (and the legacy header rewrite).
+  const context = await browser.newContext({ serviceWorkers: "block" });
   try {
     // The legacy build's own preference key: the renamed build must carry it over.
     await context.addInitScript(([prefix, key]) => localStorage.setItem(`${prefix}${key}`, "true"), [LEGACY_STORAGE_KEY_PREFIX, ONBOARDING] as const);
