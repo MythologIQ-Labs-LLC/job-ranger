@@ -132,7 +132,7 @@ jobs:
         with:
           name: ${{ steps.names.outputs.artifact }}
           path: |
-            release/Job*windows-store*.appx
+            release/Sojourner-v*-windows-store*.appx
             build/trust/windows-store-*
           if-no-files-found: error
           retention-days: 30

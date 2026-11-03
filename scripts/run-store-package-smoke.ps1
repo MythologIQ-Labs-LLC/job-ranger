@@ -29,7 +29,7 @@ $ErrorActionPreference = "Stop"
 Import-Module Appx -ErrorAction SilentlyContinue
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Job*windows-store*.appx" -File | Select-Object -First 1
+$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Sojourner-v*-windows-store*.appx" -File | Select-Object -First 1
 if (-not $appx) { throw "No Microsoft Store AppX package was found in $ReleaseDirectory." }
 New-Item -ItemType Directory -Path $TrustDirectory -Force | Out-Null
 $trustRoot = (Resolve-Path $TrustDirectory).Path

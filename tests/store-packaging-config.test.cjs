@@ -183,6 +183,18 @@ async function run() {
     await fsp.rm(root, { recursive: true, force: true });
   }
 
+  // The Store lane picks up the renamed package (Sojourner-v<version>-windows-store[-validation]-x64.appx).
+  for (const file of [
+    '.github/workflows/release-build.yml',
+    '.github/workflows/windows-store-package.yml',
+    'scripts/run-store-package-smoke.ps1',
+    'scripts/verify-store-package.ps1',
+  ]) {
+    const text = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+    assert.match(text, /Sojourner-v\*-windows-store\*\.appx/, `${file} selects the Sojourner Store package`);
+    assert.doesNotMatch(text, /[\\/"]Job\*/, `${file} has no pre-rename package glob`);
+  }
+
   console.log('Store packaging and Store-mode runtime tests passed');
 }
 

@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Job*windows-store*.appx" -File | Select-Object -First 1
+$appx = Get-ChildItem -Path $ReleaseDirectory -Filter "Sojourner-v*-windows-store*.appx" -File | Select-Object -First 1
 if (-not $appx) { throw "No Microsoft Store AppX package was found in $ReleaseDirectory." }
 if ([string]::IsNullOrWhiteSpace($ExpectedVersion)) {
   $ExpectedVersion = (node -p "require('./package.json').version").Trim()

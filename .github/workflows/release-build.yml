@@ -438,7 +438,7 @@ jobs:
       - name: Attest build provenance (Store package)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: store/release/Job*windows-store*.appx
+          subject-path: store/release/Sojourner-v*-windows-store*.appx
 
       - name: Upload Store package candidate and evidence
         shell: bash
@@ -450,7 +450,7 @@ jobs:
           set -euo pipefail
           tag="$RELEASE_TAG"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Sojourner $tag" --generate-notes --prerelease
-          gh release upload "$tag" store/release/Job*windows-store*.appx store/build/trust/windows-store-* --clobber
+          gh release upload "$tag" store/release/Sojourner-v*-windows-store*.appx store/build/trust/windows-store-* --clobber
 
   web:
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'web'
