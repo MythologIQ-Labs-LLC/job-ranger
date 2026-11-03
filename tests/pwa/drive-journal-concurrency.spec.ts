@@ -12,6 +12,8 @@ import { distPwa, projectRoot } from "./support/fixtures";
 let server: PwaServer;
 let bundled: string;
 const scriptPath = "/__test_drive_journal_contract.js";
+/** LEGACY: the receipt journal name of builds released as Job Ranger (copied, never removed). */
+const LEGACY_JOURNAL_DB = "job-ranger.drive-artifact-export-journal.v1";
 
 test.beforeAll(async () => {
   // Vite is already a direct project dependency. Do not add an extra
@@ -307,4 +309,61 @@ test("durable storage clears an ambiguous upload only with reserved-ID absence e
   });
   expect(result).toEqual({ unreserved: "refused", swapped: false, rejectedClaim: false,
     stillBlocked: true, proven: true, unblocked: true });
+});
+
+test("receipts of the pre-rename journal are copied into the renamed journal, never over a newer state, and kept", async ({ page }) => {
+  await install(page);
+  const result = await page.evaluate(async (legacyName) => {
+    const Journal = (window as any).__sojournerDriveJournal.BrowserDriveExportJournal;
+    const receipt = (overrides: Record<string, unknown>) => ({
+      schemaVersion: 2, operationId: crypto.randomUUID(), approvalId: crypto.randomUUID(),
+      accountId: "renameAccount", destinationId: "root", artifactId: "renameArtifact", artifactRevision: "1",
+      bytesSha256: "c".repeat(64), fileName: "resume.pdf", mimeType: "application/pdf",
+      status: "uploading", remoteId: null, verifiedSha256: null, reservedFileId: "renameReserved",
+      resolution: null, updatedAt: new Date().toISOString(), ...overrides,
+    });
+    const openWith = (name: string, setup: boolean) => new Promise<IDBDatabase>((resolve, reject) => {
+      const open = indexedDB.open(name, 1);
+      open.onupgradeneeded = () => {
+        if (!setup) return;
+        const store = open.result.createObjectStore("exports", { keyPath: "operationId" });
+        store.createIndex("approvalId", "approvalId", { unique: true });
+      };
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+    });
+    const put = (db: IDBDatabase, rows: unknown[]) => new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("exports", "readwrite");
+      for (const row of rows) tx.objectStore("exports").put(row);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    const count = (db: IDBDatabase) => new Promise<number>((resolve) => {
+      const request = db.transaction("exports").objectStore("exports").count();
+      request.onsuccess = () => resolve(request.result);
+    });
+    // Without a legacy journal nothing is created under the legacy name.
+    await new Journal().findOperation("warmup");
+    const before = (await indexedDB.databases()).map((db) => db.name);
+
+    // The pre-rename build left an unresolved upload and a receipt the renamed journal already advanced.
+    const unresolved = receipt({});
+    const advanced = receipt({ accountId: "otherAccount", artifactId: "otherArtifact", reservedFileId: "otherReserved" });
+    const legacy = await openWith(legacyName, true);
+    await put(legacy, [unresolved, advanced]);
+    legacy.close();
+    const current = await openWith("sojourner.drive-artifact-export-journal.v1", false);
+    await put(current, [{ ...advanced, status: "abandoned", resolution: "user_abandoned" }]);
+    current.close();
+
+    const journal = new Journal();
+    const copied = await journal.findOperation(unresolved.operationId);
+    const blocked = await journal.hasUnresolvedForArtifact(unresolved.accountId, unresolved.artifactId);
+    const kept = await journal.findOperation(advanced.operationId);
+    const legacyAfter = await openWith(legacyName, false);
+    const legacyCount = await count(legacyAfter);
+    legacyAfter.close();
+    return { createdLegacy: before.includes(legacyName), copiedStatus: copied?.status, blocked, keptStatus: kept?.status, legacyCount };
+  }, LEGACY_JOURNAL_DB);
+  expect(result).toEqual({ createdLegacy: false, copiedStatus: "uploading", blocked: true, keptStatus: "abandoned", legacyCount: 2 });
 });
