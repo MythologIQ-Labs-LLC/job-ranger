@@ -194,18 +194,18 @@ async function toLegacyLayout(files: Record<string, string>): Promise<Record<str
   }
 }
 
+/** The test server sends the renamed build's security headers; a deployed legacy build sent its own. */
+async function legacyHeaders(route: Route): Promise<void> {
+  const response = await route.fetch();
+  const headers = Object.fromEntries(Object.entries(response.headers()).map(([name, value]) =>
+    [name, value.replaceAll(TRUSTED_TYPES_POLICY_NAME, LEGACY_TRUSTED_TYPES_POLICY_NAME)]));
+  await route.fulfill({ response, headers });
+}
+
 /** A legacy workspace in a fresh browser context, created by the legacy build or synthesized. */
 async function legacyWorkspace(context: BrowserContext, server: PwaServer): Promise<{ page: Page; records: Records }> {
   const page = await context.newPage();
   if (LEGACY_DIST) {
-    // The test server sends the renamed build's security headers; a deployed legacy build sent its
-    // own, whose Trusted Types policy has the legacy name.
-    const legacyHeaders = async (route: Route) => {
-      const response = await route.fetch();
-      const headers = Object.fromEntries(Object.entries(response.headers()).map(([name, value]) =>
-        [name, value.replaceAll(TRUSTED_TYPES_POLICY_NAME, LEGACY_TRUSTED_TYPES_POLICY_NAME)]));
-      await route.fulfill({ response, headers });
-    };
     await context.route(`${server.url}**`, legacyHeaders);
     server.setRoot(LEGACY_DIST);
     await page.goto(server.url);
@@ -301,6 +301,65 @@ test(`a workspace created before the rename opens in the renamed build, intact, 
   }
 });
 
+test("a restore staged by the pre-rename build and applied after the migration keeps every artifact inside the new workspace", async ({ browser }) => {
+  // Needs a real pre-rename build: only it stages a restore whose database points into the legacy folder.
+  test.skip(!LEGACY_DIST, "set SOJOURNER_LEGACY_PWA_DIST to a pre-rename dist-pwa build");
+  const context = await browser.newContext({ serviceWorkers: "block", acceptDownloads: true });
+  try {
+    await context.addInitScript(([prefix, key]) => localStorage.setItem(`${prefix}${key}`, "true"), [LEGACY_STORAGE_KEY_PREFIX, ONBOARDING] as const);
+    const { page, records } = await legacyWorkspace(context, server);
+
+    // Back on the legacy build: take a backup, change the profile, then stage that backup for
+    // restore. The relaunch that would apply it is stopped, as if the tab was closed right there.
+    await context.route(`${server.url}**`, legacyHeaders);
+    server.setRoot(LEGACY_DIST);
+    await page.goto(`${server.url}#/settings`);
+    await waitForRuntime(page);
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Create backup" }).click();
+    const backup = await readFile(await (await download).path());
+    await page.evaluate((profile) => window.electronAPI.career.saveProfile({ ...profile, fullName: "Changed After Backup" } as never), healthcareProfile);
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Select backup to restore" }).click();
+    await (await chooser).setFiles({ name: "before-the-rename.backup", mimeType: "application/octet-stream", buffer: backup });
+    // The relaunch (sent only after the stage completed) gets a static page instead of the app, which
+    // replaces the document and stops its worker. Service workers are blocked in this context.
+    await context.route(server.url, async (route) => {
+      if (!route.request().isNavigationRequest()) return route.fallback();
+      await route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stopped</title><p>relaunch stopped</p>" });
+    });
+    await page.getByRole("button", { name: "Restore and restart" }).click();
+    await page.waitForFunction(() => document.title === "stopped", null, { timeout: 60_000 });
+    await context.unroute(server.url);
+    await page.goto(`${server.url}manifest.webmanifest`);
+    await page.waitForTimeout(500);
+    await context.unroute(`${server.url}**`, legacyHeaders);
+    server.setRoot(distPwa);
+    const legacyBefore = await opfsTree(page, LEGACY_ROOT);
+    expect(Object.keys(legacyBefore).some((name) => /restore/i.test(name)), "the legacy build staged a restore").toBe(true);
+
+    // The renamed build migrates the workspace (stage included), applies the restore, and rebases it.
+    await page.goto(server.url);
+    await waitForRuntime(page);
+    const state = await page.evaluate(async () => ({
+      profileName: (await window.electronAPI.career.getProfile())?.fullName ?? null,
+      artifacts: (await window.electronAPI.career.listSourceArtifacts()).map((artifact) => ({ id: artifact.id, managedPath: artifact.managedPath })),
+    }));
+    expect(state.profileName, "the staged backup was restored").toBe("Legacy Morgan");
+    expect(state.artifacts.map((artifact) => artifact.id)).toContain(records.artifactId);
+    for (const artifact of state.artifacts) expect(artifact.managedPath.startsWith(`${USER_DATA_DIRECTORY}/data/`), artifact.managedPath).toBe(true);
+    // A full backup refuses any artifact outside the data directory: it succeeds.
+    await page.goto(`${server.url}#/settings`);
+    const after = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Create backup" }).click();
+    expect((await after).suggestedFilename()).toMatch(/^sojourner-backup-/);
+    await leaveApp(page, server);
+    expect(await opfsTree(page, LEGACY_ROOT)).toEqual(legacyBefore);
+  } finally {
+    await context.close();
+  }
+});
+
 test("a legacy workspace that cannot be copied intact stays the workspace in use, untouched, with no partial copy", async ({ browser }) => {
   const context = await browser.newContext();
   try {
@@ -340,7 +399,7 @@ test("a tab still running the legacy build keeps the renamed build waiting (one 
     }, LEGACY_RUNTIME_LOCK_NAME);
     const renamed = await context.newPage();
     await renamed.goto(server.url);
-    await expect(renamed.getByText("Sojourner is open in another tab or window")).toBeVisible({ timeout: 60_000 });
+    await expect(renamed.getByText("Sojourner (or an earlier Job Ranger tab) is open in another tab or window")).toBeVisible({ timeout: 60_000 });
     await legacyTab.close();
     await waitForRuntime(renamed);
     expect((await renamed.evaluate(() => window.electronAPI.getRuntimeInfo())).kind).toBe("web");

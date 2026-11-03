@@ -7,7 +7,7 @@
  * and removed (for example the pre-database career profile) is never brought back.
  *
  * The demo flavor never migrates: its preferences are reset with every new demo session.
- * Pure over an injected storage, unit tested in tests/browser-storage-migration.test.mjs.
+ * Pure over an injected storage, unit tested in tests/pwa-workspace-migration.test.mjs.
  */
 
 export const STORAGE_KEY_PREFIX = "sojourner.";

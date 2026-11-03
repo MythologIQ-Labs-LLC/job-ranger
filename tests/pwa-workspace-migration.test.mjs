@@ -348,3 +348,49 @@ test("storage failures never remove anything and leave the copy to the next star
   storage.setItem = setItem;
   assert.equal(migrateLegacyStorageKeys(storage).status, "migrated");
 });
+
+// --- managed-artifact path rebase (the migrated copy, and a restore staged before the rename) ---
+
+test("managed-artifact paths under the legacy data directory are rebased once; everything else is left alone", async () => {
+  const { mkdtemp, readFile, rm, stat, writeFile, mkdir } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { default: sqlite3InitModule } = await import("@sqlite.org/sqlite-wasm");
+  const { WasmSqliteEngine } = await import("../src/pwa/runtime/wasm-sqlite-engine.ts");
+  const { rebaseManagedPaths } = await import("../src/pwa/runtime/workspace-migration.ts");
+  const work = await mkdtemp(path.join(os.tmpdir(), "sojourner-rebase-"));
+  const sqlite3 = await sqlite3InitModule({ print: () => undefined, printErr: () => undefined });
+  const engine = new WasmSqliteEngine({ sqlite3, fs: { readFile, writeFile, mkdir, stat }, dirname: path.dirname });
+  try {
+    const db = path.join(work, "workspace.sqlite3");
+    const from = `${LEGACY}/data`;
+    const to = `${NEW}/data`;
+    await engine.transaction(db, [
+      "CREATE TABLE source_artifacts (id TEXT PRIMARY KEY, managed_path TEXT NOT NULL);",
+      "CREATE TABLE resume_artifacts (id TEXT PRIMARY KEY, managed_path TEXT NOT NULL);",
+      `INSERT INTO source_artifacts VALUES ('s1', '${from}/artifacts/sources/s1/source.pdf'), ('s2', '${to}/artifacts/sources/s2/source.txt'), ('s3', '${from}x/not-under-it.pdf');`,
+      `INSERT INTO resume_artifacts VALUES ('r1', '${from}/artifacts/generated/r1/resume.pdf');`,
+    ]);
+    assert.equal(await rebaseManagedPaths(engine, db, from, to), 2);
+    const rows = await engine.queryAll(db, "SELECT id, managed_path FROM source_artifacts UNION ALL SELECT id, managed_path FROM resume_artifacts ORDER BY id;");
+    assert.deepEqual(rows, [
+      { id: "r1", managed_path: `${to}/artifacts/generated/r1/resume.pdf` },
+      { id: "s1", managed_path: `${to}/artifacts/sources/s1/source.pdf` },
+      { id: "s2", managed_path: `${to}/artifacts/sources/s2/source.txt` },
+      { id: "s3", managed_path: `${from}x/not-under-it.pdf` },
+    ]);
+    // Idempotent: a second run (every later start) finds nothing and writes nothing.
+    const image = await readFile(db);
+    const writes = engine.operationCount;
+    assert.equal(await rebaseManagedPaths(engine, db, from, to), 0);
+    assert.deepEqual(await readFile(db), image);
+    assert.ok(engine.operationCount - writes <= 3, "only the table lookup and the counts ran");
+    // A database without artifact tables (an old or empty workspace) is fine.
+    const empty = path.join(work, "empty.sqlite3");
+    await engine.exec(empty, "CREATE TABLE settings (key TEXT);");
+    assert.equal(await rebaseManagedPaths(engine, empty, from, to), 0);
+  } finally {
+    engine.closeAll();
+    await rm(work, { recursive: true, force: true });
+  }
+});

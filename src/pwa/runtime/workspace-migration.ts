@@ -203,6 +203,50 @@ async function discardPartialCopy(fs: MigrationFs, root: string): Promise<void> 
   await fs.rm(root, { recursive: true, force: true });
 }
 
+/** The part of the SQLite engine the managed-path rebase needs. */
+export interface RebaseEngine {
+  queryAll<T>(path: string, statement: string): Promise<T[]>;
+  transaction(path: string, statements: readonly string[]): Promise<void>;
+}
+
+const MANAGED_PATH_TABLES = ["resume_artifacts", "source_artifacts"] as const;
+const sqlText = (value: string) => `'${value.replace(/'/g, "''")}'`;
+
+/**
+ * Managed artifacts are recorded with absolute paths. Rows under `from` are moved to `to` in one
+ * transaction, exactly as a backup restore rebases them; rows elsewhere are left alone. Idempotent:
+ * with no row under `from` nothing is written. Throws if any row still points under `from`.
+ */
+export async function rebaseManagedPaths(engine: RebaseEngine, path: string, from: string, to: string): Promise<number> {
+  const fromPrefix = `${from.replace(/\/+$/, "")}/`;
+  const toPrefix = `${to.replace(/\/+$/, "")}/`;
+  if (fromPrefix === toPrefix) return 0;
+  const underFrom = `substr(managed_path, 1, ${fromPrefix.length}) = ${sqlText(fromPrefix)}`;
+  const tables = (
+    await engine.queryAll<{ name: string }>(
+      path,
+      `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${MANAGED_PATH_TABLES.map(sqlText).join(", ")}) ORDER BY name;`,
+    )
+  ).map((row) => row.name);
+  const pending = async (): Promise<number> => {
+    let total = 0;
+    for (const name of tables) {
+      const [row] = await engine.queryAll<{ remaining: number }>(path, `SELECT count(*) AS remaining FROM ${name} WHERE ${underFrom};`);
+      total += Number(row?.remaining ?? 0);
+    }
+    return total;
+  };
+  const before = await pending();
+  if (before === 0) return 0;
+  await engine.transaction(
+    path,
+    tables.map((name) => `UPDATE ${name} SET managed_path = ${sqlText(toPrefix)} || substr(managed_path, ${fromPrefix.length + 1}) WHERE ${underFrom};`),
+  );
+  const remaining = await pending();
+  if (remaining > 0) throw new Error(`${remaining} managed artifact path(s) still point to the earlier workspace.`);
+  return before;
+}
+
 function parentOf(path: string): string {
   const index = path.lastIndexOf("/");
   return index <= 0 ? "/" : path.slice(0, index);
