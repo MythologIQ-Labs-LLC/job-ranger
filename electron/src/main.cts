@@ -327,7 +327,16 @@ app.whenReady().then(async () => {
     if (restoreApplied) {
       // A restore staged in another data folder (such as the legacy %APPDATA%\job-ranger,
       // before the start-up migration) keeps that folder's artifact paths.
-      await rebaseRestoredManagedPaths(new SqliteClient(systemStatus.databasePath, systemStatus.sqliteBinaryPath), dataDirectory);
+      // Best effort: a failure is logged and never stops Sojourner from opening.
+      try {
+        const rebased = await rebaseRestoredManagedPaths(
+          new SqliteClient(systemStatus.databasePath, systemStatus.sqliteBinaryPath),
+          dataDirectory,
+        );
+        if (rebased > 0) console.log(`[restore] Pointed ${rebased} restored artifact paths at ${dataDirectory}.`);
+      } catch (error) {
+        console.error("Restored artifact paths could not be updated:", error instanceof Error ? error.message : error);
+      }
     }
     careerBackend = new CareerBackend({
       dataDirectory,

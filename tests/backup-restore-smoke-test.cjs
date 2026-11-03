@@ -321,6 +321,13 @@ async function run() {
     assert.equal(await rebaseRestoredManagedPaths(migratedSqlite, migratedData), 0, 'running it again changes nothing');
     const rebasedBackup = await backupService.createBackup(migratedBackups);
     assert.equal(rebasedBackup.summary.artifactFileCount, created.summary.artifactFileCount);
+    // A path whose artifacts/... part climbs out of the data directory is never adopted,
+    // even when the file it would point at exists.
+    await fs.writeFile(path.join(migratedUserData, 'escape.txt'), 'outside the data directory');
+    const hostile = `${path.join(stagedInLegacy, 'elsewhere')}${path.sep}artifacts${path.sep}..${path.sep}..${path.sep}escape.txt`;
+    await migratedSqlite.exec(sql`UPDATE source_artifacts SET managed_path = ${hostile};`);
+    assert.equal(await rebaseRestoredManagedPaths(migratedSqlite, migratedData), 0, 'an escaping artifacts/ path is ignored');
+    assert.deepEqual(await managedPaths(), [hostile]);
     await migrated.backend.dispose();
   } finally {
     await fs.rm(root, { recursive: true, force: true });

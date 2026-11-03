@@ -890,6 +890,9 @@ export async function rebaseRestoredManagedPaths(
       const marker = portable.lastIndexOf("/artifacts/");
       if (marker < 0) continue;
       const candidate = path.join(root, ...portable.slice(marker + 1).split("/"));
+      const inside = path.relative(root, candidate);
+      // Only a file under artifacts/ inside this data directory (no ".." escapes).
+      if (!inside.startsWith(`artifacts${path.sep}`) || inside.split(path.sep).includes("..") || path.isAbsolute(inside)) continue;
       if (!(await pathExists(candidate))) continue;
       statements.push(
         table === "source_artifacts"
