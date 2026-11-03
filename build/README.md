@@ -48,7 +48,7 @@ Repository/presentation assets do **not** belong in this directory. Use:
 docs/assets/branding/sojourner-banner.png
 ```
 
-The `docs/assets/branding/job-ranger-*.png` files are historical Job Ranger artwork kept for provenance (`job-ranger-logo.png` is still the source of the app emblem, see `scripts/extract-sojourner-icon.sh`).
+`docs/assets/branding/sojourner-icon-source.png` (the original lockup, still carrying the earlier Job Ranger wordmark) is the source of the app emblem (see `scripts/extract-sojourner-icon.sh`). `docs/assets/branding/historical/` keeps the earlier banner and social preview for provenance only.
 
 See `docs/BRANDING.md` for the canonical asset map.
 

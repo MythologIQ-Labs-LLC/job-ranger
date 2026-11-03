@@ -22,7 +22,7 @@ The current favicon uses the same visual source as the runtime icon.
 
 ### Brand lockup
 
-`docs/assets/branding/job-ranger-logo.png`
+`docs/assets/branding/sojourner-icon-source.png`
 
 Use for documentation or presentation contexts that need the Job Ranger name and brand mark together.
 
@@ -32,11 +32,11 @@ Use for documentation or presentation contexts that need the Job Ranger name and
 
 The current Sojourner banner, shown at the top of the README. Text: "Sojourner. Employment Toolkit. Local-first tools for a more thoughtful job search."
 
-`docs/assets/branding/job-ranger-banner.png` is historical Job Ranger artwork only. Keep it for provenance, but never present it as current Sojourner art.
+`docs/assets/branding/historical/legacy-banner.png` is historical Job Ranger artwork only. Keep it for provenance, but never present it as current Sojourner art.
 
 ### Social preview (legacy, replacement required)
 
-`docs/assets/branding/job-ranger-social-preview.png`
+`docs/assets/branding/historical/legacy-social-preview.png`
 
 Historical Job Ranger artwork only. Replace with `docs/assets/branding/sojourner-social-preview.png` (tracking issue #365). GitHub's actual Social preview setting must also be updated separately.
 
@@ -50,7 +50,7 @@ The current visual palette uses dark navy, teal/green, warm orange, cream, and n
 
 ## Canonical standalone emblem and default-theme colors
 
-The **approved source of truth is the emblem inside `docs/assets/branding/job-ranger-logo.png`**, specifically the circular mountain, forest and trail illustration to the left of the lettering. The owner supplied both an annotated preview (red circle indicating the selection) and a clean logo. The red circle is **not artwork**, and the wordmark/tagline must not appear in the square icon.
+The **approved source of truth is the emblem inside `docs/assets/branding/sojourner-icon-source.png`**, specifically the circular mountain, forest and trail illustration to the left of the lettering. The owner supplied both an annotated preview (red circle indicating the selection) and a clean logo. The red circle is **not artwork**, and the wordmark/tagline must not appear in the square icon.
 
 Use `scripts/extract-sojourner-icon.sh` to crop the native emblem directly from the existing unmarked lockup, copy the resulting `public/ICON.png` to the favicon, and regenerate the PWA and AppX assets. The source image must remain unchanged. The app must load the local packaged icon even when offline.
 
@@ -72,9 +72,9 @@ The preexisting MythologIQ Studio Side Projects thumbnail is **not** the master 
 Use lowercase kebab-case for documentation assets:
 
 ```text
-job-ranger-logo.png
-job-ranger-banner.png
-job-ranger-social-preview.png
+sojourner-banner.png
+sojourner-icon-source.png
+historical/legacy-banner.png
 ```
 
 Platform/runtime assets may keep the naming required by packaging tools, including `public/ICON.png` and generated `build/icon.icns`.
@@ -92,10 +92,10 @@ Platform/runtime assets may keep the naming required by packaging tools, includi
 
 The historical assets below remain as provenance; they are **not current Sojourner presentation assets**. Until #365 is completed, do not represent a Job Ranger image as current Sojourner art. The legacy hierarchy was:
 
-1. `docs/assets/branding/job-ranger-logo.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-sojourner-icon.sh`.
+1. `docs/assets/branding/sojourner-icon-source.png` for the **authoritative emblem and full lockup**; extract only the circular emblem via `scripts/extract-sojourner-icon.sh`.
 2. `public/ICON.png` for the **derived canonical runtime icon**, with `public/favicon.png` and all installed-app/PWA icons generated from that exact image.
-3. `docs/assets/branding/job-ranger-banner.png` for repository presentation.
-4. `docs/assets/branding/job-ranger-social-preview.png` for social/link previews.
+3. `docs/assets/branding/historical/legacy-banner.png` for repository presentation.
+4. `docs/assets/branding/historical/legacy-social-preview.png` for social/link previews.
 
 If another copy appears elsewhere in the repository, consolidate it back into this structure rather than creating another canonical candidate.
 

@@ -62,4 +62,4 @@ Recorded for the owner and UX backlog (#248). They do not block the media's accu
 
 ## Historical media
 
-`docs/assets/demo/job-ranger-demo.webm` and `docs/assets/screenshots/*.png` (Job Ranger era) stay until the owner approves replacement.
+`docs/assets/demo/historical/legacy-walkthrough.webm` and `docs/assets/screenshots/*.png` (Job Ranger era) stay until the owner approves replacement.

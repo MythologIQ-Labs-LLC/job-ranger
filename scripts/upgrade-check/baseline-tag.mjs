@@ -2,7 +2,7 @@
 //
 // The Job Ranger releases were archived as job-ranger-vX.Y.Z tags (owner
 // decision 2026-11-02) and Sojourner releases use vX.Y.Z. A Sojourner install
-// upgrades Job Ranger data in place, so until Sojourner has a stable tag the
+// migrates Job Ranger data at first start, so until Sojourner has a stable tag the
 // baseline is the newest stable Job Ranger tag (job-ranger-v1.2.0).
 // Pre-release tags (v1.0.0-alpha.1, job-ranger-v1.2.0-rc.5) are never chosen.
 
