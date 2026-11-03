@@ -453,14 +453,16 @@ jobs:
           gh release upload "$tag" store/release/Sojourner-v*-windows-store*.appx store/build/trust/windows-store-* --clobber
 
   web:
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'web'
+    # The web/PWA build is published only by a manual run: a pushed v* tag publishes the signed
+    # Windows release alone, after owner approval (PWA publication has its own acceptance gate).
+    if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'web')
     uses: ./.github/workflows/pwa.yml
     with:
       ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
   publish-web:
     needs: web
-    if: github.event_name == 'push' || inputs.publish
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write

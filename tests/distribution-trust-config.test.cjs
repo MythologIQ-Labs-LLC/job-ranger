@@ -180,6 +180,18 @@ async function run() {
   assert.equal((workflow.match(/\n          persist-credentials: false\n/g) || []).length, 2);
   assert.equal((workflow.match(/name: Keep build-only candidate as a workflow artifact\n        if: env\.PUBLISH_RELEASE != 'true'\n/g) || []).length, 2);
 
+  // A pushed v* tag publishes only the signed Windows release, after owner approval: the web/PWA
+  // build and its publication run only from a manual dispatch (PWA publication has its own gate).
+  assert.match(workflow, /
+  web:
+(?:    #.*
+)*    if: github\.event_name == 'workflow_dispatch' && /);
+  assert.match(workflow, /
+  publish-web:
+    needs: web
+    if: github\.event_name == 'workflow_dispatch' && inputs\.publish
+/);
+
   console.log("Distribution trust configuration tests passed!");
 }
 
