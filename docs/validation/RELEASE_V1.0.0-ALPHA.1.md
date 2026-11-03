@@ -59,3 +59,19 @@ On the release source (`90ea4ff`, the same tree as `main` at `2c4867a`), Windows
 
 - The certificate subject's locality reads `L=Stevenvsille` (a misspelling of Stevensville). It comes from the identity validated for the Artifact Signing account and appears in every signature; signature validity is unaffected. Correcting it is an owner action in the Azure portal.
 - This is a pre-release. Earlier Job Ranger installers remain unsigned and are no longer offered.
+
+## Website listing (verified values)
+
+For the MythologIQ Studios website download listing. Every value below was checked against the published GitHub Release on 2026-11-03; link to the GitHub-hosted file rather than re-hosting it, so the checksum and attestation stay valid.
+
+| Field | Value |
+| --- | --- |
+| Product | Sojourner |
+| Version | `1.0.0-alpha.1` (pre-release; label it "Alpha") |
+| Platform | Windows 10 and 11, x64 |
+| Download | `https://github.com/MythologIQ-Labs-LLC/sojourner/releases/download/v1.0.0-alpha.1/Sojourner-v1.0.0-alpha.1-windows-x64.exe` |
+| Release notes | `https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.0.0-alpha.1` |
+| File size | 130,055,368 bytes (124 MiB) |
+| SHA-256 | `d33758d3fe32e3a033e5daf3d2b3d65deca5fd000d5cd9780d50843641aa0cc1` |
+| Publisher (signer) | MythologIQ Labs, LLC |
+| Released | 2026-11-03 |
