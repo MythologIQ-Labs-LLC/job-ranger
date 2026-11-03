@@ -14,7 +14,7 @@ A merged `main` branch is **not** a release. A passing unit test is **not** a re
 - **`main`**: authority for current merged development, which may be ahead of the published product.
 - **Documentation on `main`**: must describe both boundaries honestly.
 
-**No Sojourner release is published yet.** The first is `v1.0.0-alpha.1` (a GitHub pre-release). The last published Job Ranger release was **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`, promoted byte-for-byte from rc.5). On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits (`job-ranger-v1.2.0`); Sojourner is a separate product line whose tags are `v*`.
+**Published Sojourner release: `v1.0.0-alpha.1`** (a GitHub pre-release, 2026-11-03, tag on `58bff07`; evidence: [`validation/RELEASE_V1.0.0-ALPHA.1.md`](./validation/RELEASE_V1.0.0-ALPHA.1.md)). The last published Job Ranger release was **v1.2.0** (`71f9b790a1f456321aee2c783f39f4a6784b83a9`, promoted byte-for-byte from rc.5). On 2026-11-02 the owner removed all 12 Job Ranger GitHub Releases and renamed their tags to `job-ranger-v*` on the same commits (`job-ranger-v1.2.0`); Sojourner is a separate product line whose tags are `v*`.
 
 Channels under [ARCH-001–003](./ARCHITECTURE_INDEX.md):
 
@@ -319,7 +319,7 @@ Each release should record:
 
 ## Current v1.0.0-alpha.1 release-readiness status
 
-**Prepared, not tagged.** `package.json` is `1.0.0-alpha.1`. The gate is [Current Windows release acceptance](#current-windows-release-acceptance-v100-alpha1). No `v*` tag exists yet.
+**Published 2026-11-03 as a GitHub pre-release** from tag `v1.0.0-alpha.1` on `58bff07020dac6653b92b4b70796be597cb465d2` ([release](https://github.com/MythologIQ-Labs-LLC/sojourner/releases/tag/v1.0.0-alpha.1), [run 41654275535](https://github.com/MythologIQ-Labs-LLC/sojourner/actions/runs/41654275535)). Candidate identification, build, package and smoke, signing verification and publication passed; the signed installer was independently re-verified after download. The installed-machine upgrade checks from Job Ranger v1.2.0 were waived by the owner for this alpha (the automated upgrade gate passed), and the uninstall/reinstall and clean-machine checks are not yet performed. Details: [`validation/RELEASE_V1.0.0-ALPHA.1.md`](./validation/RELEASE_V1.0.0-ALPHA.1.md).
 
 ## Job Ranger v1.2.0 release-readiness status (historical)
 
