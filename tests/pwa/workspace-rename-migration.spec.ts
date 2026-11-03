@@ -322,15 +322,17 @@ test("a restore staged by the pre-rename build and applied after the migration k
     const chooser = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Select backup to restore" }).click();
     await (await chooser).setFiles({ name: "before-the-rename.backup", mimeType: "application/octet-stream", buffer: backup });
-    let relaunched!: () => void;
-    const relaunch = new Promise<void>((resolve) => { relaunched = resolve; });
+    // The relaunch (sent only after the stage completed) gets a static page instead of the app, which
+    // replaces the document and stops its worker. Service workers are blocked in this context.
     await context.route(server.url, async (route) => {
-      if (route.request().isNavigationRequest()) { relaunched(); await route.abort(); } else await route.fallback();
+      if (!route.request().isNavigationRequest()) return route.fallback();
+      await route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stopped</title><p>relaunch stopped</p>" });
     });
     await page.getByRole("button", { name: "Restore and restart" }).click();
-    await relaunch;
+    await page.waitForFunction(() => document.title === "stopped", null, { timeout: 60_000 });
     await context.unroute(server.url);
-    await leaveApp(page, server);
+    await page.goto(`${server.url}manifest.webmanifest`);
+    await page.waitForTimeout(500);
     await context.unroute(`${server.url}**`, legacyHeaders);
     server.setRoot(distPwa);
     const legacyBefore = await opfsTree(page, LEGACY_ROOT);
