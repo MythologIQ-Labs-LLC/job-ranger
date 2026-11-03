@@ -1,3 +1,5 @@
+> **2026-11-03 revision: [NARRATIVE_SCRIPT_V02.md](./NARRATIVE_SCRIPT_V02.md) supersedes this pack's older draft dialogue and scene plan.** The new script follows Morgan Rivera from career direction through an explicitly imperfect opportunity assessment and truthful application preparation. The Windows signed Alpha `v1.0.0-alpha.1` is published; the statements below that say "distribution pending" or describe a PWA-only release are historical and NOT production copy. Production still requires exact Windows app rehearsal, owner approval of the script/voice/music, and verified brand artwork. No newly generated illustration is required for an internal first cut.
+
 # Sojourner | Demo production pack — DRAFT
 
 **State:** PREPRODUCTION / NOT APPROVED FOR RECORDING OR PUBLICATION. **Owner approval required after script and visuals review.**
