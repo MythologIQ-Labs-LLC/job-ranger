@@ -1,0 +1,174 @@
+{
+ "film": "C:\\dev\\mythologiq\\sojourner\\media-handoff\\sojourner-the-right-next-step-v1-review\\build\\sojourner-the-right-next-step-v1-review.mp4",
+ "probe": {
+  "sojourner-the-right-next-step-v1-review.mp4": {
+   "duration": 95.76,
+   "bytes": 13362556,
+   "streams": [
+    {
+     "codec_name": "h264",
+     "profile": "High",
+     "width": 1600,
+     "height": 900,
+     "r_frame_rate": "25/1",
+     "sample_rate": null,
+     "channels": null,
+     "pix_fmt": "yuv420p",
+     "nb_frames": "2394"
+    },
+    {
+     "codec_name": "aac",
+     "profile": "LC",
+     "width": null,
+     "height": null,
+     "r_frame_rate": "0/0",
+     "sample_rate": "48000",
+     "channels": 2,
+     "pix_fmt": null,
+     "nb_frames": "4489"
+    }
+   ]
+  },
+  "sojourner-the-right-next-step-v1-review-silent-captioned.mp4": {
+   "duration": 95.76,
+   "bytes": 9732679,
+   "streams": [
+    {
+     "codec_name": "h264",
+     "profile": "High",
+     "width": 1600,
+     "height": 900,
+     "r_frame_rate": "25/1",
+     "sample_rate": null,
+     "channels": null,
+     "pix_fmt": "yuv420p",
+     "nb_frames": "2394"
+    }
+   ]
+  }
+ },
+ "checks": {
+  "master_loudness": {
+   "integrated_lufs": -17.0,
+   "true_peak_dbfs": -1.2,
+   "lra_lu": 10.2
+  },
+  "master_sample_peak_dbfs": -1.5,
+  "master_clipped_samples": 0,
+  "lines": [
+   {
+    "scene": "S01",
+    "at": 3.2,
+    "ends": 9.032,
+    "narration_rms_db": -24.9,
+    "music_rms_db": -45.3,
+    "narration_over_music_db": 20.4
+   },
+   {
+    "scene": "S02",
+    "at": 10.541,
+    "ends": 18.234,
+    "narration_rms_db": -25.3,
+    "music_rms_db": -38.8,
+    "narration_over_music_db": 13.5
+   },
+   {
+    "scene": "S03",
+    "at": 22.483,
+    "ends": 32.064,
+    "narration_rms_db": -25.3,
+    "music_rms_db": -38.7,
+    "narration_over_music_db": 13.4
+   },
+   {
+    "scene": "S04",
+    "at": 40.478,
+    "ends": 50.598,
+    "narration_rms_db": -25.2,
+    "music_rms_db": -40.4,
+    "narration_over_music_db": 15.2
+   },
+   {
+    "scene": "S05",
+    "at": 54.446,
+    "ends": 65.427,
+    "narration_rms_db": -24.9,
+    "music_rms_db": -36.2,
+    "narration_over_music_db": 11.3
+   },
+   {
+    "scene": "S06",
+    "at": 67.488,
+    "ends": 77.445,
+    "narration_rms_db": -24.8,
+    "music_rms_db": -36.3,
+    "narration_over_music_db": 11.5
+   },
+   {
+    "scene": "S07",
+    "at": 83.412,
+    "ends": 89.167,
+    "narration_rms_db": -25.8,
+    "music_rms_db": -40.2,
+    "narration_over_music_db": 14.4
+   },
+   {
+    "scene": "S08",
+    "at": 91.72,
+    "ends": 94.475,
+    "narration_rms_db": -25.5,
+    "music_rms_db": -48.1,
+    "narration_over_music_db": 22.6
+   }
+  ],
+  "silences_over_0_75s_below_-50dbfs": [
+   [
+    0.0,
+    3.6
+   ],
+   [
+    94.45,
+    95.75
+   ]
+  ],
+  "frozen_picture_over_4s": [
+   [
+    3.0,
+    9.68
+   ],
+   [
+    9.68,
+    14.12
+   ],
+   [
+    14.6,
+    20.0
+   ],
+   [
+    24.8,
+    35.16
+   ],
+   [
+    40.4,
+    46.8
+   ],
+   [
+    46.8,
+    51.44
+   ],
+   [
+    82.84,
+    90.8
+   ]
+  ],
+  "black_frames": [
+   "black_start:0 black_end:0.56"
+  ],
+  "captions": {
+   "count": 19,
+   "overlapping": 0,
+   "shortest_s": 1.63,
+   "max_chars": 90
+  }
+ }
+}
