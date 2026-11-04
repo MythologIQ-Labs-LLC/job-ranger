@@ -156,7 +156,7 @@ async function prepareResume(page: Page, mark: Mark): Promise<void> {
   mark("resume-ready");
   const email = page.getByLabel("Email", { exact: true });
   await glideClick(page, email);
-  await email.pressSequentially("morgan.rivera@example.org", { delay: 12 });
+  await email.pressSequentially("jordan.ellis@example.org", { delay: 12 });
   mark("email-typed");
   const create = page.getByRole("button", { name: "Create truthful draft" });
   await scrollToElement(page, create, 850);

@@ -82,7 +82,7 @@ async function deliberateApplication(page: Page): Promise<void> {
   const drawer = await openAssessment(page);
   await drawer.getByRole("button", { name: "Prepare resume" }).click();
   await waitForDemoReady(page, { route: "#/resume", heading: "Build the document from facts you have actually confirmed.", content: ["Targeting tracked job"] });
-  await page.getByLabel("Email", { exact: true }).fill("morgan.rivera@example.org");
+  await page.getByLabel("Email", { exact: true }).fill("jordan.ellis@example.org");
   await page.getByRole("button", { name: "Create truthful draft" }).click();
   const passed = page.getByText("Truth Gate passed", { exact: true });
   await expect(passed).toBeVisible();

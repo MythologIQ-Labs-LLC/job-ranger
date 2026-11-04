@@ -1,4 +1,4 @@
-// Deterministic fictional demo fixture. Morgan Rivera and Harbor Health are
+// Deterministic fictional demo fixture. Jordan Ellis and Harbor Health are
 // fictional; no real person's career data is used.
 import type { BrowserContext, Page } from "@playwright/test";
 import { ONBOARDING_DISMISSED_KEY } from "../../src/demo/session";
@@ -9,7 +9,7 @@ export const TARGET_TRACK = "Practice operations";
 
 export const demoProfile = {
   version: 2,
-  fullName: "Morgan Rivera",
+  fullName: "Jordan Ellis",
   homeLocation: "Baltimore, MD",
   radiusMiles: 25,
   minimumPay: 54000,
@@ -52,7 +52,7 @@ async function call<T>(page: Page, fn: (arg: never) => Promise<T>, arg?: unknown
   return page.evaluate(fn as never, arg as never) as Promise<T>;
 }
 
-/** Morgan's profile and two Target Tracks: the current role and the target direction. */
+/** Jordan's profile and two Target Tracks: the current role and the target direction. */
 const SHARED_CONSTRAINTS = {
   geography: { locations: ["Baltimore, MD"], radiusMiles: 25, strength: "preferred" },
   schedules: { values: ["day"], strength: "preferred" },
@@ -60,7 +60,7 @@ const SHARED_CONSTRAINTS = {
   industries: { values: ["Healthcare"], strength: "preferred" },
 };
 
-/** Where Morgan is going (the target) and where Morgan works today (current). */
+/** Where Jordan is going (the target) and where Jordan works today (current). */
 export const demoTracks = {
   target: {
     name: TARGET_TRACK,
@@ -81,7 +81,7 @@ export const demoTracks = {
     relation: "current",
     roleTitles: ["Patient Services Coordinator", "Front Desk Coordinator"],
     seniority: null,
-    direction: "Where Morgan works today",
+    direction: "Where Jordan works today",
     constraints: {
       ...SHARED_CONSTRAINTS,
       workModes: { values: ["on-site"], strength: "preferred" },
@@ -176,7 +176,7 @@ async function seedSource(page: Page): Promise<void> {
   if (run.status !== "success") throw new Error(`demo source scrape failed: ${run.status}`);
 }
 
-/** Seeds Morgan's direction, Career Evidence, and one monitored source. */
+/** Seeds Jordan's direction, Career Evidence, and one monitored source. */
 export async function seedDemo(page: Page): Promise<void> {
   await seedDirection(page);
   await seedEvidence(page);
