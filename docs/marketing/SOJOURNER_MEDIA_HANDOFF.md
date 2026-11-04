@@ -6,6 +6,27 @@ This is the evidence-backed manifest for captured, reviewed Sojourner PWA media.
 
 On 2026-11-02 the owner approved using these files publicly in the repository README, which embeds them from the pinned commit above. Website integration still belongs only to the owner's designated website session. The prior Job Ranger WebM and screenshots on `main` are historical assets, no longer shown in the README.
 
+## Narrated film "The Right Next Step" (approved 2026-11-03)
+
+**Status: OWNER-APPROVED FOR THE WEBSITE PRODUCT PAGE (2026-11-03).**
+
+The film was recorded in the installed, signed Sojourner Windows Alpha `v1.0.0-alpha.1`. It follows the fictional Jordan Ellis. Narration and music were made in Sonic Rift 0.9.1.
+
+The files are on the orphan, assets-only branch [`media/sojourner-the-right-next-step-2026-11-03`](https://github.com/MythologIQ-Labs-LLC/sojourner/tree/media/sojourner-the-right-next-step-2026-11-03), pinned at **`3003e7cbc397d9459b64e930d3a7a5718121bea2`**. That branch is never merged into `main`. Its `WEBSITE_HANDOFF.md` gives placement, markup and the claims the page must not make; `media-manifest.json` gives checksums, provenance and alt text.
+
+| File | Pinned URL | SHA-256 | Media |
+| --- | --- | --- | --- |
+| Narrated film (H.264 + AAC) | [https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step.mp4](https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step.mp4) | `1d3ca1a61ce5ce6fa1a5ea92a823e05a3692d30fc6cccf00713da3d33ed49a42` | 95.76 s, 1600×900, 13,362,556 B |
+| Captions (WebVTT) | [https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step.vtt](https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step.vtt) | `45765b8c0f83655fff126b8d797d39fbb0059af3cfa964d5d81fcebd4f529625` | 19 cues |
+| Poster | [https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step-poster.png](https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step-poster.png) | `490eb6538e9770b5872bac64e25c8e59a0c7859f036ca3fe612d3c2e101ad07b` | 1600×900 |
+| Silent, captions burned in | [https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step-silent-captioned.mp4](https://raw.githubusercontent.com/MythologIQ-Labs-LLC/sojourner/3003e7cbc397d9459b64e930d3a7a5718121bea2/video/sojourner-the-right-next-step-silent-captioned.mp4) | `5e51b80b825393377759d70f1484cb5c911bc6ec4779cfa6c695a80f1b7041e2` | 95.76 s, no audio |
+| Transcript | `video/sojourner-the-right-next-step-transcript.md` | see `media-manifest.json` | |
+
+- **Verification:** all files were downloaded anonymously from the pinned URLs on 2026-11-03, and their checksums matched.
+- **Hosting:** GitHub raw serves MP4 as `application/octet-stream`. The website build should copy the files into its own hosting rather than hot-link them.
+- **Production records:** QA report, edit decision list, measurements and the full package manifest are in [`../demo-production/review-v1/`](../demo-production/review-v1/README.md). The full source package (every Sonic Rift take, the stems and the raw installed-app capture) stays on the owner's workstation under `media-handoff/sojourner-the-right-next-step-v1-review/`.
+- **Earlier media:** the 2026-10-30 silent PWA walkthrough and its screenshots below are unchanged.
+
 ## Product and source-of-truth
 
 - Product: **Sojourner: Employment Toolkit**. Since 2026-11-02 the primary deliverable is a signed Windows application, and the browser PWA continues ([`../ARCHITECTURE_INDEX.md`](../ARCHITECTURE_INDEX.md) ARCH-001). These captures show the PWA, which uses the same interface as the Windows app.

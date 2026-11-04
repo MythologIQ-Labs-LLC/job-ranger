@@ -1,6 +1,6 @@
 # Sojourner: The Right Next Step — Narrative production script v0.2
 
-**Status: OWNER REVIEW / script authored, NOT capture qualified.**  
+**Status: FILMED AND APPROVED (2026-11-03).** Filmed word for word in the installed Windows Alpha and approved by the owner for the website product page; see [`review-v1/`](./review-v1/README.md). The status that follows is historical: ~~OWNER REVIEW / script authored, NOT capture qualified.~~  
 **Recording source:** signed Windows release `v1.0.0-alpha.1` where possible, after confirming current release and exercising exact actions in an isolated fixture. Do not show the old browser walkthrough as Windows proof.  
 **Voice:** warm, focused, human, reassuring rather than overly cheerful. All narration and original music created **in Sonic Rift**, not via Claude's own synthesis or an outside TTS.  
 **Film length:** aim 100–115 seconds, not a stopwatch quota. A satisfying decision is more important than an extra screen.  

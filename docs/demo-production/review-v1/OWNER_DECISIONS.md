@@ -1,5 +1,7 @@
 # Owner decisions before publication: "The Right Next Step" v1 review cut
 
+> **Resolved 2026-11-03:** the owner approved the cut as delivered for the website product page and closed the effort ("promote this into GitHub … accessible for the website … closed out"). The narrator, music take C, the two dissolves, the 95.8 s runtime, the reused opener, the end card and the script wording ship as filmed. Item 5 (the app's "Version you sent" label) is product copy, not part of the film; it remains a separate product-copy question.
+
 1. **Listen to the narrator.** Design 1 was picked by measurement, not by ear: a low, calm voice (median pitch about 90–100 Hz). The alternates are in `audio/narration-design/`: designs 2 and 3 are similar in range, and design 4 is a higher-pitched voice (about 220 Hz). Approve it, or pick another design and the lines will be regenerated in that voice.
 2. **Pronunciation of "Sojourner"** (S05, S06, S08) and of "Epic" (S03): confirm by ear. If "Sojourner" is stressed wrongly, Sonic Rift's Pronunciations page can fix it before the lines are regenerated.
 3. **Music take C and its level.** The bed sits 11–22 dB under the narration. Approve it, choose take A, B or D (`audio/music/`), or ask for it louder or quieter.

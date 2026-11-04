@@ -1,8 +1,8 @@
 # "The Right Next Step": first review cut (v1, 2026-11-03)
 
-Private first-review cut of the narrated Sojourner demo, filmed in the installed signed Windows Alpha `v1.0.0-alpha.1`. Narration and music were made in Sonic Rift 0.9.1. **Not approved for publication.**
+The narrated Sojourner demo, filmed in the installed signed Windows Alpha `v1.0.0-alpha.1`. Narration and music were made in Sonic Rift 0.9.1. **Approved by the owner for the website product page on 2026-11-03, as cut.** It is published on the assets-only branch `media/sojourner-the-right-next-step-2026-11-03` at `3003e7cbc397d9459b64e930d3a7a5718121bea2` (see [`../../marketing/SOJOURNER_MEDIA_HANDOFF.md`](../../marketing/SOJOURNER_MEDIA_HANDOFF.md)).
 
-- **Binaries stay outside Git** (this repository is public): `media-handoff/sojourner-the-right-next-step-v1-review/first-review/` on the owner's workstation, 128 files, checked against [`SHA256SUMS.txt`](./SHA256SUMS.txt). The owner review page is a private claude.ai artifact.
+- **Binaries stay outside Git** (this repository is public): `media-handoff/sojourner-the-right-next-step-v1-review/first-review/` on the owner's workstation, 128 files, checked against [`SHA256SUMS.txt`](./SHA256SUMS.txt). The owner's review page was a private claude.ai artifact.
 - **Text records here:**
   - [QA report](./QA_REPORT.md)
   - [Owner decisions](./OWNER_DECISIONS.md)

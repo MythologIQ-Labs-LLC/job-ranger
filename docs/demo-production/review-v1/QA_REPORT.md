@@ -1,6 +1,6 @@
 # QA report: "The Right Next Step", first review cut (2026-11-03)
 
-**Status: PRIVATE FIRST REVIEW CUT. Not approved for publication.** Built on branch `demo/right-next-step-v1-20261103` (from `docs/demo-production-packs-20261103-no-ci` at `b1590587`). Narrative: `docs/demo-production/NARRATIVE_SCRIPT_V02.md`, words unchanged.
+**Status: approved by the owner for the website product page, 2026-11-03 (published on `media/sojourner-the-right-next-step-2026-11-03`).** It was delivered as a private first review cut. Built on branch `demo/right-next-step-v1-20261103` (from `docs/demo-production-packs-20261103-no-ci` at `b1590587`). Narrative: `docs/demo-production/NARRATIVE_SCRIPT_V02.md`, words unchanged.
 
 ## What the film is
 
